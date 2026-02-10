@@ -1,0 +1,52 @@
+﻿using CloudZCrypt.Application.Orchestrators.Interfaces;
+using CloudZCrypt.Application.Services.Interfaces;
+using CloudZCrypt.Composition;
+using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Terminal;
+using CloudZCrypt.Terminal.Commands;
+using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+
+Console.OutputEncoding = Encoding.UTF8;
+Console.InputEncoding = Encoding.UTF8;
+
+ServiceCollection services = new();
+services.AddDomainServices();
+services.AddApplicationServices();
+ServiceProvider provider = services.BuildServiceProvider();
+
+IFileCryptOrchestrator orchestrator =
+    provider.GetRequiredService<IFileCryptOrchestrator>();
+IPasswordService passwordService =
+    provider.GetRequiredService<IPasswordService>();
+List<IEncryptionAlgorithmStrategy> encryptionStrategies =
+    [.. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.DisplayName)];
+List<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies =
+    [.. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.DisplayName)];
+List<INameObfuscationStrategy> nameObfuscationStrategies =
+    [.. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.DisplayName)];
+List<ICompressionStrategy> compressionStrategies =
+    [.. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.DisplayName)];
+
+EncryptCommand encryptCommand = new(
+    orchestrator,
+    passwordService,
+    encryptionStrategies,
+    keyDerivationStrategies,
+    nameObfuscationStrategies,
+    compressionStrategies);
+
+GeneratePasswordCommand generatePasswordCommand = new(passwordService);
+
+AlgorithmInfoCommand algorithmInfoCommand = new(
+    encryptionStrategies,
+    keyDerivationStrategies,
+    nameObfuscationStrategies,
+    compressionStrategies);
+
+TerminalApplication app = new(
+    encryptCommand,
+    generatePasswordCommand,
+    algorithmInfoCommand);
+
+await app.RunAsync();

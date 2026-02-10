@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36401.2
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.WPF", "CloudZCrypt.WPF\CloudZCrypt.WPF.csproj", "{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Infrastructure", "CloudZCrypt.Infrastructure\CloudZCrypt.Infrastructure.csproj", "{C7CC51AB-F92B-426E-952F-A17231E77F9A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Composition", "CloudZCrypt.Composition\CloudZCrypt.Composition.csproj", "{9710FF19-2111-400B-A903-AACAD9727EE4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Terminal", "CloudZCrypt.Terminal\CloudZCrypt.Terminal.csproj", "{9E77EF84-B770-47F7-9779-1972C8547A75}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{9710FF19-2111-400B-A903-AACAD9727EE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9710FF19-2111-400B-A903-AACAD9727EE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9710FF19-2111-400B-A903-AACAD9727EE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E77EF84-B770-47F7-9779-1972C8547A75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E77EF84-B770-47F7-9779-1972C8547A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E77EF84-B770-47F7-9779-1972C8547A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E77EF84-B770-47F7-9779-1972C8547A75}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
