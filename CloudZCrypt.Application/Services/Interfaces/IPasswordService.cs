@@ -1,4 +1,4 @@
-﻿using CloudZCrypt.Application.ValueObjects.Password;
+using CloudZCrypt.Application.ValueObjects.Password;
 using CloudZCrypt.Domain.Enums;
 
 namespace CloudZCrypt.Application.Services.Interfaces

@@ -10,7 +10,7 @@ internal static class ResultRenderer
     {
         AnsiConsole.WriteLine();
 
-        string statusIcon = response.IsSuccess ? "?" : (response.IsPartialSuccess ? "?" : "?");
+        string statusIcon = response.IsSuccess ? "✅" : (response.IsPartialSuccess ? "⚠" : "❌");
         string statusColor = response.IsSuccess
             ? "green"
             : (response.IsPartialSuccess ? "yellow" : "red");
@@ -51,7 +51,7 @@ internal static class ResultRenderer
             AnsiConsole.MarkupLine("[red]Errors:[/]");
             foreach (string error in response.Errors)
             {
-                AnsiConsole.MarkupLine($"  [red]� {Markup.Escape(error)}[/]");
+                AnsiConsole.MarkupLine($"  [red]• {Markup.Escape(error)}[/]");
             }
         }
 
@@ -61,7 +61,7 @@ internal static class ResultRenderer
             AnsiConsole.MarkupLine("[yellow]Warnings:[/]");
             foreach (string warning in response.Warnings)
             {
-                AnsiConsole.MarkupLine($"  [yellow]� {Markup.Escape(warning)}[/]");
+                AnsiConsole.MarkupLine($"  [yellow]• {Markup.Escape(warning)}[/]");
             }
         }
     }

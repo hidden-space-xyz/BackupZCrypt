@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Composition;

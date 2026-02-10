@@ -25,7 +25,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
 
     private static int PromptLength() =>
         AnsiConsole.Prompt(
-            new TextPrompt<int>("[green]Password length[/] (16�256):")
+            new TextPrompt<int>("[green]Password length[/] (16–256):")
                 .DefaultValue(128)
                 .Validate(l =>
                     l is >= 16 and <= 256
@@ -47,12 +47,12 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
                     "Uppercase (A-Z)",
                     "Lowercase (a-z)",
                     "Numbers (0-9)",
-                    "Special characters (!@#�)"
+                    "Special characters (!@#$)"
                 )
                 .Select("Uppercase (A-Z)")
                 .Select("Lowercase (a-z)")
                 .Select("Numbers (0-9)")
-                .Select("Special characters (!@#�)")
+                .Select("Special characters (!@#$)")
         );
 
         PasswordGenerationOptions options = PasswordGenerationOptions.None;
@@ -62,7 +62,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
             options |= PasswordGenerationOptions.IncludeLowercase;
         if (optionChoices.Contains("Numbers (0-9)"))
             options |= PasswordGenerationOptions.IncludeNumbers;
-        if (optionChoices.Contains("Special characters (!@#�)"))
+        if (optionChoices.Contains("Special characters (!@#$)"))
             options |= PasswordGenerationOptions.IncludeSpecialCharacters;
 
         return options;
@@ -80,13 +80,13 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
                 new Markup($"[bold]{Markup.Escape(generated)}[/]"),
                 new Text(""),
                 new Markup(
-                    $"[dim]Strength:[/] [bold green]{analysis.Strength}[/] � {Markup.Escape(analysis.Description)}"
+                    $"[dim]Strength:[/] [bold green]{analysis.Strength}[/] — {Markup.Escape(analysis.Description)}"
                 ),
                 new Markup($"[dim]Length:[/]   {length} characters")
             )
         )
         {
-            Header = new PanelHeader("[bold cyan]?? Generated Password[/]"),
+            Header = new PanelHeader("[bold cyan]🔐 Generated Password[/]"),
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Cyan1),
             Padding = new Padding(1, 1),
@@ -95,7 +95,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
         AnsiConsole.Write(passwordPanel);
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(
-            "[yellow]? Store this password securely � it cannot be recovered if lost![/]"
+            "[yellow]⚠ Store this password securely — it cannot be recovered if lost![/]"
         );
     }
 }

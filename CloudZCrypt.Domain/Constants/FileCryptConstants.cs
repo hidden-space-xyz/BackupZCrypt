@@ -1,4 +1,4 @@
-﻿namespace CloudZCrypt.Domain.Constants;
+namespace CloudZCrypt.Domain.Constants;
 
 public static class FileCryptConstants
 {

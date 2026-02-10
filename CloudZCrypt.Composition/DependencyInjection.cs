@@ -40,8 +40,8 @@ public static class DependencyInjection
 
         // Compression Strategies
         services.AddSingleton<ICompressionStrategy, NoCompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, ZstandardCompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, LZ4CompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, GZipCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, BZip2CompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, LzmaCompressionStrategy>();
 
         // Name Obfuscation Strategies

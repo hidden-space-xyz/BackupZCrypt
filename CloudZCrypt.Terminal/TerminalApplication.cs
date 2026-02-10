@@ -1,4 +1,4 @@
-﻿using CloudZCrypt.Domain.Enums;
+using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Terminal.Commands;
 using CloudZCrypt.Terminal.Rendering;
 using Spectre.Console;
@@ -18,7 +18,7 @@ internal sealed class TerminalApplication(
             AnsiConsole.Clear();
             BannerRenderer.Print();
 
-            string choice = AnsiConsole.Prompt(
+            string choice = await AnsiConsole.PromptAsync(
                 new SelectionPrompt<string>()
                     .Title("[bold cyan]Main Menu[/]")
                     .HighlightStyle(Style.Parse("bold green"))

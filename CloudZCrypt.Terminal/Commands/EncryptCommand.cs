@@ -38,22 +38,22 @@ internal sealed class EncryptCommand(
         IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
             "Encryption algorithm:",
             encryptionStrategies,
-            s => $"{s.DisplayName} � {s.Summary}"
+            s => $"{s.DisplayName} — {s.Summary}"
         );
         IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
             "Key derivation algorithm:",
             keyDerivationStrategies,
-            s => $"{s.DisplayName} � {s.Summary}"
+            s => $"{s.DisplayName} — {s.Summary}"
         );
         INameObfuscationStrategy selectedObfuscation = PromptStrategy(
             "Name obfuscation mode:",
             nameObfuscationStrategies,
-            s => $"{s.DisplayName} � {s.Summary}"
+            s => $"{s.DisplayName} — {s.Summary}"
         );
         ICompressionStrategy selectedCompression = PromptStrategy(
             "Compression mode:",
             compressionStrategies,
-            s => $"{s.DisplayName} � {s.Summary}"
+            s => $"{s.DisplayName} — {s.Summary}"
         );
 
         PrintSummary(
@@ -93,7 +93,7 @@ internal sealed class EncryptCommand(
         {
             e.Cancel = true;
             cts.Cancel();
-            AnsiConsole.MarkupLine("[yellow]Cancelling�[/]");
+            AnsiConsole.MarkupLine("[yellow]Cancelling…[/]");
         };
 
         try
@@ -136,16 +136,16 @@ internal sealed class EncryptCommand(
         catch (EncryptionException ex)
         {
             AnsiConsole.MarkupLine(
-                $"[red]? {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]"
+                $"[red]❌ {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]"
             );
         }
         catch (ValidationException ex)
         {
-            AnsiConsole.MarkupLine($"[red]? Validation error: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine($"[red]❌ Validation error: {Markup.Escape(ex.Message)}[/]");
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]? Unexpected error: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine($"[red]❌ Unexpected error: {Markup.Escape(ex.Message)}[/]");
         }
     }
 
@@ -156,10 +156,10 @@ internal sealed class EncryptCommand(
         CancellationToken cancellationToken
     )
     {
-        AnsiConsole.MarkupLine("[yellow]? Warnings:[/]");
+        AnsiConsole.MarkupLine("[yellow]⚠ Warnings:[/]");
         foreach (string warning in response.Warnings)
         {
-            AnsiConsole.MarkupLine($"  [yellow]� {Markup.Escape(warning)}[/]");
+            AnsiConsole.MarkupLine($"  [yellow]⚠ {Markup.Escape(warning)}[/]");
         }
         AnsiConsole.WriteLine();
 
@@ -246,7 +246,7 @@ internal sealed class EncryptCommand(
             _ => "white",
         };
         AnsiConsole.MarkupLine(
-            $"  Password strength: [{strengthColor}]{strength.Strength}[/] � {Markup.Escape(strength.Description)}"
+            $"  Password strength: [{strengthColor}]{strength.Strength}[/] — {Markup.Escape(strength.Description)}"
         );
         AnsiConsole.WriteLine();
     }
@@ -295,7 +295,7 @@ internal sealed class EncryptCommand(
 
     private static void PrintFailure(string operationName, string[] errors) =>
         AnsiConsole.MarkupLine(
-            $"[red]? {operationName} failed: {Markup.Escape(string.Join(", ", errors))}[/]"
+            $"[red]❌ {operationName} failed: {Markup.Escape(string.Join(", ", errors))}[/]"
         );
 
     private static void PrintValidationErrors(IReadOnlyList<string> errors)
@@ -303,7 +303,7 @@ internal sealed class EncryptCommand(
         AnsiConsole.MarkupLine("[red]Validation errors:[/]");
         foreach (string error in errors)
         {
-            AnsiConsole.MarkupLine($"  [red]� {Markup.Escape(error)}[/]");
+            AnsiConsole.MarkupLine($"  [red]❌ {Markup.Escape(error)}[/]");
         }
     }
 }

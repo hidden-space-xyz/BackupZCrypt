@@ -1,4 +1,4 @@
-﻿using CloudZCrypt.Application.ValueObjects;
+using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
 namespace CloudZCrypt.Application.Services.Interfaces

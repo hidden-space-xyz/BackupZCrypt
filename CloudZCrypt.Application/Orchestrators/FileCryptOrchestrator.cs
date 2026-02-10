@@ -21,7 +21,6 @@ internal sealed class FileCryptOrchestrator(
         CancellationToken cancellationToken = default
     )
     {
-        // 1. Validaciones de negocio / request
         Result<FileCryptResult>? validationResult = await ValidateRequestAsync(
             request,
             cancellationToken
@@ -31,10 +30,8 @@ internal sealed class FileCryptOrchestrator(
             return validationResult;
         }
 
-        // 2. Normalizar paths
         (string sourcePath, string destinationPath) = NormalizePaths(request);
 
-        // 3. Comprobar existencia de origen
         bool isDirectory = fileOperations.DirectoryExists(sourcePath);
         bool isFile = fileOperations.FileExists(sourcePath);
 
@@ -43,10 +40,8 @@ internal sealed class FileCryptOrchestrator(
             return Result<FileCryptResult>.Failure("Source path does not exist.");
         }
 
-        // 4. Asegurar directorio destino
         await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
 
-        // 5. Delegar en servicios de aplicaci�n especializados
         try
         {
             if (isFile)

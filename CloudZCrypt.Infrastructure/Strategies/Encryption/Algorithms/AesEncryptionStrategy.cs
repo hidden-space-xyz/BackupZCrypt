@@ -1,4 +1,4 @@
-﻿using CloudZCrypt.Domain.Enums;
+using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Org.BouncyCastle.Crypto.Engines;

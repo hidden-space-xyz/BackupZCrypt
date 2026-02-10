@@ -1,4 +1,4 @@
-﻿using CloudZCrypt.Application.Orchestrators.Interfaces;
+using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using Spectre.Console;

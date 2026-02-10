@@ -61,7 +61,6 @@ internal sealed class ManifestService : IManifestService
                 {
                     foreach (ManifestEntry e in entries)
                     {
-                        // Key is obfuscated relative path, value is original relative path
                         map[e.ObfuscatedRelativePath] = e.OriginalRelativePath;
                     }
                 }

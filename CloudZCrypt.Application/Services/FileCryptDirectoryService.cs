@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Application.ValueObjects.Manifest;
@@ -53,9 +53,8 @@ internal sealed class FileCryptDirectoryService(
             );
         }
 
-        // Manifest
         List<ManifestEntry> manifestEntries = [];
-        Dictionary<string, string>? manifestMap = null; // obfuscated relative path -> original relative path
+        Dictionary<string, string>? manifestMap = null;
 
         if (request.Operation == EncryptOperation.Decrypt)
         {
@@ -76,7 +75,6 @@ internal sealed class FileCryptDirectoryService(
             manifestEncryptedAbsolute
         );
 
-        // Excluir manifest al desencriptar
         string[] filesToProcess = files;
         if (request.Operation == EncryptOperation.Decrypt)
         {
@@ -239,7 +237,6 @@ internal sealed class FileCryptDirectoryService(
             );
         }
 
-        // Guardar manifest al cifrar directorio
         if (request.Operation == EncryptOperation.Encrypt && manifestEntries.Count > 0)
         {
             IReadOnlyList<string> manifestErrors = await manifestService.TrySaveManifestAsync(

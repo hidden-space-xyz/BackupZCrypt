@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.Constants;
@@ -35,7 +35,6 @@ internal sealed class FileCryptSingleFileService(
 
         try
         {
-            // Mismo comportamiento: si desencripta directamente el manifest, se ignora.
             if (
                 request.Operation == EncryptOperation.Decrypt
                 && string.Equals(
@@ -64,7 +63,6 @@ internal sealed class FileCryptSingleFileService(
             {
                 destFile = ApplyObfuscationToDestination(destFile, sourcePath, obfuscationService);
             }
-            // Decrypt (single file): se respeta el destino elegido por el usuario.
 
             bool result = await ProcessSingleFileAsync(
                 encryptionService,
