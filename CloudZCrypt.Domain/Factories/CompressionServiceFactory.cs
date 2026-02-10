@@ -7,10 +7,8 @@ namespace CloudZCrypt.Domain.Factories;
 internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
 {
-    private readonly IReadOnlyDictionary<
-        CompressionMode,
-        ICompressionStrategy
-    > strategies = strategies.ToDictionary(s => s.Id, s => s);
+    private readonly IReadOnlyDictionary<CompressionMode, ICompressionStrategy> strategies =
+        strategies.ToDictionary(s => s.Id, s => s);
 
     public ICompressionStrategy Create(CompressionMode mode)
     {

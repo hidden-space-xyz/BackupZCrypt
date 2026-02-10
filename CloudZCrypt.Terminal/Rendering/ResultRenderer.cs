@@ -11,12 +11,16 @@ internal static class ResultRenderer
         AnsiConsole.WriteLine();
 
         string statusIcon = response.IsSuccess ? "?" : (response.IsPartialSuccess ? "?" : "?");
-        string statusColor = response.IsSuccess ? "green" : (response.IsPartialSuccess ? "yellow" : "red");
+        string statusColor = response.IsSuccess
+            ? "green"
+            : (response.IsPartialSuccess ? "yellow" : "red");
         string statusText = response.IsSuccess
             ? "Completed successfully"
             : (response.IsPartialSuccess ? "Partially completed" : "Failed");
 
-        AnsiConsole.MarkupLine($"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]");
+        AnsiConsole.MarkupLine(
+            $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]"
+        );
         AnsiConsole.WriteLine();
 
         Table resultTable = new Table()
@@ -29,7 +33,10 @@ internal static class ResultRenderer
         resultTable.AddRow("Files processed", $"{response.ProcessedFiles} / {response.TotalFiles}");
         resultTable.AddRow("Total size", ByteSizeFormatter.Format(response.TotalBytes));
         resultTable.AddRow("Elapsed time", response.ElapsedTime.ToString(@"hh\:mm\:ss\.fff"));
-        resultTable.AddRow("Throughput", $"{ByteSizeFormatter.Format((long)response.BytesPerSecond)}/s");
+        resultTable.AddRow(
+            "Throughput",
+            $"{ByteSizeFormatter.Format((long)response.BytesPerSecond)}/s"
+        );
 
         if (response.FailedFiles > 0)
         {
@@ -44,7 +51,7 @@ internal static class ResultRenderer
             AnsiConsole.MarkupLine("[red]Errors:[/]");
             foreach (string error in response.Errors)
             {
-                AnsiConsole.MarkupLine($"  [red]• {Markup.Escape(error)}[/]");
+                AnsiConsole.MarkupLine($"  [red]ï¿½ {Markup.Escape(error)}[/]");
             }
         }
 
@@ -54,7 +61,7 @@ internal static class ResultRenderer
             AnsiConsole.MarkupLine("[yellow]Warnings:[/]");
             foreach (string warning in response.Warnings)
             {
-                AnsiConsole.MarkupLine($"  [yellow]• {Markup.Escape(warning)}[/]");
+                AnsiConsole.MarkupLine($"  [yellow]ï¿½ {Markup.Escape(warning)}[/]");
             }
         }
     }

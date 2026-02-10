@@ -1,10 +1,10 @@
-﻿using CloudZCrypt.Application.Orchestrators.Interfaces;
+﻿using System.Text;
+using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Terminal;
 using CloudZCrypt.Terminal.Commands;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 
 Console.OutputEncoding = Encoding.UTF8;
@@ -15,18 +15,24 @@ services.AddDomainServices();
 services.AddApplicationServices();
 ServiceProvider provider = services.BuildServiceProvider();
 
-IFileCryptOrchestrator orchestrator =
-    provider.GetRequiredService<IFileCryptOrchestrator>();
-IPasswordService passwordService =
-    provider.GetRequiredService<IPasswordService>();
+IFileCryptOrchestrator orchestrator = provider.GetRequiredService<IFileCryptOrchestrator>();
+IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
-    [.. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.DisplayName)];
+[
+    .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.DisplayName),
+];
 List<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies =
-    [.. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.DisplayName)];
+[
+    .. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.DisplayName),
+];
 List<INameObfuscationStrategy> nameObfuscationStrategies =
-    [.. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.DisplayName)];
+[
+    .. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.DisplayName),
+];
 List<ICompressionStrategy> compressionStrategies =
-    [.. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.DisplayName)];
+[
+    .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.DisplayName),
+];
 
 EncryptCommand encryptCommand = new(
     orchestrator,
@@ -34,7 +40,8 @@ EncryptCommand encryptCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
-    compressionStrategies);
+    compressionStrategies
+);
 
 GeneratePasswordCommand generatePasswordCommand = new(passwordService);
 
@@ -42,11 +49,9 @@ AlgorithmInfoCommand algorithmInfoCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
-    compressionStrategies);
+    compressionStrategies
+);
 
-TerminalApplication app = new(
-    encryptCommand,
-    generatePasswordCommand,
-    algorithmInfoCommand);
+TerminalApplication app = new(encryptCommand, generatePasswordCommand, algorithmInfoCommand);
 
 await app.RunAsync();

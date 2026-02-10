@@ -7,23 +7,43 @@ internal sealed class AlgorithmInfoCommand(
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
-    IReadOnlyList<ICompressionStrategy> compressionStrategies)
+    IReadOnlyList<ICompressionStrategy> compressionStrategies
+)
 {
     public void Execute()
     {
-        AnsiConsole.Write(new Rule("[bold cyan]Algorithm Information[/]").RuleStyle(Style.Parse("grey")));
+        AnsiConsole.Write(
+            new Rule("[bold cyan]Algorithm Information[/]").RuleStyle(Style.Parse("grey"))
+        );
         AnsiConsole.WriteLine();
 
-        PrintStrategyTable("Encryption Algorithms", encryptionStrategies, s => (s.DisplayName, s.Description));
-        PrintStrategyTable("Key Derivation Algorithms", keyDerivationStrategies, s => (s.DisplayName, s.Description));
-        PrintStrategyTable("Name Obfuscation Modes", nameObfuscationStrategies, s => (s.DisplayName, s.Description));
-        PrintStrategyTable("Compression Modes", compressionStrategies, s => (s.DisplayName, s.Description));
+        PrintStrategyTable(
+            "Encryption Algorithms",
+            encryptionStrategies,
+            s => (s.DisplayName, s.Description)
+        );
+        PrintStrategyTable(
+            "Key Derivation Algorithms",
+            keyDerivationStrategies,
+            s => (s.DisplayName, s.Description)
+        );
+        PrintStrategyTable(
+            "Name Obfuscation Modes",
+            nameObfuscationStrategies,
+            s => (s.DisplayName, s.Description)
+        );
+        PrintStrategyTable(
+            "Compression Modes",
+            compressionStrategies,
+            s => (s.DisplayName, s.Description)
+        );
     }
 
     private static void PrintStrategyTable<T>(
         string title,
         IReadOnlyList<T> strategies,
-        Func<T, (string DisplayName, string Description)> selector)
+        Func<T, (string DisplayName, string Description)> selector
+    )
     {
         Table table = new Table()
             .Border(TableBorder.Rounded)

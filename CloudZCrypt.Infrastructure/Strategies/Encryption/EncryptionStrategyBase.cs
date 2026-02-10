@@ -80,7 +80,9 @@ internal abstract class EncryptionStrategyBase(
                 await WriteNonceAsync(destinationFile, nonce);
                 await WriteCompressionHeaderAsync(destinationFile, compression);
 
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    compression
+                );
                 using Stream compressedSource = await compressionStrategy.CompressAsync(sourceFile);
                 await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
             }
@@ -213,14 +215,20 @@ internal abstract class EncryptionStrategyBase(
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
 
                 // Skip salt + nonce + compression header to reach ciphertext start
-                await sourceFile.ReadExactlyAsync(new byte[SaltSize + NonceSize + CompressionHeaderSize]);
+                await sourceFile.ReadExactlyAsync(
+                    new byte[SaltSize + NonceSize + CompressionHeaderSize]
+                );
 
                 using MemoryStream decryptedBuffer = new();
                 await DecryptStreamAsync(sourceFile, decryptedBuffer, key, nonce);
                 decryptedBuffer.Position = 0;
 
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
-                using Stream decompressedStream = await compressionStrategy.DecompressAsync(decryptedBuffer);
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    compression
+                );
+                using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                    decryptedBuffer
+                );
 
                 using Stream destinationFile = File.Create(destinationFilePath);
                 await decompressedStream.CopyToAsync(destinationFile);
@@ -326,7 +334,9 @@ internal abstract class EncryptionStrategyBase(
             await WriteCompressionHeaderAsync(destinationFile, compression);
 
             using Stream source = new MemoryStream(plaintextData, writable: false);
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                compression
+            );
             using Stream compressedSource = await compressionStrategy.CompressAsync(source);
             await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
         }
@@ -410,8 +420,12 @@ internal abstract class EncryptionStrategyBase(
             await DecryptStreamAsync(source, decryptedBuffer, key, nonce);
             decryptedBuffer.Position = 0;
 
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
-            using Stream decompressedStream = await compressionStrategy.DecompressAsync(decryptedBuffer);
+            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                compression
+            );
+            using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                decryptedBuffer
+            );
             using MemoryStream resultBuffer = new();
             await decompressedStream.CopyToAsync(resultBuffer);
             return resultBuffer.ToArray();
@@ -505,7 +519,10 @@ internal abstract class EncryptionStrategyBase(
         return nonce;
     }
 
-    protected static async Task WriteCompressionHeaderAsync(Stream stream, CompressionMode compression)
+    protected static async Task WriteCompressionHeaderAsync(
+        Stream stream,
+        CompressionMode compression
+    )
     {
         await stream.WriteAsync(new[] { (byte)compression });
     }

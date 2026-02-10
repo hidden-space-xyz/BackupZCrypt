@@ -15,13 +15,19 @@ internal class NoCompressionStrategy : ICompressionStrategy
 
     public string Summary => "No compression (fastest)";
 
-    public Task<Stream> CompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public Task<Stream> CompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);
     }
 
-    public Task<Stream> DecompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public Task<Stream> DecompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);

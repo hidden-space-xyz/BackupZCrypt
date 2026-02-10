@@ -16,7 +16,10 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
 
     public string Summary => "Highest compression ratio (slowest)";
 
-    public async Task<Stream> CompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> CompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream inputBuffer = new();
         await inputStream.CopyToAsync(inputBuffer, cancellationToken);
@@ -43,7 +46,10 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         return output;
     }
 
-    public async Task<Stream> DecompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> DecompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         byte[] properties = new byte[5];
         await inputStream.ReadExactlyAsync(properties, cancellationToken);

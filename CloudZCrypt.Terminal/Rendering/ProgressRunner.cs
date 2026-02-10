@@ -1,6 +1,5 @@
-using CloudZCrypt.Application.Orchestrators.Interfaces;
+﻿using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
-using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using Spectre.Console;
 
@@ -12,11 +11,13 @@ internal static class ProgressRunner
         IFileCryptOrchestrator orchestrator,
         FileCryptRequest request,
         string operationName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         Result<FileCryptResult>? result = null;
 
-        await AnsiConsole.Progress()
+        await AnsiConsole
+            .Progress()
             .AutoClear(false)
             .HideCompleted(false)
             .Columns(
@@ -28,13 +29,14 @@ internal static class ProgressRunner
             )
             .StartAsync(async ctx =>
             {
-                ProgressTask task = ctx.AddTask($"[cyan]{operationName}ing�[/]", maxValue: 100);
+                ProgressTask task = ctx.AddTask($"[cyan]{operationName}ing…[/]", maxValue: 100);
 
                 Progress<FileCryptStatus> progress = new(update =>
                 {
-                    double pct = update.TotalBytes > 0
-                        ? (double)update.ProcessedBytes / update.TotalBytes * 100
-                        : 100;
+                    double pct =
+                        update.TotalBytes > 0
+                            ? (double)update.ProcessedBytes / update.TotalBytes * 100
+                            : 100;
                     task.Value = pct;
                     task.Description =
                         $"[cyan]{operationName}ing[/] {update.ProcessedFiles}/{update.TotalFiles} files";

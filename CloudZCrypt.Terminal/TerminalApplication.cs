@@ -8,7 +8,8 @@ namespace CloudZCrypt.Terminal;
 internal sealed class TerminalApplication(
     EncryptCommand encryptCommand,
     GeneratePasswordCommand generatePasswordCommand,
-    AlgorithmInfoCommand algorithmInfoCommand)
+    AlgorithmInfoCommand algorithmInfoCommand
+)
 {
     public async Task RunAsync()
     {

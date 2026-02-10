@@ -16,7 +16,10 @@ internal class LZ4CompressionStrategy : ICompressionStrategy
 
     public string Summary => "Fastest compression and decompression";
 
-    public async Task<Stream> CompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> CompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         using (LZ4EncoderStream lz4 = LZ4Stream.Encode(output, leaveOpen: true))
@@ -27,7 +30,10 @@ internal class LZ4CompressionStrategy : ICompressionStrategy
         return output;
     }
 
-    public async Task<Stream> DecompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> DecompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         using (LZ4DecoderStream lz4 = LZ4Stream.Decode(inputStream, leaveOpen: true))

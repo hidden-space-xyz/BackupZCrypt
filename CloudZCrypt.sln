@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.2.11415.280 d18.0
+VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.WPF", "CloudZCrypt.WPF\CloudZCrypt.WPF.csproj", "{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Application", "CloudZCrypt.Application\CloudZCrypt.Application.csproj", "{26CD6445-F026-4284-94A2-A34D37FD8FB3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Domain", "CloudZCrypt.Domain\CloudZCrypt.Domain.csproj", "{69491DCD-7FBC-43A5-98C2-1817D35F41ED}"
@@ -21,10 +19,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2B3EDC61-D6F1-4F2F-A837-050B55F40C16}.Release|Any CPU.Build.0 = Release|Any CPU
 		{26CD6445-F026-4284-94A2-A34D37FD8FB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{26CD6445-F026-4284-94A2-A34D37FD8FB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{26CD6445-F026-4284-94A2-A34D37FD8FB3}.Release|Any CPU.ActiveCfg = Release|Any CPU

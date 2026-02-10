@@ -17,13 +17,16 @@ internal sealed class EncryptCommand(
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
-    IReadOnlyList<ICompressionStrategy> compressionStrategies)
+    IReadOnlyList<ICompressionStrategy> compressionStrategies
+)
 {
     public async Task ExecuteAsync(EncryptOperation operation)
     {
         string operationName = operation == EncryptOperation.Encrypt ? "Encrypt" : "Decrypt";
 
-        AnsiConsole.Write(new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey")));
+        AnsiConsole.Write(
+            new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
+        );
         AnsiConsole.WriteLine();
 
         string sourcePath = PromptSourcePath();
@@ -33,16 +36,35 @@ internal sealed class EncryptCommand(
         PrintPasswordStrength(password);
 
         IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
-            "Encryption algorithm:", encryptionStrategies, s => $"{s.DisplayName} — {s.Summary}");
+            "Encryption algorithm:",
+            encryptionStrategies,
+            s => $"{s.DisplayName} ï¿½ {s.Summary}"
+        );
         IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
-            "Key derivation algorithm:", keyDerivationStrategies, s => $"{s.DisplayName} — {s.Summary}");
+            "Key derivation algorithm:",
+            keyDerivationStrategies,
+            s => $"{s.DisplayName} ï¿½ {s.Summary}"
+        );
         INameObfuscationStrategy selectedObfuscation = PromptStrategy(
-            "Name obfuscation mode:", nameObfuscationStrategies, s => $"{s.DisplayName} — {s.Summary}");
+            "Name obfuscation mode:",
+            nameObfuscationStrategies,
+            s => $"{s.DisplayName} ï¿½ {s.Summary}"
+        );
         ICompressionStrategy selectedCompression = PromptStrategy(
-            "Compression mode:", compressionStrategies, s => $"{s.DisplayName} — {s.Summary}");
+            "Compression mode:",
+            compressionStrategies,
+            s => $"{s.DisplayName} ï¿½ {s.Summary}"
+        );
 
-        PrintSummary(operationName, sourcePath, destinationPath,
-            selectedEncryption, selectedKdf, selectedObfuscation, selectedCompression);
+        PrintSummary(
+            operationName,
+            sourcePath,
+            destinationPath,
+            selectedEncryption,
+            selectedKdf,
+            selectedObfuscation,
+            selectedCompression
+        );
 
         if (!AnsiConsole.Confirm($"[yellow]Proceed with {operationName.ToLower()}?[/]"))
         {
@@ -71,13 +93,17 @@ internal sealed class EncryptCommand(
         {
             e.Cancel = true;
             cts.Cancel();
-            AnsiConsole.MarkupLine("[yellow]Cancelling…[/]");
+            AnsiConsole.MarkupLine("[yellow]Cancellingï¿½[/]");
         };
 
         try
         {
             Result<FileCryptResult> result = await ProgressRunner.RunAsync(
-                orchestrator, request, operationName, cts.Token);
+                orchestrator,
+                request,
+                operationName,
+                cts.Token
+            );
 
             if (!result.IsSuccess)
             {
@@ -95,8 +121,7 @@ internal sealed class EncryptCommand(
 
             if (response.HasWarnings && !request.ProceedOnWarnings)
             {
-                response = await HandleWarningsAsync(
-                    response, request, operationName, cts.Token);
+                response = await HandleWarningsAsync(response, request, operationName, cts.Token);
 
                 if (response is null)
                     return;
@@ -110,7 +135,9 @@ internal sealed class EncryptCommand(
         }
         catch (EncryptionException ex)
         {
-            AnsiConsole.MarkupLine($"[red]? {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]? {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]"
+            );
         }
         catch (ValidationException ex)
         {
@@ -126,16 +153,21 @@ internal sealed class EncryptCommand(
         FileCryptResult response,
         FileCryptRequest request,
         string operationName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         AnsiConsole.MarkupLine("[yellow]? Warnings:[/]");
         foreach (string warning in response.Warnings)
         {
-            AnsiConsole.MarkupLine($"  [yellow]• {Markup.Escape(warning)}[/]");
+            AnsiConsole.MarkupLine($"  [yellow]ï¿½ {Markup.Escape(warning)}[/]");
         }
         AnsiConsole.WriteLine();
 
-        if (!AnsiConsole.Confirm($"[yellow]Continue with {operationName.ToLower()} despite warnings?[/]"))
+        if (
+            !AnsiConsole.Confirm(
+                $"[yellow]Continue with {operationName.ToLower()} despite warnings?[/]"
+            )
+        )
         {
             AnsiConsole.MarkupLine("[grey]Operation cancelled.[/]");
             return null;
@@ -144,7 +176,11 @@ internal sealed class EncryptCommand(
         FileCryptRequest proceedRequest = request with { ProceedOnWarnings = true };
 
         Result<FileCryptResult> result = await ProgressRunner.RunAsync(
-            orchestrator, proceedRequest, operationName, cancellationToken);
+            orchestrator,
+            proceedRequest,
+            operationName,
+            cancellationToken
+        );
 
         if (!result.IsSuccess)
         {
@@ -191,8 +227,7 @@ internal sealed class EncryptCommand(
         );
 
         string confirmPassword = AnsiConsole.Prompt(
-            new TextPrompt<string>("[green]Confirm password[/]:")
-                .Secret()
+            new TextPrompt<string>("[green]Confirm password[/]:").Secret()
         );
 
         return (password, confirmPassword);
@@ -208,13 +243,19 @@ internal sealed class EncryptCommand(
             PasswordStrength.Fair => "yellow",
             PasswordStrength.Good => "green",
             PasswordStrength.Strong => "bold green",
-            _ => "white"
+            _ => "white",
         };
-        AnsiConsole.MarkupLine($"  Password strength: [{strengthColor}]{strength.Strength}[/] — {Markup.Escape(strength.Description)}");
+        AnsiConsole.MarkupLine(
+            $"  Password strength: [{strengthColor}]{strength.Strength}[/] ï¿½ {Markup.Escape(strength.Description)}"
+        );
         AnsiConsole.WriteLine();
     }
 
-    private static T PromptStrategy<T>(string title, IReadOnlyList<T> strategies, Func<T, string> converter)
+    private static T PromptStrategy<T>(
+        string title,
+        IReadOnlyList<T> strategies,
+        Func<T, string> converter
+    )
         where T : class =>
         AnsiConsole.Prompt(
             new SelectionPrompt<T>()
@@ -231,7 +272,8 @@ internal sealed class EncryptCommand(
         IEncryptionAlgorithmStrategy encryption,
         IKeyDerivationAlgorithmStrategy kdf,
         INameObfuscationStrategy obfuscation,
-        ICompressionStrategy compression)
+        ICompressionStrategy compression
+    )
     {
         AnsiConsole.WriteLine();
         Table summaryTable = new Table()
@@ -253,14 +295,15 @@ internal sealed class EncryptCommand(
 
     private static void PrintFailure(string operationName, string[] errors) =>
         AnsiConsole.MarkupLine(
-            $"[red]? {operationName} failed: {Markup.Escape(string.Join(", ", errors))}[/]");
+            $"[red]? {operationName} failed: {Markup.Escape(string.Join(", ", errors))}[/]"
+        );
 
     private static void PrintValidationErrors(IReadOnlyList<string> errors)
     {
         AnsiConsole.MarkupLine("[red]Validation errors:[/]");
         foreach (string error in errors)
         {
-            AnsiConsole.MarkupLine($"  [red]• {Markup.Escape(error)}[/]");
+            AnsiConsole.MarkupLine($"  [red]ï¿½ {Markup.Escape(error)}[/]");
         }
     }
 }

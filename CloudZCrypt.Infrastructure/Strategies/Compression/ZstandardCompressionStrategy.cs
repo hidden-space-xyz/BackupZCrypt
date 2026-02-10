@@ -18,7 +18,10 @@ internal class ZstandardCompressionStrategy : ICompressionStrategy
 
     public string Summary => "Best balance of speed and compression";
 
-    public async Task<Stream> CompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> CompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         using (CompressionStream zstd = new(output, CompressionLevel, leaveOpen: true))
@@ -29,7 +32,10 @@ internal class ZstandardCompressionStrategy : ICompressionStrategy
         return output;
     }
 
-    public async Task<Stream> DecompressAsync(Stream inputStream, CancellationToken cancellationToken = default)
+    public async Task<Stream> DecompressAsync(
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         MemoryStream output = new();
         using (DecompressionStream zstd = new(inputStream, leaveOpen: true))
