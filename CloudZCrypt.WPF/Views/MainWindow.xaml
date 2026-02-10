@@ -91,6 +91,7 @@
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
       <Grid Grid.Column="0" Margin="0,0,10,0">
         <Grid.RowDefinitions>
@@ -293,6 +294,83 @@
           </ComboBox.ItemTemplate>
           <ComboBox.ToolTip>
             <ItemsControl ItemsSource="{Binding AvailableNameObfuscationModes}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="2,2,2,4">
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto" />
+                      <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock
+                      Grid.Row="0"
+                      FontSize="14"
+                      FontWeight="Bold"
+                      Foreground="LimeGreen"
+                      Text="{Binding DisplayName}"
+                    />
+                    <TextBlock
+                      Grid.Row="1"
+                      FontSize="11"
+                      Foreground="LightGray"
+                      Text="{Binding Description}"
+                      TextWrapping="Wrap"
+                    />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ComboBox.ToolTip>
+        </ComboBox>
+      </Grid>
+      <!--  Compression Mode  -->
+      <Grid Grid.Column="3" Margin="10,0,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock
+          Grid.Row="0"
+          HorizontalAlignment="Left"
+          FontWeight="Bold"
+          Text="Compression:"
+        />
+        <ComboBox
+          x:Name="CompressionModeComboBox"
+          Grid.Row="1"
+          Margin="0,5,0,0"
+          Padding="5"
+          HorizontalAlignment="Stretch"
+          IsEnabled="{Binding AreControlsEnabled}"
+          ItemsSource="{Binding AvailableCompressionModes}"
+          SelectedValue="{Binding SelectedCompressionMode}"
+          SelectedValuePath="Id"
+          ToolTipService.ShowDuration="60000"
+        >
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="2">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock
+                  Grid.Row="0"
+                  FontSize="14"
+                  FontWeight="SemiBold"
+                  Foreground="LimeGreen"
+                  Text="{Binding DisplayName}"
+                />
+                <TextBlock
+                  Grid.Row="1"
+                  FontSize="10"
+                  Foreground="LightGray"
+                  Text="{Binding Summary}"
+                />
+              </Grid>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+          <ComboBox.ToolTip>
+            <ItemsControl ItemsSource="{Binding AvailableCompressionModes}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Grid Margin="2,2,2,4">

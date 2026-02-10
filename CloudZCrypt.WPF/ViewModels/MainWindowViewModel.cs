@@ -33,6 +33,7 @@ public class MainWindowViewModel : ObservableObjectBase
     private EncryptionAlgorithm selectedEncryptionAlgorithm;
     private KeyDerivationAlgorithm selectedKeyDerivationAlgorithm;
     private NameObfuscationMode selectedNameObfuscationMode;
+    private CompressionMode selectedCompressionMode;
 
     private bool isProcessing;
     private double progressValue;
@@ -137,6 +138,18 @@ public class MainWindowViewModel : ObservableObjectBase
         }
     }
 
+    public CompressionMode SelectedCompressionMode
+    {
+        get => selectedCompressionMode;
+        set
+        {
+            if (SetProperty(ref selectedCompressionMode, value))
+            {
+                OnPropertyChanged(nameof(SelectedCompressionModeInfo));
+            }
+        }
+    }
+
     public IEncryptionAlgorithmStrategy? SelectedEncryptionAlgorithmInfo =>
         AvailableEncryptionAlgorithms.FirstOrDefault(a => a.Id == selectedEncryptionAlgorithm);
 
@@ -147,6 +160,9 @@ public class MainWindowViewModel : ObservableObjectBase
 
     public INameObfuscationStrategy? SelectedNameObfuscationModeInfo =>
         AvailableNameObfuscationModes.FirstOrDefault(a => a.Id == selectedNameObfuscationMode);
+
+    public ICompressionStrategy? SelectedCompressionModeInfo =>
+        AvailableCompressionModes.FirstOrDefault(a => a.Id == selectedCompressionMode);
 
     public bool IsProcessing
     {
@@ -185,6 +201,8 @@ public class MainWindowViewModel : ObservableObjectBase
 
     public ObservableCollection<INameObfuscationStrategy> AvailableNameObfuscationModes { get; }
 
+    public ObservableCollection<ICompressionStrategy> AvailableCompressionModes { get; }
+
     public ICommand GenerateStrongPasswordCommand { get; }
 
     public ICommand SelectSourceFileCommand { get; }
@@ -209,7 +227,8 @@ public class MainWindowViewModel : ObservableObjectBase
         IPasswordService passwordService,
         IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
         IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-        IEnumerable<INameObfuscationStrategy> nameObfuscationStrategies
+        IEnumerable<INameObfuscationStrategy> nameObfuscationStrategies,
+        IEnumerable<ICompressionStrategy> compressionStrategies
     )
     {
         this.dialogService = dialogService;
@@ -222,6 +241,8 @@ public class MainWindowViewModel : ObservableObjectBase
 
         AvailableNameObfuscationModes = new(nameObfuscationStrategies.OrderBy(a => a.DisplayName));
 
+        AvailableCompressionModes = new(compressionStrategies.OrderBy(a => a.DisplayName));
+
         selectedEncryptionAlgorithm = AvailableEncryptionAlgorithms
             .First(x => x.Id == EncryptionAlgorithm.Aes)
             .Id;
@@ -230,6 +251,9 @@ public class MainWindowViewModel : ObservableObjectBase
             .Id;
         selectedNameObfuscationMode = AvailableNameObfuscationModes
             .First(x => x.Id == NameObfuscationMode.Guid)
+            .Id;
+        selectedCompressionMode = AvailableCompressionModes
+            .First(x => x.Id == CompressionMode.None)
             .Id;
 
         GenerateStrongPasswordCommand = new RelayCommand(GenerateStrongPassword);
@@ -438,6 +462,7 @@ public class MainWindowViewModel : ObservableObjectBase
             SelectedKeyDerivationAlgorithm,
             operation,
             SelectedNameObfuscationMode,
+            SelectedCompressionMode,
             ProceedOnWarnings: false
         );
 

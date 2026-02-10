@@ -8,12 +8,14 @@ using Org.BouncyCastle.Crypto.Modes;
 namespace CloudZCrypt.Infrastructure.Strategies.Encryption;
 
 internal abstract class EncryptionStrategyBase(
-    IKeyDerivationServiceFactory keyDerivationServiceFactory
+    IKeyDerivationServiceFactory keyDerivationServiceFactory,
+    ICompressionServiceFactory compressionServiceFactory
 )
 {
     protected const int KeySize = 256;
     protected const int SaltSize = 32;
     protected const int NonceSize = 12;
+    protected const int CompressionHeaderSize = 1;
     protected const int MacSize = 128;
     protected const int BufferSize = 4 * 1024;
 
@@ -21,7 +23,8 @@ internal abstract class EncryptionStrategyBase(
         string sourceFilePath,
         string destinationFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None
     )
     {
         try
@@ -75,9 +78,11 @@ internal abstract class EncryptionStrategyBase(
 
                 await WriteSaltAsync(destinationFile, salt);
                 await WriteNonceAsync(destinationFile, nonce);
+                await WriteCompressionHeaderAsync(destinationFile, compression);
 
-                // No filename header is written. Ciphertext starts immediately after nonce.
-                await EncryptStreamAsync(sourceFile, destinationFile, key, nonce);
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+                using Stream compressedSource = await compressionStrategy.CompressAsync(sourceFile);
+                await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
             }
             catch (IOException ex)
             {
@@ -154,7 +159,7 @@ internal abstract class EncryptionStrategyBase(
             }
 
             FileInfo fileInfo = new(sourceFilePath);
-            if (fileInfo.Length < SaltSize + NonceSize)
+            if (fileInfo.Length < SaltSize + NonceSize + CompressionHeaderSize)
             {
                 throw new EncryptionCorruptedFileException(sourceFilePath);
             }
@@ -175,13 +180,15 @@ internal abstract class EncryptionStrategyBase(
             byte[] salt,
                 nonce,
                 key;
+            CompressionMode compression;
             try
             {
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
                 salt = await ReadSaltAsync(sourceFile);
                 nonce = await ReadNonceAsync(sourceFile);
+                compression = await ReadCompressionHeaderAsync(sourceFile);
 
-                // Position is now right after salt+nonce
+                // Position is now right after salt+nonce+compression
             }
             catch (EndOfStreamException)
             {
@@ -204,12 +211,19 @@ internal abstract class EncryptionStrategyBase(
             try
             {
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
+
+                // Skip salt + nonce + compression header to reach ciphertext start
+                await sourceFile.ReadExactlyAsync(new byte[SaltSize + NonceSize + CompressionHeaderSize]);
+
+                using MemoryStream decryptedBuffer = new();
+                await DecryptStreamAsync(sourceFile, decryptedBuffer, key, nonce);
+                decryptedBuffer.Position = 0;
+
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+                using Stream decompressedStream = await compressionStrategy.DecompressAsync(decryptedBuffer);
+
                 using Stream destinationFile = File.Create(destinationFilePath);
-
-                // Skip salt + nonce to reach ciphertext start
-                await sourceFile.ReadExactlyAsync(new byte[SaltSize + NonceSize]);
-
-                await DecryptStreamAsync(sourceFile, destinationFile, key, nonce);
+                await decompressedStream.CopyToAsync(destinationFile);
             }
             catch (IOException ex)
             {
@@ -279,7 +293,8 @@ internal abstract class EncryptionStrategyBase(
         byte[] plaintextData,
         string destinationFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None
     )
     {
         ArgumentNullException.ThrowIfNull(plaintextData);
@@ -308,9 +323,12 @@ internal abstract class EncryptionStrategyBase(
             using Stream destinationFile = File.Create(destinationFilePath);
             await WriteSaltAsync(destinationFile, salt);
             await WriteNonceAsync(destinationFile, nonce);
+            await WriteCompressionHeaderAsync(destinationFile, compression);
 
             using Stream source = new MemoryStream(plaintextData, writable: false);
-            await EncryptStreamAsync(source, destinationFile, key, nonce);
+            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+            using Stream compressedSource = await compressionStrategy.CompressAsync(source);
+            await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
         }
         catch (IOException ex)
         {
@@ -369,13 +387,14 @@ internal abstract class EncryptionStrategyBase(
         {
             using Stream source = File.OpenRead(sourceFilePath);
 
-            if (source.Length < SaltSize + NonceSize)
+            if (source.Length < SaltSize + NonceSize + CompressionHeaderSize)
             {
                 throw new EncryptionCorruptedFileException(sourceFilePath);
             }
 
             byte[] salt = await ReadSaltAsync(source);
             byte[] nonce = await ReadNonceAsync(source);
+            CompressionMode compression = await ReadCompressionHeaderAsync(source);
 
             byte[] key;
             try
@@ -387,9 +406,15 @@ internal abstract class EncryptionStrategyBase(
                 throw new EncryptionKeyDerivationException(ex);
             }
 
-            using MemoryStream plaintextBuffer = new();
-            await DecryptStreamAsync(source, plaintextBuffer, key, nonce);
-            return plaintextBuffer.ToArray();
+            using MemoryStream decryptedBuffer = new();
+            await DecryptStreamAsync(source, decryptedBuffer, key, nonce);
+            decryptedBuffer.Position = 0;
+
+            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(compression);
+            using Stream decompressedStream = await compressionStrategy.DecompressAsync(decryptedBuffer);
+            using MemoryStream resultBuffer = new();
+            await decompressedStream.CopyToAsync(resultBuffer);
+            return resultBuffer.ToArray();
         }
         catch (CryptographicException)
         {
@@ -478,6 +503,18 @@ internal abstract class EncryptionStrategyBase(
         byte[] nonce = new byte[NonceSize];
         await stream.ReadExactlyAsync(nonce);
         return nonce;
+    }
+
+    protected static async Task WriteCompressionHeaderAsync(Stream stream, CompressionMode compression)
+    {
+        await stream.WriteAsync(new[] { (byte)compression });
+    }
+
+    protected static async Task<CompressionMode> ReadCompressionHeaderAsync(Stream stream)
+    {
+        byte[] header = new byte[CompressionHeaderSize];
+        await stream.ReadExactlyAsync(header);
+        return (CompressionMode)header[0];
     }
 
     protected static async Task ProcessFileWithCipherAsync(

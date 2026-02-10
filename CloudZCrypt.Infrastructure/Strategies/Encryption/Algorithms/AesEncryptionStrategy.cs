@@ -7,8 +7,11 @@ using Org.BouncyCastle.Crypto.Parameters;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
 
-internal class AesEncryptionStrategy(IKeyDerivationServiceFactory keyDerivationServiceFactory)
-    : EncryptionStrategyBase(keyDerivationServiceFactory),
+internal class AesEncryptionStrategy(
+    IKeyDerivationServiceFactory keyDerivationServiceFactory,
+    ICompressionServiceFactory compressionServiceFactory
+)
+    : EncryptionStrategyBase(keyDerivationServiceFactory, compressionServiceFactory),
         IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;

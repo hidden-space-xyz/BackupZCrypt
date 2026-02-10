@@ -13,7 +13,8 @@ public interface IEncryptionAlgorithmStrategy
         string sourceFilePath,
         string destinationFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None
     );
 
     Task<bool> DecryptFileAsync(
@@ -27,7 +28,8 @@ public interface IEncryptionAlgorithmStrategy
         byte[] plaintextData,
         string destinationFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None
     );
 
     Task<byte[]> ReadEncryptedFileAsync(

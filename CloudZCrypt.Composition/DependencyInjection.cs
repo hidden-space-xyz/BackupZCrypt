@@ -9,6 +9,7 @@ using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Services.FileSystem;
+using CloudZCrypt.Infrastructure.Strategies.Compression;
 using CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
 using CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
 using CloudZCrypt.Infrastructure.Strategies.Obfuscation;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
         services.AddSingleton<IEncryptionServiceFactory, EncryptionServiceFactory>();
         services.AddSingleton<INameObfuscationServiceFactory, NameObfuscationServiceFactory>();
+        services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
 
         // Key Derivation Strategies
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
@@ -35,6 +37,12 @@ public static class DependencyInjection
         services.AddSingleton<IEncryptionAlgorithmStrategy, SerpentEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, ChaCha20EncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
+
+        // Compression Strategies
+        services.AddSingleton<ICompressionStrategy, NoCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, ZstandardCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, LZ4CompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, LzmaCompressionStrategy>();
 
         // Name Obfuscation Strategies
         services.AddSingleton<INameObfuscationStrategy, NoObfuscationStrategy>();

@@ -342,7 +342,8 @@ internal sealed class FileCryptDirectoryService(
                 sourceFile,
                 destinationFile,
                 request.Password,
-                request.KeyDerivationAlgorithm
+                request.KeyDerivationAlgorithm,
+                request.Compression
             ),
             EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
                 sourceFile,

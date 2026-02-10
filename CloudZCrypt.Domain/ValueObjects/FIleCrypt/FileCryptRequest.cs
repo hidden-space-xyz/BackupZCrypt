@@ -11,5 +11,6 @@ public sealed record FileCryptRequest(
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     EncryptOperation Operation,
     NameObfuscationMode NameObfuscation,
+    CompressionMode Compression = CompressionMode.None,
     bool ProceedOnWarnings = false
 );
