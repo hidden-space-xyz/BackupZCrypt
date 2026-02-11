@@ -71,7 +71,7 @@ internal sealed class FileCryptRequestValidator(
 
                     if (fileSize == 0)
                     {
-                    errors.Add(Messages.SourceFileEmpty);
+                        errors.Add(Messages.SourceFileEmpty);
                     }
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
@@ -83,7 +83,7 @@ internal sealed class FileCryptRequestValidator(
                     );
                     if (files.Length == 0)
                     {
-                    errors.Add(Messages.SourceDirectoryEmpty);
+                        errors.Add(Messages.SourceDirectoryEmpty);
                     }
                 }
             }
@@ -115,9 +115,9 @@ internal sealed class FileCryptRequestValidator(
 
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
-                    errors.Add(
-                        string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
-                    );
+                        errors.Add(
+                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
+                        );
                     }
 
                     try
@@ -279,9 +279,13 @@ internal sealed class FileCryptRequestValidator(
                     long available = systemStorage.GetAvailableFreeSpace(destinationDrive);
                     if (available >= 0 && available < requiredSpace)
                     {
-                    warnings.Add(
-                        string.Format(Messages.LowDiskSpaceFormat, ByteSizeFormatter.Format(available), ByteSizeFormatter.Format(requiredSpace))
-                    );
+                        warnings.Add(
+                            string.Format(
+                                Messages.LowDiskSpaceFormat,
+                                ByteSizeFormatter.Format(available),
+                                ByteSizeFormatter.Format(requiredSpace)
+                            )
+                        );
                     }
                 }
             }
@@ -296,13 +300,15 @@ internal sealed class FileCryptRequestValidator(
                 int fileCount = files.Length;
                 if (fileCount > 10000)
                 {
-                warnings.Add(
-                    string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
-                );
+                    warnings.Add(
+                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
+                    );
                 }
                 else if (fileCount > 1000)
                 {
-                warnings.Add(string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0")));
+                    warnings.Add(
+                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0"))
+                    );
                 }
             }
 
@@ -331,7 +337,10 @@ internal sealed class FileCryptRequestValidator(
             if (hasExistingFiles)
             {
                 warnings.Add(
-                    string.Format(Messages.DestinationExistingFilesFormat, existingFileCount.ToString("N0"))
+                    string.Format(
+                        Messages.DestinationExistingFilesFormat,
+                        existingFileCount.ToString("N0")
+                    )
                 );
             }
 

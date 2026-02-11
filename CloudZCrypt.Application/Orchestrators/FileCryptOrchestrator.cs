@@ -70,7 +70,9 @@ internal sealed class FileCryptOrchestrator(
         }
         catch (Exception ex)
         {
-            return Result<FileCryptResult>.Failure(string.Format(Messages.UnexpectedErrorFormat, ex.Message));
+            return Result<FileCryptResult>.Failure(
+                string.Format(Messages.UnexpectedErrorFormat, ex.Message)
+            );
         }
     }
 

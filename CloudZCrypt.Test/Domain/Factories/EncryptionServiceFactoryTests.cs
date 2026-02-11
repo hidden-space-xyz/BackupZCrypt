@@ -32,6 +32,7 @@ internal sealed class EncryptionServiceFactoryTests
     public void Create_UnregisteredAlgorithm_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _factory.Create(EncryptionAlgorithm.Serpent));
+            _factory.Create(EncryptionAlgorithm.Serpent)
+        );
     }
 }

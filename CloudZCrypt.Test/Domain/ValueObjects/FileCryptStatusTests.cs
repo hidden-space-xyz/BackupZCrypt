@@ -21,50 +21,47 @@ internal sealed class FileCryptStatusTests
     [Test]
     public void Constructor_NegativeProcessedFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(-1, 5, 0, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new FileCryptStatus(-1, 5, 0, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, -1, 0, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, -1, 0, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeProcessedBytes_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 0, -1, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, 0, -1, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeTotalBytes_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 0, 0, -1, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, 0, 0, -1, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeElapsed_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1)));
+            new FileCryptStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1))
+        );
     }
 
     [Test]
     public void Constructor_ProcessedFilesExceedTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(6, 5, 0, 100, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new FileCryptStatus(6, 5, 0, 100, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_ProcessedBytesExceedTotalBytes_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 5, 200, 100, TimeSpan.Zero));
+            new FileCryptStatus(0, 5, 200, 100, TimeSpan.Zero)
+        );
     }
 
     [Test]

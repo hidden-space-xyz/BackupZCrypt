@@ -41,8 +41,7 @@ internal sealed class Sha512ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_FileDoesNotExist_Returns128CharHash()
     {
-        string result = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
+        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result, Does.EndWith(".czc"));
         string hashPart = Path.GetFileNameWithoutExtension(result);
@@ -52,10 +51,8 @@ internal sealed class Sha512ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DeterministicForSamePath()
     {
-        string result1 = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
+        string result1 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
+        string result2 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result1, Is.EqualTo(result2));
     }
@@ -63,10 +60,8 @@ internal sealed class Sha512ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DifferentPathsProduceDifferentHashes()
     {
-        string result1 = _strategy.ObfuscateFileName(
-            @"C:\path1\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(
-            @"C:\path2\file.txt", "file.czc");
+        string result1 = _strategy.ObfuscateFileName(@"C:\path1\file.txt", "file.czc");
+        string result2 = _strategy.ObfuscateFileName(@"C:\path2\file.txt", "file.czc");
 
         Assert.That(result1, Is.Not.EqualTo(result2));
     }
@@ -74,8 +69,7 @@ internal sealed class Sha512ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_PreservesExtension()
     {
-        string result = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.dat");
+        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.dat");
 
         Assert.That(result, Does.EndWith(".dat"));
     }

@@ -39,16 +39,24 @@ internal sealed class FileCryptSingleFileServiceTests
         _progress = Substitute.For<IProgress<FileCryptStatus>>();
 
         _service = new FileCryptSingleFileService(
-            _encryptionFactory, _obfuscationFactory, _fileOps);
+            _encryptionFactory,
+            _obfuscationFactory,
+            _fileOps
+        );
     }
 
     private static FileCryptRequest CreateRequest(
-        EncryptOperation operation = EncryptOperation.Encrypt) =>
+        EncryptOperation operation = EncryptOperation.Encrypt
+    ) =>
         new(
-            @"C:\source\file.txt", @"C:\dest\file.czc",
-            "StrongP@ss1", "StrongP@ss1",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.Argon2id,
-            operation, NameObfuscationMode.None
+            @"C:\source\file.txt",
+            @"C:\dest\file.czc",
+            "StrongP@ss1",
+            "StrongP@ss1",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            operation,
+            NameObfuscationMode.None
         );
 
     [Test]
@@ -57,16 +65,26 @@ internal sealed class FileCryptSingleFileServiceTests
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
         _fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
-        _obfuscationStrategy.ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
+        _obfuscationStrategy
+            .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
             .Returns("file.czc");
-        _encryptionStrategy.EncryptFileAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        _encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .Returns(true);
 
         Result<FileCryptResult> result = await _service.ProcessAsync(
-            @"C:\source\file.txt", @"C:\dest\file.czc",
-            CreateRequest(), _progress, CancellationToken.None);
+            @"C:\source\file.txt",
+            @"C:\dest\file.czc",
+            CreateRequest(),
+            _progress,
+            CancellationToken.None
+        );
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.IsSuccess, Is.True);
@@ -78,14 +96,22 @@ internal sealed class FileCryptSingleFileServiceTests
     public async Task ProcessAsync_Decrypt_SuccessfulDecryption_ReturnsSuccess()
     {
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(200L);
-        _encryptionStrategy.DecryptFileAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>())
+        _encryptionStrategy
+            .DecryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>()
+            )
             .Returns(true);
 
         Result<FileCryptResult> result = await _service.ProcessAsync(
-            @"C:\source\file.czc", @"C:\dest\file.txt",
-            CreateRequest(EncryptOperation.Decrypt), _progress, CancellationToken.None);
+            @"C:\source\file.czc",
+            @"C:\dest\file.txt",
+            CreateRequest(EncryptOperation.Decrypt),
+            _progress,
+            CancellationToken.None
+        );
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.IsSuccess, Is.True);
@@ -97,8 +123,12 @@ internal sealed class FileCryptSingleFileServiceTests
         string manifestPath = @$"C:\source\{FileCryptConstants.ManifestFileName}";
 
         Result<FileCryptResult> result = await _service.ProcessAsync(
-            manifestPath, @"C:\dest\manifest",
-            CreateRequest(EncryptOperation.Decrypt), _progress, CancellationToken.None);
+            manifestPath,
+            @"C:\dest\manifest",
+            CreateRequest(EncryptOperation.Decrypt),
+            _progress,
+            CancellationToken.None
+        );
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.ProcessedFiles, Is.EqualTo(0));
@@ -110,16 +140,26 @@ internal sealed class FileCryptSingleFileServiceTests
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
         _fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
-        _obfuscationStrategy.ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
+        _obfuscationStrategy
+            .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
             .Returns("file.czc");
-        _encryptionStrategy.EncryptFileAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        _encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .ThrowsAsync(new EncryptionInvalidPasswordException());
 
         Result<FileCryptResult> result = await _service.ProcessAsync(
-            @"C:\source\file.txt", @"C:\dest\file.czc",
-            CreateRequest(), _progress, CancellationToken.None);
+            @"C:\source\file.txt",
+            @"C:\dest\file.czc",
+            CreateRequest(),
+            _progress,
+            CancellationToken.None
+        );
 
         Assert.That(result.IsSuccess, Is.False);
     }
@@ -130,16 +170,26 @@ internal sealed class FileCryptSingleFileServiceTests
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
         _fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
-        _obfuscationStrategy.ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
+        _obfuscationStrategy
+            .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
             .Returns("file.czc");
-        _encryptionStrategy.EncryptFileAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        _encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .Returns(true);
 
         await _service.ProcessAsync(
-            @"C:\source\file.txt", @"C:\dest\file.czc",
-            CreateRequest(), _progress, CancellationToken.None);
+            @"C:\source\file.txt",
+            @"C:\dest\file.czc",
+            CreateRequest(),
+            _progress,
+            CancellationToken.None
+        );
 
         _progress.Received(2).Report(Arg.Any<FileCryptStatus>());
     }
@@ -150,16 +200,26 @@ internal sealed class FileCryptSingleFileServiceTests
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
         _fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\obfuscated.czc");
-        _obfuscationStrategy.ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
+        _obfuscationStrategy
+            .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
             .Returns("obfuscated.czc");
-        _encryptionStrategy.EncryptFileAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        _encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .Returns(true);
 
         await _service.ProcessAsync(
-            @"C:\source\file.txt", @"C:\dest\file.czc",
-            CreateRequest(), _progress, CancellationToken.None);
+            @"C:\source\file.txt",
+            @"C:\dest\file.czc",
+            CreateRequest(),
+            _progress,
+            CancellationToken.None
+        );
 
         _obfuscationStrategy.Received(1).ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>());
     }

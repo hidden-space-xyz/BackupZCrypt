@@ -41,8 +41,7 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_FileDoesNotExist_UsesPathHash()
     {
-        string result = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
+        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result, Does.EndWith(".czc"));
         string hashPart = Path.GetFileNameWithoutExtension(result);
@@ -52,10 +51,8 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DeterministicForSamePath()
     {
-        string result1 = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.czc");
+        string result1 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
+        string result2 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result1, Is.EqualTo(result2));
     }
@@ -63,10 +60,8 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DifferentPathsProduceDifferentHashes()
     {
-        string result1 = _strategy.ObfuscateFileName(
-            @"C:\path1\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(
-            @"C:\path2\file.txt", "file.czc");
+        string result1 = _strategy.ObfuscateFileName(@"C:\path1\file.txt", "file.czc");
+        string result2 = _strategy.ObfuscateFileName(@"C:\path2\file.txt", "file.czc");
 
         Assert.That(result1, Is.Not.EqualTo(result2));
     }
@@ -74,8 +69,7 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_PreservesExtension()
     {
-        string result = _strategy.ObfuscateFileName(
-            @"C:\nonexistent\file.txt", "file.jpg");
+        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.jpg");
 
         Assert.That(result, Does.EndWith(".jpg"));
     }

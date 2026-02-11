@@ -44,8 +44,7 @@ internal sealed class PasswordServiceTests
     [Test]
     public void AnalyzePasswordStrength_StrongPassword_ReturnsHighScore()
     {
-        PasswordStrengthAnalysis result = _service.AnalyzePasswordStrength(
-            "Kj9$mP2!xL7&nQ4#wR8@");
+        PasswordStrengthAnalysis result = _service.AnalyzePasswordStrength("Kj9$mP2!xL7&nQ4#wR8@");
 
         Assert.That(result.Strength, Is.EqualTo(PasswordStrength.Strong));
         Assert.That(result.Score, Is.GreaterThanOrEqualTo(85));
@@ -95,8 +94,7 @@ internal sealed class PasswordServiceTests
     [Test]
     public void AnalyzePasswordStrength_DescriptionContainsStrengthLabel()
     {
-        PasswordStrengthAnalysis result = _service.AnalyzePasswordStrength(
-            "Kj9$mP2!xL7&nQ4#wR8@");
+        PasswordStrengthAnalysis result = _service.AnalyzePasswordStrength("Kj9$mP2!xL7&nQ4#wR8@");
 
         Assert.That(result.Description, Does.Contain("Strong"));
     }
@@ -116,7 +114,9 @@ internal sealed class PasswordServiceTests
     public void GeneratePassword_ValidParameters_ReturnsCorrectLength()
     {
         string password = _service.GeneratePassword(
-            16, PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase);
+            16,
+            PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase
+        );
 
         Assert.That(password, Has.Length.EqualTo(16));
     }
@@ -124,8 +124,7 @@ internal sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_IncludeNumbers_ContainsDigits()
     {
-        string password = _service.GeneratePassword(
-            50, PasswordGenerationOptions.IncludeNumbers);
+        string password = _service.GeneratePassword(50, PasswordGenerationOptions.IncludeNumbers);
 
         Assert.That(password.Any(char.IsDigit), Is.True);
     }
@@ -133,8 +132,7 @@ internal sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_IncludeUppercase_ContainsUppercase()
     {
-        string password = _service.GeneratePassword(
-            50, PasswordGenerationOptions.IncludeUppercase);
+        string password = _service.GeneratePassword(50, PasswordGenerationOptions.IncludeUppercase);
 
         Assert.That(password.Any(char.IsUpper), Is.True);
     }
@@ -142,8 +140,7 @@ internal sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_IncludeLowercase_ContainsLowercase()
     {
-        string password = _service.GeneratePassword(
-            50, PasswordGenerationOptions.IncludeLowercase);
+        string password = _service.GeneratePassword(50, PasswordGenerationOptions.IncludeLowercase);
 
         Assert.That(password.Any(char.IsLower), Is.True);
     }
@@ -152,7 +149,9 @@ internal sealed class PasswordServiceTests
     public void GeneratePassword_IncludeSpecialChars_ContainsSpecial()
     {
         string password = _service.GeneratePassword(
-            50, PasswordGenerationOptions.IncludeSpecialCharacters);
+            50,
+            PasswordGenerationOptions.IncludeSpecialCharacters
+        );
 
         Assert.That(password.Any(c => !char.IsLetterOrDigit(c)), Is.True);
     }
@@ -163,9 +162,10 @@ internal sealed class PasswordServiceTests
         string password = _service.GeneratePassword(
             100,
             PasswordGenerationOptions.IncludeUppercase
-            | PasswordGenerationOptions.IncludeLowercase
-            | PasswordGenerationOptions.IncludeNumbers
-            | PasswordGenerationOptions.ExcludeSimilarCharacters);
+                | PasswordGenerationOptions.IncludeLowercase
+                | PasswordGenerationOptions.IncludeNumbers
+                | PasswordGenerationOptions.ExcludeSimilarCharacters
+        );
 
         string similarChars = "il1Lo0O";
         Assert.That(password.Any(c => similarChars.Contains(c)), Is.False);
@@ -175,30 +175,37 @@ internal sealed class PasswordServiceTests
     public void GeneratePassword_ZeroLength_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            _service.GeneratePassword(0, PasswordGenerationOptions.IncludeLowercase));
+            _service.GeneratePassword(0, PasswordGenerationOptions.IncludeLowercase)
+        );
     }
 
     [Test]
     public void GeneratePassword_NegativeLength_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            _service.GeneratePassword(-5, PasswordGenerationOptions.IncludeLowercase));
+            _service.GeneratePassword(-5, PasswordGenerationOptions.IncludeLowercase)
+        );
     }
 
     [Test]
     public void GeneratePassword_NoOptions_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            _service.GeneratePassword(10, PasswordGenerationOptions.None));
+            _service.GeneratePassword(10, PasswordGenerationOptions.None)
+        );
     }
 
     [Test]
     public void GeneratePassword_TwoCallsProduceDifferentResults()
     {
         string p1 = _service.GeneratePassword(
-            32, PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase);
+            32,
+            PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase
+        );
         string p2 = _service.GeneratePassword(
-            32, PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase);
+            32,
+            PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeLowercase
+        );
 
         Assert.That(p1, Is.Not.EqualTo(p2));
     }

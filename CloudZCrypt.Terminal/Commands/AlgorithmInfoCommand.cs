@@ -14,7 +14,9 @@ internal sealed class AlgorithmInfoCommand(
     public void Execute()
     {
         AnsiConsole.Write(
-            new Rule($"[bold cyan]{Messages.AlgorithmInformation}[/]").RuleStyle(Style.Parse("grey"))
+            new Rule($"[bold cyan]{Messages.AlgorithmInformation}[/]").RuleStyle(
+                Style.Parse("grey")
+            )
         );
         AnsiConsole.WriteLine();
 

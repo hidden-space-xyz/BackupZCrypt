@@ -26,7 +26,9 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
 
     private static int PromptLength() =>
         AnsiConsole.Prompt(
-            new TextPrompt<int>($"[green]{Messages.PasswordLengthPrompt}[/] {Messages.PasswordLengthRange}")
+            new TextPrompt<int>(
+                $"[green]{Messages.PasswordLengthPrompt}[/] {Messages.PasswordLengthRange}"
+            )
                 .DefaultValue(128)
                 .Validate(l =>
                     l is >= 16 and <= 256
@@ -41,9 +43,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
             new MultiSelectionPrompt<string>()
                 .Title($"[green]{Messages.IncludePrompt}[/]")
                 .Required()
-                .InstructionsText(
-                    $"[grey]{Messages.ToggleInstructions}[/]"
-                )
+                .InstructionsText($"[grey]{Messages.ToggleInstructions}[/]")
                 .AddChoices(
                     Messages.OptionUppercase,
                     Messages.OptionLowercase,
@@ -105,8 +105,6 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
 
         AnsiConsole.Write(passwordPanel);
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(
-            $"⚠  [yellow]{Messages.PasswordStorageWarning}[/]"
-        );
+        AnsiConsole.MarkupLine($"⚠  [yellow]{Messages.PasswordStorageWarning}[/]");
     }
 }

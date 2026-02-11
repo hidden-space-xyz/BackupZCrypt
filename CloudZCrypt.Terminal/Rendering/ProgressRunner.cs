@@ -30,7 +30,10 @@ internal static class ProgressRunner
             )
             .StartAsync(async ctx =>
             {
-                ProgressTask task = ctx.AddTask($"[cyan]{string.Format(Messages.OperationIngFormat, operationName)}[/]", maxValue: 100);
+                ProgressTask task = ctx.AddTask(
+                    $"[cyan]{string.Format(Messages.OperationIngFormat, operationName)}[/]",
+                    maxValue: 100
+                );
 
                 Progress<FileCryptStatus> progress = new(update =>
                 {

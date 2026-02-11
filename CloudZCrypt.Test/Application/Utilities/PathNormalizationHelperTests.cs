@@ -8,7 +8,10 @@ internal sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_ValidPath_ReturnsNormalized()
     {
-        string? result = PathNormalizationHelper.TryNormalize(@"C:\temp\file.txt", out string? error);
+        string? result = PathNormalizationHelper.TryNormalize(
+            @"C:\temp\file.txt",
+            out string? error
+        );
 
         Assert.That(error, Is.Null);
         Assert.That(result, Is.Not.Null);
@@ -37,7 +40,9 @@ internal sealed class PathNormalizationHelperTests
     public void TryNormalize_InvalidPath_ReturnsNullAndError()
     {
         string? result = PathNormalizationHelper.TryNormalize(
-            new string('\0', 5), out string? error);
+            new string('\0', 5),
+            out string? error
+        );
 
         Assert.That(result, Is.Null);
         Assert.That(error, Is.Not.Null);

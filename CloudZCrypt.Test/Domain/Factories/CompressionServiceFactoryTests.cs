@@ -43,7 +43,6 @@ internal sealed class CompressionServiceFactoryTests
     [Test]
     public void Create_UnregisteredMode_ThrowsArgumentOutOfRangeException()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _factory.Create(CompressionMode.LZMA));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _factory.Create(CompressionMode.LZMA));
     }
 }

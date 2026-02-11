@@ -131,7 +131,9 @@ internal sealed class FileCryptSingleFileService(
                 request.Password,
                 request.KeyDerivationAlgorithm
             ),
-            _ => throw new NotSupportedException(string.Format(Messages.UnsupportedOperationFormat, request.Operation)),
+            _ => throw new NotSupportedException(
+                string.Format(Messages.UnsupportedOperationFormat, request.Operation)
+            ),
         };
     }
 

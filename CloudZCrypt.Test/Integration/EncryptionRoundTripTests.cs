@@ -49,7 +49,9 @@ internal sealed class EncryptionRoundTripTests
     [TestCase(EncryptionAlgorithm.ChaCha20, KeyDerivationAlgorithm.PBKDF2)]
     [TestCase(EncryptionAlgorithm.Camellia, KeyDerivationAlgorithm.PBKDF2)]
     public async Task EncryptAndDecryptFile_AllAlgorithms_PBKDF2_RoundTrip(
-        EncryptionAlgorithm algorithm, KeyDerivationAlgorithm kdf)
+        EncryptionAlgorithm algorithm,
+        KeyDerivationAlgorithm kdf
+    )
     {
         string originalContent = "This is a test file for encryption round trip!";
         string sourceFile = CreateTestFile("original.txt", originalContent);
@@ -60,7 +62,11 @@ internal sealed class EncryptionRoundTripTests
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(algorithm);
 
         bool encryptResult = await strategy.EncryptFileAsync(
-            sourceFile, encryptedFile, password, kdf);
+            sourceFile,
+            encryptedFile,
+            password,
+            kdf
+        );
         Assert.That(encryptResult, Is.True);
         Assert.That(File.Exists(encryptedFile), Is.True);
 
@@ -69,7 +75,11 @@ internal sealed class EncryptionRoundTripTests
         Assert.That(encryptedBytes, Is.Not.EqualTo(originalBytes));
 
         bool decryptResult = await strategy.DecryptFileAsync(
-            encryptedFile, decryptedFile, password, kdf);
+            encryptedFile,
+            decryptedFile,
+            password,
+            kdf
+        );
         Assert.That(decryptResult, Is.True);
         Assert.That(File.Exists(decryptedFile), Is.True);
 
@@ -81,7 +91,9 @@ internal sealed class EncryptionRoundTripTests
     [TestCase(EncryptionAlgorithm.Aes, CompressionMode.GZip)]
     [TestCase(EncryptionAlgorithm.Aes, CompressionMode.BZip2)]
     public async Task EncryptAndDecryptFile_AllCompressionModes_RoundTrip(
-        EncryptionAlgorithm algorithm, CompressionMode compression)
+        EncryptionAlgorithm algorithm,
+        CompressionMode compression
+    )
     {
         string originalContent = string.Concat(Enumerable.Repeat("Compressible data block. ", 200));
         string sourceFile = CreateTestFile($"compress-test-{compression}.txt", originalContent);
@@ -92,11 +104,20 @@ internal sealed class EncryptionRoundTripTests
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(algorithm);
 
         bool encryptResult = await strategy.EncryptFileAsync(
-            sourceFile, encryptedFile, password, KeyDerivationAlgorithm.PBKDF2, compression);
+            sourceFile,
+            encryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2,
+            compression
+        );
         Assert.That(encryptResult, Is.True);
 
         bool decryptResult = await strategy.DecryptFileAsync(
-            encryptedFile, decryptedFile, password, KeyDerivationAlgorithm.PBKDF2);
+            encryptedFile,
+            decryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2
+        );
         Assert.That(decryptResult, Is.True);
 
         string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
@@ -113,11 +134,21 @@ internal sealed class EncryptionRoundTripTests
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
         await strategy.EncryptFileAsync(
-            sourceFile, encryptedFile, "CorrectPassword1!", KeyDerivationAlgorithm.PBKDF2);
+            sourceFile,
+            encryptedFile,
+            "CorrectPassword1!",
+            KeyDerivationAlgorithm.PBKDF2
+        );
 
-        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionInvalidPasswordException>(async () =>
-            await strategy.DecryptFileAsync(
-                encryptedFile, decryptedFile, "WrongPassword1!!", KeyDerivationAlgorithm.PBKDF2));
+        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionInvalidPasswordException>(
+            async () =>
+                await strategy.DecryptFileAsync(
+                    encryptedFile,
+                    decryptedFile,
+                    "WrongPassword1!!",
+                    KeyDerivationAlgorithm.PBKDF2
+                )
+        );
     }
 
     [Test]
@@ -128,9 +159,15 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(async () =>
-            await strategy.EncryptFileAsync(
-                nonExistent, dest, "Password1234!", KeyDerivationAlgorithm.PBKDF2));
+        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(
+            async () =>
+                await strategy.EncryptFileAsync(
+                    nonExistent,
+                    dest,
+                    "Password1234!",
+                    KeyDerivationAlgorithm.PBKDF2
+                )
+        );
     }
 
     [Test]
@@ -141,9 +178,15 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(async () =>
-            await strategy.DecryptFileAsync(
-                nonExistent, dest, "Password1234!", KeyDerivationAlgorithm.PBKDF2));
+        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(
+            async () =>
+                await strategy.DecryptFileAsync(
+                    nonExistent,
+                    dest,
+                    "Password1234!",
+                    KeyDerivationAlgorithm.PBKDF2
+                )
+        );
     }
 
     [Test]
@@ -155,9 +198,15 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionCorruptedFileException>(async () =>
-            await strategy.DecryptFileAsync(
-                corruptedFile, dest, "Password1234!", KeyDerivationAlgorithm.PBKDF2));
+        Assert.ThrowsAsync<CloudZCrypt.Domain.Exceptions.EncryptionCorruptedFileException>(
+            async () =>
+                await strategy.DecryptFileAsync(
+                    corruptedFile,
+                    dest,
+                    "Password1234!",
+                    KeyDerivationAlgorithm.PBKDF2
+                )
+        );
     }
 
     [TestCase(EncryptionAlgorithm.Aes)]
@@ -171,11 +220,18 @@ internal sealed class EncryptionRoundTripTests
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(algorithm);
 
         bool result = await strategy.CreateEncryptedFileAsync(
-            plaintext, encryptedFile, password, KeyDerivationAlgorithm.PBKDF2);
+            plaintext,
+            encryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2
+        );
         Assert.That(result, Is.True);
 
         byte[] readBack = await strategy.ReadEncryptedFileAsync(
-            encryptedFile, password, KeyDerivationAlgorithm.PBKDF2);
+            encryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2
+        );
 
         Assert.That(readBack, Is.EqualTo(plaintext));
     }
@@ -195,10 +251,18 @@ internal sealed class EncryptionRoundTripTests
         IEncryptionAlgorithmStrategy strategy = _encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
         await strategy.EncryptFileAsync(
-            sourceFile, encryptedFile, password, KeyDerivationAlgorithm.PBKDF2);
+            sourceFile,
+            encryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2
+        );
 
         await strategy.DecryptFileAsync(
-            encryptedFile, decryptedFile, password, KeyDerivationAlgorithm.PBKDF2);
+            encryptedFile,
+            decryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2
+        );
 
         byte[] decryptedData = await File.ReadAllBytesAsync(decryptedFile);
         Assert.That(decryptedData, Is.EqualTo(largeData));

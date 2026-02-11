@@ -29,7 +29,9 @@ public class Result<T> : Result
     public T Value =>
         IsSuccess
             ? _value!
-            : throw new InvalidOperationException(Domain.Resources.Messages.CannotAccessFailedResultValue);
+            : throw new InvalidOperationException(
+                Domain.Resources.Messages.CannotAccessFailedResultValue
+            );
 
     public static Result<T> Success(T value) => new(value, true, Array.Empty<string>());
 

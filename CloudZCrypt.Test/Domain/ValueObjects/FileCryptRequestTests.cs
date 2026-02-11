@@ -38,9 +38,14 @@ internal sealed class FileCryptRequestTests
     public void Record_DefaultCompression_IsNone()
     {
         FileCryptRequest request = new(
-            @"C:\source", @"C:\dest", "pass", "pass",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            @"C:\source",
+            @"C:\dest",
+            "pass",
+            "pass",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
         Assert.That(request.Compression, Is.EqualTo(CompressionMode.None));
@@ -51,9 +56,14 @@ internal sealed class FileCryptRequestTests
     public void Record_WithExpression_CreatesModifiedCopy()
     {
         FileCryptRequest original = new(
-            @"C:\source", @"C:\dest", "pass", "pass",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            @"C:\source",
+            @"C:\dest",
+            "pass",
+            "pass",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
         FileCryptRequest modified = original with { Operation = EncryptOperation.Decrypt };

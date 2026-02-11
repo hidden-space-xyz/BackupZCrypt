@@ -29,11 +29,17 @@ internal sealed class FileCryptRequestValidatorTests
         string dest = @"C:\dest\file.czc",
         string password = "StrongP@ss1",
         string confirmPassword = "StrongP@ss1",
-        EncryptOperation operation = EncryptOperation.Encrypt) =>
+        EncryptOperation operation = EncryptOperation.Encrypt
+    ) =>
         new(
-            source, dest, password, confirmPassword,
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.Argon2id,
-            operation, NameObfuscationMode.None
+            source,
+            dest,
+            password,
+            confirmPassword,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            operation,
+            NameObfuscationMode.None
         );
 
     [Test]
@@ -65,7 +71,9 @@ internal sealed class FileCryptRequestValidatorTests
     public async Task AnalyzeErrors_PasswordMismatch_ReturnsError()
     {
         FileCryptRequest request = CreateRequest(
-            password: "StrongP@ss1", confirmPassword: "DifferentPass1");
+            password: "StrongP@ss1",
+            confirmPassword: "DifferentPass1"
+        );
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -81,7 +89,9 @@ internal sealed class FileCryptRequestValidatorTests
     public async Task AnalyzeErrors_PasswordWithLeadingSpaces_ReturnsError()
     {
         FileCryptRequest request = CreateRequest(
-            password: " StrongP@ss1", confirmPassword: " StrongP@ss1");
+            password: " StrongP@ss1",
+            confirmPassword: " StrongP@ss1"
+        );
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -98,7 +108,9 @@ internal sealed class FileCryptRequestValidatorTests
     {
         string longPassword = new('A', 1001);
         FileCryptRequest request = CreateRequest(
-            password: longPassword, confirmPassword: longPassword);
+            password: longPassword,
+            confirmPassword: longPassword
+        );
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         _fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -146,13 +158,13 @@ internal sealed class FileCryptRequestValidatorTests
     {
         _fileOps.FileExists(Arg.Any<string>()).Returns(false);
         _fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
-        _fileOps.GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _fileOps
+            .GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<string>());
         _storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         _storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest(
-            source: @"C:\source\dir", dest: @"C:\dest\dir");
+        FileCryptRequest request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
 
         IReadOnlyList<string> errors = await _validator.AnalyzeErrorsAsync(request);
 

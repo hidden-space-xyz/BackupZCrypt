@@ -32,6 +32,7 @@ internal sealed class KeyDerivationServiceFactoryTests
     public void Create_UnregisteredAlgorithm_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _factory.Create(KeyDerivationAlgorithm.PBKDF2));
+            _factory.Create(KeyDerivationAlgorithm.PBKDF2)
+        );
     }
 }

@@ -44,6 +44,7 @@ internal sealed class NameObfuscationServiceFactoryTests
     public void Create_UnregisteredMode_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _factory.Create(NameObfuscationMode.Sha256));
+            _factory.Create(NameObfuscationMode.Sha256)
+        );
     }
 }

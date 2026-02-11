@@ -31,7 +31,10 @@ internal static class ResultRenderer
             .AddColumn(new TableColumn($"[bold]{Messages.Metric}[/]").LeftAligned())
             .AddColumn(new TableColumn($"[bold]{Messages.Value}[/]").RightAligned());
 
-        resultTable.AddRow(Messages.FilesProcessed, $"{response.ProcessedFiles} / {response.TotalFiles}");
+        resultTable.AddRow(
+            Messages.FilesProcessed,
+            $"{response.ProcessedFiles} / {response.TotalFiles}"
+        );
         resultTable.AddRow(Messages.TotalSize, ByteSizeFormatter.Format(response.TotalBytes));
         resultTable.AddRow(Messages.ElapsedTime, response.ElapsedTime.ToString(@"hh\:mm\:ss\.fff"));
         resultTable.AddRow(
@@ -41,7 +44,10 @@ internal static class ResultRenderer
 
         if (response.FailedFiles > 0)
         {
-            resultTable.AddRow($"[red]{Messages.FailedFiles}[/]", $"[red]{response.FailedFiles}[/]");
+            resultTable.AddRow(
+                $"[red]{Messages.FailedFiles}[/]",
+                $"[red]{response.FailedFiles}[/]"
+            );
         }
 
         AnsiConsole.Write(resultTable);

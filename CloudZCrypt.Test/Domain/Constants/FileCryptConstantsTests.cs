@@ -20,7 +20,9 @@ internal sealed class FileCryptConstantsTests
     [Test]
     public void ManifestFileName_EndsWithAppFileExtension()
     {
-        Assert.That(FileCryptConstants.ManifestFileName,
-            Does.EndWith(FileCryptConstants.AppFileExtension));
+        Assert.That(
+            FileCryptConstants.ManifestFileName,
+            Does.EndWith(FileCryptConstants.AppFileExtension)
+        );
     }
 }

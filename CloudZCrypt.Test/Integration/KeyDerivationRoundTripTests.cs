@@ -28,8 +28,9 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
     public void AllStrategies_DeriveKey_ProducesCorrectSize(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IKeyDerivationAlgorithmStrategy>>();
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IKeyDerivationAlgorithmStrategy>
+        >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
@@ -44,8 +45,9 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
     public void AllStrategies_SameInputsSameOutput(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IKeyDerivationAlgorithmStrategy>>();
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IKeyDerivationAlgorithmStrategy>
+        >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
@@ -61,8 +63,9 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
     public void AllStrategies_DifferentPasswordsDifferentKeys(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IKeyDerivationAlgorithmStrategy>>();
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IKeyDerivationAlgorithmStrategy>
+        >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
@@ -78,8 +81,9 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
     public void AllStrategies_HaveMetadata(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IKeyDerivationAlgorithmStrategy>>();
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IKeyDerivationAlgorithmStrategy>
+        >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
 

@@ -31,8 +31,9 @@ internal sealed class GZipCompressionStrategyTests
     public async Task CompressAndDecompress_RoundTrip_ReturnsOriginalData()
     {
         byte[] original = Encoding.UTF8.GetBytes(
-            "This is a test string that should be compressible. " +
-            "This is a test string that should be compressible.");
+            "This is a test string that should be compressible. "
+                + "This is a test string that should be compressible."
+        );
         using MemoryStream input = new(original);
 
         Stream compressed = await _strategy.CompressAsync(input);

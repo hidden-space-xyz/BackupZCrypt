@@ -110,8 +110,9 @@ internal sealed class FileCryptDirectoryService(
         ConcurrentBag<string> errors = [];
         string? fatalError = null;
 
-        using CancellationTokenSource linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken
+        );
 
         int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
         ParallelOptions parallelOptions = new()
@@ -145,7 +146,9 @@ internal sealed class FileCryptDirectoryService(
                             destinationPath,
                             destinationFilePath
                         );
-                        manifestEntries.Add(new ManifestEntry(relativePath, obfuscatedRelativePath));
+                        manifestEntries.Add(
+                            new ManifestEntry(relativePath, obfuscatedRelativePath)
+                        );
                     }
                     else
                     {
@@ -156,7 +159,10 @@ internal sealed class FileCryptDirectoryService(
 
                         if (
                             manifestMap is not null
-                            && manifestMap.TryGetValue(relativePath, out string? originalRelativePath)
+                            && manifestMap.TryGetValue(
+                                relativePath,
+                                out string? originalRelativePath
+                            )
                         )
                         {
                             destinationFilePath = fileOperations.CombinePath(
@@ -228,11 +234,15 @@ internal sealed class FileCryptDirectoryService(
                     }
                     catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
                     {
-                        errors.Add(string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message));
+                        errors.Add(
+                            string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message)
+                        );
                     }
                     catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
                     {
-                        errors.Add(string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message));
+                        errors.Add(
+                            string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message)
+                        );
                     }
                     catch (Domain.Exceptions.EncryptionCipherException ex)
                     {

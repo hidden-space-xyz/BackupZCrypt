@@ -38,35 +38,38 @@ internal sealed class FileCryptResultTests
     public void Constructor_NegativeElapsedTime_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0));
+            new FileCryptResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0)
+        );
     }
 
     [Test]
     public void Constructor_NegativeTotalBytes_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, -1, 0, 0));
+            new FileCryptResult(true, TimeSpan.Zero, -1, 0, 0)
+        );
     }
 
     [Test]
     public void Constructor_NegativeProcessedFiles_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, 0, -1, 0));
+            new FileCryptResult(true, TimeSpan.Zero, 0, -1, 0)
+        );
     }
 
     [Test]
     public void Constructor_NegativeTotalFiles_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, 0, 0, -1));
+            new FileCryptResult(true, TimeSpan.Zero, 0, 0, -1)
+        );
     }
 
     [Test]
     public void Constructor_ProcessedFilesExceedTotalFiles_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, 0, 5, 3));
+        Assert.Throws<ValidationException>(() => new FileCryptResult(true, TimeSpan.Zero, 0, 5, 3));
     }
 
     [Test]

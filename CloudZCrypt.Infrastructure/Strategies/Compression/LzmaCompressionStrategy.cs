@@ -22,7 +22,11 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream inputBuffer = new();
-        await inputStream.CopyToAsync(inputBuffer, StreamConstants.CopyBufferSize, cancellationToken);
+        await inputStream.CopyToAsync(
+            inputBuffer,
+            StreamConstants.CopyBufferSize,
+            cancellationToken
+        );
         long uncompressedSize = inputBuffer.Length;
         inputBuffer.Position = 0;
 
@@ -30,7 +34,13 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         LzmaEncoderProperties encoderProps = new(false);
         byte[] lzmaProperties;
 
-        using (LzmaStream lzma = new(encoderProps, false, new NonClosingStreamWrapper(compressedBuffer)))
+        using (
+            LzmaStream lzma = new(
+                encoderProps,
+                false,
+                new NonClosingStreamWrapper(compressedBuffer)
+            )
+        )
         {
             await inputBuffer.CopyToAsync(lzma, StreamConstants.CopyBufferSize, cancellationToken);
             lzmaProperties = lzma.Properties;
@@ -44,7 +54,11 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         await output.WriteAsync(BitConverter.GetBytes(compressedSize), cancellationToken);
 
         compressedBuffer.Position = 0;
-        await compressedBuffer.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
+        await compressedBuffer.CopyToAsync(
+            output,
+            StreamConstants.CopyBufferSize,
+            cancellationToken
+        );
 
         output.Position = 0;
         return output;

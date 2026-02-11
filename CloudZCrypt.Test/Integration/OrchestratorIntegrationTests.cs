@@ -54,15 +54,22 @@ internal sealed class OrchestratorIntegrationTests
         string password = "IntegrationP@ss1";
 
         FileCryptRequest encryptRequest = new(
-            sourceFile, encryptedFile, password, password,
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None,
+            sourceFile,
+            encryptedFile,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
             ProceedOnWarnings: true
         );
 
         Progress<FileCryptStatus> progress = new();
         Result<FileCryptResult> encryptResult = await _orchestrator.ExecuteAsync(
-            encryptRequest, progress);
+            encryptRequest,
+            progress
+        );
 
         Assert.That(encryptResult.IsSuccess, Is.True);
         Assert.That(encryptResult.Value.IsSuccess, Is.True);
@@ -73,14 +80,21 @@ internal sealed class OrchestratorIntegrationTests
         string decryptedFile = Path.Combine(decryptedDir, "test.txt");
 
         FileCryptRequest decryptRequest = new(
-            encryptedFile, decryptedFile, password, password,
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt, NameObfuscationMode.None,
+            encryptedFile,
+            decryptedFile,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.None,
             ProceedOnWarnings: true
         );
 
         Result<FileCryptResult> decryptResult = await _orchestrator.ExecuteAsync(
-            decryptRequest, progress);
+            decryptRequest,
+            progress
+        );
 
         Assert.That(decryptResult.IsSuccess, Is.True);
         Assert.That(decryptResult.Value.IsSuccess, Is.True);
@@ -97,9 +111,14 @@ internal sealed class OrchestratorIntegrationTests
         string destFile = Path.Combine(_destDir, "test.czc");
 
         FileCryptRequest request = new(
-            sourceFile, destFile, "", "",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            sourceFile,
+            destFile,
+            "",
+            "",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
         Progress<FileCryptStatus> progress = new();
@@ -117,9 +136,14 @@ internal sealed class OrchestratorIntegrationTests
         string destFile = Path.Combine(_destDir, "test.czc");
 
         FileCryptRequest request = new(
-            sourceFile, destFile, "Password1!", "DifferentPass1!",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            sourceFile,
+            destFile,
+            "Password1!",
+            "DifferentPass1!",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
         Progress<FileCryptStatus> progress = new();
@@ -136,9 +160,14 @@ internal sealed class OrchestratorIntegrationTests
         string destFile = Path.Combine(_destDir, "out.czc");
 
         FileCryptRequest request = new(
-            nonExistent, destFile, "Password1!", "Password1!",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            nonExistent,
+            destFile,
+            "Password1!",
+            "Password1!",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
         Progress<FileCryptStatus> progress = new();
@@ -158,9 +187,14 @@ internal sealed class OrchestratorIntegrationTests
         string password = "IntegrationP@ss1";
 
         FileCryptRequest request = new(
-            _sourceDir, encryptedDir, password, password,
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt, NameObfuscationMode.None,
+            _sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
             ProceedOnWarnings: true
         );
 

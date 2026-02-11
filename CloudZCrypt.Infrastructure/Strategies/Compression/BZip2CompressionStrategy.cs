@@ -23,7 +23,13 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream output = new();
-        using (BZip2Stream bzip2 = new(new NonClosingStreamWrapper(output), CompressionMode.Compress, false))
+        using (
+            BZip2Stream bzip2 = new(
+                new NonClosingStreamWrapper(output),
+                CompressionMode.Compress,
+                false
+            )
+        )
         {
             await inputStream.CopyToAsync(bzip2, StreamConstants.CopyBufferSize, cancellationToken);
         }

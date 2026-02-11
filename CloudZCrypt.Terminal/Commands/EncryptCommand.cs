@@ -23,7 +23,8 @@ internal sealed class EncryptCommand(
 {
     public async Task ExecuteAsync(EncryptOperation operation)
     {
-        string operationName = operation == EncryptOperation.Encrypt ? Messages.Encrypt : Messages.Decrypt;
+        string operationName =
+            operation == EncryptOperation.Encrypt ? Messages.Encrypt : Messages.Decrypt;
 
         AnsiConsole.Write(
             new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
@@ -67,7 +68,11 @@ internal sealed class EncryptCommand(
             selectedCompression
         );
 
-        if (!AnsiConsole.Confirm($"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
+        if (
+            !AnsiConsole.Confirm(
+                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
+            )
+        )
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
@@ -142,11 +147,15 @@ internal sealed class EncryptCommand(
         }
         catch (ValidationException ex)
         {
-            AnsiConsole.MarkupLine($"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
         }
     }
 
@@ -194,7 +203,9 @@ internal sealed class EncryptCommand(
 
     private static string PromptSourcePath() =>
         AnsiConsole.Prompt(
-            new TextPrompt<string>($"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}")
+            new TextPrompt<string>(
+                $"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}"
+            )
                 .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
                 .Validate(p =>
                     !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p))

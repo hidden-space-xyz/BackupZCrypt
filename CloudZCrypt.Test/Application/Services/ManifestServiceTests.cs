@@ -22,10 +22,14 @@ internal sealed class ManifestServiceTests
 
     private static FileCryptRequest CreateRequest() =>
         new(
-            @"C:\source", @"C:\dest",
-            "StrongP@ss1", "StrongP@ss1",
-            EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Encrypt, NameObfuscationMode.None
+            @"C:\source",
+            @"C:\dest",
+            "StrongP@ss1",
+            "StrongP@ss1",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None
         );
 
     [Test]
@@ -39,7 +43,11 @@ internal sealed class ManifestServiceTests
         try
         {
             Dictionary<string, string>? result = await _service.TryReadManifestAsync(
-                tempDir, encryptionService, CreateRequest(), CancellationToken.None);
+                tempDir,
+                encryptionService,
+                CreateRequest(),
+                CancellationToken.None
+            );
 
             Assert.That(result, Is.Null);
         }
@@ -56,7 +64,12 @@ internal sealed class ManifestServiceTests
             Substitute.For<IEncryptionAlgorithmStrategy>();
 
         IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
-            [], @"C:\dest", encryptionService, CreateRequest(), CancellationToken.None);
+            [],
+            @"C:\dest",
+            encryptionService,
+            CreateRequest(),
+            CancellationToken.None
+        );
 
         Assert.That(errors, Is.Empty);
     }
@@ -66,9 +79,14 @@ internal sealed class ManifestServiceTests
     {
         IEncryptionAlgorithmStrategy encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
-        encryptionService.CreateEncryptedFileAsync(
-                Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        encryptionService
+            .CreateEncryptedFileAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .Returns(false);
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
@@ -79,7 +97,12 @@ internal sealed class ManifestServiceTests
             List<ManifestEntry> entries = [new("original.txt", "obfuscated.czc")];
 
             IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
-                entries, tempDir, encryptionService, CreateRequest(), CancellationToken.None);
+                entries,
+                tempDir,
+                encryptionService,
+                CreateRequest(),
+                CancellationToken.None
+            );
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Does.Contain("Failed"));
@@ -95,9 +118,14 @@ internal sealed class ManifestServiceTests
     {
         IEncryptionAlgorithmStrategy encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
-        encryptionService.CreateEncryptedFileAsync(
-                Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(), Arg.Any<CompressionMode>())
+        encryptionService
+            .CreateEncryptedFileAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>()
+            )
             .ThrowsAsync(new IOException("disk error"));
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
@@ -108,7 +136,12 @@ internal sealed class ManifestServiceTests
             List<ManifestEntry> entries = [new("a.txt", "b.czc")];
 
             IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
-                entries, tempDir, encryptionService, CreateRequest(), CancellationToken.None);
+                entries,
+                tempDir,
+                encryptionService,
+                CreateRequest(),
+                CancellationToken.None
+            );
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Does.Contain("disk error"));
@@ -132,13 +165,21 @@ internal sealed class ManifestServiceTests
 
             IEncryptionAlgorithmStrategy encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
-            encryptionService.DecryptFileAsync(
-                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                    Arg.Any<KeyDerivationAlgorithm>())
+            encryptionService
+                .DecryptFileAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Any<KeyDerivationAlgorithm>()
+                )
                 .Returns(false);
 
             Dictionary<string, string>? result = await _service.TryReadManifestAsync(
-                tempDir, encryptionService, CreateRequest(), CancellationToken.None);
+                tempDir,
+                encryptionService,
+                CreateRequest(),
+                CancellationToken.None
+            );
 
             Assert.That(result, Is.Null);
         }

@@ -23,7 +23,13 @@ internal class GZipCompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream output = new();
-        using (GZipStream gzip = new(new NonClosingStreamWrapper(output), CompressionMode.Compress, CompressionLevel.Default))
+        using (
+            GZipStream gzip = new(
+                new NonClosingStreamWrapper(output),
+                CompressionMode.Compress,
+                CompressionLevel.Default
+            )
+        )
         {
             await inputStream.CopyToAsync(gzip, StreamConstants.CopyBufferSize, cancellationToken);
         }

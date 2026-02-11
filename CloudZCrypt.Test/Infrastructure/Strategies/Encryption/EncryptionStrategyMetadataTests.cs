@@ -31,8 +31,9 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia, "Camellia-256 GCM")]
     public void DisplayName_ReturnsExpected(EncryptionAlgorithm algorithm, string expectedName)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IEncryptionAlgorithmStrategy>>();
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>
+        >();
 
         IEncryptionAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
 
@@ -46,8 +47,9 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia)]
     public void Description_IsNotEmpty(EncryptionAlgorithm algorithm)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IEncryptionAlgorithmStrategy>>();
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>
+        >();
 
         IEncryptionAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
 
@@ -61,8 +63,9 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia)]
     public void Summary_IsNotEmpty(EncryptionAlgorithm algorithm)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IEncryptionAlgorithmStrategy>>();
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>
+        >();
 
         IEncryptionAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
 
@@ -72,8 +75,9 @@ internal sealed class EncryptionStrategyMetadataTests
     [Test]
     public void AllAlgorithms_HaveUniqueIds()
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IEncryptionAlgorithmStrategy>>();
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>
+        >();
 
         EncryptionAlgorithm[] ids = strategies.Select(s => s.Id).ToArray();
 
@@ -83,8 +87,9 @@ internal sealed class EncryptionStrategyMetadataTests
     [Test]
     public void AllAlgorithms_AreRegistered()
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies =
-            _provider.GetRequiredService<IEnumerable<IEncryptionAlgorithmStrategy>>();
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>
+        >();
 
         Assert.That(strategies.Count(), Is.EqualTo(5));
     }

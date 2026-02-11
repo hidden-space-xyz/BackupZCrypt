@@ -111,7 +111,9 @@ internal sealed class ManifestService : IManifestService
             );
             if (!manifestOk)
             {
-                errors.Add(string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath));
+                errors.Add(
+                    string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath)
+                );
             }
         }
         catch (Exception ex)
