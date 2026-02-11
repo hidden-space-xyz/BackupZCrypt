@@ -1,4 +1,5 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 
@@ -23,7 +24,7 @@ internal class GZipCompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream output = new();
-        using (GZipStream gzip = new(output, CompressionMode.Compress, CompressionLevel.Default))
+        using (GZipStream gzip = new(new NonClosingStreamWrapper(output), CompressionMode.Compress, CompressionLevel.Default))
         {
             await inputStream.CopyToAsync(gzip, cancellationToken);
         }

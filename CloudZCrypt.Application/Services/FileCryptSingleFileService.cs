@@ -64,14 +64,6 @@ internal sealed class FileCryptSingleFileService(
                 destFile = ApplyObfuscationToDestination(destFile, sourcePath, obfuscationService);
             }
 
-            bool result = await ProcessSingleFileAsync(
-                encryptionService,
-                sourcePath,
-                destFile,
-                request,
-                cancellationToken
-            );
-
             long fileSize = 0;
             try
             {
@@ -81,6 +73,16 @@ internal sealed class FileCryptSingleFileService(
             {
                 // ignorar
             }
+
+            progress?.Report(new FileCryptStatus(0, 1, 0, fileSize, TimeSpan.Zero));
+
+            bool result = await ProcessSingleFileAsync(
+                encryptionService,
+                sourcePath,
+                destFile,
+                request,
+                cancellationToken
+            );
 
             progress?.Report(new FileCryptStatus(1, 1, fileSize, fileSize, stopwatch.Elapsed));
             stopwatch.Stop();

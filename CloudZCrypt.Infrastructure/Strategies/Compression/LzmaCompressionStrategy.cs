@@ -1,4 +1,5 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors.LZMA;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Compression;
@@ -30,18 +31,19 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         LzmaEncoderProperties encoderProps = new(false);
         byte[] lzmaProperties;
 
-        using (LzmaStream lzma = new(encoderProps, false, compressedBuffer))
+        using (LzmaStream lzma = new(encoderProps, false, new NonClosingStreamWrapper(compressedBuffer)))
         {
             await inputBuffer.CopyToAsync(lzma, cancellationToken);
             lzmaProperties = lzma.Properties;
         }
 
-        byte[] compressedData = compressedBuffer.ToArray();
-
         MemoryStream output = new();
         await output.WriteAsync(lzmaProperties, cancellationToken);
         await output.WriteAsync(BitConverter.GetBytes(uncompressedSize), cancellationToken);
-        await output.WriteAsync(compressedData, cancellationToken);
+
+        compressedBuffer.Position = 0;
+        await compressedBuffer.CopyToAsync(output, cancellationToken);
+
         output.Position = 0;
         return output;
     }

@@ -1,4 +1,5 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
 
@@ -23,7 +24,7 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream output = new();
-        using (BZip2Stream bzip2 = new(output, CompressionMode.Compress, false))
+        using (BZip2Stream bzip2 = new(new NonClosingStreamWrapper(output), CompressionMode.Compress, false))
         {
             await inputStream.CopyToAsync(bzip2, cancellationToken);
         }
