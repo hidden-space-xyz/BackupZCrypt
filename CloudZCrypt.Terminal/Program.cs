@@ -19,19 +19,19 @@ IFileCryptOrchestrator orchestrator = provider.GetRequiredService<IFileCryptOrch
 IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
 [
-    .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.DisplayName),
+    .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.Id),
 ];
 List<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies =
 [
-    .. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.DisplayName),
+    .. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.Id),
 ];
 List<INameObfuscationStrategy> nameObfuscationStrategies =
 [
-    .. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.DisplayName),
+    .. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.Id),
 ];
 List<ICompressionStrategy> compressionStrategies =
 [
-    .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.DisplayName),
+    .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
 ];
 
 EncryptCommand encryptCommand = new(
