@@ -38,9 +38,12 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
             lzmaProperties = lzma.Properties;
         }
 
+        long compressedSize = compressedBuffer.Length;
+
         MemoryStream output = new();
         await output.WriteAsync(lzmaProperties, cancellationToken);
         await output.WriteAsync(BitConverter.GetBytes(uncompressedSize), cancellationToken);
+        await output.WriteAsync(BitConverter.GetBytes(compressedSize), cancellationToken);
 
         compressedBuffer.Position = 0;
         await compressedBuffer.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
@@ -57,12 +60,16 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         byte[] properties = new byte[5];
         await inputStream.ReadExactlyAsync(properties, cancellationToken);
 
-        byte[] sizeBytes = new byte[8];
-        await inputStream.ReadExactlyAsync(sizeBytes, cancellationToken);
-        long uncompressedSize = BitConverter.ToInt64(sizeBytes, 0);
+        byte[] uncompressedSizeBytes = new byte[8];
+        await inputStream.ReadExactlyAsync(uncompressedSizeBytes, cancellationToken);
+        long uncompressedSize = BitConverter.ToInt64(uncompressedSizeBytes, 0);
+
+        byte[] compressedSizeBytes = new byte[8];
+        await inputStream.ReadExactlyAsync(compressedSizeBytes, cancellationToken);
+        long compressedSize = BitConverter.ToInt64(compressedSizeBytes, 0);
 
         MemoryStream output = new();
-        using (LzmaStream lzma = new(properties, inputStream, uncompressedSize))
+        using (LzmaStream lzma = new(properties, inputStream, compressedSize, uncompressedSize))
         {
             await lzma.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }

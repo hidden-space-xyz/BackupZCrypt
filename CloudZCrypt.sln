@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Composition", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Terminal", "CloudZCrypt.Terminal\CloudZCrypt.Terminal.csproj", "{9E77EF84-B770-47F7-9779-1972C8547A75}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudZCrypt.Test", "CloudZCrypt.Test\CloudZCrypt.Test.csproj", "{6CFDBC38-0FB9-44DA-A341-D7E2A851879E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{9E77EF84-B770-47F7-9779-1972C8547A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E77EF84-B770-47F7-9779-1972C8547A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E77EF84-B770-47F7-9779-1972C8547A75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CFDBC38-0FB9-44DA-A341-D7E2A851879E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6CFDBC38-0FB9-44DA-A341-D7E2A851879E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6CFDBC38-0FB9-44DA-A341-D7E2A851879E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6CFDBC38-0FB9-44DA-A341-D7E2A851879E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
