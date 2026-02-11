@@ -74,19 +74,29 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
         int length
     )
     {
+        string strengthColor = analysis.Strength switch
+        {
+            PasswordStrength.VeryWeak => "red",
+            PasswordStrength.Weak => "red",
+            PasswordStrength.Fair => "yellow",
+            PasswordStrength.Good => "green",
+            PasswordStrength.Strong => "bold green",
+            _ => "white",
+        };
+
         AnsiConsole.WriteLine();
         Panel passwordPanel = new(
             new Rows(
                 new Markup($"[bold]{Markup.Escape(generated)}[/]"),
                 new Text(""),
                 new Markup(
-                    $"[dim]Strength:[/] [bold green]{analysis.Strength}[/] — {Markup.Escape(analysis.Description)}"
+                    $"[dim]Strength:[/] [{strengthColor}]{Markup.Escape(analysis.Description)}[/]"
                 ),
                 new Markup($"[dim]Length:[/]   {length} characters")
             )
         )
         {
-            Header = new PanelHeader("[bold cyan]🔐 Generated Password[/]"),
+            Header = new PanelHeader("🔐 [bold cyan]Generated Password[/]"),
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Cyan1),
             Padding = new Padding(1, 1),
@@ -95,7 +105,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
         AnsiConsole.Write(passwordPanel);
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(
-            "[yellow]⚠ Store this password securely — it cannot be recovered if lost![/]"
+            "⚠  [yellow]Store this password securely — it cannot be recovered if lost![/]"
         );
     }
 }

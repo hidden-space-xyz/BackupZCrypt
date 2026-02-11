@@ -8,7 +8,7 @@ internal static class BannerRenderer
     {
         AnsiConsole.Write(new FigletText("CloudZCrypt").Color(Color.Cyan1).Centered());
         AnsiConsole.Write(
-            new Rule("[dim]Secure File Encryption Tool[/]")
+            new Rule("[dim]A simple military-grade file encryption tool[/]")
                 .RuleStyle(Style.Parse("grey"))
                 .Centered()
         );

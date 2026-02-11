@@ -156,10 +156,10 @@ internal sealed class EncryptCommand(
         CancellationToken cancellationToken
     )
     {
-        AnsiConsole.MarkupLine("[yellow]⚠ Warnings:[/]");
+        AnsiConsole.MarkupLine("⚠  [yellow]Warnings:[/]");
         foreach (string warning in response.Warnings)
         {
-            AnsiConsole.MarkupLine($"  [yellow]⚠ {Markup.Escape(warning)}[/]");
+            AnsiConsole.MarkupLine($"  - [yellow]{Markup.Escape(warning)}[/]");
         }
         AnsiConsole.WriteLine();
 
@@ -246,7 +246,7 @@ internal sealed class EncryptCommand(
             _ => "white",
         };
         AnsiConsole.MarkupLine(
-            $"  Password strength: [{strengthColor}]{strength.Strength}[/] — {Markup.Escape(strength.Description)}"
+            $"  Password strength: [{strengthColor}]{Markup.Escape(strength.Description)}[/]"
         );
         AnsiConsole.WriteLine();
     }

@@ -20,8 +20,7 @@ internal sealed class TerminalApplication(
 
             string choice = await AnsiConsole.PromptAsync(
                 new SelectionPrompt<string>()
-                    .Title("[bold cyan]Main Menu[/]")
-                    .HighlightStyle(Style.Parse("bold green"))
+                    .HighlightStyle(Style.Parse("bold cyan"))
                     .AddChoices(
                         "🔒 Encrypt",
                         "🔓 Decrypt",
