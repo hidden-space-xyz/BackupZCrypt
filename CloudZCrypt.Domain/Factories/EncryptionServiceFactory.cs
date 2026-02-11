@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
+using CloudZCrypt.Domain.Resources;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 
 namespace CloudZCrypt.Domain.Factories;
@@ -17,7 +18,7 @@ internal class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy
         return !strategies.TryGetValue(algorithm, out IEncryptionAlgorithmStrategy? strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
-                $"Encryption algorithm '{algorithm}' is not registered."
+                string.Format(Messages.EncryptionAlgorithmNotRegisteredFormat, algorithm)
             )
             : strategy;
     }

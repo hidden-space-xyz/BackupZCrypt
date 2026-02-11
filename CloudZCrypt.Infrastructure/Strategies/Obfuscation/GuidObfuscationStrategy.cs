@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
 
@@ -7,13 +8,11 @@ internal class GuidObfuscationStrategy : INameObfuscationStrategy
 {
     public NameObfuscationMode Id => NameObfuscationMode.Guid;
 
-    public string DisplayName => "GUID";
+    public string DisplayName => Messages.GuidDisplayName;
 
-    public string Description =>
-        "Replaces the filename with a randomly generated GUID. "
-        + "Provides strong privacy by producing non-predictable, non-correlatable names for each file.";
+    public string Description => Messages.GuidDescription;
 
-    public string Summary => "Best for maximum privacy (random)";
+    public string Summary => Messages.GuidSummary;
 
     public string ObfuscateFileName(string sourceFilePath, string originalFileName)
     {

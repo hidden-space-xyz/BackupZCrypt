@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Application.ValueObjects.Manifest;
@@ -48,7 +49,7 @@ internal sealed class FileCryptDirectoryService(
                     0,
                     0,
                     0,
-                    errors: ["No files found in the source directory."]
+                    errors: [Messages.NoFilesInSourceDirectory]
                 )
             );
         }
@@ -189,7 +190,7 @@ internal sealed class FileCryptDirectoryService(
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
-                            $"Operation stopped due to access denied error: {ex.Message}",
+                            string.Format(Messages.AccessDeniedStoppedFormat, ex.Message),
                             null
                         );
                         await linkedCts.CancelAsync();
@@ -199,7 +200,7 @@ internal sealed class FileCryptDirectoryService(
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
-                            $"Operation stopped due to insufficient disk space: {ex.Message}",
+                            string.Format(Messages.InsufficientSpaceStoppedFormat, ex.Message),
                             null
                         );
                         await linkedCts.CancelAsync();
@@ -209,7 +210,7 @@ internal sealed class FileCryptDirectoryService(
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
-                            $"Operation stopped due to invalid password: {ex.Message}",
+                            string.Format(Messages.InvalidPasswordStoppedFormat, ex.Message),
                             null
                         );
                         await linkedCts.CancelAsync();
@@ -219,7 +220,7 @@ internal sealed class FileCryptDirectoryService(
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
-                            $"Operation stopped due to key derivation error: {ex.Message}",
+                            string.Format(Messages.KeyDerivationStoppedFormat, ex.Message),
                             null
                         );
                         await linkedCts.CancelAsync();
@@ -227,19 +228,19 @@ internal sealed class FileCryptDirectoryService(
                     }
                     catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
                     {
-                        errors.Add($"File not found (skipped): {file} - {ex.Message}");
+                        errors.Add(string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message));
                     }
                     catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
                     {
-                        errors.Add($"Corrupted file (skipped): {file} - {ex.Message}");
+                        errors.Add(string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message));
                     }
                     catch (Domain.Exceptions.EncryptionCipherException ex)
                     {
-                        errors.Add($"Cipher error for file: {file} - {ex.Message}");
+                        errors.Add(string.Format(Messages.CipherErrorFormat, file, ex.Message));
                     }
                     catch (Domain.Exceptions.EncryptionException ex)
                     {
-                        errors.Add($"Encryption error for file: {file} - {ex.Message}");
+                        errors.Add(string.Format(Messages.EncryptionErrorFormat, file, ex.Message));
                     }
 
                     long fileSize = 0;
@@ -294,7 +295,7 @@ internal sealed class FileCryptDirectoryService(
 
         return errorList.Count > 0 && processedFiles == 0
             ? Result<FileCryptResult>.Failure(
-                $"Failed to process any files. Errors: {string.Join("; ", errorList)}"
+                string.Format(Messages.AllFilesFailedFormat, string.Join("; ", errorList))
             )
             : Result<FileCryptResult>.Success(
                 new FileCryptResult(

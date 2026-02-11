@@ -1,4 +1,5 @@
 using CloudZCrypt.Application.Orchestrators.Interfaces;
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.Utilities.Helpers;
 using CloudZCrypt.Application.Validators.Interfaces;
@@ -37,7 +38,7 @@ internal sealed class FileCryptOrchestrator(
 
         if (!isDirectory && !isFile)
         {
-            return Result<FileCryptResult>.Failure("Source path does not exist.");
+            return Result<FileCryptResult>.Failure(Messages.SourcePathNotExist);
         }
 
         await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
@@ -69,7 +70,7 @@ internal sealed class FileCryptOrchestrator(
         }
         catch (Exception ex)
         {
-            return Result<FileCryptResult>.Failure($"An unexpected error occurred: {ex.Message}");
+            return Result<FileCryptResult>.Failure(string.Format(Messages.UnexpectedErrorFormat, ex.Message));
         }
     }
 

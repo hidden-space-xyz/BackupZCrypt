@@ -1,3 +1,4 @@
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.Utilities.Formatters;
 using CloudZCrypt.Application.Utilities.Helpers;
@@ -45,13 +46,13 @@ internal sealed class FileCryptRequestValidator(
 
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
-            errors.Add("Please select a source file or directory to process.");
+            errors.Add(Messages.SourcePathEmpty);
         }
         else if (
             !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath)
         )
         {
-            errors.Add($"The selected source path does not exist: {sourcePath}");
+            errors.Add(string.Format(Messages.SourcePathNotExistFormat, sourcePath));
         }
         else
         {
@@ -70,7 +71,7 @@ internal sealed class FileCryptRequestValidator(
 
                     if (fileSize == 0)
                     {
-                        errors.Add("The selected file is empty and cannot be processed.");
+                    errors.Add(Messages.SourceFileEmpty);
                     }
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
@@ -82,25 +83,23 @@ internal sealed class FileCryptRequestValidator(
                     );
                     if (files.Length == 0)
                     {
-                        errors.Add("The selected directory is empty - no files to process.");
+                    errors.Add(Messages.SourceDirectoryEmpty);
                     }
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                errors.Add(
-                    "Access denied to the source path. Please check permissions or run as administrator."
-                );
+                errors.Add(Messages.SourceAccessDenied);
             }
             catch (Exception ex)
             {
-                errors.Add($"Error accessing source path: {ex.Message}");
+                errors.Add(string.Format(Messages.SourceAccessErrorFormat, ex.Message));
             }
         }
 
         if (string.IsNullOrWhiteSpace(destinationPath))
         {
-            errors.Add("Please select a destination path.");
+            errors.Add(Messages.DestinationPathEmpty);
         }
         else
         {
@@ -116,9 +115,9 @@ internal sealed class FileCryptRequestValidator(
 
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
-                        errors.Add(
-                            $"The destination drive '{drive}' does not exist or is not accessible."
-                        );
+                    errors.Add(
+                        string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
+                    );
                     }
 
                     try
@@ -130,53 +129,49 @@ internal sealed class FileCryptRequestValidator(
                     }
                     catch (UnauthorizedAccessException)
                     {
-                        errors.Add(
-                            "Access denied to destination path. Please check permissions or run as administrator."
-                        );
+                        errors.Add(Messages.DestinationAccessDenied);
                     }
                     catch (Exception ex)
                     {
-                        errors.Add($"Cannot write to destination path: {ex.Message}");
+                        errors.Add(string.Format(Messages.DestinationWriteErrorFormat, ex.Message));
                     }
                 }
             }
             catch (Exception ex)
             {
-                errors.Add($"Invalid destination path: {ex.Message}");
+                errors.Add(string.Format(Messages.DestinationInvalidFormat, ex.Message));
             }
         }
 
         if (string.IsNullOrWhiteSpace(request.Password))
         {
-            errors.Add("Please enter a password for encryption/decryption.");
+            errors.Add(Messages.PasswordRequired);
         }
         else
         {
             if (request.Password.Length < 8)
             {
-                errors.Add("Password must be at least 8 characters long for security.");
+                errors.Add(Messages.PasswordTooShort);
             }
             if (request.Password.Length > 1000)
             {
-                errors.Add("Password is too long (maximum 1000 characters).");
+                errors.Add(Messages.PasswordTooLong);
             }
             if (request.Password.Trim() != request.Password)
             {
-                errors.Add("Password should not start or end with spaces.");
+                errors.Add(Messages.PasswordLeadingTrailingSpaces);
             }
         }
 
         if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
         {
-            errors.Add("Please confirm your password.");
+            errors.Add(Messages.ConfirmPasswordRequired);
         }
         else if (
             !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
         )
         {
-            errors.Add(
-                "Password and confirmation password do not match. Please check both fields."
-            );
+            errors.Add(Messages.PasswordMismatch);
         }
 
         if (!string.IsNullOrWhiteSpace(sourcePath) && !string.IsNullOrWhiteSpace(destinationPath))
@@ -193,9 +188,7 @@ internal sealed class FileCryptRequestValidator(
                         )
                     )
                     {
-                        errors.Add(
-                            "Source and destination files cannot be the same. Please choose a different destination."
-                        );
+                        errors.Add(Messages.SourceDestinationSameFile);
                     }
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
@@ -208,9 +201,7 @@ internal sealed class FileCryptRequestValidator(
                         )
                     )
                     {
-                        errors.Add(
-                            "Source and destination directories cannot be the same. Please choose a different destination."
-                        );
+                        errors.Add(Messages.SourceDestinationSameDirectory);
                     }
                     else if (
                         destinationPath.StartsWith(
@@ -219,9 +210,7 @@ internal sealed class FileCryptRequestValidator(
                         )
                     )
                     {
-                        errors.Add(
-                            "Destination directory cannot be inside the source directory. This would create a recursive operation."
-                        );
+                        errors.Add(Messages.DestinationInsideSource);
                     }
                     else if (
                         sourcePath.StartsWith(
@@ -230,9 +219,7 @@ internal sealed class FileCryptRequestValidator(
                         )
                     )
                     {
-                        errors.Add(
-                            "Source directory cannot be inside the destination directory. Please choose a different path."
-                        );
+                        errors.Add(Messages.SourceInsideDestination);
                     }
                 }
             }
@@ -292,9 +279,9 @@ internal sealed class FileCryptRequestValidator(
                     long available = systemStorage.GetAvailableFreeSpace(destinationDrive);
                     if (available >= 0 && available < requiredSpace)
                     {
-                        warnings.Add(
-                            $"Low disk space: Available {ByteSizeFormatter.Format(available)}, estimated need {ByteSizeFormatter.Format(requiredSpace)}"
-                        );
+                    warnings.Add(
+                        string.Format(Messages.LowDiskSpaceFormat, ByteSizeFormatter.Format(available), ByteSizeFormatter.Format(requiredSpace))
+                    );
                     }
                 }
             }
@@ -309,13 +296,13 @@ internal sealed class FileCryptRequestValidator(
                 int fileCount = files.Length;
                 if (fileCount > 10000)
                 {
-                    warnings.Add(
-                        $"Large operation: {fileCount:N0} files will be processed. This may take considerable time."
-                    );
+                warnings.Add(
+                    string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
+                );
                 }
                 else if (fileCount > 1000)
                 {
-                    warnings.Add($"Medium operation: {fileCount:N0} files will be processed.");
+                warnings.Add(string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0")));
                 }
             }
 
@@ -344,7 +331,7 @@ internal sealed class FileCryptRequestValidator(
             if (hasExistingFiles)
             {
                 warnings.Add(
-                    $"Destination contains {existingFileCount:N0} existing file(s) that may be overwritten."
+                    string.Format(Messages.DestinationExistingFilesFormat, existingFileCount.ToString("N0"))
                 );
             }
 
@@ -353,9 +340,7 @@ internal sealed class FileCryptRequestValidator(
             );
             if (strength.Score < 60)
             {
-                warnings.Add(
-                    "Password strength is below recommended level. Consider using a stronger password."
-                );
+                warnings.Add(Messages.WeakPasswordWarning);
             }
         }
         catch

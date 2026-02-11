@@ -1,6 +1,7 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Terminal.Commands;
 using CloudZCrypt.Terminal.Rendering;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal;
@@ -22,35 +23,38 @@ internal sealed class TerminalApplication(
                 new SelectionPrompt<string>()
                     .HighlightStyle(Style.Parse("bold cyan"))
                     .AddChoices(
-                        "🔒 Encrypt",
-                        "🔓 Decrypt",
-                        "🔑 Generate Password",
-                        "ℹ️ Algorithm Info",
-                        "❌ Exit"
+                        Messages.MenuEncrypt,
+                        Messages.MenuDecrypt,
+                        Messages.MenuGeneratePassword,
+                        Messages.MenuAlgorithmInfo,
+                        Messages.MenuExit
                     )
             );
 
-            switch (choice)
+            if (choice == Messages.MenuEncrypt)
             {
-                case "🔒 Encrypt":
-                    await encryptCommand.ExecuteAsync(EncryptOperation.Encrypt);
-                    break;
-                case "🔓 Decrypt":
-                    await encryptCommand.ExecuteAsync(EncryptOperation.Decrypt);
-                    break;
-                case "🔑 Generate Password":
-                    generatePasswordCommand.Execute();
-                    break;
-                case "ℹ️ Algorithm Info":
-                    algorithmInfoCommand.Execute();
-                    break;
-                case "❌ Exit":
-                    AnsiConsole.MarkupLine("[grey]Goodbye![/]");
-                    return;
+                await encryptCommand.ExecuteAsync(EncryptOperation.Encrypt);
+            }
+            else if (choice == Messages.MenuDecrypt)
+            {
+                await encryptCommand.ExecuteAsync(EncryptOperation.Decrypt);
+            }
+            else if (choice == Messages.MenuGeneratePassword)
+            {
+                generatePasswordCommand.Execute();
+            }
+            else if (choice == Messages.MenuAlgorithmInfo)
+            {
+                algorithmInfoCommand.Execute();
+            }
+            else if (choice == Messages.MenuExit)
+            {
+                AnsiConsole.MarkupLine($"[grey]{Messages.Goodbye}[/]");
+                return;
             }
 
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[dim]Press any key to return to the menu…[/]");
+            AnsiConsole.MarkupLine($"[dim]{Messages.PressAnyKey}[/]");
             Console.ReadKey(true);
         }
     }

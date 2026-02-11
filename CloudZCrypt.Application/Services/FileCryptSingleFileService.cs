@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.Constants;
@@ -52,7 +53,7 @@ internal sealed class FileCryptSingleFileService(
                         0,
                         0,
                         0,
-                        errors: ["Manifest file ignored during decryption."]
+                        errors: [Messages.ManifestIgnored]
                     )
                 );
             }
@@ -130,7 +131,7 @@ internal sealed class FileCryptSingleFileService(
                 request.Password,
                 request.KeyDerivationAlgorithm
             ),
-            _ => throw new NotSupportedException($"Unsupported operation: {request.Operation}"),
+            _ => throw new NotSupportedException(string.Format(Messages.UnsupportedOperationFormat, request.Operation)),
         };
     }
 

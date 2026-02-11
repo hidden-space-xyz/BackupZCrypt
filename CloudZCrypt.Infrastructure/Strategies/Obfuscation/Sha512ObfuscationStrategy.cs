@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
 
@@ -9,13 +10,11 @@ internal class Sha512ObfuscationStrategy : INameObfuscationStrategy
 {
     public NameObfuscationMode Id => NameObfuscationMode.Sha512;
 
-    public string DisplayName => "SHA-512";
+    public string DisplayName => Messages.Sha512DisplayName;
 
-    public string Description =>
-        "Replaces the filename with a 128‑character SHA‑512 hexadecimal digest computed from the file content. "
-        + "Offers stronger collision resistance than SHA‑256 at the cost of longer names; deterministic across identical content.";
+    public string Description => Messages.Sha512Description;
 
-    public string Summary => "Best for maximum collision resistance (128-char digest)";
+    public string Summary => Messages.Sha512Summary;
 
     public string ObfuscateFileName(string sourceFilePath, string originalFileName)
     {

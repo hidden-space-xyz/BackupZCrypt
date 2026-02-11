@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- BannerRenderer -->
+  <data name="BannerSubtitle" xml:space="preserve">
+    <value>A simple military-grade file encryption tool</value>
+  </data>
+  <!-- TerminalApplication menu -->
+  <data name="MenuEncrypt" xml:space="preserve">
+    <value>🔒 Encrypt</value>
+  </data>
+  <data name="MenuDecrypt" xml:space="preserve">
+    <value>🔓 Decrypt</value>
+  </data>
+  <data name="MenuGeneratePassword" xml:space="preserve">
+    <value>🔑 Generate Password</value>
+  </data>
+  <data name="MenuAlgorithmInfo" xml:space="preserve">
+    <value>ℹ️ Algorithm Info</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>❌ Exit</value>
+  </data>
+  <data name="Goodbye" xml:space="preserve">
+    <value>Goodbye!</value>
+  </data>
+  <data name="PressAnyKey" xml:space="preserve">
+    <value>Press any key to return to the menu…</value>
+  </data>
+  <!-- EncryptCommand -->
+  <data name="Encrypt" xml:space="preserve">
+    <value>Encrypt</value>
+  </data>
+  <data name="Decrypt" xml:space="preserve">
+    <value>Decrypt</value>
+  </data>
+  <data name="SourcePathPrompt" xml:space="preserve">
+    <value>Source path</value>
+  </data>
+  <data name="SourcePathHint" xml:space="preserve">
+    <value>(file or directory):</value>
+  </data>
+  <data name="PathCannotBeEmpty" xml:space="preserve">
+    <value>Path cannot be empty</value>
+  </data>
+  <data name="PathDoesNotExist" xml:space="preserve">
+    <value>Path does not exist</value>
+  </data>
+  <data name="DestinationPathPrompt" xml:space="preserve">
+    <value>Destination path</value>
+  </data>
+  <data name="PleaseEnterDestinationPath" xml:space="preserve">
+    <value>Please enter a destination path</value>
+  </data>
+  <data name="PasswordPrompt" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="PasswordCannotBeEmpty" xml:space="preserve">
+    <value>Password cannot be empty</value>
+  </data>
+  <data name="ConfirmPasswordPrompt" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="PasswordStrengthLabel" xml:space="preserve">
+    <value>Password strength:</value>
+  </data>
+  <data name="EncryptionAlgorithmPrompt" xml:space="preserve">
+    <value>Encryption algorithm:</value>
+  </data>
+  <data name="KeyDerivationAlgorithmPrompt" xml:space="preserve">
+    <value>Key derivation algorithm:</value>
+  </data>
+  <data name="NameObfuscationModePrompt" xml:space="preserve">
+    <value>Name obfuscation mode:</value>
+  </data>
+  <data name="CompressionModePrompt" xml:space="preserve">
+    <value>Compression mode:</value>
+  </data>
+  <data name="ProceedConfirmFormat" xml:space="preserve">
+    <value>Proceed with {0}?</value>
+  </data>
+  <data name="OperationCancelled" xml:space="preserve">
+    <value>Operation cancelled.</value>
+  </data>
+  <data name="Cancelling" xml:space="preserve">
+    <value>Cancelling…</value>
+  </data>
+  <data name="OperationCancelledByUser" xml:space="preserve">
+    <value>Operation cancelled by user.</value>
+  </data>
+  <data name="ValidationErrorFormat" xml:space="preserve">
+    <value>❌ Validation error: {0}</value>
+  </data>
+  <data name="UnexpectedErrorFormat" xml:space="preserve">
+    <value>❌ Unexpected error: {0}</value>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Warnings:</value>
+  </data>
+  <data name="ContinueDespiteWarningsFormat" xml:space="preserve">
+    <value>Continue with {0} despite warnings?</value>
+  </data>
+  <data name="SummaryTitle" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Setting" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Destination" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="EncryptionLabel" xml:space="preserve">
+    <value>Encryption</value>
+  </data>
+  <data name="KeyDerivationLabel" xml:space="preserve">
+    <value>Key Derivation</value>
+  </data>
+  <data name="NameObfuscationLabel" xml:space="preserve">
+    <value>Name Obfuscation</value>
+  </data>
+  <data name="CompressionLabel" xml:space="preserve">
+    <value>Compression</value>
+  </data>
+  <data name="FailedFormat" xml:space="preserve">
+    <value>❌ {0} failed: {1}</value>
+  </data>
+  <data name="ValidationErrors" xml:space="preserve">
+    <value>Validation errors:</value>
+  </data>
+  <data name="OperationIngFormat" xml:space="preserve">
+    <value>{0}ing…</value>
+  </data>
+  <data name="OperationIngFilesFormat" xml:space="preserve">
+    <value>{0}ing {1}/{2} files</value>
+  </data>
+  <!-- ResultRenderer -->
+  <data name="CompletedSuccessfully" xml:space="preserve">
+    <value>Completed successfully</value>
+  </data>
+  <data name="PartiallyCompleted" xml:space="preserve">
+    <value>Partially completed</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Results" xml:space="preserve">
+    <value>Results</value>
+  </data>
+  <data name="Metric" xml:space="preserve">
+    <value>Metric</value>
+  </data>
+  <data name="FilesProcessed" xml:space="preserve">
+    <value>Files processed</value>
+  </data>
+  <data name="TotalSize" xml:space="preserve">
+    <value>Total size</value>
+  </data>
+  <data name="ElapsedTime" xml:space="preserve">
+    <value>Elapsed time</value>
+  </data>
+  <data name="Throughput" xml:space="preserve">
+    <value>Throughput</value>
+  </data>
+  <data name="FailedFiles" xml:space="preserve">
+    <value>Failed files</value>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Errors:</value>
+  </data>
+  <!-- AlgorithmInfoCommand -->
+  <data name="AlgorithmInformation" xml:space="preserve">
+    <value>Algorithm Information</value>
+  </data>
+  <data name="EncryptionAlgorithms" xml:space="preserve">
+    <value>Encryption Algorithms</value>
+  </data>
+  <data name="KeyDerivationAlgorithms" xml:space="preserve">
+    <value>Key Derivation Algorithms</value>
+  </data>
+  <data name="NameObfuscationModes" xml:space="preserve">
+    <value>Name Obfuscation Modes</value>
+  </data>
+  <data name="CompressionModes" xml:space="preserve">
+    <value>Compression Modes</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <!-- GeneratePasswordCommand -->
+  <data name="PasswordGenerator" xml:space="preserve">
+    <value>Password Generator</value>
+  </data>
+  <data name="PasswordLengthPrompt" xml:space="preserve">
+    <value>Password length</value>
+  </data>
+  <data name="PasswordLengthRange" xml:space="preserve">
+    <value>(16–256):</value>
+  </data>
+  <data name="PasswordLengthError" xml:space="preserve">
+    <value>Length must be between 16 and 256</value>
+  </data>
+  <data name="IncludePrompt" xml:space="preserve">
+    <value>Include:</value>
+  </data>
+  <data name="ToggleInstructions" xml:space="preserve">
+    <value>(Press &lt;space&gt; to toggle, &lt;enter&gt; to confirm)</value>
+  </data>
+  <data name="OptionUppercase" xml:space="preserve">
+    <value>Uppercase (A-Z)</value>
+  </data>
+  <data name="OptionLowercase" xml:space="preserve">
+    <value>Lowercase (a-z)</value>
+  </data>
+  <data name="OptionNumbers" xml:space="preserve">
+    <value>Numbers (0-9)</value>
+  </data>
+  <data name="OptionSpecialChars" xml:space="preserve">
+    <value>Special characters (!@#$)</value>
+  </data>
+  <data name="StrengthLabel" xml:space="preserve">
+    <value>Strength:</value>
+  </data>
+  <data name="LengthLabel" xml:space="preserve">
+    <value>Length:</value>
+  </data>
+  <data name="CharactersLabel" xml:space="preserve">
+    <value>characters</value>
+  </data>
+  <data name="GeneratedPasswordHeader" xml:space="preserve">
+    <value>🔐 Generated Password</value>
+  </data>
+  <data name="PasswordStorageWarning" xml:space="preserve">
+    <value>Store this password securely — it cannot be recovered if lost!</value>
+  </data>
+</root>

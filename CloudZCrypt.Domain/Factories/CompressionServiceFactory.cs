@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
+using CloudZCrypt.Domain.Resources;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 
 namespace CloudZCrypt.Domain.Factories;
@@ -15,7 +16,7 @@ internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strat
         return !strategies.TryGetValue(mode, out ICompressionStrategy? strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(mode),
-                $"Compression mode '{mode}' is not registered."
+                string.Format(Messages.CompressionModeNotRegisteredFormat, mode)
             )
             : strategy;
     }

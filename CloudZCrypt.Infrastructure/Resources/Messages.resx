@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- AES -->
+  <data name="AesDisplayName" xml:space="preserve">
+    <value>AES-256 GCM</value>
+  </data>
+  <data name="AesDescription" xml:space="preserve">
+    <value>A NIST-standardized 128‑bit block cipher with a 256‑bit key, widely accelerated via AES-NI and ARMv8 Cryptography Extensions. Galois/Counter Mode (GCM) provides authenticated encryption with associated data (AEAD), combining high performance, confidentiality, and integrity.</value>
+  </data>
+  <data name="AesSummary" xml:space="preserve">
+    <value>Best for general purposes (with hardware acceleration)</value>
+  </data>
+  <!-- Serpent -->
+  <data name="SerpentDisplayName" xml:space="preserve">
+    <value>Serpent-256 GCM</value>
+  </data>
+  <data name="SerpentDescription" xml:space="preserve">
+    <value>A conservative 128‑bit block cipher finalist from the AES competition, designed with a large security margin and a 256‑bit key option. Typically slower than AES and Camellia. When wrapped in GCM it provides AEAD, but performance costs make it niche for high-assurance or defense-in-depth scenarios.</value>
+  </data>
+  <data name="SerpentSummary" xml:space="preserve">
+    <value>Best for high-security purposes (slow)</value>
+  </data>
+  <!-- Camellia -->
+  <data name="CamelliaDisplayName" xml:space="preserve">
+    <value>Camellia-256 GCM</value>
+  </data>
+  <data name="CamelliaDescription" xml:space="preserve">
+    <value>A 128‑bit block cipher with a 256‑bit key, jointly designed by NTT and Mitsubishi; performance and security margin comparable to AES. Supported in many international standards (RFCs, ISO/IEC) and suitable where non‑U.S.-origin algorithms or broader jurisdictional acceptance is desired. Used with GCM for AEAD.</value>
+  </data>
+  <data name="CamelliaSummary" xml:space="preserve">
+    <value>Best for international compliance</value>
+  </data>
+  <!-- ChaCha20 -->
+  <data name="ChaCha20DisplayName" xml:space="preserve">
+    <value>ChaCha20-Poly1305</value>
+  </data>
+  <data name="ChaCha20Description" xml:space="preserve">
+    <value>A modern ARX (Add-Rotate-XOR) stream cipher (ChaCha20) combined with the Poly1305 MAC to form a fast, timing‑attack‑resistant AEAD construction that performs especially well on devices lacking AES hardware acceleration. Standardized in RFC 8439 and widely deployed in TLS, SSH, QUIC, and WireGuard.</value>
+  </data>
+  <data name="ChaCha20Summary" xml:space="preserve">
+    <value>Best for general purposes (without hardware acceleration)</value>
+  </data>
+  <!-- Twofish -->
+  <data name="TwofishDisplayName" xml:space="preserve">
+    <value>Twofish-256 GCM</value>
+  </data>
+  <data name="TwofishDescription" xml:space="preserve">
+    <value>A flexible 128‑bit block cipher (up to 256‑bit keys), also an AES finalist. Offers solid cryptanalytic resilience with a different design philosophy (Feistel + key-dependent S‑boxes) for algorithmic diversity. Less commonly hardware-accelerated or standardized for AEAD modes.</value>
+  </data>
+  <data name="TwofishSummary" xml:space="preserve">
+    <value>Best for design diversity</value>
+  </data>
+  <!-- PBKDF2 -->
+  <data name="Pbkdf2DisplayName" xml:space="preserve">
+    <value>PBKDF2 (HMAC-SHA256)</value>
+  </data>
+  <data name="Pbkdf2Description" xml:space="preserve">
+    <value>A widely standardized (PKCS #5, RFC 8018, FIPS 140 allowed) iterative, CPU‑bound key derivation function using repeated HMAC-SHA256 applications. Simple and broadly implemented in virtually all cryptographic libraries. Lacks intrinsic memory hardness, making it comparatively cheaper to accelerate on GPUs/ASICs versus Argon2id or scrypt. Still appropriate where regulatory, legacy platform, or FIPS compliance requirements dominate, or when only conservative primitives are permitted. Security hinges on high iteration counts (cost parameter) and high‑entropy passwords.</value>
+  </data>
+  <data name="Pbkdf2Summary" xml:space="preserve">
+    <value>Best for maximum compatibility / legacy &amp; compliance needs</value>
+  </data>
+  <data name="Pbkdf2KeyDerivationError" xml:space="preserve">
+    <value>Error deriving key with PBKDF2</value>
+  </data>
+  <!-- Argon2id -->
+  <data name="Argon2idDisplayName" xml:space="preserve">
+    <value>Argon2id</value>
+  </data>
+  <data name="Argon2idDescription" xml:space="preserve">
+    <value>A modern memory‑hard password hashing and key derivation function (PHC winner). The "id" variant blends Argon2i (side‑channel resistant) and Argon2d (GPU/ASIC resistance) for balanced security. Tunable via: memory cost (m), iterations/time cost (t), and parallelism (p). Provides strong resistance to large‑scale brute force on GPUs, FPGAs, and ASICs by imposing substantial RAM requirements. Supports domain separation with distinct salt plus optional secret/data parameters. Recommended where modern security is prioritized over legacy compatibility.</value>
+  </data>
+  <data name="Argon2idSummary" xml:space="preserve">
+    <value>Best for maximum security / modern memory‑hard password hashing</value>
+  </data>
+  <data name="Argon2idKeyDerivationError" xml:space="preserve">
+    <value>Error deriving key with Argon2id</value>
+  </data>
+  <!-- Obfuscation: SHA-256 -->
+  <data name="Sha256DisplayName" xml:space="preserve">
+    <value>SHA-256</value>
+  </data>
+  <data name="Sha256Description" xml:space="preserve">
+    <value>Replaces the filename with a 64‑character SHA‑256 hexadecimal digest computed from the file content. Deterministic across identical content, enabling deduplication and content-addressable naming without leaking the original filename.</value>
+  </data>
+  <data name="Sha256Summary" xml:space="preserve">
+    <value>Best for content-addressed naming (64-char digest)</value>
+  </data>
+  <!-- Obfuscation: SHA-512 -->
+  <data name="Sha512DisplayName" xml:space="preserve">
+    <value>SHA-512</value>
+  </data>
+  <data name="Sha512Description" xml:space="preserve">
+    <value>Replaces the filename with a 128‑character SHA‑512 hexadecimal digest computed from the file content. Offers stronger collision resistance than SHA‑256 at the cost of longer names; deterministic across identical content.</value>
+  </data>
+  <data name="Sha512Summary" xml:space="preserve">
+    <value>Best for maximum collision resistance (128-char digest)</value>
+  </data>
+  <!-- Obfuscation: GUID -->
+  <data name="GuidDisplayName" xml:space="preserve">
+    <value>GUID</value>
+  </data>
+  <data name="GuidDescription" xml:space="preserve">
+    <value>Replaces the filename with a randomly generated GUID. Provides strong privacy by producing non-predictable, non-correlatable names for each file.</value>
+  </data>
+  <data name="GuidSummary" xml:space="preserve">
+    <value>Best for maximum privacy (random)</value>
+  </data>
+  <!-- Obfuscation: None -->
+  <data name="NoObfuscationDisplayName" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="NoObfuscationDescription" xml:space="preserve">
+    <value>Preserves the original filename unchanged. Use when filename privacy is not required and human-readable organization should be retained.</value>
+  </data>
+  <data name="NoObfuscationSummary" xml:space="preserve">
+    <value>Best if filename obfuscation is not needed</value>
+  </data>
+  <!-- Compression: GZip -->
+  <data name="GZipDisplayName" xml:space="preserve">
+    <value>GZip</value>
+  </data>
+  <data name="GZipDescription" xml:space="preserve">
+    <value>A widely supported compression algorithm (RFC 1952) based on the DEFLATE algorithm. Offers a good balance between compression ratio and speed, and is universally supported across operating systems, tools, and programming languages.</value>
+  </data>
+  <data name="GZipSummary" xml:space="preserve">
+    <value>Good balance, universal compatibility</value>
+  </data>
+  <!-- Compression: BZip2 -->
+  <data name="BZip2DisplayName" xml:space="preserve">
+    <value>BZip2</value>
+  </data>
+  <data name="BZip2Description" xml:space="preserve">
+    <value>A high-quality block-sorting compression algorithm that achieves better compression ratios than GZip at the cost of slower speed. Well suited for archiving scenarios where file size reduction is more important than throughput.</value>
+  </data>
+  <data name="BZip2Summary" xml:space="preserve">
+    <value>Higher compression ratio than GZip</value>
+  </data>
+  <!-- Compression: LZMA -->
+  <data name="LzmaDisplayName" xml:space="preserve">
+    <value>LZMA (7-Zip)</value>
+  </data>
+  <data name="LzmaDescription" xml:space="preserve">
+    <value>The Lempel-Ziv-Markov chain Algorithm used by 7-Zip, delivering one of the highest compression ratios among general-purpose compressors. Ideal for archiving and scenarios where minimizing file size is more important than compression speed.</value>
+  </data>
+  <data name="LzmaSummary" xml:space="preserve">
+    <value>Highest compression ratio (slowest)</value>
+  </data>
+  <!-- Compression: None -->
+  <data name="NoCompressionDisplayName" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="NoCompressionDescription" xml:space="preserve">
+    <value>No compression is applied. Files are encrypted as-is without any size reduction. Best when speed is critical or files are already compressed (e.g., ZIP, JPEG, MP4).</value>
+  </data>
+  <data name="NoCompressionSummary" xml:space="preserve">
+    <value>No compression (fastest)</value>
+  </data>
+  <!-- EncryptionStrategyBase -->
+  <data name="OperationEncryption" xml:space="preserve">
+    <value>encryption</value>
+  </data>
+  <data name="OperationDecryption" xml:space="preserve">
+    <value>decryption</value>
+  </data>
+</root>

@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
+using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors.LZMA;
 
@@ -9,14 +10,11 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
 {
     public Domain.Enums.CompressionMode Id => Domain.Enums.CompressionMode.LZMA;
 
-    public string DisplayName => "LZMA (7-Zip)";
+    public string DisplayName => Messages.LzmaDisplayName;
 
-    public string Description =>
-        "The Lempel-Ziv-Markov chain Algorithm used by 7-Zip, delivering one of the highest compression ratios "
-        + "among general-purpose compressors. Ideal for archiving and scenarios where minimizing file size is "
-        + "more important than compression speed.";
+    public string Description => Messages.LzmaDescription;
 
-    public string Summary => "Highest compression ratio (slowest)";
+    public string Summary => Messages.LzmaSummary;
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,

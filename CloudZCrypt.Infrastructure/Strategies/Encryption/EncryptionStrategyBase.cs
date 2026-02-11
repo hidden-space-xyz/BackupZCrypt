@@ -3,6 +3,7 @@ using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Exceptions;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Modes;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Encryption;
@@ -103,7 +104,7 @@ internal abstract class EncryptionStrategyBase(
                 {
                     throw new EncryptionInsufficientSpaceException(destinationFilePath);
                 }
-                throw new EncryptionCipherException("encryption", ex);
+                throw new EncryptionCipherException(Messages.OperationEncryption, ex);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -122,7 +123,7 @@ internal abstract class EncryptionStrategyBase(
                 { /* ignore */
                 }
 
-                throw new EncryptionCipherException("encryption", ex);
+                throw new EncryptionCipherException(Messages.OperationEncryption, ex);
             }
 
             return true;
@@ -133,7 +134,7 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (Exception ex)
         {
-            throw new EncryptionCipherException("encryption", ex);
+            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
         }
     }
 
@@ -250,7 +251,7 @@ internal abstract class EncryptionStrategyBase(
                 {
                     throw new EncryptionInsufficientSpaceException(destinationFilePath);
                 }
-                throw new EncryptionCipherException("decryption", ex);
+                throw new EncryptionCipherException(Messages.OperationDecryption, ex);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -282,7 +283,7 @@ internal abstract class EncryptionStrategyBase(
                     throw new EncryptionInvalidPasswordException();
                 }
 
-                throw new EncryptionCipherException("decryption", ex);
+                throw new EncryptionCipherException(Messages.OperationDecryption, ex);
             }
 
             return true;
@@ -293,7 +294,7 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (Exception ex)
         {
-            throw new EncryptionCipherException("decryption", ex);
+            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
         }
     }
 
@@ -357,7 +358,7 @@ internal abstract class EncryptionStrategyBase(
             {
                 throw new EncryptionInsufficientSpaceException(destinationFilePath);
             }
-            throw new EncryptionCipherException("encryption", ex);
+            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -376,7 +377,7 @@ internal abstract class EncryptionStrategyBase(
             { /* ignore */
             }
 
-            throw new EncryptionCipherException("encryption", ex);
+            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
         }
 
         return true;
@@ -444,7 +445,7 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (IOException ex)
         {
-            throw new EncryptionCipherException("decryption", ex);
+            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
         }
     }
 

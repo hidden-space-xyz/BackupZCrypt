@@ -1,5 +1,6 @@
 using CloudZCrypt.Application.Utilities.Formatters;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal.Rendering;
@@ -15,8 +16,8 @@ internal static class ResultRenderer
             ? "green"
             : (response.IsPartialSuccess ? "yellow" : "red");
         string statusText = response.IsSuccess
-            ? "Completed successfully"
-            : (response.IsPartialSuccess ? "Partially completed" : "Failed");
+            ? Messages.CompletedSuccessfully
+            : (response.IsPartialSuccess ? Messages.PartiallyCompleted : Messages.Failed);
 
         AnsiConsole.MarkupLine(
             $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]"
@@ -26,21 +27,21 @@ internal static class ResultRenderer
         Table resultTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
-            .Title("[bold cyan]Results[/]")
-            .AddColumn(new TableColumn("[bold]Metric[/]").LeftAligned())
-            .AddColumn(new TableColumn("[bold]Value[/]").RightAligned());
+            .Title($"[bold cyan]{Messages.Results}[/]")
+            .AddColumn(new TableColumn($"[bold]{Messages.Metric}[/]").LeftAligned())
+            .AddColumn(new TableColumn($"[bold]{Messages.Value}[/]").RightAligned());
 
-        resultTable.AddRow("Files processed", $"{response.ProcessedFiles} / {response.TotalFiles}");
-        resultTable.AddRow("Total size", ByteSizeFormatter.Format(response.TotalBytes));
-        resultTable.AddRow("Elapsed time", response.ElapsedTime.ToString(@"hh\:mm\:ss\.fff"));
+        resultTable.AddRow(Messages.FilesProcessed, $"{response.ProcessedFiles} / {response.TotalFiles}");
+        resultTable.AddRow(Messages.TotalSize, ByteSizeFormatter.Format(response.TotalBytes));
+        resultTable.AddRow(Messages.ElapsedTime, response.ElapsedTime.ToString(@"hh\:mm\:ss\.fff"));
         resultTable.AddRow(
-            "Throughput",
+            Messages.Throughput,
             $"{ByteSizeFormatter.Format((long)response.BytesPerSecond)}/s"
         );
 
         if (response.FailedFiles > 0)
         {
-            resultTable.AddRow("[red]Failed files[/]", $"[red]{response.FailedFiles}[/]");
+            resultTable.AddRow($"[red]{Messages.FailedFiles}[/]", $"[red]{response.FailedFiles}[/]");
         }
 
         AnsiConsole.Write(resultTable);
@@ -48,7 +49,7 @@ internal static class ResultRenderer
         if (response.HasErrors)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[red]Errors:[/]");
+            AnsiConsole.MarkupLine($"[red]{Messages.Errors}[/]");
             foreach (string error in response.Errors)
             {
                 AnsiConsole.MarkupLine($"  [red]• {Markup.Escape(error)}[/]");
@@ -58,7 +59,7 @@ internal static class ResultRenderer
         if (response.HasWarnings)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[yellow]Warnings:[/]");
+            AnsiConsole.MarkupLine($"[yellow]{Messages.WarningsLabel}[/]");
             foreach (string warning in response.Warnings)
             {
                 AnsiConsole.MarkupLine($"  [yellow]• {Markup.Escape(warning)}[/]");

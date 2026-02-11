@@ -1,3 +1,5 @@
+using CloudZCrypt.Application.Resources;
+
 namespace CloudZCrypt.Application.Utilities.Helpers;
 
 internal static class PathNormalizationHelper
@@ -17,7 +19,7 @@ internal static class PathNormalizationHelper
         }
         catch (Exception ex)
         {
-            error = $"Invalid path: {ex.Message}";
+            error = string.Format(Messages.InvalidPathFormat, ex.Message);
             return null;
         }
     }

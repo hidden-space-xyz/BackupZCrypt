@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
+using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
@@ -10,14 +11,11 @@ internal class GZipCompressionStrategy : ICompressionStrategy
 {
     public Domain.Enums.CompressionMode Id => Domain.Enums.CompressionMode.GZip;
 
-    public string DisplayName => "GZip";
+    public string DisplayName => Messages.GZipDisplayName;
 
-    public string Description =>
-        "A widely supported compression algorithm (RFC 1952) based on the DEFLATE algorithm. "
-        + "Offers a good balance between compression ratio and speed, and is universally supported "
-        + "across operating systems, tools, and programming languages.";
+    public string Description => Messages.GZipDescription;
 
-    public string Summary => "Good balance, universal compatibility";
+    public string Summary => Messages.GZipSummary;
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,

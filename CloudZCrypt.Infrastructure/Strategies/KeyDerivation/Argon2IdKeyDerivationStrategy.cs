@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -14,17 +15,11 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 
     public KeyDerivationAlgorithm Id => KeyDerivationAlgorithm.Argon2id;
 
-    public string DisplayName => "Argon2id";
+    public string DisplayName => Messages.Argon2idDisplayName;
 
-    public string Description =>
-        "A modern memory‑hard password hashing and key derivation function (PHC winner). "
-        + "The “id” variant blends Argon2i (side‑channel resistant) and Argon2d (GPU/ASIC resistance) for balanced security. "
-        + "Tunable via: memory cost (m), iterations/time cost (t), and parallelism (p). "
-        + "Provides strong resistance to large‑scale brute force on GPUs, FPGAs, and ASICs by imposing substantial RAM requirements. "
-        + "Supports domain separation with distinct salt plus optional secret/data parameters. "
-        + "Recommended where modern security is prioritized over legacy compatibility.";
+    public string Description => Messages.Argon2idDescription;
 
-    public string Summary => "Best for maximum security / modern memory‑hard password hashing";
+    public string Summary => Messages.Argon2idSummary;
 
     public byte[] DeriveKey(string password, byte[] salt, int keySize)
     {
@@ -54,7 +49,7 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
                 Array.Clear(key, 0, key.Length);
             }
 
-            throw new CryptographicException("Error deriving key with Argon2id", ex);
+            throw new CryptographicException(Messages.Argon2idKeyDerivationError, ex);
         }
         finally
         {

@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- BannerRenderer -->
+  <data name="BannerSubtitle" xml:space="preserve">
+    <value>Una herramienta sencilla de cifrado de archivos de grado militar</value>
+  </data>
+  <!-- TerminalApplication menu -->
+  <data name="MenuEncrypt" xml:space="preserve">
+    <value>🔒 Cifrar</value>
+  </data>
+  <data name="MenuDecrypt" xml:space="preserve">
+    <value>🔓 Descifrar</value>
+  </data>
+  <data name="MenuGeneratePassword" xml:space="preserve">
+    <value>🔑 Generar contraseña</value>
+  </data>
+  <data name="MenuAlgorithmInfo" xml:space="preserve">
+    <value>ℹ️ Información de algoritmos</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>❌ Salir</value>
+  </data>
+  <data name="Goodbye" xml:space="preserve">
+    <value>¡Hasta luego!</value>
+  </data>
+  <data name="PressAnyKey" xml:space="preserve">
+    <value>Pulse cualquier tecla para volver al menú…</value>
+  </data>
+  <!-- EncryptCommand -->
+  <data name="Encrypt" xml:space="preserve">
+    <value>Cifrar</value>
+  </data>
+  <data name="Decrypt" xml:space="preserve">
+    <value>Descifrar</value>
+  </data>
+  <data name="SourcePathPrompt" xml:space="preserve">
+    <value>Ruta de origen</value>
+  </data>
+  <data name="SourcePathHint" xml:space="preserve">
+    <value>(archivo o directorio):</value>
+  </data>
+  <data name="PathCannotBeEmpty" xml:space="preserve">
+    <value>La ruta no puede estar vacía</value>
+  </data>
+  <data name="PathDoesNotExist" xml:space="preserve">
+    <value>La ruta no existe</value>
+  </data>
+  <data name="DestinationPathPrompt" xml:space="preserve">
+    <value>Ruta de destino</value>
+  </data>
+  <data name="PleaseEnterDestinationPath" xml:space="preserve">
+    <value>Introduzca una ruta de destino</value>
+  </data>
+  <data name="PasswordPrompt" xml:space="preserve">
+    <value>Contraseña</value>
+  </data>
+  <data name="PasswordCannotBeEmpty" xml:space="preserve">
+    <value>La contraseña no puede estar vacía</value>
+  </data>
+  <data name="ConfirmPasswordPrompt" xml:space="preserve">
+    <value>Confirmar contraseña</value>
+  </data>
+  <data name="PasswordStrengthLabel" xml:space="preserve">
+    <value>Fortaleza de la contraseña:</value>
+  </data>
+  <data name="EncryptionAlgorithmPrompt" xml:space="preserve">
+    <value>Algoritmo de cifrado:</value>
+  </data>
+  <data name="KeyDerivationAlgorithmPrompt" xml:space="preserve">
+    <value>Algoritmo de derivación de clave:</value>
+  </data>
+  <data name="NameObfuscationModePrompt" xml:space="preserve">
+    <value>Modo de ofuscación de nombre:</value>
+  </data>
+  <data name="CompressionModePrompt" xml:space="preserve">
+    <value>Modo de compresión:</value>
+  </data>
+  <data name="ProceedConfirmFormat" xml:space="preserve">
+    <value>¿Proceder con {0}?</value>
+  </data>
+  <data name="OperationCancelled" xml:space="preserve">
+    <value>Operación cancelada.</value>
+  </data>
+  <data name="Cancelling" xml:space="preserve">
+    <value>Cancelando…</value>
+  </data>
+  <data name="OperationCancelledByUser" xml:space="preserve">
+    <value>Operación cancelada por el usuario.</value>
+  </data>
+  <data name="ValidationErrorFormat" xml:space="preserve">
+    <value>❌ Error de validación: {0}</value>
+  </data>
+  <data name="UnexpectedErrorFormat" xml:space="preserve">
+    <value>❌ Error inesperado: {0}</value>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Advertencias:</value>
+  </data>
+  <data name="ContinueDespiteWarningsFormat" xml:space="preserve">
+    <value>¿Continuar con {0} a pesar de las advertencias?</value>
+  </data>
+  <data name="SummaryTitle" xml:space="preserve">
+    <value>Resumen</value>
+  </data>
+  <data name="Setting" xml:space="preserve">
+    <value>Configuración</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Valor</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>Origen</value>
+  </data>
+  <data name="Destination" xml:space="preserve">
+    <value>Destino</value>
+  </data>
+  <data name="EncryptionLabel" xml:space="preserve">
+    <value>Cifrado</value>
+  </data>
+  <data name="KeyDerivationLabel" xml:space="preserve">
+    <value>Derivación de clave</value>
+  </data>
+  <data name="NameObfuscationLabel" xml:space="preserve">
+    <value>Ofuscación de nombre</value>
+  </data>
+  <data name="CompressionLabel" xml:space="preserve">
+    <value>Compresión</value>
+  </data>
+  <data name="FailedFormat" xml:space="preserve">
+    <value>❌ {0} falló: {1}</value>
+  </data>
+  <data name="ValidationErrors" xml:space="preserve">
+    <value>Errores de validación:</value>
+  </data>
+  <data name="OperationIngFormat" xml:space="preserve">
+    <value>{0}ando…</value>
+  </data>
+  <data name="OperationIngFilesFormat" xml:space="preserve">
+    <value>{0}ando {1}/{2} archivos</value>
+  </data>
+  <!-- ResultRenderer -->
+  <data name="CompletedSuccessfully" xml:space="preserve">
+    <value>Completado exitosamente</value>
+  </data>
+  <data name="PartiallyCompleted" xml:space="preserve">
+    <value>Completado parcialmente</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>Fallido</value>
+  </data>
+  <data name="Results" xml:space="preserve">
+    <value>Resultados</value>
+  </data>
+  <data name="Metric" xml:space="preserve">
+    <value>Métrica</value>
+  </data>
+  <data name="FilesProcessed" xml:space="preserve">
+    <value>Archivos procesados</value>
+  </data>
+  <data name="TotalSize" xml:space="preserve">
+    <value>Tamaño total</value>
+  </data>
+  <data name="ElapsedTime" xml:space="preserve">
+    <value>Tiempo transcurrido</value>
+  </data>
+  <data name="Throughput" xml:space="preserve">
+    <value>Rendimiento</value>
+  </data>
+  <data name="FailedFiles" xml:space="preserve">
+    <value>Archivos fallidos</value>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Errores:</value>
+  </data>
+  <!-- AlgorithmInfoCommand -->
+  <data name="AlgorithmInformation" xml:space="preserve">
+    <value>Información de algoritmos</value>
+  </data>
+  <data name="EncryptionAlgorithms" xml:space="preserve">
+    <value>Algoritmos de cifrado</value>
+  </data>
+  <data name="KeyDerivationAlgorithms" xml:space="preserve">
+    <value>Algoritmos de derivación de clave</value>
+  </data>
+  <data name="NameObfuscationModes" xml:space="preserve">
+    <value>Modos de ofuscación de nombre</value>
+  </data>
+  <data name="CompressionModes" xml:space="preserve">
+    <value>Modos de compresión</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <!-- GeneratePasswordCommand -->
+  <data name="PasswordGenerator" xml:space="preserve">
+    <value>Generador de contraseñas</value>
+  </data>
+  <data name="PasswordLengthPrompt" xml:space="preserve">
+    <value>Longitud de la contraseña</value>
+  </data>
+  <data name="PasswordLengthRange" xml:space="preserve">
+    <value>(16–256):</value>
+  </data>
+  <data name="PasswordLengthError" xml:space="preserve">
+    <value>La longitud debe estar entre 16 y 256</value>
+  </data>
+  <data name="IncludePrompt" xml:space="preserve">
+    <value>Incluir:</value>
+  </data>
+  <data name="ToggleInstructions" xml:space="preserve">
+    <value>(Pulse &lt;espacio&gt; para alternar, &lt;enter&gt; para confirmar)</value>
+  </data>
+  <data name="OptionUppercase" xml:space="preserve">
+    <value>Mayúsculas (A-Z)</value>
+  </data>
+  <data name="OptionLowercase" xml:space="preserve">
+    <value>Minúsculas (a-z)</value>
+  </data>
+  <data name="OptionNumbers" xml:space="preserve">
+    <value>Números (0-9)</value>
+  </data>
+  <data name="OptionSpecialChars" xml:space="preserve">
+    <value>Caracteres especiales (!@#$)</value>
+  </data>
+  <data name="StrengthLabel" xml:space="preserve">
+    <value>Fortaleza:</value>
+  </data>
+  <data name="LengthLabel" xml:space="preserve">
+    <value>Longitud:</value>
+  </data>
+  <data name="CharactersLabel" xml:space="preserve">
+    <value>caracteres</value>
+  </data>
+  <data name="GeneratedPasswordHeader" xml:space="preserve">
+    <value>🔐 Contraseña generada</value>
+  </data>
+  <data name="PasswordStorageWarning" xml:space="preserve">
+    <value>¡Guarde esta contraseña de forma segura — no se puede recuperar si se pierde!</value>
+  </data>
+</root>

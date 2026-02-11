@@ -1,6 +1,7 @@
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal.Rendering;
@@ -29,7 +30,7 @@ internal static class ProgressRunner
             )
             .StartAsync(async ctx =>
             {
-                ProgressTask task = ctx.AddTask($"[cyan]{operationName}ing…[/]", maxValue: 100);
+                ProgressTask task = ctx.AddTask($"[cyan]{string.Format(Messages.OperationIngFormat, operationName)}[/]", maxValue: 100);
 
                 Progress<FileCryptStatus> progress = new(update =>
                 {
@@ -39,7 +40,7 @@ internal static class ProgressRunner
                             : 100;
                     task.Value = pct;
                     task.Description =
-                        $"[cyan]{operationName}ing[/] {update.ProcessedFiles}/{update.TotalFiles} files";
+                        $"[cyan]{string.Format(Messages.OperationIngFilesFormat, operationName, update.ProcessedFiles, update.TotalFiles)}[/]";
                 });
 
                 result = await orchestrator.ExecuteAsync(request, progress, cancellationToken);

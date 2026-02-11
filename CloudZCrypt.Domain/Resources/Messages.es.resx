@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessDeniedFormat" xml:space="preserve">
+    <value>Acceso denegado al archivo: {0}</value>
+  </data>
+  <data name="FileNotFoundFormat" xml:space="preserve">
+    <value>Archivo no encontrado: {0}</value>
+  </data>
+  <data name="InsufficientDiskSpaceFormat" xml:space="preserve">
+    <value>Espacio en disco insuficiente en: {0}</value>
+  </data>
+  <data name="InvalidPassword" xml:space="preserve">
+    <value>Contraseña no válida o archivo corrupto. Verifique la contraseña y la integridad del archivo.</value>
+  </data>
+  <data name="CorruptedFileFormat" xml:space="preserve">
+    <value>El archivo cifrado parece estar corrupto o no es válido: {0}</value>
+  </data>
+  <data name="KeyDerivationFailed" xml:space="preserve">
+    <value>No se pudo derivar la clave de cifrado a partir de la contraseña</value>
+  </data>
+  <data name="CipherOperationFailedFormat" xml:space="preserve">
+    <value>La operación de cifrado falló durante {0}</value>
+  </data>
+  <data name="EncryptionAlgorithmNotRegisteredFormat" xml:space="preserve">
+    <value>El algoritmo de cifrado '{0}' no está registrado.</value>
+  </data>
+  <data name="KeyDerivationAlgorithmNotRegisteredFormat" xml:space="preserve">
+    <value>El algoritmo de derivación de clave '{0}' no está registrado.</value>
+  </data>
+  <data name="NameObfuscationModeNotRegisteredFormat" xml:space="preserve">
+    <value>El modo de ofuscación de nombre '{0}' no está registrado.</value>
+  </data>
+  <data name="CompressionModeNotRegisteredFormat" xml:space="preserve">
+    <value>El modo de compresión '{0}' no está registrado.</value>
+  </data>
+  <data name="CannotAccessFailedResultValue" xml:space="preserve">
+    <value>No se puede acceder al valor de un resultado fallido</value>
+  </data>
+</root>

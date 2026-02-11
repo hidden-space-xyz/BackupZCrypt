@@ -1,6 +1,7 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -16,14 +17,11 @@ internal class CamelliaEncryptionStrategy(
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Camellia;
 
-    public string DisplayName => "Camellia-256 GCM";
+    public string DisplayName => Messages.CamelliaDisplayName;
 
-    public string Description =>
-        "A 128‑bit block cipher with a 256‑bit key, jointly designed by NTT and Mitsubishi; performance and security margin comparable to AES. "
-        + "Supported in many international standards (RFCs, ISO/IEC) and suitable where non‑U.S.-origin algorithms or broader jurisdictional acceptance is desired. "
-        + "Used with GCM for AEAD.";
+    public string Description => Messages.CamelliaDescription;
 
-    public string Summary => "Best for international compliance";
+    public string Summary => Messages.CamelliaSummary;
 
     protected override async Task EncryptStreamAsync(
         Stream sourceStream,

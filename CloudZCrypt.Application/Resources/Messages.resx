@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- Validator messages -->
+  <data name="SourcePathEmpty" xml:space="preserve">
+    <value>Please select a source file or directory to process.</value>
+  </data>
+  <data name="SourcePathNotExistFormat" xml:space="preserve">
+    <value>The selected source path does not exist: {0}</value>
+  </data>
+  <data name="SourceFileEmpty" xml:space="preserve">
+    <value>The selected file is empty and cannot be processed.</value>
+  </data>
+  <data name="SourceDirectoryEmpty" xml:space="preserve">
+    <value>The selected directory is empty - no files to process.</value>
+  </data>
+  <data name="SourceAccessDenied" xml:space="preserve">
+    <value>Access denied to the source path. Please check permissions or run as administrator.</value>
+  </data>
+  <data name="SourceAccessErrorFormat" xml:space="preserve">
+    <value>Error accessing source path: {0}</value>
+  </data>
+  <data name="DestinationPathEmpty" xml:space="preserve">
+    <value>Please select a destination path.</value>
+  </data>
+  <data name="DestinationDriveNotAccessibleFormat" xml:space="preserve">
+    <value>The destination drive '{0}' does not exist or is not accessible.</value>
+  </data>
+  <data name="DestinationAccessDenied" xml:space="preserve">
+    <value>Access denied to destination path. Please check permissions or run as administrator.</value>
+  </data>
+  <data name="DestinationWriteErrorFormat" xml:space="preserve">
+    <value>Cannot write to destination path: {0}</value>
+  </data>
+  <data name="DestinationInvalidFormat" xml:space="preserve">
+    <value>Invalid destination path: {0}</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Please enter a password for encryption/decryption.</value>
+  </data>
+  <data name="PasswordTooShort" xml:space="preserve">
+    <value>Password must be at least 8 characters long for security.</value>
+  </data>
+  <data name="PasswordTooLong" xml:space="preserve">
+    <value>Password is too long (maximum 1000 characters).</value>
+  </data>
+  <data name="PasswordLeadingTrailingSpaces" xml:space="preserve">
+    <value>Password should not start or end with spaces.</value>
+  </data>
+  <data name="ConfirmPasswordRequired" xml:space="preserve">
+    <value>Please confirm your password.</value>
+  </data>
+  <data name="PasswordMismatch" xml:space="preserve">
+    <value>Password and confirmation password do not match. Please check both fields.</value>
+  </data>
+  <data name="SourceDestinationSameFile" xml:space="preserve">
+    <value>Source and destination files cannot be the same. Please choose a different destination.</value>
+  </data>
+  <data name="SourceDestinationSameDirectory" xml:space="preserve">
+    <value>Source and destination directories cannot be the same. Please choose a different destination.</value>
+  </data>
+  <data name="DestinationInsideSource" xml:space="preserve">
+    <value>Destination directory cannot be inside the source directory. This would create a recursive operation.</value>
+  </data>
+  <data name="SourceInsideDestination" xml:space="preserve">
+    <value>Source directory cannot be inside the destination directory. Please choose a different path.</value>
+  </data>
+  <data name="LowDiskSpaceFormat" xml:space="preserve">
+    <value>Low disk space: Available {0}, estimated need {1}</value>
+  </data>
+  <data name="LargeOperationFormat" xml:space="preserve">
+    <value>Large operation: {0} files will be processed. This may take considerable time.</value>
+  </data>
+  <data name="MediumOperationFormat" xml:space="preserve">
+    <value>Medium operation: {0} files will be processed.</value>
+  </data>
+  <data name="DestinationExistingFilesFormat" xml:space="preserve">
+    <value>Destination contains {0} existing file(s) that may be overwritten.</value>
+  </data>
+  <data name="WeakPasswordWarning" xml:space="preserve">
+    <value>Password strength is below recommended level. Consider using a stronger password.</value>
+  </data>
+  <data name="InvalidPathFormat" xml:space="preserve">
+    <value>Invalid path: {0}</value>
+  </data>
+  <!-- Orchestrator messages -->
+  <data name="SourcePathNotExist" xml:space="preserve">
+    <value>Source path does not exist.</value>
+  </data>
+  <data name="UnexpectedErrorFormat" xml:space="preserve">
+    <value>An unexpected error occurred: {0}</value>
+  </data>
+  <!-- PasswordService messages -->
+  <data name="EmptyPasswordDescription" xml:space="preserve">
+    <value>Empty password. Please enter a password.</value>
+  </data>
+  <data name="PasswordLengthNonPositive" xml:space="preserve">
+    <value>Password length must be greater than 0</value>
+  </data>
+  <data name="PasswordOptionsNone" xml:space="preserve">
+    <value>At least one character type must be selected</value>
+  </data>
+  <data name="NoCharactersAvailable" xml:space="preserve">
+    <value>No characters available for password generation with the given options</value>
+  </data>
+  <data name="StrengthVeryWeak" xml:space="preserve">
+    <value>Very Weak</value>
+  </data>
+  <data name="StrengthWeak" xml:space="preserve">
+    <value>Weak</value>
+  </data>
+  <data name="StrengthFair" xml:space="preserve">
+    <value>Fair</value>
+  </data>
+  <data name="StrengthGood" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="StrengthStrong" xml:space="preserve">
+    <value>Strong</value>
+  </data>
+  <data name="EntropyFormat" xml:space="preserve">
+    <value>Entropy: {0} bits</value>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Suggestions:</value>
+  </data>
+  <data name="GoodJob" xml:space="preserve">
+    <value>Good job!</value>
+  </data>
+  <data name="TipIncreaseLength" xml:space="preserve">
+    <value>Increase length (≥12 chars)</value>
+  </data>
+  <data name="TipAddUppercase" xml:space="preserve">
+    <value>Add uppercase letters</value>
+  </data>
+  <data name="TipAddLowercase" xml:space="preserve">
+    <value>Add lowercase letters</value>
+  </data>
+  <data name="TipAddDigits" xml:space="preserve">
+    <value>Add digits</value>
+  </data>
+  <data name="TipAddSymbols" xml:space="preserve">
+    <value>Add symbols</value>
+  </data>
+  <data name="TipMoreVariety" xml:space="preserve">
+    <value>Use more character variety</value>
+  </data>
+  <data name="TipAvoidSequences" xml:space="preserve">
+    <value>Avoid sequences (e.g. abc, 123, qwerty)</value>
+  </data>
+  <data name="TipReduceRepeats" xml:space="preserve">
+    <value>Reduce repeated characters</value>
+  </data>
+  <data name="TipAvoidYears" xml:space="preserve">
+    <value>Avoid years</value>
+  </data>
+  <!-- FileCryptSingleFileService -->
+  <data name="ManifestIgnored" xml:space="preserve">
+    <value>Manifest file ignored during decryption.</value>
+  </data>
+  <data name="UnsupportedOperationFormat" xml:space="preserve">
+    <value>Unsupported operation: {0}</value>
+  </data>
+  <!-- FileCryptDirectoryService -->
+  <data name="NoFilesInSourceDirectory" xml:space="preserve">
+    <value>No files found in the source directory.</value>
+  </data>
+  <data name="AccessDeniedStoppedFormat" xml:space="preserve">
+    <value>Operation stopped due to access denied error: {0}</value>
+  </data>
+  <data name="InsufficientSpaceStoppedFormat" xml:space="preserve">
+    <value>Operation stopped due to insufficient disk space: {0}</value>
+  </data>
+  <data name="InvalidPasswordStoppedFormat" xml:space="preserve">
+    <value>Operation stopped due to invalid password: {0}</value>
+  </data>
+  <data name="KeyDerivationStoppedFormat" xml:space="preserve">
+    <value>Operation stopped due to key derivation error: {0}</value>
+  </data>
+  <data name="FileNotFoundSkippedFormat" xml:space="preserve">
+    <value>File not found (skipped): {0} - {1}</value>
+  </data>
+  <data name="CorruptedFileSkippedFormat" xml:space="preserve">
+    <value>Corrupted file (skipped): {0} - {1}</value>
+  </data>
+  <data name="CipherErrorFormat" xml:space="preserve">
+    <value>Cipher error for file: {0} - {1}</value>
+  </data>
+  <data name="EncryptionErrorFormat" xml:space="preserve">
+    <value>Encryption error for file: {0} - {1}</value>
+  </data>
+  <data name="AllFilesFailedFormat" xml:space="preserve">
+    <value>Failed to process any files. Errors: {0}</value>
+  </data>
+  <!-- ManifestService -->
+  <data name="ManifestCreateFailedFormat" xml:space="preserve">
+    <value>Failed to create encrypted manifest at '{0}'.</value>
+  </data>
+  <data name="ManifestWriteFailedFormat" xml:space="preserve">
+    <value>Failed to write or encrypt manifest: {0}</value>
+  </data>
+</root>

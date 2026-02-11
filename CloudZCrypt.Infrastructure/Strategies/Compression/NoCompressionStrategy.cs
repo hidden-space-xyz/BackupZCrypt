@@ -1,6 +1,7 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
+using CloudZCrypt.Infrastructure.Resources;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
@@ -8,13 +9,11 @@ internal class NoCompressionStrategy : ICompressionStrategy
 {
     public CompressionMode Id => CompressionMode.None;
 
-    public string DisplayName => "None";
+    public string DisplayName => Messages.NoCompressionDisplayName;
 
-    public string Description =>
-        "No compression is applied. Files are encrypted as-is without any size reduction. "
-        + "Best when speed is critical or files are already compressed (e.g., ZIP, JPEG, MP4).";
+    public string Description => Messages.NoCompressionDescription;
 
-    public string Summary => "No compression (fastest)";
+    public string Summary => Messages.NoCompressionSummary;
 
     public Task<Stream> CompressAsync(
         Stream inputStream,

@@ -7,6 +7,7 @@ using CloudZCrypt.Domain.Exceptions;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using CloudZCrypt.Terminal.Rendering;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal.Commands;
@@ -22,7 +23,7 @@ internal sealed class EncryptCommand(
 {
     public async Task ExecuteAsync(EncryptOperation operation)
     {
-        string operationName = operation == EncryptOperation.Encrypt ? "Encrypt" : "Decrypt";
+        string operationName = operation == EncryptOperation.Encrypt ? Messages.Encrypt : Messages.Decrypt;
 
         AnsiConsole.Write(
             new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
@@ -36,22 +37,22 @@ internal sealed class EncryptCommand(
         PrintPasswordStrength(password);
 
         IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
-            "Encryption algorithm:",
+            Messages.EncryptionAlgorithmPrompt,
             encryptionStrategies,
             s => $"{s.DisplayName} — {s.Summary}"
         );
         IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
-            "Key derivation algorithm:",
+            Messages.KeyDerivationAlgorithmPrompt,
             keyDerivationStrategies,
             s => $"{s.DisplayName} — {s.Summary}"
         );
         INameObfuscationStrategy selectedObfuscation = PromptStrategy(
-            "Name obfuscation mode:",
+            Messages.NameObfuscationModePrompt,
             nameObfuscationStrategies,
             s => $"{s.DisplayName} — {s.Summary}"
         );
         ICompressionStrategy selectedCompression = PromptStrategy(
-            "Compression mode:",
+            Messages.CompressionModePrompt,
             compressionStrategies,
             s => $"{s.DisplayName} — {s.Summary}"
         );
@@ -66,9 +67,9 @@ internal sealed class EncryptCommand(
             selectedCompression
         );
 
-        if (!AnsiConsole.Confirm($"[yellow]Proceed with {operationName.ToLower()}?[/]"))
+        if (!AnsiConsole.Confirm($"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
         {
-            AnsiConsole.MarkupLine("[grey]Operation cancelled.[/]");
+            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
         }
 
@@ -93,7 +94,7 @@ internal sealed class EncryptCommand(
         {
             e.Cancel = true;
             cts.Cancel();
-            AnsiConsole.MarkupLine("[yellow]Cancelling…[/]");
+            AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
         };
 
         try
@@ -131,7 +132,7 @@ internal sealed class EncryptCommand(
         }
         catch (OperationCanceledException)
         {
-            AnsiConsole.MarkupLine("[yellow]Operation cancelled by user.[/]");
+            AnsiConsole.MarkupLine($"[yellow]{Messages.OperationCancelledByUser}[/]");
         }
         catch (EncryptionException ex)
         {
@@ -141,11 +142,11 @@ internal sealed class EncryptCommand(
         }
         catch (ValidationException ex)
         {
-            AnsiConsole.MarkupLine($"[red]❌ Validation error: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine($"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]");
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]❌ Unexpected error: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine($"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
         }
     }
 
@@ -156,7 +157,7 @@ internal sealed class EncryptCommand(
         CancellationToken cancellationToken
     )
     {
-        AnsiConsole.MarkupLine("⚠  [yellow]Warnings:[/]");
+        AnsiConsole.MarkupLine($"⚠  [yellow]{Messages.WarningsLabel}[/]");
         foreach (string warning in response.Warnings)
         {
             AnsiConsole.MarkupLine($"  - [yellow]{Markup.Escape(warning)}[/]");
@@ -165,11 +166,11 @@ internal sealed class EncryptCommand(
 
         if (
             !AnsiConsole.Confirm(
-                $"[yellow]Continue with {operationName.ToLower()} despite warnings?[/]"
+                $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToLower())}[/]"
             )
         )
         {
-            AnsiConsole.MarkupLine("[grey]Operation cancelled.[/]");
+            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return null;
         }
 
@@ -193,41 +194,41 @@ internal sealed class EncryptCommand(
 
     private static string PromptSourcePath() =>
         AnsiConsole.Prompt(
-            new TextPrompt<string>("[green]Source path[/] (file or directory):")
-                .ValidationErrorMessage("[red]Path cannot be empty[/]")
+            new TextPrompt<string>($"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
                 .Validate(p =>
                     !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p))
                         ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Path does not exist[/]")
+                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")
                 )
         );
 
     private static string PromptDestinationPath() =>
         AnsiConsole.Prompt(
-            new TextPrompt<string>("[green]Destination path[/]:")
-                .ValidationErrorMessage("[red]Path cannot be empty[/]")
+            new TextPrompt<string>($"[green]{Messages.DestinationPathPrompt}[/]:")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
                 .Validate(p =>
                     !string.IsNullOrWhiteSpace(p)
                         ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Please enter a destination path[/]")
+                        : ValidationResult.Error($"[red]{Messages.PleaseEnterDestinationPath}[/]")
                 )
         );
 
     private static (string Password, string ConfirmPassword) PromptPasswords()
     {
         string password = AnsiConsole.Prompt(
-            new TextPrompt<string>("[green]Password[/]:")
+            new TextPrompt<string>($"[green]{Messages.PasswordPrompt}[/]:")
                 .Secret()
-                .ValidationErrorMessage("[red]Password cannot be empty[/]")
+                .ValidationErrorMessage($"[red]{Messages.PasswordCannotBeEmpty}[/]")
                 .Validate(p =>
                     !string.IsNullOrWhiteSpace(p)
                         ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Password cannot be empty[/]")
+                        : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")
                 )
         );
 
         string confirmPassword = AnsiConsole.Prompt(
-            new TextPrompt<string>("[green]Confirm password[/]:").Secret()
+            new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret()
         );
 
         return (password, confirmPassword);
@@ -246,7 +247,7 @@ internal sealed class EncryptCommand(
             _ => "white",
         };
         AnsiConsole.MarkupLine(
-            $"  Password strength: [{strengthColor}]{Markup.Escape(strength.Description)}[/]"
+            $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]"
         );
         AnsiConsole.WriteLine();
     }
@@ -279,28 +280,28 @@ internal sealed class EncryptCommand(
         Table summaryTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
-            .Title($"[bold cyan]{operationName} Summary[/]")
-            .AddColumn(new TableColumn("[bold]Setting[/]").LeftAligned())
-            .AddColumn(new TableColumn("[bold]Value[/]").LeftAligned());
+            .Title($"[bold cyan]{operationName} {Messages.SummaryTitle}[/]")
+            .AddColumn(new TableColumn($"[bold]{Messages.Setting}[/]").LeftAligned())
+            .AddColumn(new TableColumn($"[bold]{Messages.Value}[/]").LeftAligned());
 
-        summaryTable.AddRow("Source", Markup.Escape(sourcePath));
-        summaryTable.AddRow("Destination", Markup.Escape(destinationPath));
-        summaryTable.AddRow("Encryption", Markup.Escape(encryption.DisplayName));
-        summaryTable.AddRow("Key Derivation", Markup.Escape(kdf.DisplayName));
-        summaryTable.AddRow("Name Obfuscation", Markup.Escape(obfuscation.DisplayName));
-        summaryTable.AddRow("Compression", Markup.Escape(compression.DisplayName));
+        summaryTable.AddRow(Messages.Source, Markup.Escape(sourcePath));
+        summaryTable.AddRow(Messages.Destination, Markup.Escape(destinationPath));
+        summaryTable.AddRow(Messages.EncryptionLabel, Markup.Escape(encryption.DisplayName));
+        summaryTable.AddRow(Messages.KeyDerivationLabel, Markup.Escape(kdf.DisplayName));
+        summaryTable.AddRow(Messages.NameObfuscationLabel, Markup.Escape(obfuscation.DisplayName));
+        summaryTable.AddRow(Messages.CompressionLabel, Markup.Escape(compression.DisplayName));
         AnsiConsole.Write(summaryTable);
         AnsiConsole.WriteLine();
     }
 
     private static void PrintFailure(string operationName, string[] errors) =>
         AnsiConsole.MarkupLine(
-            $"[red]❌ {operationName} failed: {Markup.Escape(string.Join(", ", errors))}[/]"
+            $"[red]{string.Format(Messages.FailedFormat, operationName, Markup.Escape(string.Join(", ", errors)))}[/]"
         );
 
     private static void PrintValidationErrors(IReadOnlyList<string> errors)
     {
-        AnsiConsole.MarkupLine("[red]Validation errors:[/]");
+        AnsiConsole.MarkupLine($"[red]{Messages.ValidationErrors}[/]");
         foreach (string error in errors)
         {
             AnsiConsole.MarkupLine($"  [red]❌ {Markup.Escape(error)}[/]");

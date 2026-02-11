@@ -1,6 +1,7 @@
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Password;
 using CloudZCrypt.Domain.Enums;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal.Commands;
@@ -10,7 +11,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
     public void Execute()
     {
         AnsiConsole.Write(
-            new Rule("[bold cyan]Password Generator[/]").RuleStyle(Style.Parse("grey"))
+            new Rule($"[bold cyan]{Messages.PasswordGenerator}[/]").RuleStyle(Style.Parse("grey"))
         );
         AnsiConsole.WriteLine();
 
@@ -25,12 +26,12 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
 
     private static int PromptLength() =>
         AnsiConsole.Prompt(
-            new TextPrompt<int>("[green]Password length[/] (16–256):")
+            new TextPrompt<int>($"[green]{Messages.PasswordLengthPrompt}[/] {Messages.PasswordLengthRange}")
                 .DefaultValue(128)
                 .Validate(l =>
                     l is >= 16 and <= 256
                         ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Length must be between 16 and 256[/]")
+                        : ValidationResult.Error($"[red]{Messages.PasswordLengthError}[/]")
                 )
         );
 
@@ -38,31 +39,31 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
     {
         List<string> optionChoices = AnsiConsole.Prompt(
             new MultiSelectionPrompt<string>()
-                .Title("[green]Include:[/]")
+                .Title($"[green]{Messages.IncludePrompt}[/]")
                 .Required()
                 .InstructionsText(
-                    "[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to confirm)[/]"
+                    $"[grey]{Messages.ToggleInstructions}[/]"
                 )
                 .AddChoices(
-                    "Uppercase (A-Z)",
-                    "Lowercase (a-z)",
-                    "Numbers (0-9)",
-                    "Special characters (!@#$)"
+                    Messages.OptionUppercase,
+                    Messages.OptionLowercase,
+                    Messages.OptionNumbers,
+                    Messages.OptionSpecialChars
                 )
-                .Select("Uppercase (A-Z)")
-                .Select("Lowercase (a-z)")
-                .Select("Numbers (0-9)")
-                .Select("Special characters (!@#$)")
+                .Select(Messages.OptionUppercase)
+                .Select(Messages.OptionLowercase)
+                .Select(Messages.OptionNumbers)
+                .Select(Messages.OptionSpecialChars)
         );
 
         PasswordGenerationOptions options = PasswordGenerationOptions.None;
-        if (optionChoices.Contains("Uppercase (A-Z)"))
+        if (optionChoices.Contains(Messages.OptionUppercase))
             options |= PasswordGenerationOptions.IncludeUppercase;
-        if (optionChoices.Contains("Lowercase (a-z)"))
+        if (optionChoices.Contains(Messages.OptionLowercase))
             options |= PasswordGenerationOptions.IncludeLowercase;
-        if (optionChoices.Contains("Numbers (0-9)"))
+        if (optionChoices.Contains(Messages.OptionNumbers))
             options |= PasswordGenerationOptions.IncludeNumbers;
-        if (optionChoices.Contains("Special characters (!@#$)"))
+        if (optionChoices.Contains(Messages.OptionSpecialChars))
             options |= PasswordGenerationOptions.IncludeSpecialCharacters;
 
         return options;
@@ -90,13 +91,13 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
                 new Markup($"[bold]{Markup.Escape(generated)}[/]"),
                 new Text(""),
                 new Markup(
-                    $"[dim]Strength:[/] [{strengthColor}]{Markup.Escape(analysis.Description)}[/]"
+                    $"[dim]{Messages.StrengthLabel}[/] [{strengthColor}]{Markup.Escape(analysis.Description)}[/]"
                 ),
-                new Markup($"[dim]Length:[/]   {length} characters")
+                new Markup($"[dim]{Messages.LengthLabel}[/]   {length} {Messages.CharactersLabel}")
             )
         )
         {
-            Header = new PanelHeader("🔐 [bold cyan]Generated Password[/]"),
+            Header = new PanelHeader($"{Messages.GeneratedPasswordHeader}"),
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Cyan1),
             Padding = new Padding(1, 1),
@@ -105,7 +106,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
         AnsiConsole.Write(passwordPanel);
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(
-            "⚠  [yellow]Store this password securely — it cannot be recovered if lost![/]"
+            $"⚠  [yellow]{Messages.PasswordStorageWarning}[/]"
         );
     }
 }

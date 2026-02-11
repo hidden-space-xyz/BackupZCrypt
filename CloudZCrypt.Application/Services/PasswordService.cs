@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Password;
 using CloudZCrypt.Domain.Enums;
@@ -70,7 +71,7 @@ namespace CloudZCrypt.Application.Services
             {
                 return new PasswordStrengthAnalysis(
                     PasswordStrength.VeryWeak,
-                    "Empty password. Please enter a password.",
+                    Messages.EmptyPasswordDescription,
                     0
                 );
             }
@@ -112,7 +113,7 @@ namespace CloudZCrypt.Application.Services
             {
                 throw new ValidationException(
                     ValidationErrorCode.PasswordLengthNonPositive,
-                    "Password length must be greater than 0",
+                    Messages.PasswordLengthNonPositive,
                     nameof(length)
                 );
             }
@@ -121,7 +122,7 @@ namespace CloudZCrypt.Application.Services
             {
                 throw new ValidationException(
                     ValidationErrorCode.PasswordOptionsNone,
-                    "At least one character type must be selected",
+                    Messages.PasswordOptionsNone,
                     nameof(options)
                 );
             }
@@ -161,7 +162,7 @@ namespace CloudZCrypt.Application.Services
             {
                 throw new ValidationException(
                     ValidationErrorCode.NoCharactersAvailableForGeneration,
-                    "No characters available for password generation with the given options"
+                    Messages.NoCharactersAvailable
                 );
             }
 
@@ -359,72 +360,72 @@ namespace CloudZCrypt.Application.Services
             sb.Append(
                 strength switch
                 {
-                    PasswordStrength.VeryWeak => "Very Weak",
-                    PasswordStrength.Weak => "Weak",
-                    PasswordStrength.Fair => "Fair",
-                    PasswordStrength.Good => "Good",
-                    PasswordStrength.Strong => "Strong",
+                    PasswordStrength.VeryWeak => Messages.StrengthVeryWeak,
+                    PasswordStrength.Weak => Messages.StrengthWeak,
+                    PasswordStrength.Fair => Messages.StrengthFair,
+                    PasswordStrength.Good => Messages.StrengthGood,
+                    PasswordStrength.Strong => Messages.StrengthStrong,
                     _ => "?",
                 }
             );
 
-            sb.Append($" // Entropy: {entropy:0.0} bits");
+            sb.Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
 
             List<string> tips = [];
 
             if (password.Length < 12)
             {
-                tips.Add("Increase length (≥12 chars)");
+                tips.Add(Messages.TipIncreaseLength);
             }
 
             if (!flags.HasUpper)
             {
-                tips.Add("Add uppercase letters");
+                tips.Add(Messages.TipAddUppercase);
             }
 
             if (!flags.HasLower)
             {
-                tips.Add("Add lowercase letters");
+                tips.Add(Messages.TipAddLowercase);
             }
 
             if (!flags.HasDigit)
             {
-                tips.Add("Add digits");
+                tips.Add(Messages.TipAddDigits);
             }
 
             if (!flags.HasSpecial)
             {
-                tips.Add("Add symbols");
+                tips.Add(Messages.TipAddSymbols);
             }
 
             if (flags.CategoryCount < 4 && password.Length < 16)
             {
-                tips.Add("Use more character variety");
+                tips.Add(Messages.TipMoreVariety);
             }
 
             if (HasObviousSequence(password))
             {
-                tips.Add("Avoid sequences (e.g. abc, 123, qwerty)");
+                tips.Add(Messages.TipAvoidSequences);
             }
 
             if (HasRepeats(password))
             {
-                tips.Add("Reduce repeated characters");
+                tips.Add(Messages.TipReduceRepeats);
             }
 
             if (YearRegex.IsMatch(password))
             {
-                tips.Add("Avoid years");
+                tips.Add(Messages.TipAvoidYears);
             }
 
             if (tips.Count > 0)
             {
-                sb.Append(" // Suggestions: ");
+                sb.Append($" // {Messages.Suggestions} ");
                 sb.Append(string.Join(", ", tips.Take(3)));
             }
             else if (strength == PasswordStrength.Strong)
             {
-                sb.Append(" // Good job!");
+                sb.Append($" // {Messages.GoodJob}");
             }
 
             return sb.ToString();

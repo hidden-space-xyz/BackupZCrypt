@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Manifest;
 using CloudZCrypt.Domain.Strategies.Interfaces;
@@ -110,12 +111,12 @@ internal sealed class ManifestService : IManifestService
             );
             if (!manifestOk)
             {
-                errors.Add($"Failed to create encrypted manifest at '{encryptedManifestPath}'.");
+                errors.Add(string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath));
             }
         }
         catch (Exception ex)
         {
-            errors.Add($"Failed to write or encrypt manifest: {ex.Message}");
+            errors.Add(string.Format(Messages.ManifestWriteFailedFormat, ex.Message));
         }
 
         return errors;

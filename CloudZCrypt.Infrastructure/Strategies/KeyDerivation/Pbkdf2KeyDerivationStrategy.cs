@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -13,16 +14,11 @@ internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 
     public KeyDerivationAlgorithm Id => KeyDerivationAlgorithm.PBKDF2;
 
-    public string DisplayName => "PBKDF2 (HMAC-SHA256)";
+    public string DisplayName => Messages.Pbkdf2DisplayName;
 
-    public string Description =>
-        "A widely standardized (PKCS #5, RFC 8018, FIPS 140 allowed) iterative, CPU‑bound key derivation function using repeated HMAC-SHA256 applications. "
-        + "Simple and broadly implemented in virtually all cryptographic libraries. "
-        + "Lacks intrinsic memory hardness, making it comparatively cheaper to accelerate on GPUs/ASICs versus Argon2id or scrypt. "
-        + "Still appropriate where regulatory, legacy platform, or FIPS compliance requirements dominate, or when only conservative primitives are permitted. "
-        + "Security hinges on high iteration counts (cost parameter) and high‑entropy passwords.";
+    public string Description => Messages.Pbkdf2Description;
 
-    public string Summary => "Best for maximum compatibility / legacy & compliance needs";
+    public string Summary => Messages.Pbkdf2Summary;
 
     public byte[] DeriveKey(string password, byte[] salt, int keySize)
     {
@@ -45,7 +41,7 @@ internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         }
         catch (Exception ex)
         {
-            throw new CryptographicException("Error deriving key with PBKDF2", ex);
+            throw new CryptographicException(Messages.Pbkdf2KeyDerivationError, ex);
         }
         finally
         {

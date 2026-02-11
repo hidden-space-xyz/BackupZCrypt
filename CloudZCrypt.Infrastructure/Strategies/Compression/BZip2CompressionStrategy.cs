@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
+using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
@@ -10,14 +11,11 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
 {
     public Domain.Enums.CompressionMode Id => Domain.Enums.CompressionMode.BZip2;
 
-    public string DisplayName => "BZip2";
+    public string DisplayName => Messages.BZip2DisplayName;
 
-    public string Description =>
-        "A high-quality block-sorting compression algorithm that achieves better compression ratios "
-        + "than GZip at the cost of slower speed. Well suited for archiving scenarios where file size "
-        + "reduction is more important than throughput.";
+    public string Description => Messages.BZip2Description;
 
-    public string Summary => "Higher compression ratio than GZip";
+    public string Summary => Messages.BZip2Summary;
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,

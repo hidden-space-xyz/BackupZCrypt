@@ -1,4 +1,5 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 namespace CloudZCrypt.Terminal.Commands;
@@ -13,27 +14,27 @@ internal sealed class AlgorithmInfoCommand(
     public void Execute()
     {
         AnsiConsole.Write(
-            new Rule("[bold cyan]Algorithm Information[/]").RuleStyle(Style.Parse("grey"))
+            new Rule($"[bold cyan]{Messages.AlgorithmInformation}[/]").RuleStyle(Style.Parse("grey"))
         );
         AnsiConsole.WriteLine();
 
         PrintStrategyTable(
-            "Encryption Algorithms",
+            Messages.EncryptionAlgorithms,
             encryptionStrategies,
             s => (s.DisplayName, s.Description)
         );
         PrintStrategyTable(
-            "Key Derivation Algorithms",
+            Messages.KeyDerivationAlgorithms,
             keyDerivationStrategies,
             s => (s.DisplayName, s.Description)
         );
         PrintStrategyTable(
-            "Name Obfuscation Modes",
+            Messages.NameObfuscationModes,
             nameObfuscationStrategies,
             s => (s.DisplayName, s.Description)
         );
         PrintStrategyTable(
-            "Compression Modes",
+            Messages.CompressionModes,
             compressionStrategies,
             s => (s.DisplayName, s.Description)
         );
@@ -49,8 +50,8 @@ internal sealed class AlgorithmInfoCommand(
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .Title($"[bold green]{title}[/]")
-            .AddColumn(new TableColumn("[bold]Name[/]").LeftAligned())
-            .AddColumn(new TableColumn("[bold]Description[/]").LeftAligned());
+            .AddColumn(new TableColumn($"[bold]{Messages.Name}[/]").LeftAligned())
+            .AddColumn(new TableColumn($"[bold]{Messages.Description}[/]").LeftAligned());
 
         foreach (T strategy in strategies)
         {
