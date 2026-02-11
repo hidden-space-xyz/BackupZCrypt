@@ -17,7 +17,7 @@ internal abstract class EncryptionStrategyBase(
     protected const int NonceSize = 12;
     protected const int CompressionHeaderSize = 1;
     protected const int MacSize = 128;
-    protected const int BufferSize = 4 * 1024;
+    protected const int BufferSize = 80 * 1024;
 
     public async Task<bool> EncryptFileAsync(
         string sourceFilePath,
@@ -231,7 +231,7 @@ internal abstract class EncryptionStrategyBase(
                 );
 
                 using Stream destinationFile = File.Create(destinationFilePath);
-                await decompressedStream.CopyToAsync(destinationFile);
+                await decompressedStream.CopyToAsync(destinationFile, BufferSize);
             }
             catch (IOException ex)
             {
@@ -427,7 +427,7 @@ internal abstract class EncryptionStrategyBase(
                 decryptedBuffer
             );
             using MemoryStream resultBuffer = new();
-            await decompressedStream.CopyToAsync(resultBuffer);
+            await decompressedStream.CopyToAsync(resultBuffer, BufferSize);
             return resultBuffer.ToArray();
         }
         catch (CryptographicException)
@@ -541,7 +541,7 @@ internal abstract class EncryptionStrategyBase(
     )
     {
         byte[] inputBuffer = new byte[BufferSize];
-        byte[] outputBuffer = new byte[BufferSize];
+        byte[] outputBuffer = new byte[BufferSize + MacSize / 8];
 
         int bytesRead;
         while ((bytesRead = await sourceStream.ReadAsync(inputBuffer)) > 0)

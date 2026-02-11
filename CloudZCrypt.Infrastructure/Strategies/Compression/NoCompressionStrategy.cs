@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Constants;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
@@ -39,7 +40,7 @@ internal class NoCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken
     )
     {
-        await input.CopyToAsync(output, cancellationToken);
+        await input.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         output.Position = 0;
         return output;
     }

@@ -1,4 +1,5 @@
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Constants;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors.LZMA;
 
@@ -23,7 +24,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
     )
     {
         MemoryStream inputBuffer = new();
-        await inputStream.CopyToAsync(inputBuffer, cancellationToken);
+        await inputStream.CopyToAsync(inputBuffer, StreamConstants.CopyBufferSize, cancellationToken);
         long uncompressedSize = inputBuffer.Length;
         inputBuffer.Position = 0;
 
@@ -33,7 +34,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
 
         using (LzmaStream lzma = new(encoderProps, false, new NonClosingStreamWrapper(compressedBuffer)))
         {
-            await inputBuffer.CopyToAsync(lzma, cancellationToken);
+            await inputBuffer.CopyToAsync(lzma, StreamConstants.CopyBufferSize, cancellationToken);
             lzmaProperties = lzma.Properties;
         }
 
@@ -42,7 +43,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         await output.WriteAsync(BitConverter.GetBytes(uncompressedSize), cancellationToken);
 
         compressedBuffer.Position = 0;
-        await compressedBuffer.CopyToAsync(output, cancellationToken);
+        await compressedBuffer.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
 
         output.Position = 0;
         return output;
@@ -63,7 +64,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         MemoryStream output = new();
         using (LzmaStream lzma = new(properties, inputStream, uncompressedSize))
         {
-            await lzma.CopyToAsync(output, cancellationToken);
+            await lzma.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
         output.Position = 0;
         return output;
