@@ -12,6 +12,7 @@ internal static class ProgressRunner
         IFileCryptOrchestrator orchestrator,
         FileCryptRequest request,
         string operationName,
+        string operationIngName,
         CancellationToken cancellationToken
     )
     {
@@ -31,7 +32,7 @@ internal static class ProgressRunner
             .StartAsync(async ctx =>
             {
                 ProgressTask task = ctx.AddTask(
-                    $"[cyan]{string.Format(Messages.OperationIngFormat, operationName)}[/]",
+                    $"[cyan]{string.Format(Messages.OperationIngFormat, operationIngName)}[/]",
                     maxValue: 100
                 );
 
@@ -43,7 +44,7 @@ internal static class ProgressRunner
                             : 100;
                     task.Value = pct;
                     task.Description =
-                        $"[cyan]{string.Format(Messages.OperationIngFilesFormat, operationName, update.ProcessedFiles, update.TotalFiles)}[/]";
+                        $"[cyan]{string.Format(Messages.OperationIngFilesFormat, operationIngName, update.ProcessedFiles, update.TotalFiles)}[/]";
                 });
 
                 result = await orchestrator.ExecuteAsync(request, progress, cancellationToken);

@@ -39,11 +39,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- BannerRenderer -->
   <data name="BannerSubtitle" xml:space="preserve">
     <value>Una herramienta sencilla de cifrado de archivos de grado militar</value>
   </data>
-  <!-- TerminalApplication menu -->
   <data name="MenuEncrypt" xml:space="preserve">
     <value>🔒 Cifrar</value>
   </data>
@@ -65,12 +63,17 @@
   <data name="PressAnyKey" xml:space="preserve">
     <value>Pulse cualquier tecla para volver al menú…</value>
   </data>
-  <!-- EncryptCommand -->
   <data name="Encrypt" xml:space="preserve">
     <value>Cifrar</value>
   </data>
+  <data name="Encrypting" xml:space="preserve">
+    <value>Cifrando</value>
+  </data>
   <data name="Decrypt" xml:space="preserve">
     <value>Descifrar</value>
+  </data>
+  <data name="Decrypting" xml:space="preserve">
+    <value>Descifrando</value>
   </data>
   <data name="SourcePathPrompt" xml:space="preserve">
     <value>Ruta de origen</value>
@@ -172,12 +175,11 @@
     <value>Errores de validación:</value>
   </data>
   <data name="OperationIngFormat" xml:space="preserve">
-    <value>{0}ando…</value>
+    <value>{0}…</value>
   </data>
   <data name="OperationIngFilesFormat" xml:space="preserve">
-    <value>{0}ando {1}/{2} archivos</value>
+    <value>{0} {1}/{2} archivos</value>
   </data>
-  <!-- ResultRenderer -->
   <data name="CompletedSuccessfully" xml:space="preserve">
     <value>Completado exitosamente</value>
   </data>
@@ -211,7 +213,6 @@
   <data name="Errors" xml:space="preserve">
     <value>Errores:</value>
   </data>
-  <!-- AlgorithmInfoCommand -->
   <data name="AlgorithmInformation" xml:space="preserve">
     <value>Información de algoritmos</value>
   </data>
@@ -233,7 +234,6 @@
   <data name="Description" xml:space="preserve">
     <value>Descripción</value>
   </data>
-  <!-- GeneratePasswordCommand -->
   <data name="PasswordGenerator" xml:space="preserve">
     <value>Generador de contraseñas</value>
   </data>

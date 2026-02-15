@@ -17,7 +17,8 @@ internal sealed class FileCryptDirectoryService(
     IEncryptionServiceFactory encryptionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
     IFileOperationsService fileOperations,
-    IManifestService manifestService
+    IManifestService manifestService,
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies
 ) : IFileCryptDirectoryService
 {
     public async Task<Result<FileCryptResult>> ProcessAsync(
@@ -30,12 +31,49 @@ internal sealed class FileCryptDirectoryService(
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        IEncryptionAlgorithmStrategy encryptionService = encryptionServiceFactory.Create(
-            request.EncryptionAlgorithm
-        );
-        INameObfuscationStrategy obfuscationService = nameObfuscationServiceFactory.Create(
-            request.NameObfuscation
-        );
+        IEncryptionAlgorithmStrategy encryptionService;
+        INameObfuscationStrategy obfuscationService;
+
+        ConcurrentBag<ManifestEntry> manifestEntries = [];
+        Dictionary<string, string>? manifestMap = null;
+
+        if (request.Operation == EncryptOperation.Decrypt)
+        {
+            ManifestData? manifestData = await manifestService.TryReadManifestAsync(
+                sourcePath,
+                [.. encryptionStrategies],
+                request.Password,
+                cancellationToken
+            );
+
+            if (manifestData is not null)
+            {
+                manifestMap = manifestData.FileMap;
+                encryptionService = encryptionServiceFactory.Create(
+                    manifestData.Header.EncryptionAlgorithm
+                );
+                obfuscationService = nameObfuscationServiceFactory.Create(
+                    manifestData.Header.NameObfuscation
+                );
+                request = request with
+                {
+                    EncryptionAlgorithm = manifestData.Header.EncryptionAlgorithm,
+                    KeyDerivationAlgorithm = manifestData.Header.KeyDerivationAlgorithm,
+                    NameObfuscation = manifestData.Header.NameObfuscation,
+                    Compression = manifestData.Header.Compression,
+                };
+            }
+            else
+            {
+                encryptionService = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
+                obfuscationService = nameObfuscationServiceFactory.Create(request.NameObfuscation);
+            }
+        }
+        else
+        {
+            encryptionService = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
+            obfuscationService = nameObfuscationServiceFactory.Create(request.NameObfuscation);
+        }
 
         string[] files = await fileOperations.GetFilesAsync(sourcePath, "*.*", cancellationToken);
 
@@ -51,19 +89,6 @@ internal sealed class FileCryptDirectoryService(
                     0,
                     errors: [Messages.NoFilesInSourceDirectory]
                 )
-            );
-        }
-
-        ConcurrentBag<ManifestEntry> manifestEntries = [];
-        Dictionary<string, string>? manifestMap = null;
-
-        if (request.Operation == EncryptOperation.Decrypt)
-        {
-            manifestMap = await manifestService.TryReadManifestAsync(
-                sourcePath,
-                encryptionService,
-                request,
-                cancellationToken
             );
         }
 
@@ -260,7 +285,7 @@ internal sealed class FileCryptDirectoryService(
                     }
                     catch
                     {
-                        // ignore
+                        // Ignore file size retrieval errors and proceed with a size of 0 for progress reporting
                     }
 
                     long currentProcessedBytes = Interlocked.Add(ref processedBytes, fileSize);
@@ -287,8 +312,15 @@ internal sealed class FileCryptDirectoryService(
 
         if (request.Operation == EncryptOperation.Encrypt && !manifestEntries.IsEmpty)
         {
+            ManifestHeader header = new(
+                request.EncryptionAlgorithm,
+                request.KeyDerivationAlgorithm,
+                request.NameObfuscation,
+                request.Compression
+            );
             IReadOnlyList<string> manifestErrors = await manifestService.TrySaveManifestAsync(
                 [.. manifestEntries],
+                header,
                 destinationPath,
                 encryptionService,
                 request,

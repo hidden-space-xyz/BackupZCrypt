@@ -108,8 +108,6 @@ internal sealed class PasswordServiceTests
         Assert.That(result.Score, Is.LessThanOrEqualTo(100));
     }
 
-    // GeneratePassword tests
-
     [Test]
     public void GeneratePassword_ValidParameters_ReturnsCorrectLength()
     {

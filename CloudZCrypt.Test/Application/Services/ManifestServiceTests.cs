@@ -42,10 +42,10 @@ internal sealed class ManifestServiceTests
 
         try
         {
-            Dictionary<string, string>? result = await _service.TryReadManifestAsync(
+            ManifestData? result = await _service.TryReadManifestAsync(
                 tempDir,
-                encryptionService,
-                CreateRequest(),
+                [encryptionService],
+                "StrongP@ss1",
                 CancellationToken.None
             );
 
@@ -57,6 +57,14 @@ internal sealed class ManifestServiceTests
         }
     }
 
+    private static ManifestHeader CreateHeader() =>
+        new(
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            NameObfuscationMode.None,
+            CompressionMode.None
+        );
+
     [Test]
     public async Task TrySaveManifestAsync_EmptyEntries_ReturnsNoErrors()
     {
@@ -65,6 +73,7 @@ internal sealed class ManifestServiceTests
 
         IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
             [],
+            CreateHeader(),
             @"C:\dest",
             encryptionService,
             CreateRequest(),
@@ -98,6 +107,7 @@ internal sealed class ManifestServiceTests
 
             IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
                 entries,
+                CreateHeader(),
                 tempDir,
                 encryptionService,
                 CreateRequest(),
@@ -137,6 +147,7 @@ internal sealed class ManifestServiceTests
 
             IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
                 entries,
+                CreateHeader(),
                 tempDir,
                 encryptionService,
                 CreateRequest(),
@@ -174,10 +185,10 @@ internal sealed class ManifestServiceTests
                 )
                 .Returns(false);
 
-            Dictionary<string, string>? result = await _service.TryReadManifestAsync(
+            ManifestData? result = await _service.TryReadManifestAsync(
                 tempDir,
-                encryptionService,
-                CreateRequest(),
+                [encryptionService],
+                "StrongP@ss1",
                 CancellationToken.None
             );
 

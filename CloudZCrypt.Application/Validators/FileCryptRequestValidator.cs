@@ -4,6 +4,7 @@ using CloudZCrypt.Application.Utilities.Formatters;
 using CloudZCrypt.Application.Utilities.Helpers;
 using CloudZCrypt.Application.Validators.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Password;
+using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
@@ -163,15 +164,18 @@ internal sealed class FileCryptRequestValidator(
             }
         }
 
-        if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        if (request.Operation == EncryptOperation.Encrypt)
         {
-            errors.Add(Messages.ConfirmPasswordRequired);
-        }
-        else if (
-            !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
-        )
-        {
-            errors.Add(Messages.PasswordMismatch);
+            if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+            {
+                errors.Add(Messages.ConfirmPasswordRequired);
+            }
+            else if (
+                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
+            )
+            {
+                errors.Add(Messages.PasswordMismatch);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(sourcePath) && !string.IsNullOrWhiteSpace(destinationPath))

@@ -25,6 +25,8 @@ internal sealed class EncryptCommand(
     {
         string operationName =
             operation == EncryptOperation.Encrypt ? Messages.Encrypt : Messages.Decrypt;
+        string operationIngName =
+            operation == EncryptOperation.Encrypt ? Messages.Encrypting : Messages.Decrypting;
 
         AnsiConsole.Write(
             new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
@@ -33,64 +35,104 @@ internal sealed class EncryptCommand(
 
         string sourcePath = PromptSourcePath();
         string destinationPath = PromptDestinationPath();
-        (string password, string confirmPassword) = PromptPasswords();
 
-        PrintPasswordStrength(password);
-
-        IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
-            Messages.EncryptionAlgorithmPrompt,
-            encryptionStrategies,
-            s => $"{s.DisplayName} — {s.Summary}"
-        );
-        IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
-            Messages.KeyDerivationAlgorithmPrompt,
-            keyDerivationStrategies,
-            s => $"{s.DisplayName} — {s.Summary}"
-        );
-        INameObfuscationStrategy selectedObfuscation = PromptStrategy(
-            Messages.NameObfuscationModePrompt,
-            nameObfuscationStrategies,
-            s => $"{s.DisplayName} — {s.Summary}"
-        );
-        ICompressionStrategy selectedCompression = PromptStrategy(
-            Messages.CompressionModePrompt,
-            compressionStrategies,
-            s => $"{s.DisplayName} — {s.Summary}"
-        );
-
-        PrintSummary(
-            operationName,
-            sourcePath,
-            destinationPath,
-            selectedEncryption,
-            selectedKdf,
-            selectedObfuscation,
-            selectedCompression
-        );
-
-        if (
-            !AnsiConsole.Confirm(
-                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
-            )
-        )
+        if (operation == EncryptOperation.Encrypt)
         {
-            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
-            return;
+            (string password, string confirmPassword) = PromptPasswords();
+
+            PrintPasswordStrength(password);
+
+            IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
+                Messages.EncryptionAlgorithmPrompt,
+                encryptionStrategies,
+                s => $"{s.DisplayName} — {s.Summary}"
+            );
+            IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
+                Messages.KeyDerivationAlgorithmPrompt,
+                keyDerivationStrategies,
+                s => $"{s.DisplayName} — {s.Summary}"
+            );
+            INameObfuscationStrategy selectedObfuscation = PromptStrategy(
+                Messages.NameObfuscationModePrompt,
+                nameObfuscationStrategies,
+                s => $"{s.DisplayName} — {s.Summary}"
+            );
+            ICompressionStrategy selectedCompression = PromptStrategy(
+                Messages.CompressionModePrompt,
+                compressionStrategies,
+                s => $"{s.DisplayName} — {s.Summary}"
+            );
+
+            PrintSummary(
+                operationName,
+                sourcePath,
+                destinationPath,
+                selectedEncryption,
+                selectedKdf,
+                selectedObfuscation,
+                selectedCompression
+            );
+
+            if (
+                !await AnsiConsole.ConfirmAsync(
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
+                )
+            )
+            {
+                AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
+                return;
+            }
+
+            FileCryptRequest request = new(
+                sourcePath,
+                destinationPath,
+                password,
+                confirmPassword,
+                selectedEncryption.Id,
+                selectedKdf.Id,
+                operation,
+                selectedObfuscation.Id,
+                selectedCompression.Id,
+                ProceedOnWarnings: false
+            );
+
+            await RunOperationAsync(request, operationName, operationIngName);
         }
+        else
+        {
+            string password = PromptPassword();
 
-        FileCryptRequest request = new(
-            sourcePath,
-            destinationPath,
-            password,
-            confirmPassword,
-            selectedEncryption.Id,
-            selectedKdf.Id,
-            operation,
-            selectedObfuscation.Id,
-            selectedCompression.Id,
-            ProceedOnWarnings: false
-        );
+            if (
+                !await AnsiConsole.ConfirmAsync(
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
+                )
+            )
+            {
+                AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
+                return;
+            }
 
+            FileCryptRequest request = new(
+                sourcePath,
+                destinationPath,
+                password,
+                password,
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.Argon2id,
+                operation,
+                NameObfuscationMode.None
+            );
+
+            await RunOperationAsync(request, operationName, operationIngName);
+        }
+    }
+
+    private async Task RunOperationAsync(
+        FileCryptRequest request,
+        string operationName,
+        string operationIngName
+    )
+    {
         AnsiConsole.WriteLine();
 
         using CancellationTokenSource cts = new();
@@ -108,6 +150,7 @@ internal sealed class EncryptCommand(
                 orchestrator,
                 request,
                 operationName,
+                operationIngName,
                 cts.Token
             );
 
@@ -117,7 +160,7 @@ internal sealed class EncryptCommand(
                 return;
             }
 
-            FileCryptResult response = result.Value;
+            FileCryptResult? response = result.Value;
 
             if (response.HasErrors && response.TotalFiles == 0 && response.ProcessedFiles == 0)
             {
@@ -127,7 +170,13 @@ internal sealed class EncryptCommand(
 
             if (response.HasWarnings && !request.ProceedOnWarnings)
             {
-                response = await HandleWarningsAsync(response, request, operationName, cts.Token);
+                response = await HandleWarningsAsync(
+                    response,
+                    request,
+                    operationName,
+                    operationIngName,
+                    cts.Token
+                );
 
                 if (response is null)
                     return;
@@ -163,6 +212,7 @@ internal sealed class EncryptCommand(
         FileCryptResult response,
         FileCryptRequest request,
         string operationName,
+        string operationIngName,
         CancellationToken cancellationToken
     )
     {
@@ -174,7 +224,7 @@ internal sealed class EncryptCommand(
         AnsiConsole.WriteLine();
 
         if (
-            !AnsiConsole.Confirm(
+            !await AnsiConsole.ConfirmAsync(
                 $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToLower())}[/]"
             )
         )
@@ -189,6 +239,7 @@ internal sealed class EncryptCommand(
             orchestrator,
             proceedRequest,
             operationName,
+            operationIngName,
             cancellationToken
         );
 
@@ -225,9 +276,8 @@ internal sealed class EncryptCommand(
                 )
         );
 
-    private static (string Password, string ConfirmPassword) PromptPasswords()
-    {
-        string password = AnsiConsole.Prompt(
+    private static string PromptPassword() =>
+        AnsiConsole.Prompt(
             new TextPrompt<string>($"[green]{Messages.PasswordPrompt}[/]:")
                 .Secret()
                 .ValidationErrorMessage($"[red]{Messages.PasswordCannotBeEmpty}[/]")
@@ -237,6 +287,10 @@ internal sealed class EncryptCommand(
                         : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")
                 )
         );
+
+    private static (string Password, string ConfirmPassword) PromptPasswords()
+    {
+        string password = PromptPassword();
 
         string confirmPassword = AnsiConsole.Prompt(
             new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret()

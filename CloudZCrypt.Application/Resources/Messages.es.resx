@@ -39,7 +39,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- Validator messages -->
   <data name="SourcePathEmpty" xml:space="preserve">
     <value>Seleccione un archivo o directorio de origen para procesar.</value>
   </data>
@@ -121,14 +120,12 @@
   <data name="InvalidPathFormat" xml:space="preserve">
     <value>Ruta no válida: {0}</value>
   </data>
-  <!-- Orchestrator messages -->
   <data name="SourcePathNotExist" xml:space="preserve">
     <value>La ruta de origen no existe.</value>
   </data>
   <data name="UnexpectedErrorFormat" xml:space="preserve">
     <value>Ocurrió un error inesperado: {0}</value>
   </data>
-  <!-- PasswordService messages -->
   <data name="EmptyPasswordDescription" xml:space="preserve">
     <value>Contraseña vacía. Introduzca una contraseña.</value>
   </data>
@@ -192,14 +189,12 @@
   <data name="TipAvoidYears" xml:space="preserve">
     <value>Evite años</value>
   </data>
-  <!-- FileCryptSingleFileService -->
   <data name="ManifestIgnored" xml:space="preserve">
     <value>Archivo de manifiesto ignorado durante el descifrado.</value>
   </data>
   <data name="UnsupportedOperationFormat" xml:space="preserve">
     <value>Operación no soportada: {0}</value>
   </data>
-  <!-- FileCryptDirectoryService -->
   <data name="NoFilesInSourceDirectory" xml:space="preserve">
     <value>No se encontraron archivos en el directorio de origen.</value>
   </data>
@@ -230,7 +225,6 @@
   <data name="AllFilesFailedFormat" xml:space="preserve">
     <value>No se pudo procesar ningún archivo. Errores: {0}</value>
   </data>
-  <!-- ManifestService -->
   <data name="ManifestCreateFailedFormat" xml:space="preserve">
     <value>No se pudo crear el manifiesto cifrado en '{0}'.</value>
   </data>

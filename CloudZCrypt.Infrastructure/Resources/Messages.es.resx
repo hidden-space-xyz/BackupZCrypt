@@ -39,7 +39,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- AES -->
   <data name="AesDisplayName" xml:space="preserve">
     <value>AES-256 GCM</value>
   </data>
@@ -49,7 +48,6 @@
   <data name="AesSummary" xml:space="preserve">
     <value>Mejor para uso general (con aceleración por hardware)</value>
   </data>
-  <!-- Serpent -->
   <data name="SerpentDisplayName" xml:space="preserve">
     <value>Serpent-256 GCM</value>
   </data>
@@ -59,7 +57,6 @@
   <data name="SerpentSummary" xml:space="preserve">
     <value>Mejor para alta seguridad (lento)</value>
   </data>
-  <!-- Camellia -->
   <data name="CamelliaDisplayName" xml:space="preserve">
     <value>Camellia-256 GCM</value>
   </data>
@@ -69,7 +66,6 @@
   <data name="CamelliaSummary" xml:space="preserve">
     <value>Mejor para cumplimiento internacional</value>
   </data>
-  <!-- ChaCha20 -->
   <data name="ChaCha20DisplayName" xml:space="preserve">
     <value>ChaCha20-Poly1305</value>
   </data>
@@ -79,7 +75,6 @@
   <data name="ChaCha20Summary" xml:space="preserve">
     <value>Mejor para uso general (sin aceleración por hardware)</value>
   </data>
-  <!-- Twofish -->
   <data name="TwofishDisplayName" xml:space="preserve">
     <value>Twofish-256 GCM</value>
   </data>
@@ -89,7 +84,6 @@
   <data name="TwofishSummary" xml:space="preserve">
     <value>Mejor para diversidad de diseño</value>
   </data>
-  <!-- PBKDF2 -->
   <data name="Pbkdf2DisplayName" xml:space="preserve">
     <value>PBKDF2 (HMAC-SHA256)</value>
   </data>
@@ -102,7 +96,6 @@
   <data name="Pbkdf2KeyDerivationError" xml:space="preserve">
     <value>Error al derivar clave con PBKDF2</value>
   </data>
-  <!-- Argon2id -->
   <data name="Argon2idDisplayName" xml:space="preserve">
     <value>Argon2id</value>
   </data>
@@ -115,7 +108,6 @@
   <data name="Argon2idKeyDerivationError" xml:space="preserve">
     <value>Error al derivar clave con Argon2id</value>
   </data>
-  <!-- Obfuscation: SHA-256 -->
   <data name="Sha256DisplayName" xml:space="preserve">
     <value>SHA-256</value>
   </data>
@@ -125,7 +117,6 @@
   <data name="Sha256Summary" xml:space="preserve">
     <value>Mejor para nomenclatura por contenido (resumen de 64 caracteres)</value>
   </data>
-  <!-- Obfuscation: SHA-512 -->
   <data name="Sha512DisplayName" xml:space="preserve">
     <value>SHA-512</value>
   </data>
@@ -135,7 +126,6 @@
   <data name="Sha512Summary" xml:space="preserve">
     <value>Mejor para máxima resistencia a colisiones (resumen de 128 caracteres)</value>
   </data>
-  <!-- Obfuscation: GUID -->
   <data name="GuidDisplayName" xml:space="preserve">
     <value>GUID</value>
   </data>
@@ -145,7 +135,6 @@
   <data name="GuidSummary" xml:space="preserve">
     <value>Mejor para máxima privacidad (aleatorio)</value>
   </data>
-  <!-- Obfuscation: None -->
   <data name="NoObfuscationDisplayName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
@@ -155,7 +144,6 @@
   <data name="NoObfuscationSummary" xml:space="preserve">
     <value>Mejor si no se necesita ofuscación de nombres</value>
   </data>
-  <!-- Compression: GZip -->
   <data name="GZipDisplayName" xml:space="preserve">
     <value>GZip</value>
   </data>
@@ -165,7 +153,6 @@
   <data name="GZipSummary" xml:space="preserve">
     <value>Buen equilibrio, compatibilidad universal</value>
   </data>
-  <!-- Compression: BZip2 -->
   <data name="BZip2DisplayName" xml:space="preserve">
     <value>BZip2</value>
   </data>
@@ -175,7 +162,6 @@
   <data name="BZip2Summary" xml:space="preserve">
     <value>Mayor ratio de compresión que GZip</value>
   </data>
-  <!-- Compression: LZMA -->
   <data name="LzmaDisplayName" xml:space="preserve">
     <value>LZMA (7-Zip)</value>
   </data>
@@ -185,7 +171,6 @@
   <data name="LzmaSummary" xml:space="preserve">
     <value>Mayor ratio de compresión (más lento)</value>
   </data>
-  <!-- Compression: None -->
   <data name="NoCompressionDisplayName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
@@ -195,7 +180,6 @@
   <data name="NoCompressionSummary" xml:space="preserve">
     <value>Sin compresión (más rápido)</value>
   </data>
-  <!-- EncryptionStrategyBase -->
   <data name="OperationEncryption" xml:space="preserve">
     <value>cifrado</value>
   </data>

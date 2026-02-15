@@ -39,11 +39,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- BannerRenderer -->
   <data name="BannerSubtitle" xml:space="preserve">
     <value>A simple military-grade file encryption tool</value>
   </data>
-  <!-- TerminalApplication menu -->
   <data name="MenuEncrypt" xml:space="preserve">
     <value>🔒 Encrypt</value>
   </data>
@@ -65,12 +63,17 @@
   <data name="PressAnyKey" xml:space="preserve">
     <value>Press any key to return to the menu…</value>
   </data>
-  <!-- EncryptCommand -->
   <data name="Encrypt" xml:space="preserve">
     <value>Encrypt</value>
   </data>
+  <data name="Encrypting" xml:space="preserve">
+    <value>Encrypting</value>
+  </data>
   <data name="Decrypt" xml:space="preserve">
     <value>Decrypt</value>
+  </data>
+  <data name="Decrypting" xml:space="preserve">
+    <value>Decrypting</value>
   </data>
   <data name="SourcePathPrompt" xml:space="preserve">
     <value>Source path</value>
@@ -172,12 +175,11 @@
     <value>Validation errors:</value>
   </data>
   <data name="OperationIngFormat" xml:space="preserve">
-    <value>{0}ing…</value>
+    <value>{0}…</value>
   </data>
   <data name="OperationIngFilesFormat" xml:space="preserve">
-    <value>{0}ing {1}/{2} files</value>
+    <value>{0} {1}/{2} files</value>
   </data>
-  <!-- ResultRenderer -->
   <data name="CompletedSuccessfully" xml:space="preserve">
     <value>Completed successfully</value>
   </data>
@@ -211,7 +213,6 @@
   <data name="Errors" xml:space="preserve">
     <value>Errors:</value>
   </data>
-  <!-- AlgorithmInfoCommand -->
   <data name="AlgorithmInformation" xml:space="preserve">
     <value>Algorithm Information</value>
   </data>
@@ -233,7 +234,6 @@
   <data name="Description" xml:space="preserve">
     <value>Description</value>
   </data>
-  <!-- GeneratePasswordCommand -->
   <data name="PasswordGenerator" xml:space="preserve">
     <value>Password Generator</value>
   </data>

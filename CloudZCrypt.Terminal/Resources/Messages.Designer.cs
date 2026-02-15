@@ -160,6 +160,15 @@ namespace CloudZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Decrypting.
+        /// </summary>
+        internal static string Decrypting {
+            get {
+                return ResourceManager.GetString("Decrypting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Description.
         /// </summary>
         internal static string Description {
@@ -201,6 +210,15 @@ namespace CloudZCrypt.Terminal.Resources {
         internal static string Encrypt {
             get {
                 return ResourceManager.GetString("Encrypt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Encrypting.
+        /// </summary>
+        internal static string Encrypting {
+            get {
+                return ResourceManager.GetString("Encrypting", resourceCulture);
             }
         }
         
@@ -448,7 +466,7 @@ namespace CloudZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a {0}ing {1}/{2} files.
+        ///   Busca una cadena traducida similar a {0} {1}/{2} files.
         /// </summary>
         internal static string OperationIngFilesFormat {
             get {
@@ -457,7 +475,7 @@ namespace CloudZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a {0}ing….
+        ///   Busca una cadena traducida similar a {0}….
         /// </summary>
         internal static string OperationIngFormat {
             get {

@@ -3,6 +3,7 @@ using System.Text.Json;
 using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Manifest;
+using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
@@ -13,10 +14,10 @@ internal sealed class ManifestService : IManifestService
     private static string AppFileExtension => ".czc";
     private static string ManifestFileName => "manifest" + AppFileExtension;
 
-    public async Task<Dictionary<string, string>?> TryReadManifestAsync(
+    public async Task<ManifestData?> TryReadManifestAsync(
         string sourceRoot,
-        IEncryptionAlgorithmStrategy encryptionService,
-        FileCryptRequest request,
+        IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
+        string password,
         CancellationToken cancellationToken
     )
     {
@@ -28,56 +29,25 @@ internal sealed class ManifestService : IManifestService
                 return null;
             }
 
-            string tempJsonPath = Path.Combine(
-                Path.GetTempPath(),
-                $"czc-manifest-{Guid.NewGuid():N}.json"
-            );
-            bool ok = await encryptionService.DecryptFileAsync(
-                encryptedManifestPath,
-                tempJsonPath,
-                request.Password,
-                request.KeyDerivationAlgorithm
-            );
-            if (!ok)
+            foreach (IEncryptionAlgorithmStrategy strategy in encryptionStrategies)
             {
-                try
+                foreach (KeyDerivationAlgorithm kdf in Enum.GetValues<KeyDerivationAlgorithm>())
                 {
-                    if (File.Exists(tempJsonPath))
-                        File.Delete(tempJsonPath);
-                }
-                catch
-                { /* ignore */
-                }
-                return null;
-            }
-
-            try
-            {
-                await using FileStream fs = File.OpenRead(tempJsonPath);
-                List<ManifestEntry>? entries = await JsonSerializer.DeserializeAsync<
-                    List<ManifestEntry>
-                >(fs, cancellationToken: cancellationToken);
-                Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
-                if (entries is not null)
-                {
-                    foreach (ManifestEntry e in entries)
+                    ManifestData? result = await TryReadWithStrategyAsync(
+                        encryptedManifestPath,
+                        strategy,
+                        password,
+                        kdf,
+                        cancellationToken
+                    );
+                    if (result is not null)
                     {
-                        map[e.ObfuscatedRelativePath] = e.OriginalRelativePath;
+                        return result;
                     }
                 }
-                return map;
             }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(tempJsonPath))
-                        File.Delete(tempJsonPath);
-                }
-                catch
-                { /* ignore */
-                }
-            }
+
+            return null;
         }
         catch
         {
@@ -87,6 +57,7 @@ internal sealed class ManifestService : IManifestService
 
     public async Task<IReadOnlyList<string>> TrySaveManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
+        ManifestHeader header,
         string destinationRoot,
         IEncryptionAlgorithmStrategy encryptionService,
         FileCryptRequest request,
@@ -101,7 +72,15 @@ internal sealed class ManifestService : IManifestService
 
         try
         {
-            byte[] manifestBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(entries));
+            ManifestDocument document = new(
+                header.EncryptionAlgorithm,
+                header.KeyDerivationAlgorithm,
+                header.NameObfuscation,
+                header.Compression,
+                [.. entries]
+            );
+
+            byte[] manifestBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
             string encryptedManifestPath = Path.Combine(destinationRoot, ManifestFileName);
             bool manifestOk = await encryptionService.CreateEncryptedFileAsync(
                 manifestBytes,
@@ -122,5 +101,74 @@ internal sealed class ManifestService : IManifestService
         }
 
         return errors;
+    }
+
+    private static async Task<ManifestData?> TryReadWithStrategyAsync(
+        string encryptedManifestPath,
+        IEncryptionAlgorithmStrategy encryptionService,
+        string password,
+        KeyDerivationAlgorithm kdf,
+        CancellationToken cancellationToken
+    )
+    {
+        string tempJsonPath = Path.Combine(
+            Path.GetTempPath(),
+            $"czc-manifest-{Guid.NewGuid():N}.json"
+        );
+
+        try
+        {
+            bool ok = await encryptionService.DecryptFileAsync(
+                encryptedManifestPath,
+                tempJsonPath,
+                password,
+                kdf
+            );
+            if (!ok)
+            {
+                return null;
+            }
+
+            await using FileStream fs = File.OpenRead(tempJsonPath);
+            ManifestDocument? doc = await JsonSerializer.DeserializeAsync<ManifestDocument>(
+                fs,
+                cancellationToken: cancellationToken
+            );
+
+            if (doc is null)
+            {
+                return null;
+            }
+
+            ManifestHeader header = new(
+                doc.EncryptionAlgorithm,
+                doc.KeyDerivationAlgorithm,
+                doc.NameObfuscation,
+                doc.Compression
+            );
+
+            Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
+            foreach (ManifestEntry e in doc.Entries)
+            {
+                map[e.ObfuscatedRelativePath] = e.OriginalRelativePath;
+            }
+
+            return new ManifestData(header, map);
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempJsonPath))
+                    File.Delete(tempJsonPath);
+            }
+            catch
+            { /* ignore */
+            }
+        }
     }
 }

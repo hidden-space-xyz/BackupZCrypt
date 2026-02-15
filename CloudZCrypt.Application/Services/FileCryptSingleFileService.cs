@@ -72,7 +72,7 @@ internal sealed class FileCryptSingleFileService(
             }
             catch
             {
-                // ignorar
+                // Ignore file size retrieval errors and proceed with a size of 0 for progress reporting
             }
 
             progress?.Report(new FileCryptStatus(0, 1, 0, fileSize, TimeSpan.Zero));

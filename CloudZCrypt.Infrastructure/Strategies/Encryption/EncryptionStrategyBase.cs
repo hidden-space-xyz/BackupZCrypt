@@ -190,8 +190,6 @@ internal abstract class EncryptionStrategyBase(
                 salt = await ReadSaltAsync(sourceFile);
                 nonce = await ReadNonceAsync(sourceFile);
                 compression = await ReadCompressionHeaderAsync(sourceFile);
-
-                // Position is now right after salt+nonce+compression
             }
             catch (EndOfStreamException)
             {
@@ -215,7 +213,6 @@ internal abstract class EncryptionStrategyBase(
             {
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
 
-                // Skip salt + nonce + compression header to reach ciphertext start
                 await sourceFile.ReadExactlyAsync(
                     new byte[SaltSize + NonceSize + CompressionHeaderSize]
                 );

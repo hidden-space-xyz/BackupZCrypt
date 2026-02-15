@@ -39,7 +39,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- Validator messages -->
   <data name="SourcePathEmpty" xml:space="preserve">
     <value>Please select a source file or directory to process.</value>
   </data>
@@ -121,14 +120,12 @@
   <data name="InvalidPathFormat" xml:space="preserve">
     <value>Invalid path: {0}</value>
   </data>
-  <!-- Orchestrator messages -->
   <data name="SourcePathNotExist" xml:space="preserve">
     <value>Source path does not exist.</value>
   </data>
   <data name="UnexpectedErrorFormat" xml:space="preserve">
     <value>An unexpected error occurred: {0}</value>
   </data>
-  <!-- PasswordService messages -->
   <data name="EmptyPasswordDescription" xml:space="preserve">
     <value>Empty password. Please enter a password.</value>
   </data>
@@ -192,14 +189,12 @@
   <data name="TipAvoidYears" xml:space="preserve">
     <value>Avoid years</value>
   </data>
-  <!-- FileCryptSingleFileService -->
   <data name="ManifestIgnored" xml:space="preserve">
     <value>Manifest file ignored during decryption.</value>
   </data>
   <data name="UnsupportedOperationFormat" xml:space="preserve">
     <value>Unsupported operation: {0}</value>
   </data>
-  <!-- FileCryptDirectoryService -->
   <data name="NoFilesInSourceDirectory" xml:space="preserve">
     <value>No files found in the source directory.</value>
   </data>
@@ -230,7 +225,6 @@
   <data name="AllFilesFailedFormat" xml:space="preserve">
     <value>Failed to process any files. Errors: {0}</value>
   </data>
-  <!-- ManifestService -->
   <data name="ManifestCreateFailedFormat" xml:space="preserve">
     <value>Failed to create encrypted manifest at '{0}'.</value>
   </data>

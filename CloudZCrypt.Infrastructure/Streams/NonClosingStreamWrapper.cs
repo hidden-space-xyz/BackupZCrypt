@@ -1,9 +1,5 @@
 namespace CloudZCrypt.Infrastructure.Streams;
 
-/// <summary>
-/// A stream wrapper that prevents the underlying stream from being closed or disposed
-/// when the wrapping stream (e.g., a compression stream) is disposed.
-/// </summary>
 internal sealed class NonClosingStreamWrapper(Stream inner) : Stream
 {
     public override bool CanRead => inner.CanRead;
