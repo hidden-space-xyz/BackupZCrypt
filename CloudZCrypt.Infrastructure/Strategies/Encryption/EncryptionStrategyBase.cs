@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Exceptions;
 using CloudZCrypt.Domain.Factories.Interfaces;
+using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto;
@@ -12,7 +13,9 @@ namespace CloudZCrypt.Infrastructure.Strategies.Encryption;
 
 internal abstract class EncryptionStrategyBase(
     IKeyDerivationServiceFactory keyDerivationServiceFactory,
-    ICompressionServiceFactory compressionServiceFactory
+    ICompressionServiceFactory compressionServiceFactory,
+    IFileOperationsService fileOperationsService,
+    ISystemStorageService systemStorageService
 )
 {
     protected const int KeySize = 256;
@@ -47,7 +50,7 @@ internal abstract class EncryptionStrategyBase(
             nonce = GenerateNonce();
             key = DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
-            using Stream destinationFile = CreateFile(destinationFilePath);
+            using Stream destinationFile = fileOperationsService.CreateWriteStream(destinationFilePath, BufferSize);
 
             byte[] associatedData = BuildAssociatedData(salt, nonce, compression);
             await destinationFile.WriteAsync(associatedData, cancellationToken);
@@ -127,7 +130,7 @@ internal abstract class EncryptionStrategyBase(
 
             key = DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
-            using Stream decryptedBuffer = CreateTempFileStream();
+            using Stream decryptedBuffer = fileOperationsService.CreateTempStream(BufferSize);
             await DecryptStreamAsync(
                 sourceFile,
                 decryptedBuffer,
@@ -146,7 +149,7 @@ internal abstract class EncryptionStrategyBase(
                 cancellationToken
             );
 
-            using Stream destinationFile = CreateFile(destinationFilePath);
+            using Stream destinationFile = fileOperationsService.CreateWriteStream(destinationFilePath, BufferSize);
             await decompressedStream.CopyToAsync(destinationFile, BufferSize, cancellationToken);
 
             return true;
@@ -219,7 +222,7 @@ internal abstract class EncryptionStrategyBase(
         {
             key = DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
-            using Stream destinationFile = CreateFile(destinationFilePath);
+            using Stream destinationFile = fileOperationsService.CreateWriteStream(destinationFilePath, BufferSize);
             byte[] associatedData = BuildAssociatedData(salt, nonce, compression);
             await destinationFile.WriteAsync(associatedData, cancellationToken);
 
@@ -296,7 +299,7 @@ internal abstract class EncryptionStrategyBase(
 
             key = DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
-            using Stream decryptedBuffer = CreateTempFileStream();
+            using Stream decryptedBuffer = fileOperationsService.CreateTempStream(BufferSize);
             await DecryptStreamAsync(
                 source,
                 decryptedBuffer,
@@ -317,10 +320,6 @@ internal abstract class EncryptionStrategyBase(
             using MemoryStream resultBuffer = new();
             await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
             return resultBuffer.ToArray();
-        }
-        catch (EncryptionException)
-        {
-            throw;
         }
         catch (InvalidCipherTextException)
         {
@@ -481,63 +480,17 @@ internal abstract class EncryptionStrategyBase(
         return header;
     }
 
-    private static FileStream OpenReadFile(string filePath)
+    private Stream OpenSourceFile(string sourceFilePath, bool validateHeader = false)
     {
-        return new FileStream(
-            filePath,
-            new FileStreamOptions
-            {
-                Access = FileAccess.Read,
-                Mode = FileMode.Open,
-                Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
-                BufferSize = BufferSize,
-            }
-        );
-    }
-
-    private static FileStream CreateFile(string filePath)
-    {
-        return new FileStream(
-            filePath,
-            new FileStreamOptions
-            {
-                Access = FileAccess.Write,
-                Mode = FileMode.Create,
-                Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
-                BufferSize = BufferSize,
-            }
-        );
-    }
-
-    private static FileStream CreateTempFileStream()
-    {
-        string tempFilePath = Path.GetTempFileName();
-        return new FileStream(
-            tempFilePath,
-            new FileStreamOptions
-            {
-                Access = FileAccess.ReadWrite,
-                Mode = FileMode.Create,
-                Options =
-                    FileOptions.Asynchronous
-                    | FileOptions.SequentialScan
-                    | FileOptions.DeleteOnClose,
-                BufferSize = BufferSize,
-            }
-        );
-    }
-
-    private FileStream OpenSourceFile(string sourceFilePath, bool validateHeader = false)
-    {
-        if (!File.Exists(sourceFilePath))
+        if (!fileOperationsService.FileExists(sourceFilePath))
         {
             throw new EncryptionFileNotFoundException(sourceFilePath);
         }
 
-        FileStream stream;
+        Stream stream;
         try
         {
-            stream = OpenReadFile(sourceFilePath);
+            stream = fileOperationsService.OpenReadStream(sourceFilePath, BufferSize);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -573,21 +526,23 @@ internal abstract class EncryptionStrategyBase(
         }
     }
 
-    private static void ValidateDiskSpace(string sourceFilePath, string destinationFilePath)
+    private void ValidateDiskSpace(string sourceFilePath, string destinationFilePath)
     {
         try
         {
-            FileInfo sourceFileInfo = new(sourceFilePath);
-            string? destinationDrive = Path.GetPathRoot(Path.GetFullPath(destinationFilePath));
+            long sourceLength = fileOperationsService.GetFileSize(sourceFilePath);
+            string fullPath = fileOperationsService.GetFullPath(destinationFilePath);
+            string? destinationDrive = systemStorageService.GetPathRoot(fullPath);
 
             if (!string.IsNullOrEmpty(destinationDrive))
             {
-                DriveInfo driveInfo = new(destinationDrive);
-                if (driveInfo.IsReady)
-                {
-                    long requiredSpace = (long)(sourceFileInfo.Length * 1.2) + 1024;
+                long availableSpace = systemStorageService.GetAvailableFreeSpace(destinationDrive);
 
-                    if (driveInfo.AvailableFreeSpace < requiredSpace)
+                if (availableSpace >= 0)
+                {
+                    long requiredSpace = (long)(sourceLength * 1.2) + 1024;
+
+                    if (availableSpace < requiredSpace)
                     {
                         throw new EncryptionInsufficientSpaceException(destinationFilePath);
                     }
@@ -604,14 +559,14 @@ internal abstract class EncryptionStrategyBase(
         }
     }
 
-    private static void EnsureDirectoryExists(string filePath)
+    private void EnsureDirectoryExists(string filePath)
     {
-        string? directory = Path.GetDirectoryName(filePath);
+        string? directory = fileOperationsService.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory))
         {
             try
             {
-                Directory.CreateDirectory(directory);
+                fileOperationsService.CreateDirectory(directory);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -620,13 +575,13 @@ internal abstract class EncryptionStrategyBase(
         }
     }
 
-    private static void TryDeleteFile(string filePath)
+    private void TryDeleteFile(string filePath)
     {
         try
         {
-            if (File.Exists(filePath))
+            if (fileOperationsService.FileExists(filePath))
             {
-                File.Delete(filePath);
+                fileOperationsService.DeleteFile(filePath);
             }
         }
         catch

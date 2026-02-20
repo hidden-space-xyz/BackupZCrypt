@@ -1,5 +1,6 @@
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
+using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Engines;
@@ -10,9 +11,11 @@ namespace CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
 
 internal class AesEncryptionStrategy(
     IKeyDerivationServiceFactory keyDerivationServiceFactory,
-    ICompressionServiceFactory compressionServiceFactory
+    ICompressionServiceFactory compressionServiceFactory,
+    IFileOperationsService fileOperationsService,
+    ISystemStorageService systemStorageService
 )
-    : EncryptionStrategyBase(keyDerivationServiceFactory, compressionServiceFactory),
+    : EncryptionStrategyBase(keyDerivationServiceFactory, compressionServiceFactory, fileOperationsService, systemStorageService),
         IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;
