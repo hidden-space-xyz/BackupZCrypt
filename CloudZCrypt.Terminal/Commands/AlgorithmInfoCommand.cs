@@ -51,6 +51,7 @@ internal sealed class AlgorithmInfoCommand(
         Table table = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
+            .ShowRowSeparators()
             .Title($"[bold green]{title}[/]")
             .AddColumn(new TableColumn($"[bold]{Messages.Name}[/]").LeftAligned())
             .AddColumn(new TableColumn($"[bold]{Messages.Description}[/]").LeftAligned());

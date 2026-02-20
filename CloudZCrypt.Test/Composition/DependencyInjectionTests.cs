@@ -152,6 +152,7 @@ internal sealed class DependencyInjectionTests
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void KeyDerivationFactory_ResolvesAllAlgorithms(KeyDerivationAlgorithm algorithm)
     {
         IKeyDerivationServiceFactory factory =

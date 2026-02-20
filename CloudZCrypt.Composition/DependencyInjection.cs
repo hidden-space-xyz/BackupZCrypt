@@ -30,6 +30,7 @@ public static class DependencyInjection
         // Key Derivation Strategies
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();
+        services.AddSingleton<IKeyDerivationAlgorithmStrategy, ScryptKeyDerivationStrategy>();
 
         // Encryption Strategies
         services.AddSingleton<IEncryptionAlgorithmStrategy, AesEncryptionStrategy>();

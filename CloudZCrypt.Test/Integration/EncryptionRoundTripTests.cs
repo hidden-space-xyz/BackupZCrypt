@@ -48,6 +48,11 @@ internal sealed class EncryptionRoundTripTests
     [TestCase(EncryptionAlgorithm.Serpent, KeyDerivationAlgorithm.PBKDF2)]
     [TestCase(EncryptionAlgorithm.ChaCha20, KeyDerivationAlgorithm.PBKDF2)]
     [TestCase(EncryptionAlgorithm.Camellia, KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.Scrypt)]
+    [TestCase(EncryptionAlgorithm.Twofish, KeyDerivationAlgorithm.Scrypt)]
+    [TestCase(EncryptionAlgorithm.Serpent, KeyDerivationAlgorithm.Scrypt)]
+    [TestCase(EncryptionAlgorithm.ChaCha20, KeyDerivationAlgorithm.Scrypt)]
+    [TestCase(EncryptionAlgorithm.Camellia, KeyDerivationAlgorithm.Scrypt)]
     public async Task EncryptAndDecryptFile_AllAlgorithms_PBKDF2_RoundTrip(
         EncryptionAlgorithm algorithm,
         KeyDerivationAlgorithm kdf

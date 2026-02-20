@@ -9,9 +9,9 @@ namespace CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
-    private const int MemoryCost = 65536;
+    private const int MemoryCost = 262144;
     private const int Iterations = 4;
-    private const int Parallelism = 4;
+    private const int Parallelism = 2;
 
     public KeyDerivationAlgorithm Id => KeyDerivationAlgorithm.Argon2id;
 

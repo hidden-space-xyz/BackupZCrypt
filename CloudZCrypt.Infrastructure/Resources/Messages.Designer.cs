@@ -394,6 +394,42 @@ namespace CloudZCrypt.Infrastructure.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a A memory‑hard key derivation function (RFC 7914) that requires large amounts of RAM to compute, making brute‑force attacks on GPUs, FPGAs, and ASICs significantly more expensive than CPU‑only functions like PBKDF2. Tunable via: CPU/memory cost parameter (N), block‑size factor (r), and parallelization parameter (p). Offers stronger hardware‑attack resistance than PBKDF2 and broader ecosystem support than Argon2id, being widely deployed in disk encryption (e.g., tarsnap), cryptocurrency systems, and password  [resto de la cadena truncado]&quot;;.
+        /// </summary>
+        internal static string ScryptDescription {
+            get {
+                return ResourceManager.GetString("ScryptDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Scrypt.
+        /// </summary>
+        internal static string ScryptDisplayName {
+            get {
+                return ResourceManager.GetString("ScryptDisplayName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Error deriving key with scrypt.
+        /// </summary>
+        internal static string ScryptKeyDerivationError {
+            get {
+                return ResourceManager.GetString("ScryptKeyDerivationError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Best for memory‑hard security with broad ecosystem compatibility.
+        /// </summary>
+        internal static string ScryptSummary {
+            get {
+                return ResourceManager.GetString("ScryptSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a A conservative 128‑bit block cipher finalist from the AES competition, designed with a large security margin and a 256‑bit key option. Typically slower than AES and Camellia. When wrapped in GCM it provides AEAD, but performance costs make it niche for high-assurance or defense-in-depth scenarios..
         /// </summary>
         internal static string SerpentDescription {

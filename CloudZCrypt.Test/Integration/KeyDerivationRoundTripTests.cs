@@ -26,6 +26,7 @@ internal sealed class KeyDerivationRoundTripTests
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_DeriveKey_ProducesCorrectSize(KeyDerivationAlgorithm algorithm)
     {
         IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
@@ -43,6 +44,7 @@ internal sealed class KeyDerivationRoundTripTests
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_SameInputsSameOutput(KeyDerivationAlgorithm algorithm)
     {
         IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
@@ -61,6 +63,7 @@ internal sealed class KeyDerivationRoundTripTests
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_DifferentPasswordsDifferentKeys(KeyDerivationAlgorithm algorithm)
     {
         IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
@@ -79,6 +82,7 @@ internal sealed class KeyDerivationRoundTripTests
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
     [TestCase(KeyDerivationAlgorithm.PBKDF2)]
+    [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_HaveMetadata(KeyDerivationAlgorithm algorithm)
     {
         IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
