@@ -121,55 +121,55 @@
     <value>AES-256 GCM</value>
   </data>
   <data name="AesDescription" xml:space="preserve">
-    <value>Cifrado de bloques de 128 bits estandarizado por NIST con clave de 256 bits, ampliamente acelerado por AES-NI y extensiones criptográficas ARMv8. El modo Galois/Counter (GCM) proporciona cifrado autenticado con datos asociados (AEAD), combinando alto rendimiento, confidencialidad e integridad.</value>
+    <value>El estándar de cifrado utilizado por gobiernos, bancos y la mayoría de aplicaciones seguras en todo el mundo. Muy rápido en ordenadores y teléfonos modernos gracias al soporte de hardware integrado. Recomendado para la mayoría de usuarios.</value>
   </data>
   <data name="AesSummary" xml:space="preserve">
-    <value>Mejor para uso general (con aceleración por hardware)</value>
+    <value>Recomendado — rápido y ampliamente confiable (por defecto)</value>
   </data>
   <data name="SerpentDisplayName" xml:space="preserve">
     <value>Serpent-256 GCM</value>
   </data>
   <data name="SerpentDescription" xml:space="preserve">
-    <value>Cifrado de bloques conservador de 128 bits, finalista de la competición AES, diseñado con un amplio margen de seguridad y opción de clave de 256 bits. Generalmente más lento que AES y Camellia. Envuelto en GCM proporciona AEAD, pero los costes de rendimiento lo hacen ideal para escenarios de alta seguridad o defensa en profundidad.</value>
+    <value>Diseñado con un margen de seguridad extra grande, siendo una de las opciones más conservadoras disponibles. Notablemente más lento que AES, pero preferido cuando la máxima precaución es prioritaria sobre la velocidad.</value>
   </data>
   <data name="SerpentSummary" xml:space="preserve">
-    <value>Mejor para alta seguridad (lento)</value>
+    <value>Máximo margen de seguridad (más lento que AES)</value>
   </data>
   <data name="CamelliaDisplayName" xml:space="preserve">
     <value>Camellia-256 GCM</value>
   </data>
   <data name="CamelliaDescription" xml:space="preserve">
-    <value>Cifrado de bloques de 128 bits con clave de 256 bits, diseñado conjuntamente por NTT y Mitsubishi; rendimiento y margen de seguridad comparables a AES. Soportado en muchos estándares internacionales (RFCs, ISO/IEC) y adecuado donde se desean algoritmos de origen no estadounidense o mayor aceptación jurisdiccional. Usado con GCM para AEAD.</value>
+    <value>Una alternativa sólida a AES desarrollada en Japón, con seguridad y rendimiento comparables. Reconocido por organismos internacionales de estándares y una buena opción cuando se prefiere un algoritmo de origen no estadounidense.</value>
   </data>
   <data name="CamelliaSummary" xml:space="preserve">
-    <value>Mejor para cumplimiento internacional</value>
+    <value>Alternativa sólida a AES (estándar internacional)</value>
   </data>
   <data name="ChaCha20DisplayName" xml:space="preserve">
     <value>ChaCha20-Poly1305</value>
   </data>
   <data name="ChaCha20Description" xml:space="preserve">
-    <value>Cifrado de flujo moderno ARX (Add-Rotate-XOR) combinado con el MAC Poly1305 para formar una construcción AEAD rápida y resistente a ataques de temporización, que funciona especialmente bien en dispositivos sin aceleración hardware AES. Estandarizado en RFC 8439 y ampliamente desplegado en TLS, SSH, QUIC y WireGuard.</value>
+    <value>Un método de cifrado moderno y rápido que destaca en dispositivos antiguos o de bajo consumo que carecen de hardware AES dedicado. Ampliamente usado en VPNs (WireGuard), navegación web (TLS) y aplicaciones de mensajería.</value>
   </data>
   <data name="ChaCha20Summary" xml:space="preserve">
-    <value>Mejor para uso general (sin aceleración por hardware)</value>
+    <value>Rápido en todos los dispositivos, incluso sin hardware AES</value>
   </data>
   <data name="TwofishDisplayName" xml:space="preserve">
     <value>Twofish-256 GCM</value>
   </data>
   <data name="TwofishDescription" xml:space="preserve">
-    <value>Cifrado de bloques flexible de 128 bits (hasta claves de 256 bits), también finalista de AES. Ofrece sólida resiliencia criptoanalítica con una filosofía de diseño diferente (Feistel + S-boxes dependientes de clave) para diversidad algorítmica. Menos comúnmente acelerado por hardware o estandarizado para modos AEAD.</value>
+    <value>Un algoritmo de cifrado respetado que utiliza un diseño interno fundamentalmente diferente al de AES. Una opción sólida si desea evitar depender de una única familia de algoritmos.</value>
   </data>
   <data name="TwofishSummary" xml:space="preserve">
-    <value>Mejor para diversidad de diseño</value>
+    <value>Buena alternativa con un enfoque de diseño diferente</value>
   </data>
   <data name="Pbkdf2DisplayName" xml:space="preserve">
     <value>PBKDF2 (HMAC-SHA256)</value>
   </data>
   <data name="Pbkdf2Description" xml:space="preserve">
-    <value>Función de derivación de claves iterativa, estandarizada (PKCS #5, RFC 8018, permitida en FIPS 140), basada en CPU, que utiliza aplicaciones repetidas de HMAC-SHA256. Simple y ampliamente implementada en prácticamente todas las bibliotecas criptográficas. Carece de dureza de memoria intrínseca, lo que la hace comparativamente más barata de acelerar en GPUs/ASICs frente a Argon2id o scrypt. Aún apropiada donde dominan requisitos regulatorios, plataformas heredadas o cumplimiento FIPS. La seguridad depende de altos conteos de iteraciones y contraseñas de alta entropía.</value>
+    <value>Un método tradicional y ampliamente compatible para convertir su contraseña en una clave de cifrado. Soportado en todas partes, pero ofrece menos protección contra atacantes con hardware especializado (GPUs). Elíjalo cuando la compatibilidad con sistemas antiguos sea importante.</value>
   </data>
   <data name="Pbkdf2Summary" xml:space="preserve">
-    <value>Mejor para máxima compatibilidad / necesidades heredadas y de cumplimiento</value>
+    <value>Máxima compatibilidad con sistemas antiguos</value>
   </data>
   <data name="Pbkdf2KeyDerivationError" xml:space="preserve">
     <value>Error al derivar clave con PBKDF2</value>
@@ -178,10 +178,10 @@
     <value>Argon2id</value>
   </data>
   <data name="Argon2idDescription" xml:space="preserve">
-    <value>Función moderna de hashing de contraseñas y derivación de claves con dureza de memoria (ganadora de PHC). La variante "id" combina Argon2i (resistente a canales laterales) y Argon2d (resistencia a GPU/ASIC) para seguridad equilibrada. Configurable mediante: coste de memoria (m), iteraciones/coste de tiempo (t) y paralelismo (p). Proporciona fuerte resistencia a fuerza bruta a gran escala en GPUs, FPGAs y ASICs al imponer requisitos sustanciales de RAM. Recomendado donde se prioriza la seguridad moderna sobre la compatibilidad heredada.</value>
+    <value>La forma más moderna y segura de convertir su contraseña en una clave de cifrado. Diseñado específicamente para resistir ataques con hardware especializado (GPUs, chips personalizados) al requerir grandes cantidades de memoria. Recomendado para la mayoría de usuarios.</value>
   </data>
   <data name="Argon2idSummary" xml:space="preserve">
-    <value>Mejor para máxima seguridad / hashing moderno con dureza de memoria</value>
+    <value>Recomendado — protección de contraseña más fuerte (por defecto)</value>
   </data>
   <data name="Argon2idKeyDerivationError" xml:space="preserve">
     <value>Error al derivar clave con Argon2id</value>
@@ -190,10 +190,10 @@
     <value>Scrypt</value>
   </data>
   <data name="ScryptDescription" xml:space="preserve">
-    <value>Función de derivación de claves con dureza de memoria (RFC 7914) que requiere grandes cantidades de RAM para su cálculo, haciendo los ataques de fuerza bruta en GPUs, FPGAs y ASICs significativamente más costosos que funciones solo de CPU como PBKDF2. Configurable mediante: parámetro de coste CPU/memoria (N), factor de tamaño de bloque (r) y parámetro de paralelización (p). Ofrece mayor resistencia a ataques por hardware que PBKDF2 y mayor compatibilidad de ecosistema que Argon2id, siendo ampliamente utilizada en cifrado de disco (ej. tarsnap), sistemas de criptomonedas y almacenamiento de contraseñas. Elija scrypt sobre PBKDF2 cuando se necesite dureza de memoria pero Argon2id no esté disponible; elija Argon2id cuando se requiera máxima seguridad y resistencia a canales laterales.</value>
+    <value>Un método robusto para convertir su contraseña en una clave de cifrado que también resiste ataques basados en hardware al requerir memoria significativa. Un buen punto intermedio entre PBKDF2 y Argon2id, con mayor soporte de software que Argon2id.</value>
   </data>
   <data name="ScryptSummary" xml:space="preserve">
-    <value>Mejor para seguridad con dureza de memoria y amplia compatibilidad</value>
+    <value>Protección fuerte, mayor compatibilidad que Argon2id</value>
   </data>
   <data name="ScryptKeyDerivationError" xml:space="preserve">
     <value>Error al derivar clave con scrypt</value>
@@ -202,73 +202,73 @@
     <value>SHA-256</value>
   </data>
   <data name="Sha256Description" xml:space="preserve">
-    <value>Reemplaza el nombre del archivo con un resumen hexadecimal SHA-256 de 64 caracteres calculado a partir del contenido del archivo. Determinístico para contenido idéntico, permitiendo deduplicación y nomenclatura direccionable por contenido sin revelar el nombre original.</value>
+    <value>Reemplaza el nombre del archivo con un código único de 64 caracteres basado en el contenido del archivo. Los archivos con el mismo contenido siempre obtienen el mismo nombre, lo que ayuda a detectar duplicados ocultando el nombre original.</value>
   </data>
   <data name="Sha256Summary" xml:space="preserve">
-    <value>Mejor para nomenclatura por contenido (resumen de 64 caracteres)</value>
+    <value>Nombre basado en contenido (64 caracteres)</value>
   </data>
   <data name="Sha512DisplayName" xml:space="preserve">
     <value>SHA-512</value>
   </data>
   <data name="Sha512Description" xml:space="preserve">
-    <value>Reemplaza el nombre del archivo con un resumen hexadecimal SHA-512 de 128 caracteres calculado a partir del contenido del archivo. Ofrece mayor resistencia a colisiones que SHA-256 a costa de nombres más largos; determinístico para contenido idéntico.</value>
+    <value>Similar a SHA-256 pero genera un código más largo de 128 caracteres, ofreciendo garantías de unicidad aún más fuertes. Úselo cuando necesite máxima seguridad de que ningún archivo diferente comparta nombre.</value>
   </data>
   <data name="Sha512Summary" xml:space="preserve">
-    <value>Mejor para máxima resistencia a colisiones (resumen de 128 caracteres)</value>
+    <value>Nombre basado en contenido (128 caracteres, más seguro)</value>
   </data>
   <data name="GuidDisplayName" xml:space="preserve">
     <value>GUID</value>
   </data>
   <data name="GuidDescription" xml:space="preserve">
-    <value>Reemplaza el nombre del archivo con un GUID generado aleatoriamente. Proporciona fuerte privacidad al producir nombres no predecibles y no correlacionables para cada archivo.</value>
+    <value>Reemplaza el nombre del archivo con un identificador único completamente aleatorio. Cada archivo recibe un nombre diferente cada vez, haciendo imposible adivinar o correlacionar nombres de archivos.</value>
   </data>
   <data name="GuidSummary" xml:space="preserve">
-    <value>Mejor para máxima privacidad (aleatorio)</value>
+    <value>Nombre completamente aleatorio (máxima privacidad)</value>
   </data>
   <data name="NoObfuscationDisplayName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
   <data name="NoObfuscationDescription" xml:space="preserve">
-    <value>Preserva el nombre del archivo original sin cambios. Úselo cuando la privacidad del nombre de archivo no es necesaria y se debe mantener la organización legible.</value>
+    <value>Mantiene el nombre de archivo original tal cual. Úselo cuando no necesite ocultar los nombres de archivo y prefiera mantenerlos legibles y organizados.</value>
   </data>
   <data name="NoObfuscationSummary" xml:space="preserve">
-    <value>Mejor si no se necesita ofuscación de nombres</value>
+    <value>Mantiene el nombre original (por defecto)</value>
   </data>
   <data name="GZipDisplayName" xml:space="preserve">
     <value>GZip</value>
   </data>
   <data name="GZipDescription" xml:space="preserve">
-    <value>Algoritmo de compresión ampliamente soportado (RFC 1952) basado en el algoritmo DEFLATE. Ofrece un buen equilibrio entre ratio de compresión y velocidad, y es universalmente soportado en sistemas operativos, herramientas y lenguajes de programación.</value>
+    <value>Un método de compresión rápido y universal que reduce el tamaño del archivo antes del cifrado. Funciona bien con la mayoría de tipos de archivo y es compatible con prácticamente todos los sistemas.</value>
   </data>
   <data name="GZipSummary" xml:space="preserve">
-    <value>Buen equilibrio, compatibilidad universal</value>
+    <value>Buen equilibrio entre velocidad y compresión</value>
   </data>
   <data name="BZip2DisplayName" xml:space="preserve">
     <value>BZip2</value>
   </data>
   <data name="BZip2Description" xml:space="preserve">
-    <value>Algoritmo de compresión de alta calidad por ordenación de bloques que logra mejores ratios de compresión que GZip a costa de menor velocidad. Adecuado para escenarios de archivo donde la reducción de tamaño es más importante que el rendimiento.</value>
+    <value>Comprime más que GZip pero tarda más. Ideal cuando desea archivos más pequeños y no le importa esperar un poco más.</value>
   </data>
   <data name="BZip2Summary" xml:space="preserve">
-    <value>Mayor ratio de compresión que GZip</value>
+    <value>Archivos más pequeños que GZip (más lento)</value>
   </data>
   <data name="LzmaDisplayName" xml:space="preserve">
     <value>LZMA (7-Zip)</value>
   </data>
   <data name="LzmaDescription" xml:space="preserve">
-    <value>El algoritmo Lempel-Ziv-Markov utilizado por 7-Zip, que ofrece uno de los mayores ratios de compresión entre compresores de propósito general. Ideal para archivo y escenarios donde minimizar el tamaño del archivo es más importante que la velocidad de compresión.</value>
+    <value>El método de compresión utilizado por 7-Zip, logrando los archivos más pequeños posibles. Ideal para archivos grandes donde minimizar el tamaño es más importante que la velocidad.</value>
   </data>
   <data name="LzmaSummary" xml:space="preserve">
-    <value>Mayor ratio de compresión (más lento)</value>
+    <value>Archivos lo más pequeños posible (más lento)</value>
   </data>
   <data name="NoCompressionDisplayName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
   <data name="NoCompressionDescription" xml:space="preserve">
-    <value>No se aplica compresión. Los archivos se cifran tal cual sin reducción de tamaño. Mejor cuando la velocidad es crítica o los archivos ya están comprimidos (ej. ZIP, JPEG, MP4).</value>
+    <value>No se aplica compresión — los archivos se cifran con su tamaño original. Ideal cuando la velocidad es lo más importante o los archivos ya están comprimidos (ej. ZIP, JPEG, MP4).</value>
   </data>
   <data name="NoCompressionSummary" xml:space="preserve">
-    <value>Sin compresión (más rápido)</value>
+    <value>Sin compresión, más rápido (por defecto)</value>
   </data>
   <data name="OperationEncryption" xml:space="preserve">
     <value>cifrado</value>
