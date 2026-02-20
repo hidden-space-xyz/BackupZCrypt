@@ -4,6 +4,7 @@ using CloudZCrypt.Domain.Exceptions;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 
 namespace CloudZCrypt.Infrastructure.Strategies.Encryption;
@@ -19,6 +20,7 @@ internal abstract class EncryptionStrategyBase(
     protected const int CompressionHeaderSize = 1;
     protected const int MacSize = 128;
     protected const int BufferSize = 80 * 1024;
+    private const int HeaderSize = SaltSize + NonceSize + CompressionHeaderSize;
 
     public async Task<bool> EncryptFileAsync(
         string sourceFilePath,
@@ -44,42 +46,30 @@ internal abstract class EncryptionStrategyBase(
                 throw new EncryptionAccessDeniedException(sourceFilePath, ex);
             }
 
-            string? destinationDir = Path.GetDirectoryName(destinationFilePath);
-            if (!string.IsNullOrEmpty(destinationDir))
-            {
-                try
-                {
-                    Directory.CreateDirectory(destinationDir);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    throw new EncryptionAccessDeniedException(destinationFilePath, ex);
-                }
-            }
-
-            await ValidateDiskSpaceAsync(sourceFilePath, destinationFilePath);
+            EnsureDirectoryExists(destinationFilePath);
+            ValidateDiskSpace(sourceFilePath, destinationFilePath);
 
             byte[] salt = GenerateSalt();
             byte[] nonce = GenerateNonce();
-
-            byte[] key;
-            try
-            {
-                key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
-            }
-            catch (Exception ex)
-            {
-                throw new EncryptionKeyDerivationException(ex);
-            }
+            byte[] key = [];
 
             try
             {
+                try
+                {
+                    key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
+                }
+                catch (Exception ex)
+                {
+                    throw new EncryptionKeyDerivationException(ex);
+                }
+
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
                 using Stream destinationFile = File.Create(destinationFilePath);
 
                 await WriteSaltAsync(destinationFile, salt);
                 await WriteNonceAsync(destinationFile, nonce);
-                await WriteCompressionHeaderAsync(destinationFile, compression);
+                WriteCompressionHeader(destinationFile, compression);
 
                 ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
                     compression
@@ -87,18 +77,13 @@ internal abstract class EncryptionStrategyBase(
                 using Stream compressedSource = await compressionStrategy.CompressAsync(sourceFile);
                 await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
             }
+            catch (EncryptionException)
+            {
+                throw;
+            }
             catch (IOException ex)
             {
-                try
-                {
-                    if (File.Exists(destinationFilePath))
-                    {
-                        File.Delete(destinationFilePath);
-                    }
-                }
-                catch
-                { /* ignore */
-                }
+                TryDeleteFile(destinationFilePath);
 
                 if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
                 {
@@ -112,18 +97,15 @@ internal abstract class EncryptionStrategyBase(
             }
             catch (Exception ex)
             {
-                try
-                {
-                    if (File.Exists(destinationFilePath))
-                    {
-                        File.Delete(destinationFilePath);
-                    }
-                }
-                catch
-                { /* ignore */
-                }
+                TryDeleteFile(destinationFilePath);
 
                 throw new EncryptionCipherException(Messages.OperationEncryption, ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+                CryptographicOperations.ZeroMemory(salt);
+                CryptographicOperations.ZeroMemory(nonce);
             }
 
             return true;
@@ -162,60 +144,33 @@ internal abstract class EncryptionStrategyBase(
             }
 
             FileInfo fileInfo = new(sourceFilePath);
-            if (fileInfo.Length < SaltSize + NonceSize + CompressionHeaderSize)
+            if (fileInfo.Length < HeaderSize)
             {
                 throw new EncryptionCorruptedFileException(sourceFilePath);
             }
 
-            string? destinationDir = Path.GetDirectoryName(destinationFilePath);
-            if (!string.IsNullOrEmpty(destinationDir))
-            {
-                try
-                {
-                    Directory.CreateDirectory(destinationDir);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    throw new EncryptionAccessDeniedException(destinationFilePath, ex);
-                }
-            }
+            EnsureDirectoryExists(destinationFilePath);
 
-            byte[] salt,
-                nonce,
-                key;
-            CompressionMode compression;
+            byte[] salt = [];
+            byte[] nonce = [];
+            byte[] key = [];
+
             try
             {
                 using Stream sourceFile = File.OpenRead(sourceFilePath);
+
                 salt = await ReadSaltAsync(sourceFile);
                 nonce = await ReadNonceAsync(sourceFile);
-                compression = await ReadCompressionHeaderAsync(sourceFile);
-            }
-            catch (EndOfStreamException)
-            {
-                throw new EncryptionCorruptedFileException(sourceFilePath);
-            }
-            catch
-            {
-                throw new EncryptionCorruptedFileException(sourceFilePath);
-            }
+                CompressionMode compression = ReadCompressionHeader(sourceFile);
 
-            try
-            {
-                key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
-            }
-            catch (Exception ex)
-            {
-                throw new EncryptionKeyDerivationException(ex);
-            }
-
-            try
-            {
-                using Stream sourceFile = File.OpenRead(sourceFilePath);
-
-                await sourceFile.ReadExactlyAsync(
-                    new byte[SaltSize + NonceSize + CompressionHeaderSize]
-                );
+                try
+                {
+                    key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
+                }
+                catch (Exception ex)
+                {
+                    throw new EncryptionKeyDerivationException(ex);
+                }
 
                 using MemoryStream decryptedBuffer = new();
                 await DecryptStreamAsync(sourceFile, decryptedBuffer, key, nonce);
@@ -231,18 +186,28 @@ internal abstract class EncryptionStrategyBase(
                 using Stream destinationFile = File.Create(destinationFilePath);
                 await decompressedStream.CopyToAsync(destinationFile, BufferSize);
             }
+            catch (EncryptionException)
+            {
+                throw;
+            }
+            catch (InvalidCipherTextException)
+            {
+                TryDeleteFile(destinationFilePath);
+                throw new EncryptionInvalidPasswordException();
+            }
+            catch (CryptographicException)
+            {
+                TryDeleteFile(destinationFilePath);
+                throw new EncryptionInvalidPasswordException();
+            }
+            catch (EndOfStreamException)
+            {
+                TryDeleteFile(destinationFilePath);
+                throw new EncryptionCorruptedFileException(sourceFilePath);
+            }
             catch (IOException ex)
             {
-                try
-                {
-                    if (File.Exists(destinationFilePath))
-                    {
-                        File.Delete(destinationFilePath);
-                    }
-                }
-                catch
-                { /* ignore */
-                }
+                TryDeleteFile(destinationFilePath);
 
                 if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
                 {
@@ -254,33 +219,17 @@ internal abstract class EncryptionStrategyBase(
             {
                 throw new EncryptionAccessDeniedException(destinationFilePath, ex);
             }
-            catch (CryptographicException)
-            {
-                throw new EncryptionInvalidPasswordException();
-            }
             catch (Exception ex)
             {
-                try
-                {
-                    if (File.Exists(destinationFilePath))
-                    {
-                        File.Delete(destinationFilePath);
-                    }
-                }
-                catch
-                { /* ignore */
-                }
-
-                if (
-                    ex.Message.Contains("tag", StringComparison.OrdinalIgnoreCase)
-                    || ex.Message.Contains("authentication", StringComparison.OrdinalIgnoreCase)
-                    || ex.Message.Contains("mac", StringComparison.OrdinalIgnoreCase)
-                )
-                {
-                    throw new EncryptionInvalidPasswordException();
-                }
+                TryDeleteFile(destinationFilePath);
 
                 throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+                CryptographicOperations.ZeroMemory(salt);
+                CryptographicOperations.ZeroMemory(nonce);
             }
 
             return true;
@@ -305,31 +254,27 @@ internal abstract class EncryptionStrategyBase(
     {
         ArgumentNullException.ThrowIfNull(plaintextData);
 
-        string? destinationDir = Path.GetDirectoryName(destinationFilePath);
-        if (!string.IsNullOrEmpty(destinationDir))
-        {
-            Directory.CreateDirectory(destinationDir);
-        }
+        EnsureDirectoryExists(destinationFilePath);
 
         byte[] salt = GenerateSalt();
         byte[] nonce = GenerateNonce();
-
-        byte[] key;
-        try
-        {
-            key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
-        }
-        catch (Exception ex)
-        {
-            throw new EncryptionKeyDerivationException(ex);
-        }
+        byte[] key = [];
 
         try
         {
+            try
+            {
+                key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
+            }
+            catch (Exception ex)
+            {
+                throw new EncryptionKeyDerivationException(ex);
+            }
+
             using Stream destinationFile = File.Create(destinationFilePath);
             await WriteSaltAsync(destinationFile, salt);
             await WriteNonceAsync(destinationFile, nonce);
-            await WriteCompressionHeaderAsync(destinationFile, compression);
+            WriteCompressionHeader(destinationFile, compression);
 
             using Stream source = new MemoryStream(plaintextData, writable: false);
             ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
@@ -338,18 +283,13 @@ internal abstract class EncryptionStrategyBase(
             using Stream compressedSource = await compressionStrategy.CompressAsync(source);
             await EncryptStreamAsync(compressedSource, destinationFile, key, nonce);
         }
+        catch (EncryptionException)
+        {
+            throw;
+        }
         catch (IOException ex)
         {
-            try
-            {
-                if (File.Exists(destinationFilePath))
-                {
-                    File.Delete(destinationFilePath);
-                }
-            }
-            catch
-            { /* ignore */
-            }
+            TryDeleteFile(destinationFilePath);
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
@@ -363,18 +303,15 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (Exception ex)
         {
-            try
-            {
-                if (File.Exists(destinationFilePath))
-                {
-                    File.Delete(destinationFilePath);
-                }
-            }
-            catch
-            { /* ignore */
-            }
+            TryDeleteFile(destinationFilePath);
 
             throw new EncryptionCipherException(Messages.OperationEncryption, ex);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(salt);
+            CryptographicOperations.ZeroMemory(nonce);
         }
 
         return true;
@@ -391,20 +328,23 @@ internal abstract class EncryptionStrategyBase(
             throw new EncryptionFileNotFoundException(sourceFilePath);
         }
 
+        byte[] salt = [];
+        byte[] nonce = [];
+        byte[] key = [];
+
         try
         {
             using Stream source = File.OpenRead(sourceFilePath);
 
-            if (source.Length < SaltSize + NonceSize + CompressionHeaderSize)
+            if (source.Length < HeaderSize)
             {
                 throw new EncryptionCorruptedFileException(sourceFilePath);
             }
 
-            byte[] salt = await ReadSaltAsync(source);
-            byte[] nonce = await ReadNonceAsync(source);
-            CompressionMode compression = await ReadCompressionHeaderAsync(source);
+            salt = await ReadSaltAsync(source);
+            nonce = await ReadNonceAsync(source);
+            CompressionMode compression = ReadCompressionHeader(source);
 
-            byte[] key;
             try
             {
                 key = DeriveKey(password, salt, KeySize, keyDerivationAlgorithm);
@@ -428,6 +368,10 @@ internal abstract class EncryptionStrategyBase(
             await decompressedStream.CopyToAsync(resultBuffer, BufferSize);
             return resultBuffer.ToArray();
         }
+        catch (InvalidCipherTextException)
+        {
+            throw new EncryptionInvalidPasswordException();
+        }
         catch (CryptographicException)
         {
             throw new EncryptionInvalidPasswordException();
@@ -443,6 +387,12 @@ internal abstract class EncryptionStrategyBase(
         catch (IOException ex)
         {
             throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(salt);
+            CryptographicOperations.ZeroMemory(nonce);
         }
     }
 
@@ -463,20 +413,14 @@ internal abstract class EncryptionStrategyBase(
     protected static byte[] GenerateSalt()
     {
         byte[] salt = new byte[SaltSize];
-        using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(salt);
-        }
+        RandomNumberGenerator.Fill(salt);
         return salt;
     }
 
     protected static byte[] GenerateNonce()
     {
         byte[] nonce = new byte[NonceSize];
-        using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(nonce);
-        }
+        RandomNumberGenerator.Fill(nonce);
         return nonce;
     }
 
@@ -517,19 +461,22 @@ internal abstract class EncryptionStrategyBase(
         return nonce;
     }
 
-    protected static async Task WriteCompressionHeaderAsync(
+    protected static void WriteCompressionHeader(
         Stream stream,
         CompressionMode compression
     )
     {
-        await stream.WriteAsync(new[] { (byte)compression });
+        stream.WriteByte((byte)compression);
     }
 
-    protected static async Task<CompressionMode> ReadCompressionHeaderAsync(Stream stream)
+    protected static CompressionMode ReadCompressionHeader(Stream stream)
     {
-        byte[] header = new byte[CompressionHeaderSize];
-        await stream.ReadExactlyAsync(header);
-        return (CompressionMode)header[0];
+        int value = stream.ReadByte();
+        if (value < 0)
+        {
+            throw new EndOfStreamException();
+        }
+        return (CompressionMode)value;
     }
 
     protected static async Task ProcessFileWithCipherAsync(
@@ -558,7 +505,7 @@ internal abstract class EncryptionStrategyBase(
         }
     }
 
-    private static async Task ValidateDiskSpaceAsync(
+    private static void ValidateDiskSpace(
         string sourceFilePath,
         string destinationFilePath
     )
@@ -590,7 +537,35 @@ internal abstract class EncryptionStrategyBase(
         {
             // If we can't check disk space, continue anyway
         }
+    }
 
-        await Task.CompletedTask;
+    private static void EnsureDirectoryExists(string filePath)
+    {
+        string? directory = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            try
+            {
+                Directory.CreateDirectory(directory);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new EncryptionAccessDeniedException(filePath, ex);
+            }
+        }
+    }
+
+    private static void TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch
+        { /* ignore */
+        }
     }
 }
