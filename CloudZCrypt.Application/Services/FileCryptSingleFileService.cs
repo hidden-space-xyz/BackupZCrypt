@@ -123,13 +123,15 @@ internal sealed class FileCryptSingleFileService(
                 destinationFile,
                 request.Password,
                 request.KeyDerivationAlgorithm,
-                request.Compression
+                request.Compression,
+                cancellationToken
             ),
             EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
                 sourceFile,
                 destinationFile,
                 request.Password,
-                request.KeyDerivationAlgorithm
+                request.KeyDerivationAlgorithm,
+                cancellationToken
             ),
             _ => throw new NotSupportedException(
                 string.Format(Messages.UnsupportedOperationFormat, request.Operation)

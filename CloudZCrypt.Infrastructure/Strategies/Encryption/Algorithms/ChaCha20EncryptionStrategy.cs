@@ -26,27 +26,31 @@ internal class ChaCha20EncryptionStrategy(
         Stream sourceStream,
         Stream destinationStream,
         byte[] key,
-        byte[] nonce
+        byte[] nonce,
+        byte[] associatedData,
+        CancellationToken cancellationToken
     )
     {
         ChaCha20Poly1305 chacha20Poly1305 = new();
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce);
+        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         chacha20Poly1305.Init(true, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, chacha20Poly1305);
+        await ProcessFileWithCipherAsync(sourceStream, destinationStream, chacha20Poly1305, cancellationToken);
     }
 
     protected override async Task DecryptStreamAsync(
         Stream sourceStream,
         Stream destinationStream,
         byte[] key,
-        byte[] nonce
+        byte[] nonce,
+        byte[] associatedData,
+        CancellationToken cancellationToken
     )
     {
         ChaCha20Poly1305 chacha20Poly1305 = new();
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce);
+        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         chacha20Poly1305.Init(false, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, chacha20Poly1305);
+        await ProcessFileWithCipherAsync(sourceStream, destinationStream, chacha20Poly1305, cancellationToken);
     }
 }

@@ -418,13 +418,15 @@ internal sealed class FileCryptDirectoryService(
                 destinationFile,
                 request.Password,
                 request.KeyDerivationAlgorithm,
-                request.Compression
+                request.Compression,
+                cancellationToken
             ),
             EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
                 sourceFile,
                 destinationFile,
                 request.Password,
-                request.KeyDerivationAlgorithm
+                request.KeyDerivationAlgorithm,
+                cancellationToken
             ),
             _ => throw new NotSupportedException($"Unsupported operation: {request.Operation}"),
         };

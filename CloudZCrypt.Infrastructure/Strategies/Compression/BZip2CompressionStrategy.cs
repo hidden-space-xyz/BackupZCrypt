@@ -22,7 +22,7 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        MemoryStream output = new();
+        FileStream output = CreateTempStream();
         using (
             BZip2Stream bzip2 = new(
                 new NonClosingStreamWrapper(output),
@@ -42,12 +42,30 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        MemoryStream output = new();
+        FileStream output = CreateTempStream();
         using (BZip2Stream bzip2 = new(inputStream, CompressionMode.Decompress, false))
         {
             await bzip2.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
         output.Position = 0;
         return output;
+    }
+
+    private static FileStream CreateTempStream()
+    {
+        string tempFilePath = Path.GetTempFileName();
+        return new FileStream(
+            tempFilePath,
+            new FileStreamOptions
+            {
+                Access = FileAccess.ReadWrite,
+                Mode = FileMode.Create,
+                Options =
+                    FileOptions.Asynchronous
+                    | FileOptions.SequentialScan
+                    | FileOptions.DeleteOnClose,
+                BufferSize = StreamConstants.CopyBufferSize,
+            }
+        );
     }
 }

@@ -27,29 +27,33 @@ internal class SerpentEncryptionStrategy(
         Stream sourceStream,
         Stream destinationStream,
         byte[] key,
-        byte[] nonce
+        byte[] nonce,
+        byte[] associatedData,
+        CancellationToken cancellationToken
     )
     {
         SerpentEngine serpentEngine = new();
         GcmBlockCipher gcmCipher = new(serpentEngine);
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce);
+        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(true, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher);
+        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher, cancellationToken);
     }
 
     protected override async Task DecryptStreamAsync(
         Stream sourceStream,
         Stream destinationStream,
         byte[] key,
-        byte[] nonce
+        byte[] nonce,
+        byte[] associatedData,
+        CancellationToken cancellationToken
     )
     {
         SerpentEngine serpentEngine = new();
         GcmBlockCipher gcmCipher = new(serpentEngine);
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce);
+        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(false, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher);
+        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher, cancellationToken);
     }
 }

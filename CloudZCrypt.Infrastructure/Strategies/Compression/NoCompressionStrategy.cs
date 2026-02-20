@@ -20,7 +20,7 @@ internal class NoCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        MemoryStream output = new();
+        FileStream output = CreateTempStream();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);
     }
 
@@ -29,18 +29,36 @@ internal class NoCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        MemoryStream output = new();
+        FileStream output = CreateTempStream();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);
     }
 
     private static async Task<Stream> CopyAndRewindAsync(
         Stream input,
-        MemoryStream output,
+        FileStream output,
         CancellationToken cancellationToken
     )
     {
         await input.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         output.Position = 0;
         return output;
+    }
+
+    private static FileStream CreateTempStream()
+    {
+        string tempFilePath = Path.GetTempFileName();
+        return new FileStream(
+            tempFilePath,
+            new FileStreamOptions
+            {
+                Access = FileAccess.ReadWrite,
+                Mode = FileMode.Create,
+                Options =
+                    FileOptions.Asynchronous
+                    | FileOptions.SequentialScan
+                    | FileOptions.DeleteOnClose,
+                BufferSize = StreamConstants.CopyBufferSize,
+            }
+        );
     }
 }

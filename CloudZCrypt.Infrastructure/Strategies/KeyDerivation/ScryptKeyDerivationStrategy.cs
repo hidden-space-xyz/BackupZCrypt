@@ -28,7 +28,14 @@ internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         try
         {
             passwordBytes = Encoding.UTF8.GetBytes(password);
-            return SCrypt.Generate(passwordBytes, salt, CostParameter, BlockSize, Parallelization, keySize / 8);
+            return SCrypt.Generate(
+                passwordBytes,
+                salt,
+                CostParameter,
+                BlockSize,
+                Parallelization,
+                keySize / 8
+            );
         }
         catch (Exception ex)
         {

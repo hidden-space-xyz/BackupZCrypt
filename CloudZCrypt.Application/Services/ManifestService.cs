@@ -86,7 +86,8 @@ internal sealed class ManifestService : IManifestService
                 manifestBytes,
                 encryptedManifestPath,
                 request.Password,
-                request.KeyDerivationAlgorithm
+                request.KeyDerivationAlgorithm,
+                cancellationToken: cancellationToken
             );
             if (!manifestOk)
             {
@@ -122,7 +123,8 @@ internal sealed class ManifestService : IManifestService
                 encryptedManifestPath,
                 tempJsonPath,
                 password,
-                kdf
+                kdf,
+                cancellationToken
             );
             if (!ok)
             {

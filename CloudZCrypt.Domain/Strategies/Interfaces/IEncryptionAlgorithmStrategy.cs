@@ -14,14 +14,16 @@ public interface IEncryptionAlgorithmStrategy
         string destinationFilePath,
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None
+        CompressionMode compression = CompressionMode.None,
+        CancellationToken cancellationToken = default
     );
 
     Task<bool> DecryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CancellationToken cancellationToken = default
     );
 
     Task<bool> CreateEncryptedFileAsync(
@@ -29,12 +31,14 @@ public interface IEncryptionAlgorithmStrategy
         string destinationFilePath,
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None
+        CompressionMode compression = CompressionMode.None,
+        CancellationToken cancellationToken = default
     );
 
     Task<byte[]> ReadEncryptedFileAsync(
         string sourceFilePath,
         string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CancellationToken cancellationToken = default
     );
 }

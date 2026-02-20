@@ -21,47 +21,59 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        MemoryStream inputBuffer = new();
-        await inputStream.CopyToAsync(
-            inputBuffer,
-            StreamConstants.CopyBufferSize,
-            cancellationToken
-        );
-        long uncompressedSize = inputBuffer.Length;
-        inputBuffer.Position = 0;
+        const int headerSize = 5 + sizeof(long) + sizeof(long);
+        Stream? tempInput = null;
+        Stream effectiveInput = inputStream;
 
-        MemoryStream compressedBuffer = new();
-        LzmaEncoderProperties encoderProps = new(false);
-        byte[] lzmaProperties;
-
-        using (
-            LzmaStream lzma = new(
-                encoderProps,
-                false,
-                new NonClosingStreamWrapper(compressedBuffer)
-            )
-        )
+        try
         {
-            await inputBuffer.CopyToAsync(lzma, StreamConstants.CopyBufferSize, cancellationToken);
-            lzmaProperties = lzma.Properties;
+            long uncompressedSize;
+            if (inputStream.CanSeek)
+            {
+                uncompressedSize = inputStream.Length - inputStream.Position;
+            }
+            else
+            {
+                tempInput = CreateTempStream();
+                await inputStream.CopyToAsync(
+                    tempInput,
+                    StreamConstants.CopyBufferSize,
+                    cancellationToken
+                );
+                tempInput.Position = 0;
+                effectiveInput = tempInput;
+                uncompressedSize = tempInput.Length;
+            }
+
+            FileStream output = CreateTempStream();
+            output.Position = headerSize;
+
+            LzmaEncoderProperties encoderProps = new(false);
+            byte[] lzmaProperties;
+
+            using (LzmaStream lzma = new(encoderProps, false, new NonClosingStreamWrapper(output)))
+            {
+                await effectiveInput.CopyToAsync(
+                    lzma,
+                    StreamConstants.CopyBufferSize,
+                    cancellationToken
+                );
+                lzmaProperties = lzma.Properties;
+            }
+
+            long compressedSize = output.Length - headerSize;
+
+            output.Position = 0;
+            await output.WriteAsync(lzmaProperties, cancellationToken);
+            await output.WriteAsync(BitConverter.GetBytes(uncompressedSize), cancellationToken);
+            await output.WriteAsync(BitConverter.GetBytes(compressedSize), cancellationToken);
+            output.Position = 0;
+            return output;
         }
-
-        long compressedSize = compressedBuffer.Length;
-
-        MemoryStream output = new();
-        await output.WriteAsync(lzmaProperties, cancellationToken);
-        await output.WriteAsync(BitConverter.GetBytes(uncompressedSize), cancellationToken);
-        await output.WriteAsync(BitConverter.GetBytes(compressedSize), cancellationToken);
-
-        compressedBuffer.Position = 0;
-        await compressedBuffer.CopyToAsync(
-            output,
-            StreamConstants.CopyBufferSize,
-            cancellationToken
-        );
-
-        output.Position = 0;
-        return output;
+        finally
+        {
+            tempInput?.Dispose();
+        }
     }
 
     public async Task<Stream> DecompressAsync(
@@ -80,12 +92,30 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         await inputStream.ReadExactlyAsync(compressedSizeBytes, cancellationToken);
         long compressedSize = BitConverter.ToInt64(compressedSizeBytes, 0);
 
-        MemoryStream output = new();
+        FileStream output = CreateTempStream();
         using (LzmaStream lzma = new(properties, inputStream, compressedSize, uncompressedSize))
         {
             await lzma.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
         output.Position = 0;
         return output;
+    }
+
+    private static FileStream CreateTempStream()
+    {
+        string tempFilePath = Path.GetTempFileName();
+        return new FileStream(
+            tempFilePath,
+            new FileStreamOptions
+            {
+                Access = FileAccess.ReadWrite,
+                Mode = FileMode.Create,
+                Options =
+                    FileOptions.Asynchronous
+                    | FileOptions.SequentialScan
+                    | FileOptions.DeleteOnClose,
+                BufferSize = StreamConstants.CopyBufferSize,
+            }
+        );
     }
 }
