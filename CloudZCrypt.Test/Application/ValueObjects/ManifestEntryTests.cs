@@ -1,6 +1,6 @@
-using CloudZCrypt.Application.ValueObjects.Manifest;
-
 namespace CloudZCrypt.Test.Application.ValueObjects;
+
+using CloudZCrypt.Application.ValueObjects.Manifest;
 
 [TestFixture]
 internal sealed class ManifestEntryTests

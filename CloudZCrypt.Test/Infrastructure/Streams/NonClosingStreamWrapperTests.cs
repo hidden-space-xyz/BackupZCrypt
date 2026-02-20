@@ -1,6 +1,6 @@
-using CloudZCrypt.Infrastructure.Streams;
-
 namespace CloudZCrypt.Test.Infrastructure.Streams;
+
+using CloudZCrypt.Infrastructure.Streams;
 
 [TestFixture]
 internal sealed class NonClosingStreamWrapperTests

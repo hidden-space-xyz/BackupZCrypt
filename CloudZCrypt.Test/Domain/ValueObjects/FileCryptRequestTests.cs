@@ -1,7 +1,7 @@
+namespace CloudZCrypt.Test.Domain.ValueObjects;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
-
-namespace CloudZCrypt.Test.Domain.ValueObjects;
 
 [TestFixture]
 internal sealed class FileCryptRequestTests
@@ -19,8 +19,7 @@ internal sealed class FileCryptRequestTests
             Operation: EncryptOperation.Encrypt,
             NameObfuscation: NameObfuscationMode.None,
             Compression: CompressionMode.GZip,
-            ProceedOnWarnings: true
-        );
+            ProceedOnWarnings: true);
 
         Assert.That(request.SourcePath, Is.EqualTo(@"C:\source"));
         Assert.That(request.DestinationPath, Is.EqualTo(@"C:\dest"));
@@ -45,8 +44,7 @@ internal sealed class FileCryptRequestTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+            NameObfuscationMode.None);
 
         Assert.That(request.Compression, Is.EqualTo(CompressionMode.None));
         Assert.That(request.ProceedOnWarnings, Is.False);
@@ -63,8 +61,7 @@ internal sealed class FileCryptRequestTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+            NameObfuscationMode.None);
 
         FileCryptRequest modified = original with { Operation = EncryptOperation.Decrypt };
 

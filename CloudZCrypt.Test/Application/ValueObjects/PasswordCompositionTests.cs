@@ -1,6 +1,6 @@
-using CloudZCrypt.Application.ValueObjects.Password;
-
 namespace CloudZCrypt.Test.Application.ValueObjects;
+
+using CloudZCrypt.Application.ValueObjects.Password;
 
 [TestFixture]
 internal sealed class PasswordCompositionTests

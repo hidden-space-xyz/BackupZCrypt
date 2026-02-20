@@ -1,10 +1,10 @@
+namespace CloudZCrypt.Terminal.Rendering;
+
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
-
-namespace CloudZCrypt.Terminal.Rendering;
 
 internal static class ProgressRunner
 {
@@ -13,8 +13,7 @@ internal static class ProgressRunner
         FileCryptRequest request,
         string operationName,
         string operationIngName,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         Result<FileCryptResult>? result = null;
 
@@ -27,14 +26,12 @@ internal static class ProgressRunner
                 new ProgressBarColumn(),
                 new PercentageColumn(),
                 new RemainingTimeColumn(),
-                new SpinnerColumn()
-            )
+                new SpinnerColumn())
             .StartAsync(async ctx =>
             {
                 ProgressTask task = ctx.AddTask(
                     $"[cyan]{string.Format(Messages.OperationIngFormat, operationIngName)}[/]",
-                    maxValue: 100
-                );
+                    maxValue: 100);
 
                 Progress<FileCryptStatus> progress = new(update =>
                 {

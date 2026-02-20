@@ -1,6 +1,6 @@
-using CloudZCrypt.Application.ValueObjects;
-
 namespace CloudZCrypt.Test.Application.ValueObjects;
+
+using CloudZCrypt.Application.ValueObjects;
 
 [TestFixture]
 internal sealed class ResultTests

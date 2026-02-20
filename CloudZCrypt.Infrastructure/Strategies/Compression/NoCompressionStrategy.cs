@@ -1,9 +1,9 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Compression;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
 using CloudZCrypt.Infrastructure.Resources;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
 internal class NoCompressionStrategy : ICompressionStrategy
 {
@@ -17,8 +17,7 @@ internal class NoCompressionStrategy : ICompressionStrategy
 
     public Task<Stream> CompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);
@@ -26,8 +25,7 @@ internal class NoCompressionStrategy : ICompressionStrategy
 
     public Task<Stream> DecompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         return CopyAndRewindAsync(inputStream, output, cancellationToken);
@@ -36,8 +34,7 @@ internal class NoCompressionStrategy : ICompressionStrategy
     private static async Task<Stream> CopyAndRewindAsync(
         Stream input,
         FileStream output,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         await input.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         output.Position = 0;
@@ -58,7 +55,6 @@ internal class NoCompressionStrategy : ICompressionStrategy
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = StreamConstants.CopyBufferSize,
-            }
-        );
+            });
     }
 }

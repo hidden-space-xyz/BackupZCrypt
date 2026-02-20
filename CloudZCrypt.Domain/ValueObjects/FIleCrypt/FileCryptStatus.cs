@@ -1,30 +1,22 @@
-using CloudZCrypt.Domain.Enums;
-
 namespace CloudZCrypt.Domain.ValueObjects.FileCrypt;
+
+using CloudZCrypt.Domain.Enums;
 
 public sealed record FileCryptStatus
 {
-    public int ProcessedFiles { get; }
-    public int TotalFiles { get; }
-    public long ProcessedBytes { get; }
-    public long TotalBytes { get; }
-    public TimeSpan Elapsed { get; }
-
     public FileCryptStatus(
         int processedFiles,
         int totalFiles,
         long processedBytes,
         long totalBytes,
-        TimeSpan elapsed
-    )
+        TimeSpan elapsed)
     {
         if (processedFiles < 0)
         {
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedFilesNegative,
                 "Processed files cannot be negative",
-                nameof(processedFiles)
-            );
+                nameof(processedFiles));
         }
 
         if (totalFiles < 0)
@@ -32,8 +24,7 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.TotalFilesNegative,
                 "Total files cannot be negative",
-                nameof(totalFiles)
-            );
+                nameof(totalFiles));
         }
 
         if (processedBytes < 0)
@@ -41,8 +32,7 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedBytesNegative,
                 "Processed bytes cannot be negative",
-                nameof(processedBytes)
-            );
+                nameof(processedBytes));
         }
 
         if (totalBytes < 0)
@@ -50,8 +40,7 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.TotalBytesNegative,
                 "Total bytes cannot be negative",
-                nameof(totalBytes)
-            );
+                nameof(totalBytes));
         }
 
         if (elapsed < TimeSpan.Zero)
@@ -59,8 +48,7 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ElapsedNegative,
                 "Elapsed time cannot be negative",
-                nameof(elapsed)
-            );
+                nameof(elapsed));
         }
 
         if (processedFiles > totalFiles)
@@ -68,8 +56,7 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedFilesExceedTotalFiles,
                 "Processed files cannot exceed total files",
-                nameof(processedFiles)
-            );
+                nameof(processedFiles));
         }
 
         if (processedBytes > totalBytes)
@@ -77,14 +64,23 @@ public sealed record FileCryptStatus
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedBytesExceedTotalBytes,
                 "Processed bytes cannot exceed total bytes",
-                nameof(processedBytes)
-            );
+                nameof(processedBytes));
         }
 
-        ProcessedFiles = processedFiles;
-        TotalFiles = totalFiles;
-        ProcessedBytes = processedBytes;
-        TotalBytes = totalBytes;
-        Elapsed = elapsed;
+        this.ProcessedFiles = processedFiles;
+        this.TotalFiles = totalFiles;
+        this.ProcessedBytes = processedBytes;
+        this.TotalBytes = totalBytes;
+        this.Elapsed = elapsed;
     }
+
+    public int ProcessedFiles { get; }
+
+    public int TotalFiles { get; }
+
+    public long ProcessedBytes { get; }
+
+    public long TotalBytes { get; }
+
+    public TimeSpan Elapsed { get; }
 }

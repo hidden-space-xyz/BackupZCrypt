@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Terminal.Commands;
+
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
@@ -10,16 +12,13 @@ using CloudZCrypt.Terminal.Rendering;
 using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
-namespace CloudZCrypt.Terminal.Commands;
-
 internal sealed class EncryptCommand(
     IFileCryptOrchestrator orchestrator,
     IPasswordService passwordService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
-    IReadOnlyList<ICompressionStrategy> compressionStrategies
-)
+    IReadOnlyList<ICompressionStrategy> compressionStrategies)
 {
     public async Task ExecuteAsync(EncryptOperation operation)
     {
@@ -29,8 +28,7 @@ internal sealed class EncryptCommand(
             operation == EncryptOperation.Encrypt ? Messages.Encrypting : Messages.Decrypting;
 
         AnsiConsole.Write(
-            new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
-        );
+            new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey")));
         AnsiConsole.WriteLine();
 
         string sourcePath = PromptSourcePath();
@@ -40,28 +38,24 @@ internal sealed class EncryptCommand(
         {
             (string password, string confirmPassword) = PromptPasswords();
 
-            PrintPasswordStrength(password);
+            this.PrintPasswordStrength(password);
 
             IEncryptionAlgorithmStrategy selectedEncryption = PromptStrategy(
                 Messages.EncryptionAlgorithmPrompt,
                 encryptionStrategies,
-                s => $"{s.DisplayName} — {s.Summary}"
-            );
+                s => $"{s.DisplayName} — {s.Summary}");
             IKeyDerivationAlgorithmStrategy selectedKdf = PromptStrategy(
                 Messages.KeyDerivationAlgorithmPrompt,
                 keyDerivationStrategies,
-                s => $"{s.DisplayName} — {s.Summary}"
-            );
+                s => $"{s.DisplayName} — {s.Summary}");
             INameObfuscationStrategy selectedObfuscation = PromptStrategy(
                 Messages.NameObfuscationModePrompt,
                 nameObfuscationStrategies,
-                s => $"{s.DisplayName} — {s.Summary}"
-            );
+                s => $"{s.DisplayName} — {s.Summary}");
             ICompressionStrategy selectedCompression = PromptStrategy(
                 Messages.CompressionModePrompt,
                 compressionStrategies,
-                s => $"{s.DisplayName} — {s.Summary}"
-            );
+                s => $"{s.DisplayName} — {s.Summary}");
 
             PrintSummary(
                 operationName,
@@ -70,14 +64,11 @@ internal sealed class EncryptCommand(
                 selectedEncryption,
                 selectedKdf,
                 selectedObfuscation,
-                selectedCompression
-            );
+                selectedCompression);
 
             if (
                 !await AnsiConsole.ConfirmAsync(
-                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
-                )
-            )
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
             {
                 AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
                 return;
@@ -93,10 +84,9 @@ internal sealed class EncryptCommand(
                 operation,
                 selectedObfuscation.Id,
                 selectedCompression.Id,
-                ProceedOnWarnings: false
-            );
+                ProceedOnWarnings: false);
 
-            await RunOperationAsync(request, operationName, operationIngName);
+            await this.RunOperationAsync(request, operationName, operationIngName);
         }
         else
         {
@@ -104,9 +94,7 @@ internal sealed class EncryptCommand(
 
             if (
                 !await AnsiConsole.ConfirmAsync(
-                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"
-                )
-            )
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
             {
                 AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
                 return;
@@ -120,216 +108,15 @@ internal sealed class EncryptCommand(
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
                 operation,
-                NameObfuscationMode.None
-            );
+                NameObfuscationMode.None);
 
-            await RunOperationAsync(request, operationName, operationIngName);
+            await this.RunOperationAsync(request, operationName, operationIngName);
         }
     }
 
-    private async Task RunOperationAsync(
-        FileCryptRequest request,
-        string operationName,
-        string operationIngName
-    )
-    {
-        AnsiConsole.WriteLine();
-
-        using CancellationTokenSource cts = new();
-
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-            AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
-        };
-
-        try
-        {
-            Result<FileCryptResult> result = await ProgressRunner.RunAsync(
-                orchestrator,
-                request,
-                operationName,
-                operationIngName,
-                cts.Token
-            );
-
-            if (!result.IsSuccess)
-            {
-                PrintFailure(operationName, result.Errors);
-                return;
-            }
-
-            FileCryptResult? response = result.Value;
-
-            if (response.HasErrors && response.TotalFiles == 0 && response.ProcessedFiles == 0)
-            {
-                PrintValidationErrors(response.Errors);
-                return;
-            }
-
-            if (response.HasWarnings && !request.ProceedOnWarnings)
-            {
-                response = await HandleWarningsAsync(
-                    response,
-                    request,
-                    operationName,
-                    operationIngName,
-                    cts.Token
-                );
-
-                if (response is null)
-                    return;
-            }
-
-            ResultRenderer.Print(response, operationName);
-        }
-        catch (OperationCanceledException)
-        {
-            AnsiConsole.MarkupLine($"[yellow]{Messages.OperationCancelledByUser}[/]");
-        }
-        catch (EncryptionException ex)
-        {
-            AnsiConsole.MarkupLine(
-                $"[red]❌ {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]"
-            );
-        }
-        catch (ValidationException ex)
-        {
-            AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]"
-            );
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
-            );
-        }
-    }
-
-    private async Task<FileCryptResult?> HandleWarningsAsync(
-        FileCryptResult response,
-        FileCryptRequest request,
-        string operationName,
-        string operationIngName,
-        CancellationToken cancellationToken
-    )
-    {
-        AnsiConsole.MarkupLine($"⚠  [yellow]{Messages.WarningsLabel}[/]");
-        foreach (string warning in response.Warnings)
-        {
-            AnsiConsole.MarkupLine($"  - [yellow]{Markup.Escape(warning)}[/]");
-        }
-        AnsiConsole.WriteLine();
-
-        if (
-            !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToLower())}[/]"
-            )
-        )
-        {
-            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
-            return null;
-        }
-
-        FileCryptRequest proceedRequest = request with { ProceedOnWarnings = true };
-
-        Result<FileCryptResult> result = await ProgressRunner.RunAsync(
-            orchestrator,
-            proceedRequest,
-            operationName,
-            operationIngName,
-            cancellationToken
-        );
-
-        if (!result.IsSuccess)
-        {
-            PrintFailure(operationName, result.Errors);
-            return null;
-        }
-
-        return result.Value;
-    }
-
-    private static string PromptSourcePath() =>
-        AnsiConsole.Prompt(
-            new TextPrompt<string>(
-                $"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}"
-            )
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p))
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")
-                )
-        );
-
-    private static string PromptDestinationPath() =>
-        AnsiConsole.Prompt(
-            new TextPrompt<string>($"[green]{Messages.DestinationPathPrompt}[/]:")
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p)
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PleaseEnterDestinationPath}[/]")
-                )
-        );
-
-    private static string PromptPassword() =>
-        AnsiConsole.Prompt(
-            new TextPrompt<string>($"[green]{Messages.PasswordPrompt}[/]:")
-                .Secret()
-                .ValidationErrorMessage($"[red]{Messages.PasswordCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p)
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")
-                )
-        );
-
-    private static (string Password, string ConfirmPassword) PromptPasswords()
-    {
-        string password = PromptPassword();
-
-        string confirmPassword = AnsiConsole.Prompt(
-            new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret()
-        );
-
-        return (password, confirmPassword);
-    }
-
-    private void PrintPasswordStrength(string password)
-    {
-        PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(password);
-        string strengthColor = strength.Strength switch
-        {
-            PasswordStrength.VeryWeak => "red",
-            PasswordStrength.Weak => "red",
-            PasswordStrength.Fair => "yellow",
-            PasswordStrength.Good => "green",
-            PasswordStrength.Strong => "bold green",
-            _ => "white",
-        };
+    private static void PrintFailure(string operationName, string[] errors) =>
         AnsiConsole.MarkupLine(
-            $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]"
-        );
-        AnsiConsole.WriteLine();
-    }
-
-    private static T PromptStrategy<T>(
-        string title,
-        IReadOnlyList<T> strategies,
-        Func<T, string> converter
-    )
-        where T : class =>
-        AnsiConsole.Prompt(
-            new SelectionPrompt<T>()
-                .Title($"[green]{title}[/]")
-                .HighlightStyle(Style.Parse("bold cyan"))
-                .UseConverter(converter)
-                .AddChoices(strategies)
-        );
+            $"[red]{string.Format(Messages.FailedFormat, operationName, Markup.Escape(string.Join(", ", errors)))}[/]");
 
     private static void PrintSummary(
         string operationName,
@@ -338,8 +125,7 @@ internal sealed class EncryptCommand(
         IEncryptionAlgorithmStrategy encryption,
         IKeyDerivationAlgorithmStrategy kdf,
         INameObfuscationStrategy obfuscation,
-        ICompressionStrategy compression
-    )
+        ICompressionStrategy compression)
     {
         AnsiConsole.WriteLine();
         Table summaryTable = new Table()
@@ -359,17 +145,198 @@ internal sealed class EncryptCommand(
         AnsiConsole.WriteLine();
     }
 
-    private static void PrintFailure(string operationName, string[] errors) =>
-        AnsiConsole.MarkupLine(
-            $"[red]{string.Format(Messages.FailedFormat, operationName, Markup.Escape(string.Join(", ", errors)))}[/]"
-        );
-
     private static void PrintValidationErrors(IReadOnlyList<string> errors)
     {
         AnsiConsole.MarkupLine($"[red]{Messages.ValidationErrors}[/]");
         foreach (string error in errors)
         {
             AnsiConsole.MarkupLine($"  [red]❌ {Markup.Escape(error)}[/]");
+        }
+    }
+
+    private static string PromptDestinationPath() =>
+        AnsiConsole.Prompt(
+            new TextPrompt<string>($"[green]{Messages.DestinationPathPrompt}[/]:")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
+                .Validate(p =>
+                    !string.IsNullOrWhiteSpace(p)
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error($"[red]{Messages.PleaseEnterDestinationPath}[/]")));
+
+    private static string PromptPassword() =>
+        AnsiConsole.Prompt(
+            new TextPrompt<string>($"[green]{Messages.PasswordPrompt}[/]:")
+                .Secret()
+                .ValidationErrorMessage($"[red]{Messages.PasswordCannotBeEmpty}[/]")
+                .Validate(p =>
+                    !string.IsNullOrWhiteSpace(p)
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")));
+
+    private static (string Password, string ConfirmPassword) PromptPasswords()
+    {
+        string password = PromptPassword();
+
+        string confirmPassword = AnsiConsole.Prompt(
+            new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret());
+
+        return (password, confirmPassword);
+    }
+
+    private static string PromptSourcePath() =>
+        AnsiConsole.Prompt(
+            new TextPrompt<string>(
+                $"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
+                .Validate(p =>
+                    !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p))
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")));
+
+    private static T PromptStrategy<T>(
+        string title,
+        IReadOnlyList<T> strategies,
+        Func<T, string> converter)
+        where T : class =>
+        AnsiConsole.Prompt(
+            new SelectionPrompt<T>()
+                .Title($"[green]{title}[/]")
+                .HighlightStyle(Style.Parse("bold cyan"))
+                .UseConverter(converter)
+                .AddChoices(strategies));
+
+    private async Task<FileCryptResult?> HandleWarningsAsync(
+        FileCryptResult response,
+        FileCryptRequest request,
+        string operationName,
+        string operationIngName,
+        CancellationToken cancellationToken)
+    {
+        AnsiConsole.MarkupLine($"⚠  [yellow]{Messages.WarningsLabel}[/]");
+        foreach (string warning in response.Warnings)
+        {
+            AnsiConsole.MarkupLine($"  - [yellow]{Markup.Escape(warning)}[/]");
+        }
+
+        AnsiConsole.WriteLine();
+
+        if (
+            !await AnsiConsole.ConfirmAsync(
+                $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToLower())}[/]"))
+        {
+            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
+            return null;
+        }
+
+        FileCryptRequest proceedRequest = request with { ProceedOnWarnings = true };
+
+        Result<FileCryptResult> result = await ProgressRunner.RunAsync(
+            orchestrator,
+            proceedRequest,
+            operationName,
+            operationIngName,
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            PrintFailure(operationName, result.Errors);
+            return null;
+        }
+
+        return result.Value;
+    }
+
+    private void PrintPasswordStrength(string password)
+    {
+        PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(password);
+        string strengthColor = strength.Strength switch
+        {
+            PasswordStrength.VeryWeak => "red",
+            PasswordStrength.Weak => "red",
+            PasswordStrength.Fair => "yellow",
+            PasswordStrength.Good => "green",
+            PasswordStrength.Strong => "bold green",
+            _ => "white",
+        };
+        AnsiConsole.MarkupLine(
+            $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]");
+        AnsiConsole.WriteLine();
+    }
+
+    private async Task RunOperationAsync(
+        FileCryptRequest request,
+        string operationName,
+        string operationIngName)
+    {
+        AnsiConsole.WriteLine();
+
+        using CancellationTokenSource cts = new();
+
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+            AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
+        };
+
+        try
+        {
+            Result<FileCryptResult> result = await ProgressRunner.RunAsync(
+                orchestrator,
+                request,
+                operationName,
+                operationIngName,
+                cts.Token);
+
+            if (!result.IsSuccess)
+            {
+                PrintFailure(operationName, result.Errors);
+                return;
+            }
+
+            FileCryptResult? response = result.Value;
+
+            if (response.HasErrors && response.TotalFiles == 0 && response.ProcessedFiles == 0)
+            {
+                PrintValidationErrors(response.Errors);
+                return;
+            }
+
+            if (response.HasWarnings && !request.ProceedOnWarnings)
+            {
+                response = await this.HandleWarningsAsync(
+                    response,
+                    request,
+                    operationName,
+                    operationIngName,
+                    cts.Token);
+
+                if (response is null)
+                {
+                    return;
+                }
+            }
+
+            ResultRenderer.Print(response, operationName);
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.MarkupLine($"[yellow]{Messages.OperationCancelledByUser}[/]");
+        }
+        catch (EncryptionException ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]❌ {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]");
+        }
+        catch (ValidationException ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
         }
     }
 }

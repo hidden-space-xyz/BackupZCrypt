@@ -1,7 +1,7 @@
+namespace CloudZCrypt.Test.Domain.Exceptions;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Exceptions;
-
-namespace CloudZCrypt.Test.Domain.Exceptions;
 
 [TestFixture]
 internal sealed class EncryptionExceptionTests

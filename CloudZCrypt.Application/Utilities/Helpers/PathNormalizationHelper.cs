@@ -1,6 +1,6 @@
-using CloudZCrypt.Application.Resources;
-
 namespace CloudZCrypt.Application.Utilities.Helpers;
+
+using CloudZCrypt.Application.Resources;
 
 internal static class PathNormalizationHelper
 {

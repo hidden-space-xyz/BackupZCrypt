@@ -1,27 +1,27 @@
+namespace CloudZCrypt.Test.Integration;
+
 using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CloudZCrypt.Test.Integration;
-
 [TestFixture]
 internal sealed class KeyDerivationRoundTripTests
 {
-    private ServiceProvider _provider = null!;
+    private ServiceProvider provider = null!;
 
     [SetUp]
     public void SetUp()
     {
         ServiceCollection services = new();
         services.AddDomainServices();
-        _provider = services.BuildServiceProvider();
+        this.provider = services.BuildServiceProvider();
     }
 
     [TearDown]
     public void TearDown()
     {
-        _provider.Dispose();
+        this.provider.Dispose();
     }
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
@@ -29,7 +29,7 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_DeriveKey_ProducesCorrectSize(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IKeyDerivationAlgorithmStrategy>
         >();
 
@@ -47,7 +47,7 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_SameInputsSameOutput(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IKeyDerivationAlgorithmStrategy>
         >();
 
@@ -66,7 +66,7 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_DifferentPasswordsDifferentKeys(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IKeyDerivationAlgorithmStrategy>
         >();
 
@@ -85,7 +85,7 @@ internal sealed class KeyDerivationRoundTripTests
     [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void AllStrategies_HaveMetadata(KeyDerivationAlgorithm algorithm)
     {
-        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IKeyDerivationAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IKeyDerivationAlgorithmStrategy>
         >();
 

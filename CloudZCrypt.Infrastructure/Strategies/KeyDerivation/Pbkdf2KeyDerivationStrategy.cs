@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
+
 using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Domain.Enums;
@@ -5,8 +7,6 @@ using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
-
-namespace CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

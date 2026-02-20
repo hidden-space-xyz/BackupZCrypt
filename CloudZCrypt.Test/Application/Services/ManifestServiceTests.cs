@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Test.Application.Services;
+
 using System.Text;
 using CloudZCrypt.Application.Services;
 using CloudZCrypt.Application.ValueObjects.Manifest;
@@ -7,30 +9,51 @@ using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
-namespace CloudZCrypt.Test.Application.Services;
-
 [TestFixture]
 internal sealed class ManifestServiceTests
 {
-    private ManifestService _service = null!;
+    private ManifestService service = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _service = new ManifestService();
+        this.service = new ManifestService();
     }
 
-    private static FileCryptRequest CreateRequest() =>
-        new(
-            @"C:\source",
-            @"C:\dest",
-            "StrongP@ss1",
-            "StrongP@ss1",
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+    [Test]
+    public async Task TryReadManifestAsync_DecryptionFails_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            await File.WriteAllBytesAsync(manifestPath, [1, 2, 3]);
+
+            IEncryptionAlgorithmStrategy encryptionService =
+                Substitute.For<IEncryptionAlgorithmStrategy>();
+            encryptionService
+                .DecryptFileAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Any<KeyDerivationAlgorithm>())
+                .Returns(false);
+
+            ManifestData? result = await this.service.TryReadManifestAsync(
+                tempDir,
+                [encryptionService],
+                "StrongP@ss1",
+                CancellationToken.None);
+
+            Assert.That(result, Is.Null);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 
     [Test]
     public async Task TryReadManifestAsync_ManifestDoesNotExist_ReturnsNull()
@@ -42,12 +65,11 @@ internal sealed class ManifestServiceTests
 
         try
         {
-            ManifestData? result = await _service.TryReadManifestAsync(
+            ManifestData? result = await this.service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
-                CancellationToken.None
-            );
+                CancellationToken.None);
 
             Assert.That(result, Is.Null);
         }
@@ -57,28 +79,19 @@ internal sealed class ManifestServiceTests
         }
     }
 
-    private static ManifestHeader CreateHeader() =>
-        new(
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            NameObfuscationMode.None,
-            CompressionMode.None
-        );
-
     [Test]
     public async Task TrySaveManifestAsync_EmptyEntries_ReturnsNoErrors()
     {
         IEncryptionAlgorithmStrategy encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
 
-        IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
+        IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
             [],
             CreateHeader(),
             @"C:\dest",
             encryptionService,
             CreateRequest(),
-            CancellationToken.None
-        );
+            CancellationToken.None);
 
         Assert.That(errors, Is.Empty);
     }
@@ -94,8 +107,7 @@ internal sealed class ManifestServiceTests
                 Arg.Any<string>(),
                 Arg.Any<string>(),
                 Arg.Any<KeyDerivationAlgorithm>(),
-                Arg.Any<CompressionMode>()
-            )
+                Arg.Any<CompressionMode>())
             .Returns(false);
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
@@ -105,14 +117,13 @@ internal sealed class ManifestServiceTests
         {
             List<ManifestEntry> entries = [new("original.txt", "obfuscated.czc")];
 
-            IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
+            IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,
                 encryptionService,
                 CreateRequest(),
-                CancellationToken.None
-            );
+                CancellationToken.None);
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Does.Contain("Failed"));
@@ -134,8 +145,7 @@ internal sealed class ManifestServiceTests
                 Arg.Any<string>(),
                 Arg.Any<string>(),
                 Arg.Any<KeyDerivationAlgorithm>(),
-                Arg.Any<CompressionMode>()
-            )
+                Arg.Any<CompressionMode>())
             .ThrowsAsync(new IOException("disk error"));
 
         string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
@@ -145,14 +155,13 @@ internal sealed class ManifestServiceTests
         {
             List<ManifestEntry> entries = [new("a.txt", "b.czc")];
 
-            IReadOnlyList<string> errors = await _service.TrySaveManifestAsync(
+            IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,
                 encryptionService,
                 CreateRequest(),
-                CancellationToken.None
-            );
+                CancellationToken.None);
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Does.Contain("disk error"));
@@ -163,40 +172,21 @@ internal sealed class ManifestServiceTests
         }
     }
 
-    [Test]
-    public async Task TryReadManifestAsync_DecryptionFails_ReturnsNull()
-    {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+    private static ManifestHeader CreateHeader() =>
+        new(
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            NameObfuscationMode.None,
+            CompressionMode.None);
 
-        try
-        {
-            string manifestPath = Path.Combine(tempDir, "manifest.czc");
-            await File.WriteAllBytesAsync(manifestPath, [1, 2, 3]);
-
-            IEncryptionAlgorithmStrategy encryptionService =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-            encryptionService
-                .DecryptFileAsync(
-                    Arg.Any<string>(),
-                    Arg.Any<string>(),
-                    Arg.Any<string>(),
-                    Arg.Any<KeyDerivationAlgorithm>()
-                )
-                .Returns(false);
-
-            ManifestData? result = await _service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
-                CancellationToken.None
-            );
-
-            Assert.That(result, Is.Null);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
+    private static FileCryptRequest CreateRequest() =>
+        new(
+            @"C:\source",
+            @"C:\dest",
+            "StrongP@ss1",
+            "StrongP@ss1",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None);
 }

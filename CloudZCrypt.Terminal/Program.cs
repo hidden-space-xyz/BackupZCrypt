@@ -40,8 +40,7 @@ EncryptCommand encryptCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
-    compressionStrategies
-);
+    compressionStrategies);
 
 GeneratePasswordCommand generatePasswordCommand = new(passwordService);
 
@@ -49,8 +48,7 @@ AlgorithmInfoCommand algorithmInfoCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
-    compressionStrategies
-);
+    compressionStrategies);
 
 TerminalApplication app = new(encryptCommand, generatePasswordCommand, algorithmInfoCommand);
 

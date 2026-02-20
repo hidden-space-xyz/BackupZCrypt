@@ -1,47 +1,47 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.Obfuscation;
-
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
 
 [TestFixture]
 internal sealed class GuidObfuscationStrategyTests
 {
-    private GuidObfuscationStrategy _strategy = null!;
+    private GuidObfuscationStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new GuidObfuscationStrategy();
+        this.strategy = new GuidObfuscationStrategy();
     }
 
     [Test]
     public void Id_ReturnsGuid()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(NameObfuscationMode.Guid));
+        Assert.That(this.strategy.Id, Is.EqualTo(NameObfuscationMode.Guid));
     }
 
     [Test]
     public void DisplayName_ReturnsGUID()
     {
-        Assert.That(_strategy.DisplayName, Is.EqualTo("GUID"));
+        Assert.That(this.strategy.DisplayName, Is.EqualTo("GUID"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
     public void ObfuscateFileName_ReturnsGuidWithExtension()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
 
         Assert.That(result, Does.EndWith(".czc"));
         string guidPart = Path.GetFileNameWithoutExtension(result);
@@ -51,7 +51,7 @@ internal sealed class GuidObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_PreservesExtension()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\source\photo.jpg", "photo.jpg");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\photo.jpg", "photo.jpg");
 
         Assert.That(result, Does.EndWith(".jpg"));
     }
@@ -59,8 +59,8 @@ internal sealed class GuidObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DifferentCallsProduceDifferentNames()
     {
-        string result1 = _strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
+        string result1 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
+        string result2 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
 
         Assert.That(result1, Is.Not.EqualTo(result2));
     }
@@ -68,7 +68,7 @@ internal sealed class GuidObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_NoExtension_ReturnsGuidOnly()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\source\noext", "noext");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\noext", "noext");
 
         Assert.That(Guid.TryParse(result, out _), Is.True);
     }

@@ -1,19 +1,17 @@
-using CloudZCrypt.Domain.Services.Interfaces;
-
 namespace CloudZCrypt.Infrastructure.Services.FileSystem;
+
+using CloudZCrypt.Domain.Services.Interfaces;
 
 internal class FileOperationsService : IFileOperationsService
 {
     public async Task<string[]> GetFilesAsync(
         string directoryPath,
         string searchPattern = "*.*",
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         return await Task.Run(
             () => Directory.GetFiles(directoryPath, searchPattern, SearchOption.AllDirectories),
-            cancellationToken
-        );
+            cancellationToken);
     }
 
     public bool DirectoryExists(string directoryPath)
@@ -33,8 +31,7 @@ internal class FileOperationsService : IFileOperationsService
 
     public async Task CreateDirectoryAsync(
         string directoryPath,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         await Task.Run(() => Directory.CreateDirectory(directoryPath), cancellationToken);
     }
@@ -79,8 +76,7 @@ internal class FileOperationsService : IFileOperationsService
                 Mode = FileMode.Open,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = bufferSize,
-            }
-        );
+            });
     }
 
     public Stream CreateWriteStream(string filePath, int bufferSize)
@@ -93,8 +89,7 @@ internal class FileOperationsService : IFileOperationsService
                 Mode = FileMode.Create,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = bufferSize,
-            }
-        );
+            });
     }
 
     public Stream CreateTempStream(int bufferSize)
@@ -111,7 +106,6 @@ internal class FileOperationsService : IFileOperationsService
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = bufferSize,
-            }
-        );
+            });
     }
 }

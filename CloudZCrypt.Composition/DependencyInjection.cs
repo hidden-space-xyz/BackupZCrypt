@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Composition;
+
 using CloudZCrypt.Application.Orchestrators;
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Services;
@@ -8,14 +10,13 @@ using CloudZCrypt.Domain.Factories;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
+using CloudZCrypt.Infrastructure.Services.Encryption;
 using CloudZCrypt.Infrastructure.Services.FileSystem;
 using CloudZCrypt.Infrastructure.Strategies.Compression;
 using CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
 using CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
 using CloudZCrypt.Infrastructure.Strategies.Obfuscation;
 using Microsoft.Extensions.DependencyInjection;
-
-namespace CloudZCrypt.Composition;
 
 public static class DependencyInjection
 {
@@ -55,6 +56,8 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<IFileOperationsService, FileOperationsService>();
         services.AddSingleton<ISystemStorageService, SystemStorageService>();
+        services.AddSingleton<IEncryptionSessionFactory, EncryptionSessionFactory>();
+        services.AddSingleton<IEncryptionFileService, EncryptionFileService>();
 
         return services;
     }

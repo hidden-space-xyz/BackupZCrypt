@@ -1,6 +1,6 @@
-using CloudZCrypt.Domain.Services.Interfaces;
-
 namespace CloudZCrypt.Infrastructure.Services.FileSystem;
+
+using CloudZCrypt.Domain.Services.Interfaces;
 
 internal class SystemStorageService : ISystemStorageService
 {

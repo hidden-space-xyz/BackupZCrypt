@@ -1,11 +1,11 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Compression;
+
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
 using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
 internal class BZip2CompressionStrategy : ICompressionStrategy
 {
@@ -19,34 +19,32 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         using (
             BZip2Stream bzip2 = new(
                 new NonClosingStreamWrapper(output),
                 CompressionMode.Compress,
-                false
-            )
-        )
+                false))
         {
             await inputStream.CopyToAsync(bzip2, StreamConstants.CopyBufferSize, cancellationToken);
         }
+
         output.Position = 0;
         return output;
     }
 
     public async Task<Stream> DecompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         using (BZip2Stream bzip2 = new(inputStream, CompressionMode.Decompress, false))
         {
             await bzip2.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
+
         output.Position = 0;
         return output;
     }
@@ -65,7 +63,6 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = StreamConstants.CopyBufferSize,
-            }
-        );
+            });
     }
 }

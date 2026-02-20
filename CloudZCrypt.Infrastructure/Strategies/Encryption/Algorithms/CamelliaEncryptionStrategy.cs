@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Services.Interfaces;
@@ -7,15 +9,14 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 
-namespace CloudZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
-
 internal class CamelliaEncryptionStrategy(
-    IKeyDerivationServiceFactory keyDerivationServiceFactory,
+    IEncryptionSessionFactory encryptionSessionFactory,
     ICompressionServiceFactory compressionServiceFactory,
-    IFileOperationsService fileOperationsService,
-    ISystemStorageService systemStorageService
-)
-    : EncryptionStrategyBase(keyDerivationServiceFactory, compressionServiceFactory, fileOperationsService, systemStorageService),
+    IEncryptionFileService encryptionFileService)
+    : EncryptionStrategyBase(
+        encryptionSessionFactory,
+        compressionServiceFactory,
+        encryptionFileService),
         IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Camellia;
@@ -32,15 +33,18 @@ internal class CamelliaEncryptionStrategy(
         byte[] key,
         byte[] nonce,
         byte[] associatedData,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         CamelliaEngine camelliaEngine = new();
         GcmBlockCipher gcmCipher = new(camelliaEngine);
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(true, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher, cancellationToken);
+        await this.ProcessFileWithCipherAsync(
+            sourceStream,
+            destinationStream,
+            gcmCipher,
+            cancellationToken);
     }
 
     protected override async Task DecryptStreamAsync(
@@ -49,14 +53,17 @@ internal class CamelliaEncryptionStrategy(
         byte[] key,
         byte[] nonce,
         byte[] associatedData,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         CamelliaEngine camelliaEngine = new();
         GcmBlockCipher gcmCipher = new(camelliaEngine);
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(false, parameters);
 
-        await ProcessFileWithCipherAsync(sourceStream, destinationStream, gcmCipher, cancellationToken);
+        await this.ProcessFileWithCipherAsync(
+            sourceStream,
+            destinationStream,
+            gcmCipher,
+            cancellationToken);
     }
 }

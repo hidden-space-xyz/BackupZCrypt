@@ -1,6 +1,6 @@
-using CloudZCrypt.Application.Utilities.Formatters;
-
 namespace CloudZCrypt.Test.Application.Utilities;
+
+using CloudZCrypt.Application.Utilities.Formatters;
 
 [TestFixture]
 internal sealed class ByteSizeFormatterTests

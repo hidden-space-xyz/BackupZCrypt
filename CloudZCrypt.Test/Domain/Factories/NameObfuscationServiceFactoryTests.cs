@@ -1,50 +1,49 @@
+namespace CloudZCrypt.Test.Domain.Factories;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using NSubstitute;
 
-namespace CloudZCrypt.Test.Domain.Factories;
-
 [TestFixture]
 internal sealed class NameObfuscationServiceFactoryTests
 {
-    private NameObfuscationServiceFactory _factory = null!;
-    private INameObfuscationStrategy _noneStrategy = null!;
-    private INameObfuscationStrategy _guidStrategy = null!;
+    private NameObfuscationServiceFactory factory = null!;
+    private INameObfuscationStrategy noneStrategy = null!;
+    private INameObfuscationStrategy guidStrategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _noneStrategy = Substitute.For<INameObfuscationStrategy>();
-        _noneStrategy.Id.Returns(NameObfuscationMode.None);
+        this.noneStrategy = Substitute.For<INameObfuscationStrategy>();
+        this.noneStrategy.Id.Returns(NameObfuscationMode.None);
 
-        _guidStrategy = Substitute.For<INameObfuscationStrategy>();
-        _guidStrategy.Id.Returns(NameObfuscationMode.Guid);
+        this.guidStrategy = Substitute.For<INameObfuscationStrategy>();
+        this.guidStrategy.Id.Returns(NameObfuscationMode.Guid);
 
-        _factory = new NameObfuscationServiceFactory([_noneStrategy, _guidStrategy]);
+        this.factory = new NameObfuscationServiceFactory([this.noneStrategy, this.guidStrategy]);
     }
 
     [Test]
     public void Create_RegisteredMode_ReturnsStrategy()
     {
-        INameObfuscationStrategy result = _factory.Create(NameObfuscationMode.None);
+        INameObfuscationStrategy result = this.factory.Create(NameObfuscationMode.None);
 
-        Assert.That(result, Is.SameAs(_noneStrategy));
+        Assert.That(result, Is.SameAs(this.noneStrategy));
     }
 
     [Test]
     public void Create_GuidMode_ReturnsCorrectStrategy()
     {
-        INameObfuscationStrategy result = _factory.Create(NameObfuscationMode.Guid);
+        INameObfuscationStrategy result = this.factory.Create(NameObfuscationMode.Guid);
 
-        Assert.That(result, Is.SameAs(_guidStrategy));
+        Assert.That(result, Is.SameAs(this.guidStrategy));
     }
 
     [Test]
     public void Create_UnregisteredMode_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _factory.Create(NameObfuscationMode.Sha256)
-        );
+            this.factory.Create(NameObfuscationMode.Sha256));
     }
 }

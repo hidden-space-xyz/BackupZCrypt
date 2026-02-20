@@ -1,28 +1,28 @@
+namespace CloudZCrypt.Test.Integration;
+
 using System.Text;
 using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CloudZCrypt.Test.Integration;
-
 [TestFixture]
 internal sealed class CompressionRoundTripTests
 {
-    private ServiceProvider _provider = null!;
+    private ServiceProvider provider = null!;
 
     [SetUp]
     public void SetUp()
     {
         ServiceCollection services = new();
         services.AddDomainServices();
-        _provider = services.BuildServiceProvider();
+        this.provider = services.BuildServiceProvider();
     }
 
     [TearDown]
     public void TearDown()
     {
-        _provider.Dispose();
+        this.provider.Dispose();
     }
 
     [TestCase(CompressionMode.None)]
@@ -30,15 +30,14 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.BZip2)]
     public async Task AllCompressionStrategies_RoundTrip_PreservesData(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
         ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
 
         byte[] original = Encoding.UTF8.GetBytes(
-            string.Concat(Enumerable.Repeat("Round trip compression test data! ", 30))
-        );
+            string.Concat(Enumerable.Repeat("Round trip compression test data! ", 30)));
         using MemoryStream input = new(original);
 
         Stream compressed = await strategy.CompressAsync(input);
@@ -55,7 +54,7 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.LZMA)]
     public async Task CompressionStrategies_ActuallyCompressData(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
@@ -70,8 +69,7 @@ internal sealed class CompressionRoundTripTests
         Assert.That(
             compressed.Length,
             Is.LessThan(original.Length),
-            $"{mode} should compress highly repetitive data"
-        );
+            $"{mode} should compress highly repetitive data");
     }
 
     [TestCase(CompressionMode.None)]
@@ -79,7 +77,7 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.BZip2)]
     public async Task AllStrategies_EmptyInput_RoundTrip(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
@@ -102,7 +100,7 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.LZMA)]
     public void AllStrategies_HaveMetadata(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 

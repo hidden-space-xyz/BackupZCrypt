@@ -1,47 +1,47 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.Obfuscation;
-
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
 
 [TestFixture]
 internal sealed class NoObfuscationStrategyTests
 {
-    private NoObfuscationStrategy _strategy = null!;
+    private NoObfuscationStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new NoObfuscationStrategy();
+        this.strategy = new NoObfuscationStrategy();
     }
 
     [Test]
     public void Id_ReturnsNone()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(NameObfuscationMode.None));
+        Assert.That(this.strategy.Id, Is.EqualTo(NameObfuscationMode.None));
     }
 
     [Test]
     public void DisplayName_ReturnsNone()
     {
-        Assert.That(_strategy.DisplayName, Is.EqualTo("None"));
+        Assert.That(this.strategy.DisplayName, Is.EqualTo("None"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
     public void ObfuscateFileName_ReturnsOriginalName()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt");
 
         Assert.That(result, Is.EqualTo("file.txt"));
     }
@@ -49,7 +49,7 @@ internal sealed class NoObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_WithCzcExtension_ReturnsOriginalName()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt.czc");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt.czc");
 
         Assert.That(result, Is.EqualTo("file.txt.czc"));
     }

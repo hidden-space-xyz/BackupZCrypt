@@ -1,7 +1,7 @@
+namespace CloudZCrypt.Test.Application.ValueObjects;
+
 using CloudZCrypt.Application.ValueObjects.Password;
 using CloudZCrypt.Domain.Enums;
-
-namespace CloudZCrypt.Test.Application.ValueObjects;
 
 [TestFixture]
 internal sealed class PasswordStrengthAnalysisTests

@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Test.Integration;
+
 using System.Text;
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.ValueObjects;
@@ -6,16 +8,14 @@ using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CloudZCrypt.Test.Integration;
-
 [TestFixture]
 internal sealed class OrchestratorIntegrationTests
 {
-    private ServiceProvider _provider = null!;
-    private IFileCryptOrchestrator _orchestrator = null!;
-    private string _testDir = null!;
-    private string _sourceDir = null!;
-    private string _destDir = null!;
+    private ServiceProvider provider = null!;
+    private IFileCryptOrchestrator orchestrator = null!;
+    private string testDir = null!;
+    private string sourceDir = null!;
+    private string destDir = null!;
 
     [SetUp]
     public void SetUp()
@@ -23,23 +23,23 @@ internal sealed class OrchestratorIntegrationTests
         ServiceCollection services = new();
         services.AddDomainServices();
         services.AddApplicationServices();
-        _provider = services.BuildServiceProvider();
-        _orchestrator = _provider.GetRequiredService<IFileCryptOrchestrator>();
+        this.provider = services.BuildServiceProvider();
+        this.orchestrator = this.provider.GetRequiredService<IFileCryptOrchestrator>();
 
-        _testDir = Path.Combine(Path.GetTempPath(), $"cloudzcrypt-orch-{Guid.NewGuid():N}");
-        _sourceDir = Path.Combine(_testDir, "source");
-        _destDir = Path.Combine(_testDir, "dest");
-        Directory.CreateDirectory(_sourceDir);
-        Directory.CreateDirectory(_destDir);
+        this.testDir = Path.Combine(Path.GetTempPath(), $"cloudzcrypt-orch-{Guid.NewGuid():N}");
+        this.sourceDir = Path.Combine(this.testDir, "source");
+        this.destDir = Path.Combine(this.testDir, "dest");
+        Directory.CreateDirectory(this.sourceDir);
+        Directory.CreateDirectory(this.destDir);
     }
 
     [TearDown]
     public void TearDown()
     {
-        _provider.Dispose();
-        if (Directory.Exists(_testDir))
+        this.provider.Dispose();
+        if (Directory.Exists(this.testDir))
         {
-            Directory.Delete(_testDir, true);
+            Directory.Delete(this.testDir, true);
         }
     }
 
@@ -47,10 +47,10 @@ internal sealed class OrchestratorIntegrationTests
     public async Task ExecuteAsync_SingleFile_EncryptAndDecrypt_RoundTrip()
     {
         string originalContent = "Integration test file content!";
-        string sourceFile = Path.Combine(_sourceDir, "test.txt");
-        File.WriteAllText(sourceFile, originalContent);
+        string sourceFile = Path.Combine(this.sourceDir, "test.txt");
+        await File.WriteAllTextAsync(sourceFile, originalContent);
 
-        string encryptedFile = Path.Combine(_destDir, "test.czc");
+        string encryptedFile = Path.Combine(this.destDir, "test.czc");
         string password = "IntegrationP@ss1";
 
         FileCryptRequest encryptRequest = new(
@@ -62,20 +62,18 @@ internal sealed class OrchestratorIntegrationTests
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
             NameObfuscationMode.None,
-            ProceedOnWarnings: true
-        );
+            ProceedOnWarnings: true);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> encryptResult = await _orchestrator.ExecuteAsync(
+        Result<FileCryptResult> encryptResult = await this.orchestrator.ExecuteAsync(
             encryptRequest,
-            progress
-        );
+            progress);
 
         Assert.That(encryptResult.IsSuccess, Is.True);
         Assert.That(encryptResult.Value.IsSuccess, Is.True);
         Assert.That(File.Exists(encryptedFile), Is.True);
 
-        string decryptedDir = Path.Combine(_testDir, "decrypted");
+        string decryptedDir = Path.Combine(this.testDir, "decrypted");
         Directory.CreateDirectory(decryptedDir);
         string decryptedFile = Path.Combine(decryptedDir, "test.txt");
 
@@ -88,13 +86,11 @@ internal sealed class OrchestratorIntegrationTests
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Decrypt,
             NameObfuscationMode.None,
-            ProceedOnWarnings: true
-        );
+            ProceedOnWarnings: true);
 
-        Result<FileCryptResult> decryptResult = await _orchestrator.ExecuteAsync(
+        Result<FileCryptResult> decryptResult = await this.orchestrator.ExecuteAsync(
             decryptRequest,
-            progress
-        );
+            progress);
 
         Assert.That(decryptResult.IsSuccess, Is.True);
         Assert.That(decryptResult.Value.IsSuccess, Is.True);
@@ -106,23 +102,22 @@ internal sealed class OrchestratorIntegrationTests
     [Test]
     public async Task ExecuteAsync_ValidationErrors_EmptyPassword_ReturnsErrors()
     {
-        string sourceFile = Path.Combine(_sourceDir, "test.txt");
-        File.WriteAllText(sourceFile, "content");
-        string destFile = Path.Combine(_destDir, "test.czc");
+        string sourceFile = Path.Combine(this.sourceDir, "test.txt");
+        await File.WriteAllTextAsync(sourceFile, "content");
+        string destFile = Path.Combine(this.destDir, "test.czc");
 
         FileCryptRequest request = new(
             sourceFile,
             destFile,
-            "",
-            "",
+            string.Empty,
+            string.Empty,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+            NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await _orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.HasErrors, Is.True);
@@ -131,9 +126,9 @@ internal sealed class OrchestratorIntegrationTests
     [Test]
     public async Task ExecuteAsync_ValidationErrors_PasswordMismatch_ReturnsErrors()
     {
-        string sourceFile = Path.Combine(_sourceDir, "test.txt");
-        File.WriteAllText(sourceFile, "content");
-        string destFile = Path.Combine(_destDir, "test.czc");
+        string sourceFile = Path.Combine(this.sourceDir, "test.txt");
+        await File.WriteAllTextAsync(sourceFile, "content");
+        string destFile = Path.Combine(this.destDir, "test.czc");
 
         FileCryptRequest request = new(
             sourceFile,
@@ -143,11 +138,10 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+            NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await _orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.HasErrors, Is.True);
@@ -156,8 +150,8 @@ internal sealed class OrchestratorIntegrationTests
     [Test]
     public async Task ExecuteAsync_SourceNotFound_ReturnsErrors()
     {
-        string nonExistent = Path.Combine(_sourceDir, "nonexistent.txt");
-        string destFile = Path.Combine(_destDir, "out.czc");
+        string nonExistent = Path.Combine(this.sourceDir, "nonexistent.txt");
+        string destFile = Path.Combine(this.destDir, "out.czc");
 
         FileCryptRequest request = new(
             nonExistent,
@@ -167,11 +161,10 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
-            NameObfuscationMode.None
-        );
+            NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await _orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.HasErrors, Is.True);
@@ -180,14 +173,14 @@ internal sealed class OrchestratorIntegrationTests
     [Test]
     public async Task ExecuteAsync_Directory_EncryptMultipleFiles()
     {
-        File.WriteAllText(Path.Combine(_sourceDir, "file1.txt"), "Content 1");
-        File.WriteAllText(Path.Combine(_sourceDir, "file2.txt"), "Content 2");
+        await File.WriteAllTextAsync(Path.Combine(this.sourceDir, "file1.txt"), "Content 1");
+        await File.WriteAllTextAsync(Path.Combine(this.sourceDir, "file2.txt"), "Content 2");
 
-        string encryptedDir = Path.Combine(_testDir, "encrypted");
+        string encryptedDir = Path.Combine(this.testDir, "encrypted");
         string password = "IntegrationP@ss1";
 
         FileCryptRequest request = new(
-            _sourceDir,
+            this.sourceDir,
             encryptedDir,
             password,
             password,
@@ -195,11 +188,10 @@ internal sealed class OrchestratorIntegrationTests
             KeyDerivationAlgorithm.PBKDF2,
             EncryptOperation.Encrypt,
             NameObfuscationMode.None,
-            ProceedOnWarnings: true
-        );
+            ProceedOnWarnings: true);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await _orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.ProcessedFiles, Is.EqualTo(2));

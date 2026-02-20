@@ -1,6 +1,6 @@
-using CloudZCrypt.Domain.Enums;
-
 namespace CloudZCrypt.Domain.ValueObjects.FileCrypt;
+
+using CloudZCrypt.Domain.Enums;
 
 public sealed record FileCryptRequest(
     string SourcePath,
@@ -12,5 +12,4 @@ public sealed record FileCryptRequest(
     EncryptOperation Operation,
     NameObfuscationMode NameObfuscation,
     CompressionMode Compression = CompressionMode.None,
-    bool ProceedOnWarnings = false
-);
+    bool ProceedOnWarnings = false);

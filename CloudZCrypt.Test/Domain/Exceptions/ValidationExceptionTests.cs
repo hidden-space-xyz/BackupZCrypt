@@ -1,7 +1,7 @@
+namespace CloudZCrypt.Test.Domain.Exceptions;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Exceptions;
-
-namespace CloudZCrypt.Test.Domain.Exceptions;
 
 [TestFixture]
 internal sealed class ValidationExceptionTests
@@ -12,8 +12,7 @@ internal sealed class ValidationExceptionTests
         ValidationException ex = new(
             ValidationErrorCode.PasswordLengthNonPositive,
             "Length must be positive",
-            "length"
-        );
+            "length");
 
         Assert.That(ex.Code, Is.EqualTo(ValidationErrorCode.PasswordLengthNonPositive));
         Assert.That(ex.Message, Is.EqualTo("Length must be positive"));

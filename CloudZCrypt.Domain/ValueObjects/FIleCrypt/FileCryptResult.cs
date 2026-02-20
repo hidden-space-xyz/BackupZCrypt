@@ -1,17 +1,9 @@
-using CloudZCrypt.Domain.Enums;
-
 namespace CloudZCrypt.Domain.ValueObjects.FileCrypt;
+
+using CloudZCrypt.Domain.Enums;
 
 public sealed record FileCryptResult
 {
-    public bool IsSuccess { get; }
-    public TimeSpan ElapsedTime { get; }
-    public long TotalBytes { get; }
-    public int ProcessedFiles { get; }
-    public int TotalFiles { get; }
-    public IReadOnlyList<string> Errors { get; }
-    public IReadOnlyList<string> Warnings { get; }
-
     public FileCryptResult(
         bool isSuccess,
         TimeSpan elapsedTime,
@@ -19,44 +11,61 @@ public sealed record FileCryptResult
         int processedFiles,
         int totalFiles,
         IEnumerable<string>? errors = null,
-        IEnumerable<string>? warnings = null
-    )
+        IEnumerable<string>? warnings = null)
     {
         ValidateInputs(elapsedTime, totalBytes, processedFiles, totalFiles);
 
-        IsSuccess = isSuccess;
-        ElapsedTime = elapsedTime;
-        TotalBytes = totalBytes;
-        ProcessedFiles = processedFiles;
-        TotalFiles = totalFiles;
-        Errors = errors?.ToArray() ?? Array.Empty<string>();
-        Warnings = warnings?.ToArray() ?? Array.Empty<string>();
+        this.IsSuccess = isSuccess;
+        this.ElapsedTime = elapsedTime;
+        this.TotalBytes = totalBytes;
+        this.ProcessedFiles = processedFiles;
+        this.TotalFiles = totalFiles;
+        this.Errors = errors?.ToArray() ?? Array.Empty<string>();
+        this.Warnings = warnings?.ToArray() ?? Array.Empty<string>();
     }
 
-    public bool HasErrors => Errors.Count > 0;
-    public bool HasWarnings => Warnings.Count > 0;
-    public int FailedFiles => TotalFiles - ProcessedFiles;
-    public double SuccessRate => TotalFiles == 0 ? 0.0 : (double)ProcessedFiles / TotalFiles;
-    public bool IsPartialSuccess => ProcessedFiles > 0 && ProcessedFiles < TotalFiles;
+    public bool IsSuccess { get; }
+
+    public TimeSpan ElapsedTime { get; }
+
+    public long TotalBytes { get; }
+
+    public int ProcessedFiles { get; }
+
+    public int TotalFiles { get; }
+
+    public IReadOnlyList<string> Errors { get; }
+
+    public IReadOnlyList<string> Warnings { get; }
+
+    public bool HasErrors => this.Errors.Count > 0;
+
+    public bool HasWarnings => this.Warnings.Count > 0;
+
+    public int FailedFiles => this.TotalFiles - this.ProcessedFiles;
+
+    public double SuccessRate => this.TotalFiles == 0 ? 0.0 : (double)this.ProcessedFiles / this.TotalFiles;
+
+    public bool IsPartialSuccess => this.ProcessedFiles > 0 && this.ProcessedFiles < this.TotalFiles;
+
     public double BytesPerSecond =>
-        ElapsedTime.TotalSeconds > 0 ? TotalBytes / ElapsedTime.TotalSeconds : 0;
+        this.ElapsedTime.TotalSeconds > 0 ? this.TotalBytes / this.ElapsedTime.TotalSeconds : 0;
+
     public double FilesPerSecond =>
-        ElapsedTime.TotalSeconds > 0 ? ProcessedFiles / ElapsedTime.TotalSeconds : 0;
+        this.ElapsedTime.TotalSeconds > 0 ? this.ProcessedFiles / this.ElapsedTime.TotalSeconds : 0;
 
     private static void ValidateInputs(
         TimeSpan elapsedTime,
         long totalBytes,
         int processedFiles,
-        int totalFiles
-    )
+        int totalFiles)
     {
         if (elapsedTime < TimeSpan.Zero)
         {
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ElapsedTimeNegative,
                 "Elapsed time cannot be negative",
-                nameof(elapsedTime)
-            );
+                nameof(elapsedTime));
         }
 
         if (totalBytes < 0)
@@ -64,8 +73,7 @@ public sealed record FileCryptResult
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.TotalBytesNegative,
                 "Total bytes cannot be negative",
-                nameof(totalBytes)
-            );
+                nameof(totalBytes));
         }
 
         if (processedFiles < 0)
@@ -73,8 +81,7 @@ public sealed record FileCryptResult
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedFilesNegative,
                 "Processed files cannot be negative",
-                nameof(processedFiles)
-            );
+                nameof(processedFiles));
         }
 
         if (totalFiles < 0)
@@ -82,8 +89,7 @@ public sealed record FileCryptResult
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.TotalFilesNegative,
                 "Total files cannot be negative",
-                nameof(totalFiles)
-            );
+                nameof(totalFiles));
         }
 
         if (processedFiles > totalFiles)
@@ -91,8 +97,7 @@ public sealed record FileCryptResult
             throw new Exceptions.ValidationException(
                 ValidationErrorCode.ProcessedFilesExceedTotalFiles,
                 "Processed files cannot exceed total files",
-                nameof(processedFiles)
-            );
+                nameof(processedFiles));
         }
     }
 }

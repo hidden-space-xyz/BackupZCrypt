@@ -1,18 +1,17 @@
+namespace CloudZCrypt.Terminal.Commands;
+
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.ValueObjects.Password;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
-namespace CloudZCrypt.Terminal.Commands;
-
 internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
 {
     public void Execute()
     {
         AnsiConsole.Write(
-            new Rule($"[bold cyan]{Messages.PasswordGenerator}[/]").RuleStyle(Style.Parse("grey"))
-        );
+            new Rule($"[bold cyan]{Messages.PasswordGenerator}[/]").RuleStyle(Style.Parse("grey")));
         AnsiConsole.WriteLine();
 
         int length = PromptLength();
@@ -27,15 +26,12 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
     private static int PromptLength() =>
         AnsiConsole.Prompt(
             new TextPrompt<int>(
-                $"[green]{Messages.PasswordLengthPrompt}[/] {Messages.PasswordLengthRange}"
-            )
+                $"[green]{Messages.PasswordLengthPrompt}[/] {Messages.PasswordLengthRange}")
                 .DefaultValue(128)
                 .Validate(l =>
                     l is >= 16 and <= 256
                         ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PasswordLengthError}[/]")
-                )
-        );
+                        : ValidationResult.Error($"[red]{Messages.PasswordLengthError}[/]")));
 
     private static PasswordGenerationOptions PromptOptions()
     {
@@ -48,23 +44,32 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
                     Messages.OptionUppercase,
                     Messages.OptionLowercase,
                     Messages.OptionNumbers,
-                    Messages.OptionSpecialChars
-                )
+                    Messages.OptionSpecialChars)
                 .Select(Messages.OptionUppercase)
                 .Select(Messages.OptionLowercase)
                 .Select(Messages.OptionNumbers)
-                .Select(Messages.OptionSpecialChars)
-        );
+                .Select(Messages.OptionSpecialChars));
 
         PasswordGenerationOptions options = PasswordGenerationOptions.None;
         if (optionChoices.Contains(Messages.OptionUppercase))
+        {
             options |= PasswordGenerationOptions.IncludeUppercase;
+        }
+
         if (optionChoices.Contains(Messages.OptionLowercase))
+        {
             options |= PasswordGenerationOptions.IncludeLowercase;
+        }
+
         if (optionChoices.Contains(Messages.OptionNumbers))
+        {
             options |= PasswordGenerationOptions.IncludeNumbers;
+        }
+
         if (optionChoices.Contains(Messages.OptionSpecialChars))
+        {
             options |= PasswordGenerationOptions.IncludeSpecialCharacters;
+        }
 
         return options;
     }
@@ -72,8 +77,7 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
     private static void PrintGeneratedPassword(
         string generated,
         PasswordStrengthAnalysis analysis,
-        int length
-    )
+        int length)
     {
         string strengthColor = analysis.Strength switch
         {
@@ -89,13 +93,10 @@ internal sealed class GeneratePasswordCommand(IPasswordService passwordService)
         Panel passwordPanel = new(
             new Rows(
                 new Markup($"[bold]{Markup.Escape(generated)}[/]"),
-                new Text(""),
+                new Text(string.Empty),
                 new Markup(
-                    $"[dim]{Messages.StrengthLabel}[/] [{strengthColor}]{Markup.Escape(analysis.Description)}[/]"
-                ),
-                new Markup($"[dim]{Messages.LengthLabel}[/]   {length} {Messages.CharactersLabel}")
-            )
-        )
+                    $"[dim]{Messages.StrengthLabel}[/] [{strengthColor}]{Markup.Escape(analysis.Description)}[/]"),
+                new Markup($"[dim]{Messages.LengthLabel}[/]   {length} {Messages.CharactersLabel}")))
         {
             Header = new PanelHeader($"{Messages.GeneratedPasswordHeader}"),
             Border = BoxBorder.Rounded,

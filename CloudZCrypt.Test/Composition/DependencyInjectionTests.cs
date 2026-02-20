@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Test.Composition;
+
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.Validators.Interfaces;
@@ -8,12 +10,10 @@ using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CloudZCrypt.Test.Composition;
-
 [TestFixture]
 internal sealed class DependencyInjectionTests
 {
-    private ServiceProvider _provider = null!;
+    private ServiceProvider provider = null!;
 
     [SetUp]
     public void SetUp()
@@ -21,20 +21,20 @@ internal sealed class DependencyInjectionTests
         ServiceCollection services = new();
         services.AddDomainServices();
         services.AddApplicationServices();
-        _provider = services.BuildServiceProvider();
+        this.provider = services.BuildServiceProvider();
     }
 
     [TearDown]
     public void TearDown()
     {
-        _provider.Dispose();
+        this.provider.Dispose();
     }
 
     [Test]
     public void AddDomainServices_ResolvesKeyDerivationServiceFactory()
     {
         IKeyDerivationServiceFactory factory =
-            _provider.GetRequiredService<IKeyDerivationServiceFactory>();
+            this.provider.GetRequiredService<IKeyDerivationServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
     }
@@ -43,7 +43,7 @@ internal sealed class DependencyInjectionTests
     public void AddDomainServices_ResolvesEncryptionServiceFactory()
     {
         IEncryptionServiceFactory factory =
-            _provider.GetRequiredService<IEncryptionServiceFactory>();
+            this.provider.GetRequiredService<IEncryptionServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
     }
@@ -52,7 +52,7 @@ internal sealed class DependencyInjectionTests
     public void AddDomainServices_ResolvesCompressionServiceFactory()
     {
         ICompressionServiceFactory factory =
-            _provider.GetRequiredService<ICompressionServiceFactory>();
+            this.provider.GetRequiredService<ICompressionServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
     }
@@ -61,7 +61,7 @@ internal sealed class DependencyInjectionTests
     public void AddDomainServices_ResolvesNameObfuscationServiceFactory()
     {
         INameObfuscationServiceFactory factory =
-            _provider.GetRequiredService<INameObfuscationServiceFactory>();
+            this.provider.GetRequiredService<INameObfuscationServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
     }
@@ -69,7 +69,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesPasswordService()
     {
-        IPasswordService service = _provider.GetRequiredService<IPasswordService>();
+        IPasswordService service = this.provider.GetRequiredService<IPasswordService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -77,7 +77,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesFileOperationsService()
     {
-        IFileOperationsService service = _provider.GetRequiredService<IFileOperationsService>();
+        IFileOperationsService service = this.provider.GetRequiredService<IFileOperationsService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -85,7 +85,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesSystemStorageService()
     {
-        ISystemStorageService service = _provider.GetRequiredService<ISystemStorageService>();
+        ISystemStorageService service = this.provider.GetRequiredService<ISystemStorageService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -94,7 +94,7 @@ internal sealed class DependencyInjectionTests
     public void AddApplicationServices_ResolvesFileCryptOrchestrator()
     {
         IFileCryptOrchestrator orchestrator =
-            _provider.GetRequiredService<IFileCryptOrchestrator>();
+            this.provider.GetRequiredService<IFileCryptOrchestrator>();
 
         Assert.That(orchestrator, Is.Not.Null);
     }
@@ -103,7 +103,7 @@ internal sealed class DependencyInjectionTests
     public void AddApplicationServices_ResolvesFileCryptSingleFileService()
     {
         IFileCryptSingleFileService service =
-            _provider.GetRequiredService<IFileCryptSingleFileService>();
+            this.provider.GetRequiredService<IFileCryptSingleFileService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -112,7 +112,7 @@ internal sealed class DependencyInjectionTests
     public void AddApplicationServices_ResolvesFileCryptDirectoryService()
     {
         IFileCryptDirectoryService service =
-            _provider.GetRequiredService<IFileCryptDirectoryService>();
+            this.provider.GetRequiredService<IFileCryptDirectoryService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -121,7 +121,7 @@ internal sealed class DependencyInjectionTests
     public void AddApplicationServices_ResolvesFileCryptRequestValidator()
     {
         IFileCryptRequestValidator validator =
-            _provider.GetRequiredService<IFileCryptRequestValidator>();
+            this.provider.GetRequiredService<IFileCryptRequestValidator>();
 
         Assert.That(validator, Is.Not.Null);
     }
@@ -129,7 +129,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesManifestService()
     {
-        IManifestService service = _provider.GetRequiredService<IManifestService>();
+        IManifestService service = this.provider.GetRequiredService<IManifestService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -142,7 +142,7 @@ internal sealed class DependencyInjectionTests
     public void EncryptionFactory_ResolvesAllAlgorithms(EncryptionAlgorithm algorithm)
     {
         IEncryptionServiceFactory factory =
-            _provider.GetRequiredService<IEncryptionServiceFactory>();
+            this.provider.GetRequiredService<IEncryptionServiceFactory>();
 
         IEncryptionAlgorithmStrategy strategy = factory.Create(algorithm);
 
@@ -156,7 +156,7 @@ internal sealed class DependencyInjectionTests
     public void KeyDerivationFactory_ResolvesAllAlgorithms(KeyDerivationAlgorithm algorithm)
     {
         IKeyDerivationServiceFactory factory =
-            _provider.GetRequiredService<IKeyDerivationServiceFactory>();
+            this.provider.GetRequiredService<IKeyDerivationServiceFactory>();
 
         IKeyDerivationAlgorithmStrategy strategy = factory.Create(algorithm);
 
@@ -171,7 +171,7 @@ internal sealed class DependencyInjectionTests
     public void CompressionFactory_ResolvesAllModes(CompressionMode mode)
     {
         ICompressionServiceFactory factory =
-            _provider.GetRequiredService<ICompressionServiceFactory>();
+            this.provider.GetRequiredService<ICompressionServiceFactory>();
 
         ICompressionStrategy strategy = factory.Create(mode);
 
@@ -186,7 +186,7 @@ internal sealed class DependencyInjectionTests
     public void ObfuscationFactory_ResolvesAllModes(NameObfuscationMode mode)
     {
         INameObfuscationServiceFactory factory =
-            _provider.GetRequiredService<INameObfuscationServiceFactory>();
+            this.provider.GetRequiredService<INameObfuscationServiceFactory>();
 
         INameObfuscationStrategy strategy = factory.Create(mode);
 

@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Application.Validators;
+
 using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
 using CloudZCrypt.Application.Utilities.Formatters;
@@ -8,38 +10,34 @@ using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
-namespace CloudZCrypt.Application.Validators;
-
 internal sealed class FileCryptRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
-    IPasswordService passwordService
-) : IFileCryptRequestValidator
+    IPasswordService passwordService) : IFileCryptRequestValidator
 {
     public async Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
         FileCryptRequest request,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         List<string> errors = [];
 
         string? sourcePath = PathNormalizationHelper.TryNormalize(
             request.SourcePath,
-            out string? sourceNormalizeError
-        );
+            out string? sourceNormalizeError);
         string? destinationPath = PathNormalizationHelper.TryNormalize(
             request.DestinationPath,
-            out string? destinationNormalizeError
-        );
+            out string? destinationNormalizeError);
 
         if (sourceNormalizeError is not null)
         {
             errors.Add(sourceNormalizeError);
         }
+
         if (destinationNormalizeError is not null)
         {
             errors.Add(destinationNormalizeError);
         }
+
         if (sourcePath is null || destinationPath is null)
         {
             return errors;
@@ -50,8 +48,7 @@ internal sealed class FileCryptRequestValidator(
             errors.Add(Messages.SourcePathEmpty);
         }
         else if (
-            !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath)
-        )
+            !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath))
         {
             errors.Add(string.Format(Messages.SourcePathNotExistFormat, sourcePath));
         }
@@ -80,8 +77,7 @@ internal sealed class FileCryptRequestValidator(
                     string[] files = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
-                        cancellationToken
-                    );
+                        cancellationToken);
                     if (files.Length == 0)
                     {
                         errors.Add(Messages.SourceDirectoryEmpty);
@@ -117,16 +113,14 @@ internal sealed class FileCryptRequestValidator(
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
                         errors.Add(
-                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
-                        );
+                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive));
                     }
 
                     try
                     {
                         await fileOperations.CreateDirectoryAsync(
                             destinationDir!,
-                            cancellationToken
-                        );
+                            cancellationToken);
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -154,10 +148,12 @@ internal sealed class FileCryptRequestValidator(
             {
                 errors.Add(Messages.PasswordTooShort);
             }
+
             if (request.Password.Length > 1000)
             {
                 errors.Add(Messages.PasswordTooLong);
             }
+
             if (request.Password.Trim() != request.Password)
             {
                 errors.Add(Messages.PasswordLeadingTrailingSpaces);
@@ -171,8 +167,7 @@ internal sealed class FileCryptRequestValidator(
                 errors.Add(Messages.ConfirmPasswordRequired);
             }
             else if (
-                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
-            )
+                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
             {
                 errors.Add(Messages.PasswordMismatch);
             }
@@ -188,9 +183,7 @@ internal sealed class FileCryptRequestValidator(
                         string.Equals(
                             sourcePath,
                             destinationPath,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
+                            StringComparison.OrdinalIgnoreCase))
                     {
                         errors.Add(Messages.SourceDestinationSameFile);
                     }
@@ -201,27 +194,21 @@ internal sealed class FileCryptRequestValidator(
                         string.Equals(
                             sourcePath,
                             destinationPath,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
+                            StringComparison.OrdinalIgnoreCase))
                     {
                         errors.Add(Messages.SourceDestinationSameDirectory);
                     }
                     else if (
                         destinationPath.StartsWith(
                             sourcePath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
+                            StringComparison.OrdinalIgnoreCase))
                     {
                         errors.Add(Messages.DestinationInsideSource);
                     }
                     else if (
                         sourcePath.StartsWith(
                             destinationPath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
+                            StringComparison.OrdinalIgnoreCase))
                     {
                         errors.Add(Messages.SourceInsideDestination);
                     }
@@ -237,16 +224,14 @@ internal sealed class FileCryptRequestValidator(
 
     public async Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
         FileCryptRequest request,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         List<string> warnings = [];
 
         string? sourcePath = PathNormalizationHelper.TryNormalize(request.SourcePath, out _);
         string? destinationPath = PathNormalizationHelper.TryNormalize(
             request.DestinationPath,
-            out _
-        );
+            out _);
         if (sourcePath is null || destinationPath is null)
         {
             return warnings;
@@ -259,14 +244,12 @@ internal sealed class FileCryptRequestValidator(
                 string? destinationDrive = systemStorage.GetPathRoot(destinationPath);
                 if (
                     !string.IsNullOrEmpty(destinationDrive)
-                    && systemStorage.IsDriveReady(destinationDrive)
-                )
+                    && systemStorage.IsDriveReady(destinationDrive))
                 {
                     string[] sourceFiles = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
-                        cancellationToken
-                    );
+                        cancellationToken);
                     long totalSize = sourceFiles.Sum(f =>
                     {
                         try
@@ -287,9 +270,7 @@ internal sealed class FileCryptRequestValidator(
                             string.Format(
                                 Messages.LowDiskSpaceFormat,
                                 ByteSizeFormatter.Format(available),
-                                ByteSizeFormatter.Format(requiredSpace)
-                            )
-                        );
+                                ByteSizeFormatter.Format(requiredSpace)));
                     }
                 }
             }
@@ -299,20 +280,17 @@ internal sealed class FileCryptRequestValidator(
                 string[] files = await fileOperations.GetFilesAsync(
                     sourcePath,
                     "*.*",
-                    cancellationToken
-                );
+                    cancellationToken);
                 int fileCount = files.Length;
                 if (fileCount > 10000)
                 {
                     warnings.Add(
-                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
-                    );
+                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0")));
                 }
                 else if (fileCount > 1000)
                 {
                     warnings.Add(
-                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0"))
-                    );
+                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0")));
                 }
             }
 
@@ -329,8 +307,7 @@ internal sealed class FileCryptRequestValidator(
                 string[] existingFiles = await fileOperations.GetFilesAsync(
                     destinationPath,
                     "*.*",
-                    cancellationToken
-                );
+                    cancellationToken);
                 if (existingFiles.Length > 0)
                 {
                     hasExistingFiles = true;
@@ -343,14 +320,11 @@ internal sealed class FileCryptRequestValidator(
                 warnings.Add(
                     string.Format(
                         Messages.DestinationExistingFilesFormat,
-                        existingFileCount.ToString("N0")
-                    )
-                );
+                        existingFileCount.ToString("N0")));
             }
 
             PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(
-                request.Password
-            );
+                request.Password);
             if (strength.Score < 60)
             {
                 warnings.Add(Messages.WeakPasswordWarning);

@@ -1,42 +1,42 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Compression;
+
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.Compression;
 
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Compression;
-
 [TestFixture]
 internal sealed class NoCompressionStrategyTests
 {
-    private NoCompressionStrategy _strategy = null!;
+    private NoCompressionStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new NoCompressionStrategy();
+        this.strategy = new NoCompressionStrategy();
     }
 
     [Test]
     public void Id_ReturnsNone()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(CompressionMode.None));
+        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.None));
     }
 
     [Test]
     public void DisplayName_ReturnsNone()
     {
-        Assert.That(_strategy.DisplayName, Is.EqualTo("None"));
+        Assert.That(this.strategy.DisplayName, Is.EqualTo("None"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
@@ -45,7 +45,7 @@ internal sealed class NoCompressionStrategyTests
         byte[] data = Encoding.UTF8.GetBytes("Hello, world!");
         using MemoryStream input = new(data);
 
-        Stream result = await _strategy.CompressAsync(input);
+        Stream result = await this.strategy.CompressAsync(input);
 
         byte[] output = new byte[result.Length];
         await result.ReadExactlyAsync(output);
@@ -59,7 +59,7 @@ internal sealed class NoCompressionStrategyTests
         byte[] data = Encoding.UTF8.GetBytes("Hello, world!");
         using MemoryStream input = new(data);
 
-        Stream result = await _strategy.DecompressAsync(input);
+        Stream result = await this.strategy.DecompressAsync(input);
 
         byte[] output = new byte[result.Length];
         await result.ReadExactlyAsync(output);
@@ -72,7 +72,7 @@ internal sealed class NoCompressionStrategyTests
     {
         using MemoryStream input = new([1, 2, 3]);
 
-        Stream result = await _strategy.CompressAsync(input);
+        Stream result = await this.strategy.CompressAsync(input);
 
         Assert.That(result.Position, Is.EqualTo(0));
     }
@@ -82,7 +82,7 @@ internal sealed class NoCompressionStrategyTests
     {
         using MemoryStream input = new();
 
-        Stream result = await _strategy.CompressAsync(input);
+        Stream result = await this.strategy.CompressAsync(input);
 
         Assert.That(result.Length, Is.EqualTo(0));
     }

@@ -1,6 +1,6 @@
-using CloudZCrypt.Infrastructure.Constants;
-
 namespace CloudZCrypt.Test.Infrastructure.Constants;
+
+using CloudZCrypt.Infrastructure.Constants;
 
 [TestFixture]
 internal sealed class StreamConstantsTests

@@ -1,8 +1,8 @@
-using CloudZCrypt.Application.ValueObjects;
-using CloudZCrypt.Domain.ValueObjects.FileCrypt;
-
 namespace CloudZCrypt.Application.Services.Interfaces
 {
+    using CloudZCrypt.Application.ValueObjects;
+    using CloudZCrypt.Domain.ValueObjects.FileCrypt;
+
     public interface IFileCryptSingleFileService
     {
         Task<Result<FileCryptResult>> ProcessAsync(
@@ -10,7 +10,6 @@ namespace CloudZCrypt.Application.Services.Interfaces
             string destinationPath,
             FileCryptRequest request,
             IProgress<FileCryptStatus> progress,
-            CancellationToken cancellationToken
-        );
+            CancellationToken cancellationToken);
     }
 }

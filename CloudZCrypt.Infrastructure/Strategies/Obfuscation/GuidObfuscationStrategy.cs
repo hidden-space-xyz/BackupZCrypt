@@ -1,8 +1,8 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
 
 internal class GuidObfuscationStrategy : INameObfuscationStrategy
 {

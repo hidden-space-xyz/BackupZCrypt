@@ -1,16 +1,15 @@
+namespace CloudZCrypt.Terminal;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Terminal.Commands;
 using CloudZCrypt.Terminal.Rendering;
 using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
 
-namespace CloudZCrypt.Terminal;
-
 internal sealed class TerminalApplication(
     EncryptCommand encryptCommand,
     GeneratePasswordCommand generatePasswordCommand,
-    AlgorithmInfoCommand algorithmInfoCommand
-)
+    AlgorithmInfoCommand algorithmInfoCommand)
 {
     public async Task RunAsync()
     {
@@ -27,9 +26,7 @@ internal sealed class TerminalApplication(
                         Messages.MenuDecrypt,
                         Messages.MenuGeneratePassword,
                         Messages.MenuAlgorithmInfo,
-                        Messages.MenuExit
-                    )
-            );
+                        Messages.MenuExit));
 
             if (choice == Messages.MenuEncrypt)
             {

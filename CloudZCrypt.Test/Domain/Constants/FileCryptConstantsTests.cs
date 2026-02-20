@@ -1,6 +1,6 @@
-using CloudZCrypt.Domain.Constants;
-
 namespace CloudZCrypt.Test.Domain.Constants;
+
+using CloudZCrypt.Domain.Constants;
 
 [TestFixture]
 internal sealed class FileCryptConstantsTests
@@ -22,7 +22,6 @@ internal sealed class FileCryptConstantsTests
     {
         Assert.That(
             FileCryptConstants.ManifestFileName,
-            Does.EndWith(FileCryptConstants.AppFileExtension)
-        );
+            Does.EndWith(FileCryptConstants.AppFileExtension));
     }
 }

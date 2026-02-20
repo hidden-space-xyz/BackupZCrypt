@@ -1,42 +1,42 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Compression;
+
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.Compression;
 
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Compression;
-
 [TestFixture]
 internal sealed class LzmaCompressionStrategyTests
 {
-    private LzmaCompressionStrategy _strategy = null!;
+    private LzmaCompressionStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new LzmaCompressionStrategy();
+        this.strategy = new LzmaCompressionStrategy();
     }
 
     [Test]
     public void Id_ReturnsLZMA()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(CompressionMode.LZMA));
+        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.LZMA));
     }
 
     [Test]
     public void DisplayName_ContainsLZMA()
     {
-        Assert.That(_strategy.DisplayName, Does.Contain("LZMA"));
+        Assert.That(this.strategy.DisplayName, Does.Contain("LZMA"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
@@ -44,12 +44,11 @@ internal sealed class LzmaCompressionStrategyTests
     {
         byte[] original = Encoding.UTF8.GetBytes(
             "This is a test string that should be compressible. "
-                + "This is a test string that should be compressible."
-        );
+                + "This is a test string that should be compressible.");
         using MemoryStream input = new(original);
 
-        Stream compressed = await _strategy.CompressAsync(input);
-        Stream decompressed = await _strategy.DecompressAsync(compressed);
+        Stream compressed = await this.strategy.CompressAsync(input);
+        Stream decompressed = await this.strategy.DecompressAsync(compressed);
 
         byte[] result = new byte[decompressed.Length];
         await decompressed.ReadExactlyAsync(result);
@@ -64,7 +63,7 @@ internal sealed class LzmaCompressionStrategyTests
         byte[] data = Encoding.UTF8.GetBytes(text);
         using MemoryStream input = new(data);
 
-        Stream compressed = await _strategy.CompressAsync(input);
+        Stream compressed = await this.strategy.CompressAsync(input);
 
         Assert.That(compressed.Length, Is.LessThan(data.Length));
     }
@@ -75,7 +74,7 @@ internal sealed class LzmaCompressionStrategyTests
         string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
         using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
 
-        Stream compressed = await _strategy.CompressAsync(input);
+        Stream compressed = await this.strategy.CompressAsync(input);
 
         Assert.That(compressed.Position, Is.EqualTo(0));
     }
@@ -85,9 +84,9 @@ internal sealed class LzmaCompressionStrategyTests
     {
         string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
         using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
-        Stream compressed = await _strategy.CompressAsync(input);
+        Stream compressed = await this.strategy.CompressAsync(input);
 
-        Stream decompressed = await _strategy.DecompressAsync(compressed);
+        Stream decompressed = await this.strategy.DecompressAsync(compressed);
 
         Assert.That(decompressed.Position, Is.EqualTo(0));
     }

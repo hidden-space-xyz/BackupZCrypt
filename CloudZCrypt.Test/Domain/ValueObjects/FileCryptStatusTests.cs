@@ -1,7 +1,7 @@
+namespace CloudZCrypt.Test.Domain.ValueObjects;
+
 using CloudZCrypt.Domain.Exceptions;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
-
-namespace CloudZCrypt.Test.Domain.ValueObjects;
 
 [TestFixture]
 internal sealed class FileCryptStatusTests
@@ -46,8 +46,7 @@ internal sealed class FileCryptStatusTests
     public void Constructor_NegativeElapsed_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1))
-        );
+            new FileCryptStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1)));
     }
 
     [Test]
@@ -60,8 +59,7 @@ internal sealed class FileCryptStatusTests
     public void Constructor_ProcessedBytesExceedTotalBytes_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 5, 200, 100, TimeSpan.Zero)
-        );
+            new FileCryptStatus(0, 5, 200, 100, TimeSpan.Zero));
     }
 
     [Test]

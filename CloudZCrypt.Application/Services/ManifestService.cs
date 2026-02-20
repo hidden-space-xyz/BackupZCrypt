@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Application.Services;
+
 using System.Text;
 using System.Text.Json;
 using CloudZCrypt.Application.Resources;
@@ -7,19 +9,17 @@ using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
-namespace CloudZCrypt.Application.Services;
-
 internal sealed class ManifestService : IManifestService
 {
     private static string AppFileExtension => ".czc";
+
     private static string ManifestFileName => "manifest" + AppFileExtension;
 
     public async Task<ManifestData?> TryReadManifestAsync(
         string sourceRoot,
         IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
         string password,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -38,8 +38,7 @@ internal sealed class ManifestService : IManifestService
                         strategy,
                         password,
                         kdf,
-                        cancellationToken
-                    );
+                        cancellationToken);
                     if (result is not null)
                     {
                         return result;
@@ -61,8 +60,7 @@ internal sealed class ManifestService : IManifestService
         string destinationRoot,
         IEncryptionAlgorithmStrategy encryptionService,
         FileCryptRequest request,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         List<string> errors = [];
         if (entries.Count == 0)
@@ -77,8 +75,7 @@ internal sealed class ManifestService : IManifestService
                 header.KeyDerivationAlgorithm,
                 header.NameObfuscation,
                 header.Compression,
-                [.. entries]
-            );
+                [.. entries]);
 
             byte[] manifestBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
             string encryptedManifestPath = Path.Combine(destinationRoot, ManifestFileName);
@@ -87,13 +84,11 @@ internal sealed class ManifestService : IManifestService
                 encryptedManifestPath,
                 request.Password,
                 request.KeyDerivationAlgorithm,
-                cancellationToken: cancellationToken
-            );
+                cancellationToken: cancellationToken);
             if (!manifestOk)
             {
                 errors.Add(
-                    string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath)
-                );
+                    string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath));
             }
         }
         catch (Exception ex)
@@ -109,13 +104,11 @@ internal sealed class ManifestService : IManifestService
         IEncryptionAlgorithmStrategy encryptionService,
         string password,
         KeyDerivationAlgorithm kdf,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         string tempJsonPath = Path.Combine(
             Path.GetTempPath(),
-            $"czc-manifest-{Guid.NewGuid():N}.json"
-        );
+            $"czc-manifest-{Guid.NewGuid():N}.json");
 
         try
         {
@@ -124,8 +117,7 @@ internal sealed class ManifestService : IManifestService
                 tempJsonPath,
                 password,
                 kdf,
-                cancellationToken
-            );
+                cancellationToken);
             if (!ok)
             {
                 return null;
@@ -134,8 +126,7 @@ internal sealed class ManifestService : IManifestService
             await using FileStream fs = File.OpenRead(tempJsonPath);
             ManifestDocument? doc = await JsonSerializer.DeserializeAsync<ManifestDocument>(
                 fs,
-                cancellationToken: cancellationToken
-            );
+                cancellationToken: cancellationToken);
 
             if (doc is null)
             {
@@ -146,8 +137,7 @@ internal sealed class ManifestService : IManifestService
                 doc.EncryptionAlgorithm,
                 doc.KeyDerivationAlgorithm,
                 doc.NameObfuscation,
-                doc.Compression
-            );
+                doc.Compression);
 
             Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
             foreach (ManifestEntry e in doc.Entries)
@@ -166,7 +156,9 @@ internal sealed class ManifestService : IManifestService
             try
             {
                 if (File.Exists(tempJsonPath))
+                {
                     File.Delete(tempJsonPath);
+                }
             }
             catch
             { /* ignore */

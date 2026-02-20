@@ -1,8 +1,8 @@
-using CloudZCrypt.Application.ValueObjects.Password;
-using CloudZCrypt.Domain.Enums;
-
 namespace CloudZCrypt.Application.Services.Interfaces
 {
+    using CloudZCrypt.Application.ValueObjects.Password;
+    using CloudZCrypt.Domain.Enums;
+
     public interface IPasswordService
     {
         PasswordStrengthAnalysis AnalyzePasswordStrength(string password);

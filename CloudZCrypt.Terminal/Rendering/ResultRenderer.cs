@@ -1,9 +1,9 @@
+namespace CloudZCrypt.Terminal.Rendering;
+
 using CloudZCrypt.Application.Utilities.Formatters;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 using CloudZCrypt.Terminal.Resources;
 using Spectre.Console;
-
-namespace CloudZCrypt.Terminal.Rendering;
 
 internal static class ResultRenderer
 {
@@ -20,8 +20,7 @@ internal static class ResultRenderer
             : (response.IsPartialSuccess ? Messages.PartiallyCompleted : Messages.Failed);
 
         AnsiConsole.MarkupLine(
-            $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]"
-        );
+            $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]");
         AnsiConsole.WriteLine();
 
         Table resultTable = new Table()
@@ -33,21 +32,18 @@ internal static class ResultRenderer
 
         resultTable.AddRow(
             Messages.FilesProcessed,
-            $"{response.ProcessedFiles} / {response.TotalFiles}"
-        );
+            $"{response.ProcessedFiles} / {response.TotalFiles}");
         resultTable.AddRow(Messages.TotalSize, ByteSizeFormatter.Format(response.TotalBytes));
         resultTable.AddRow(Messages.ElapsedTime, response.ElapsedTime.ToString(@"hh\:mm\:ss\.fff"));
         resultTable.AddRow(
             Messages.Throughput,
-            $"{ByteSizeFormatter.Format((long)response.BytesPerSecond)}/s"
-        );
+            $"{ByteSizeFormatter.Format((long)response.BytesPerSecond)}/s");
 
         if (response.FailedFiles > 0)
         {
             resultTable.AddRow(
                 $"[red]{Messages.FailedFiles}[/]",
-                $"[red]{response.FailedFiles}[/]"
-            );
+                $"[red]{response.FailedFiles}[/]");
         }
 
         AnsiConsole.Write(resultTable);

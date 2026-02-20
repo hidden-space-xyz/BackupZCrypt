@@ -5,13 +5,12 @@ public sealed record PasswordComposition(
     bool HasLower,
     bool HasDigit,
     bool HasSpecial,
-    bool HasOther
-)
+    bool HasOther)
 {
     public int CategoryCount =>
-        (HasUpper ? 1 : 0)
-        + (HasLower ? 1 : 0)
-        + (HasDigit ? 1 : 0)
-        + (HasSpecial ? 1 : 0)
-        + (HasOther ? 1 : 0);
+        (this.HasUpper ? 1 : 0)
+        + (this.HasLower ? 1 : 0)
+        + (this.HasDigit ? 1 : 0)
+        + (this.HasSpecial ? 1 : 0)
+        + (this.HasOther ? 1 : 0);
 }

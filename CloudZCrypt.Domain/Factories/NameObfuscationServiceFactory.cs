@@ -1,9 +1,9 @@
+namespace CloudZCrypt.Domain.Factories;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Resources;
 using CloudZCrypt.Domain.Strategies.Interfaces;
-
-namespace CloudZCrypt.Domain.Factories;
 
 internal class NameObfuscationServiceFactory(IEnumerable<INameObfuscationStrategy> strategies)
     : INameObfuscationServiceFactory
@@ -13,11 +13,10 @@ internal class NameObfuscationServiceFactory(IEnumerable<INameObfuscationStrateg
 
     public INameObfuscationStrategy Create(NameObfuscationMode obfuscationMode)
     {
-        return !strategies.TryGetValue(obfuscationMode, out INameObfuscationStrategy? strategy)
+        return !this.strategies.TryGetValue(obfuscationMode, out INameObfuscationStrategy? strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(obfuscationMode),
-                string.Format(Messages.NameObfuscationModeNotRegisteredFormat, obfuscationMode)
-            )
+                string.Format(Messages.NameObfuscationModeNotRegisteredFormat, obfuscationMode))
             : strategy;
     }
 }

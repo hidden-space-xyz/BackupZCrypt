@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Application.Orchestrators;
+
 using CloudZCrypt.Application.Orchestrators.Interfaces;
 using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
@@ -7,25 +9,20 @@ using CloudZCrypt.Application.ValueObjects;
 using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
-namespace CloudZCrypt.Application.Orchestrators;
-
 internal sealed class FileCryptOrchestrator(
     IFileCryptRequestValidator fileProcessingRequestValidator,
     IFileOperationsService fileOperations,
     IFileCryptSingleFileService singleFileProcessor,
-    IFileCryptDirectoryService directoryProcessor
-) : IFileCryptOrchestrator
+    IFileCryptDirectoryService directoryProcessor) : IFileCryptOrchestrator
 {
     public async Task<Result<FileCryptResult>> ExecuteAsync(
         FileCryptRequest request,
         IProgress<FileCryptStatus> progress,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
-        Result<FileCryptResult>? validationResult = await ValidateRequestAsync(
+        Result<FileCryptResult>? validationResult = await this.ValidateRequestAsync(
             request,
-            cancellationToken
-        );
+            cancellationToken);
         if (validationResult is not null)
         {
             return validationResult;
@@ -41,7 +38,7 @@ internal sealed class FileCryptOrchestrator(
             return Result<FileCryptResult>.Failure(Messages.SourcePathNotExist);
         }
 
-        await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
+        await this.EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
 
         try
         {
@@ -52,8 +49,7 @@ internal sealed class FileCryptOrchestrator(
                     destinationPath,
                     request,
                     progress,
-                    cancellationToken
-                );
+                    cancellationToken);
             }
 
             return await directoryProcessor.ProcessAsync(
@@ -61,8 +57,7 @@ internal sealed class FileCryptOrchestrator(
                 destinationPath,
                 request,
                 progress,
-                cancellationToken
-            );
+                cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -71,44 +66,12 @@ internal sealed class FileCryptOrchestrator(
         catch (Exception ex)
         {
             return Result<FileCryptResult>.Failure(
-                string.Format(Messages.UnexpectedErrorFormat, ex.Message)
-            );
+                string.Format(Messages.UnexpectedErrorFormat, ex.Message));
         }
-    }
-
-    private async Task<Result<FileCryptResult>?> ValidateRequestAsync(
-        FileCryptRequest request,
-        CancellationToken cancellationToken
-    )
-    {
-        IReadOnlyList<string> errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
-            request,
-            cancellationToken
-        );
-        if (errors.Count > 0)
-        {
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors)
-            );
-        }
-
-        IReadOnlyList<string> warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
-            request,
-            cancellationToken
-        );
-        if (warnings.Count > 0 && !request.ProceedOnWarnings)
-        {
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings)
-            );
-        }
-
-        return null;
     }
 
     private static (string SourcePath, string DestinationPath) NormalizePaths(
-        FileCryptRequest request
-    )
+        FileCryptRequest request)
     {
         string sourcePath =
             PathNormalizationHelper.TryNormalize(request.SourcePath, out _) ?? request.SourcePath;
@@ -123,8 +86,7 @@ internal sealed class FileCryptOrchestrator(
     private async Task EnsureDestinationDirectoryAsync(
         string sourcePath,
         string destinationPath,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         if (fileOperations.DirectoryExists(sourcePath))
         {
@@ -138,5 +100,30 @@ internal sealed class FileCryptOrchestrator(
                 await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
             }
         }
+    }
+
+    private async Task<Result<FileCryptResult>?> ValidateRequestAsync(
+        FileCryptRequest request,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<string> errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
+            request,
+            cancellationToken);
+        if (errors.Count > 0)
+        {
+            return Result<FileCryptResult>.Success(
+                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
+        }
+
+        IReadOnlyList<string> warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
+            request,
+            cancellationToken);
+        if (warnings.Count > 0 && !request.ProceedOnWarnings)
+        {
+            return Result<FileCryptResult>.Success(
+                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings));
+        }
+
+        return null;
     }
 }

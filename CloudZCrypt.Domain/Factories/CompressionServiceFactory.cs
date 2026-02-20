@@ -1,9 +1,9 @@
+namespace CloudZCrypt.Domain.Factories;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Factories.Interfaces;
 using CloudZCrypt.Domain.Resources;
 using CloudZCrypt.Domain.Strategies.Interfaces;
-
-namespace CloudZCrypt.Domain.Factories;
 
 internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
@@ -13,11 +13,10 @@ internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strat
 
     public ICompressionStrategy Create(CompressionMode mode)
     {
-        return !strategies.TryGetValue(mode, out ICompressionStrategy? strategy)
+        return !this.strategies.TryGetValue(mode, out ICompressionStrategy? strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(mode),
-                string.Format(Messages.CompressionModeNotRegisteredFormat, mode)
-            )
+                string.Format(Messages.CompressionModeNotRegisteredFormat, mode))
             : strategy;
     }
 }

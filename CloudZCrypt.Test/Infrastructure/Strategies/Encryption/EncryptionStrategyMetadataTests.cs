@@ -1,27 +1,27 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Encryption;
+
 using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Encryption;
-
 [TestFixture]
 internal sealed class EncryptionStrategyMetadataTests
 {
-    private ServiceProvider _provider = null!;
+    private ServiceProvider provider = null!;
 
     [SetUp]
     public void SetUp()
     {
         ServiceCollection services = new();
         services.AddDomainServices();
-        _provider = services.BuildServiceProvider();
+        this.provider = services.BuildServiceProvider();
     }
 
     [TearDown]
     public void TearDown()
     {
-        _provider.Dispose();
+        this.provider.Dispose();
     }
 
     [TestCase(EncryptionAlgorithm.Aes, "AES-256 GCM")]
@@ -31,7 +31,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia, "Camellia-256 GCM")]
     public void DisplayName_ReturnsExpected(EncryptionAlgorithm algorithm, string expectedName)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IEncryptionAlgorithmStrategy>
         >();
 
@@ -47,7 +47,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia)]
     public void Description_IsNotEmpty(EncryptionAlgorithm algorithm)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IEncryptionAlgorithmStrategy>
         >();
 
@@ -63,7 +63,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [TestCase(EncryptionAlgorithm.Camellia)]
     public void Summary_IsNotEmpty(EncryptionAlgorithm algorithm)
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IEncryptionAlgorithmStrategy>
         >();
 
@@ -75,7 +75,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [Test]
     public void AllAlgorithms_HaveUniqueIds()
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IEncryptionAlgorithmStrategy>
         >();
 
@@ -87,7 +87,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [Test]
     public void AllAlgorithms_AreRegistered()
     {
-        IEnumerable<IEncryptionAlgorithmStrategy> strategies = _provider.GetRequiredService<
+        IEnumerable<IEncryptionAlgorithmStrategy> strategies = this.provider.GetRequiredService<
             IEnumerable<IEncryptionAlgorithmStrategy>
         >();
 

@@ -1,9 +1,9 @@
+namespace CloudZCrypt.Application.Services.Interfaces;
+
 using CloudZCrypt.Application.ValueObjects.Manifest;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
-
-namespace CloudZCrypt.Application.Services.Interfaces;
 
 public interface IManifestService
 {
@@ -11,8 +11,7 @@ public interface IManifestService
         string sourceRoot,
         IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
         string password,
-        CancellationToken cancellationToken
-    );
+        CancellationToken cancellationToken);
 
     Task<IReadOnlyList<string>> TrySaveManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
@@ -20,6 +19,5 @@ public interface IManifestService
         string destinationRoot,
         IEncryptionAlgorithmStrategy encryptionService,
         FileCryptRequest request,
-        CancellationToken cancellationToken
-    );
+        CancellationToken cancellationToken);
 }

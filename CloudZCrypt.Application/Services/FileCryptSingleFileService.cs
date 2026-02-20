@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Application.Services;
+
 using System.Diagnostics;
 using CloudZCrypt.Application.Resources;
 using CloudZCrypt.Application.Services.Interfaces;
@@ -9,30 +11,24 @@ using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
-namespace CloudZCrypt.Application.Services;
-
 internal sealed class FileCryptSingleFileService(
     IEncryptionServiceFactory encryptionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
-    IFileOperationsService fileOperations
-) : IFileCryptSingleFileService
+    IFileOperationsService fileOperations) : IFileCryptSingleFileService
 {
     public async Task<Result<FileCryptResult>> ProcessAsync(
         string sourcePath,
         string destinationPath,
         FileCryptRequest request,
         IProgress<FileCryptStatus> progress,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         IEncryptionAlgorithmStrategy encryptionService = encryptionServiceFactory.Create(
-            request.EncryptionAlgorithm
-        );
+            request.EncryptionAlgorithm);
         INameObfuscationStrategy obfuscationService = nameObfuscationServiceFactory.Create(
-            request.NameObfuscation
-        );
+            request.NameObfuscation);
 
         try
         {
@@ -41,9 +37,7 @@ internal sealed class FileCryptSingleFileService(
                 && string.Equals(
                     Path.GetFileName(sourcePath),
                     FileCryptConstants.ManifestFileName,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+                    StringComparison.OrdinalIgnoreCase))
             {
                 stopwatch.Stop();
                 return Result<FileCryptResult>.Success(
@@ -53,16 +47,14 @@ internal sealed class FileCryptSingleFileService(
                         0,
                         0,
                         0,
-                        errors: [Messages.ManifestIgnored]
-                    )
-                );
+                        errors: [Messages.ManifestIgnored]));
             }
 
             string destFile = destinationPath;
 
             if (request.Operation == EncryptOperation.Encrypt)
             {
-                destFile = ApplyObfuscationToDestination(destFile, sourcePath, obfuscationService);
+                destFile = this.ApplyObfuscationToDestination(destFile, sourcePath, obfuscationService);
             }
 
             long fileSize = 0;
@@ -82,8 +74,7 @@ internal sealed class FileCryptSingleFileService(
                 sourcePath,
                 destFile,
                 request,
-                cancellationToken
-            );
+                cancellationToken);
 
             progress?.Report(new FileCryptStatus(1, 1, fileSize, fileSize, stopwatch.Elapsed));
             stopwatch.Stop();
@@ -95,9 +86,7 @@ internal sealed class FileCryptSingleFileService(
                     fileSize,
                     result ? 1 : 0,
                     1,
-                    errors: []
-                )
-            );
+                    errors: []));
         }
         catch (Domain.Exceptions.EncryptionException ex)
         {
@@ -111,8 +100,7 @@ internal sealed class FileCryptSingleFileService(
         string sourceFile,
         string destinationFile,
         FileCryptRequest request,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -124,26 +112,22 @@ internal sealed class FileCryptSingleFileService(
                 request.Password,
                 request.KeyDerivationAlgorithm,
                 request.Compression,
-                cancellationToken
-            ),
+                cancellationToken),
             EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
                 sourceFile,
                 destinationFile,
                 request.Password,
                 request.KeyDerivationAlgorithm,
-                cancellationToken
-            ),
+                cancellationToken),
             _ => throw new NotSupportedException(
-                string.Format(Messages.UnsupportedOperationFormat, request.Operation)
-            ),
+                string.Format(Messages.UnsupportedOperationFormat, request.Operation)),
         };
     }
 
     private string ApplyObfuscationToDestination(
         string destinationFile,
         string sourceFile,
-        INameObfuscationStrategy obfuscationService
-    )
+        INameObfuscationStrategy obfuscationService)
     {
         string dir =
             fileOperations.GetDirectoryName(destinationFile)

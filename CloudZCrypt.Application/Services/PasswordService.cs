@@ -1,14 +1,14 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using CloudZCrypt.Application.Resources;
-using CloudZCrypt.Application.Services.Interfaces;
-using CloudZCrypt.Application.ValueObjects.Password;
-using CloudZCrypt.Domain.Enums;
-using CloudZCrypt.Domain.Exceptions;
-
 namespace CloudZCrypt.Application.Services
 {
+    using System.Security.Cryptography;
+    using System.Text;
+    using System.Text.RegularExpressions;
+    using CloudZCrypt.Application.Resources;
+    using CloudZCrypt.Application.Services.Interfaces;
+    using CloudZCrypt.Application.ValueObjects.Password;
+    using CloudZCrypt.Domain.Enums;
+    using CloudZCrypt.Domain.Exceptions;
+
     internal class PasswordService : IPasswordService
     {
         private const double MaxEntropyBits = 120.0;
@@ -22,8 +22,8 @@ namespace CloudZCrypt.Application.Services
         private static readonly Regex LowerCaseRegex = new(@"[a-z]");
         private static readonly Regex NumberRegex = new(@"[0-9]");
         private static readonly Regex SpecialCharRegex = new(
-            @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]"
-        );
+            @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]");
+
         private static readonly Regex YearRegex = new(@"\b(19|20)\d{2}\b");
 
         private static readonly string[] CommonSubstrings =
@@ -72,8 +72,7 @@ namespace CloudZCrypt.Application.Services
                 return new PasswordStrengthAnalysis(
                     PasswordStrength.VeryWeak,
                     Messages.EmptyPasswordDescription,
-                    0
-                );
+                    0);
             }
 
             string trimmed = password.Trim();
@@ -95,8 +94,7 @@ namespace CloudZCrypt.Application.Services
                 score < 100
                 && compositionFlags.CategoryCount >= 4
                 && trimmed.Length >= 16
-                && entropy >= 90
-            )
+                && entropy >= 90)
             {
                 score = Math.Min(100, score + 5);
             }
@@ -114,8 +112,7 @@ namespace CloudZCrypt.Application.Services
                 throw new ValidationException(
                     ValidationErrorCode.PasswordLengthNonPositive,
                     Messages.PasswordLengthNonPositive,
-                    nameof(length)
-                );
+                    nameof(length));
             }
 
             if (options == PasswordGenerationOptions.None)
@@ -123,8 +120,7 @@ namespace CloudZCrypt.Application.Services
                 throw new ValidationException(
                     ValidationErrorCode.PasswordOptionsNone,
                     Messages.PasswordOptionsNone,
-                    nameof(options)
-                );
+                    nameof(options));
             }
 
             StringBuilder charSet = new();
@@ -154,16 +150,14 @@ namespace CloudZCrypt.Application.Services
             if (options.HasFlag(PasswordGenerationOptions.ExcludeSimilarCharacters))
             {
                 availableChars = new string(
-                    availableChars.Where(c => !SimilarChars.Contains(c)).ToArray()
-                );
+                    availableChars.Where(c => !SimilarChars.Contains(c)).ToArray());
             }
 
             if (string.IsNullOrEmpty(availableChars))
             {
                 throw new ValidationException(
                     ValidationErrorCode.NoCharactersAvailableForGeneration,
-                    Messages.NoCharactersAvailable
-                );
+                    Messages.NoCharactersAvailable);
             }
 
             StringBuilder password = new(length);
@@ -237,6 +231,7 @@ namespace CloudZCrypt.Application.Services
                     {
                         penalty += (runLength - 2) * 1.5;
                     }
+
                     runLength = 1;
                 }
             }
@@ -353,8 +348,7 @@ namespace CloudZCrypt.Application.Services
             PasswordStrength strength,
             double entropy,
             PasswordComposition flags,
-            string password
-        )
+            string password)
         {
             StringBuilder sb = new();
             sb.Append(
@@ -366,8 +360,7 @@ namespace CloudZCrypt.Application.Services
                     PasswordStrength.Good => Messages.StrengthGood,
                     PasswordStrength.Strong => Messages.StrengthStrong,
                     _ => "?",
-                }
-            );
+                });
 
             sb.Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
 

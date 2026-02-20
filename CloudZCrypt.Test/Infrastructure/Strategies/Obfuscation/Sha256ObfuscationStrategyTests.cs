@@ -1,47 +1,47 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.Obfuscation;
-
-namespace CloudZCrypt.Test.Infrastructure.Strategies.Obfuscation;
 
 [TestFixture]
 internal sealed class Sha256ObfuscationStrategyTests
 {
-    private Sha256ObfuscationStrategy _strategy = null!;
+    private Sha256ObfuscationStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new Sha256ObfuscationStrategy();
+        this.strategy = new Sha256ObfuscationStrategy();
     }
 
     [Test]
     public void Id_ReturnsSha256()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(NameObfuscationMode.Sha256));
+        Assert.That(this.strategy.Id, Is.EqualTo(NameObfuscationMode.Sha256));
     }
 
     [Test]
     public void DisplayName_ReturnsSHA256()
     {
-        Assert.That(_strategy.DisplayName, Is.EqualTo("SHA-256"));
+        Assert.That(this.strategy.DisplayName, Is.EqualTo("SHA-256"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
     public void ObfuscateFileName_FileDoesNotExist_UsesPathHash()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
+        string result = this.strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result, Does.EndWith(".czc"));
         string hashPart = Path.GetFileNameWithoutExtension(result);
@@ -51,8 +51,8 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DeterministicForSamePath()
     {
-        string result1 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
+        string result1 = this.strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
+        string result2 = this.strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.czc");
 
         Assert.That(result1, Is.EqualTo(result2));
     }
@@ -60,8 +60,8 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DifferentPathsProduceDifferentHashes()
     {
-        string result1 = _strategy.ObfuscateFileName(@"C:\path1\file.txt", "file.czc");
-        string result2 = _strategy.ObfuscateFileName(@"C:\path2\file.txt", "file.czc");
+        string result1 = this.strategy.ObfuscateFileName(@"C:\path1\file.txt", "file.czc");
+        string result2 = this.strategy.ObfuscateFileName(@"C:\path2\file.txt", "file.czc");
 
         Assert.That(result1, Is.Not.EqualTo(result2));
     }
@@ -69,7 +69,7 @@ internal sealed class Sha256ObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_PreservesExtension()
     {
-        string result = _strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.jpg");
+        string result = this.strategy.ObfuscateFileName(@"C:\nonexistent\file.txt", "file.jpg");
 
         Assert.That(result, Does.EndWith(".jpg"));
     }
@@ -82,7 +82,7 @@ internal sealed class Sha256ObfuscationStrategyTests
         {
             File.WriteAllText(tempFile, "test content");
 
-            string result = _strategy.ObfuscateFileName(tempFile, "test.czc");
+            string result = this.strategy.ObfuscateFileName(tempFile, "test.czc");
 
             Assert.That(result, Does.EndWith(".czc"));
             string hashPart = Path.GetFileNameWithoutExtension(result);
@@ -104,8 +104,8 @@ internal sealed class Sha256ObfuscationStrategyTests
             File.WriteAllText(tempFile1, "identical content");
             File.WriteAllText(tempFile2, "identical content");
 
-            string result1 = _strategy.ObfuscateFileName(tempFile1, "a.czc");
-            string result2 = _strategy.ObfuscateFileName(tempFile2, "b.czc");
+            string result1 = this.strategy.ObfuscateFileName(tempFile1, "a.czc");
+            string result2 = this.strategy.ObfuscateFileName(tempFile2, "b.czc");
 
             Assert.That(result1, Is.EqualTo(result2));
         }

@@ -5,8 +5,7 @@ public interface IFileOperationsService
     Task<string[]> GetFilesAsync(
         string directoryPath,
         string searchPattern = "*.*",
-        CancellationToken cancellationToken = default
-    );
+        CancellationToken cancellationToken = default);
 
     bool DirectoryExists(string directoryPath);
 

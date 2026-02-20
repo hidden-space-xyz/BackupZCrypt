@@ -1,10 +1,10 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
+
 using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Obfuscation;
 
 internal class Sha512ObfuscationStrategy : INameObfuscationStrategy
 {
@@ -55,6 +55,7 @@ internal class Sha512ObfuscationStrategy : INameObfuscationStrategy
         {
             sb.Append(b.ToString("x2"));
         }
+
         return sb.ToString();
     }
 }

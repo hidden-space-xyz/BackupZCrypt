@@ -1,3 +1,5 @@
+namespace CloudZCrypt.Application.Services;
+
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using CloudZCrypt.Application.Resources;
@@ -11,23 +13,19 @@ using CloudZCrypt.Domain.Services.Interfaces;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Domain.ValueObjects.FileCrypt;
 
-namespace CloudZCrypt.Application.Services;
-
 internal sealed class FileCryptDirectoryService(
     IEncryptionServiceFactory encryptionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
     IFileOperationsService fileOperations,
     IManifestService manifestService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies
-) : IFileCryptDirectoryService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IFileCryptDirectoryService
 {
     public async Task<Result<FileCryptResult>> ProcessAsync(
         string sourcePath,
         string destinationPath,
         FileCryptRequest request,
         IProgress<FileCryptStatus> progress,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -43,18 +41,15 @@ internal sealed class FileCryptDirectoryService(
                 sourcePath,
                 [.. encryptionStrategies],
                 request.Password,
-                cancellationToken
-            );
+                cancellationToken);
 
             if (manifestData is not null)
             {
                 manifestMap = manifestData.FileMap;
                 encryptionService = encryptionServiceFactory.Create(
-                    manifestData.Header.EncryptionAlgorithm
-                );
+                    manifestData.Header.EncryptionAlgorithm);
                 obfuscationService = nameObfuscationServiceFactory.Create(
-                    manifestData.Header.NameObfuscation
-                );
+                    manifestData.Header.NameObfuscation);
                 request = request with
                 {
                     EncryptionAlgorithm = manifestData.Header.EncryptionAlgorithm,
@@ -87,19 +82,15 @@ internal sealed class FileCryptDirectoryService(
                     0,
                     0,
                     0,
-                    errors: [Messages.NoFilesInSourceDirectory]
-                )
-            );
+                    errors: [Messages.NoFilesInSourceDirectory]));
         }
 
         string manifestEncryptedAbsolute = Path.Combine(
             sourcePath,
-            FileCryptConstants.ManifestFileName
-        );
+            FileCryptConstants.ManifestFileName);
         string manifestEncryptedRelative = fileOperations.GetRelativePath(
             sourcePath,
-            manifestEncryptedAbsolute
-        );
+            manifestEncryptedAbsolute);
 
         string[] filesToProcess = files;
         if (request.Operation == EncryptOperation.Decrypt)
@@ -109,9 +100,7 @@ internal sealed class FileCryptDirectoryService(
                     !string.Equals(
                         fileOperations.GetRelativePath(sourcePath, f),
                         manifestEncryptedRelative,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                )
+                        StringComparison.OrdinalIgnoreCase))
                 .ToArray();
         }
 
@@ -125,19 +114,16 @@ internal sealed class FileCryptDirectoryService(
         int processedFiles = 0;
 
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
-            StringComparer.OrdinalIgnoreCase
-        );
+            StringComparer.OrdinalIgnoreCase);
 
         progress?.Report(
-            new FileCryptStatus(0, filesToProcess.Length, 0, totalBytes, TimeSpan.Zero)
-        );
+            new FileCryptStatus(0, filesToProcess.Length, 0, totalBytes, TimeSpan.Zero));
 
         ConcurrentBag<string> errors = [];
         string? fatalError = null;
 
         using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken
-        );
+            cancellationToken);
 
         int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
         ParallelOptions parallelOptions = new()
@@ -158,42 +144,35 @@ internal sealed class FileCryptDirectoryService(
 
                     if (request.Operation == EncryptOperation.Encrypt)
                     {
-                        destinationFilePath = ObfuscateFullPath(
+                        destinationFilePath = this.ObfuscateFullPath(
                             sourcePath,
                             file,
                             relativePath,
                             destinationPath,
                             obfuscationService,
-                            directoryObfuscationCache
-                        );
+                            directoryObfuscationCache);
 
                         string obfuscatedRelativePath = fileOperations.GetRelativePath(
                             destinationPath,
-                            destinationFilePath
-                        );
+                            destinationFilePath);
                         manifestEntries.Add(
-                            new ManifestEntry(relativePath, obfuscatedRelativePath)
-                        );
+                            new ManifestEntry(relativePath, obfuscatedRelativePath));
                     }
                     else
                     {
                         destinationFilePath = fileOperations.CombinePath(
                             destinationPath,
-                            relativePath.Replace(FileCryptConstants.AppFileExtension, "")
-                        );
+                            relativePath.Replace(FileCryptConstants.AppFileExtension, string.Empty));
 
                         if (
                             manifestMap is not null
                             && manifestMap.TryGetValue(
                                 relativePath,
-                                out string? originalRelativePath
-                            )
-                        )
+                                out string? originalRelativePath))
                         {
                             destinationFilePath = fileOperations.CombinePath(
                                 destinationPath,
-                                originalRelativePath
-                            );
+                                originalRelativePath);
                         }
                     }
 
@@ -210,8 +189,7 @@ internal sealed class FileCryptDirectoryService(
                             file,
                             destinationFilePath,
                             request,
-                            token
-                        );
+                            token);
                         if (operationResult)
                         {
                             Interlocked.Increment(ref processedFiles);
@@ -222,8 +200,7 @@ internal sealed class FileCryptDirectoryService(
                         Interlocked.CompareExchange(
                             ref fatalError,
                             string.Format(Messages.AccessDeniedStoppedFormat, ex.Message),
-                            null
-                        );
+                            null);
                         await linkedCts.CancelAsync();
                         return;
                     }
@@ -232,8 +209,7 @@ internal sealed class FileCryptDirectoryService(
                         Interlocked.CompareExchange(
                             ref fatalError,
                             string.Format(Messages.InsufficientSpaceStoppedFormat, ex.Message),
-                            null
-                        );
+                            null);
                         await linkedCts.CancelAsync();
                         return;
                     }
@@ -242,8 +218,7 @@ internal sealed class FileCryptDirectoryService(
                         Interlocked.CompareExchange(
                             ref fatalError,
                             string.Format(Messages.InvalidPasswordStoppedFormat, ex.Message),
-                            null
-                        );
+                            null);
                         await linkedCts.CancelAsync();
                         return;
                     }
@@ -252,22 +227,19 @@ internal sealed class FileCryptDirectoryService(
                         Interlocked.CompareExchange(
                             ref fatalError,
                             string.Format(Messages.KeyDerivationStoppedFormat, ex.Message),
-                            null
-                        );
+                            null);
                         await linkedCts.CancelAsync();
                         return;
                     }
                     catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
                     {
                         errors.Add(
-                            string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message)
-                        );
+                            string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message));
                     }
                     catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
                     {
                         errors.Add(
-                            string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message)
-                        );
+                            string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message));
                     }
                     catch (Domain.Exceptions.EncryptionCipherException ex)
                     {
@@ -296,11 +268,8 @@ internal sealed class FileCryptDirectoryService(
                             filesToProcess.Length,
                             currentProcessedBytes,
                             totalBytes,
-                            stopwatch.Elapsed
-                        )
-                    );
-                }
-            );
+                            stopwatch.Elapsed));
+                });
         }
         catch (OperationCanceledException) when (fatalError is not null)
         {
@@ -316,16 +285,14 @@ internal sealed class FileCryptDirectoryService(
                 request.EncryptionAlgorithm,
                 request.KeyDerivationAlgorithm,
                 request.NameObfuscation,
-                request.Compression
-            );
+                request.Compression);
             IReadOnlyList<string> manifestErrors = await manifestService.TrySaveManifestAsync(
                 [.. manifestEntries],
                 header,
                 destinationPath,
                 encryptionService,
                 request,
-                cancellationToken
-            );
+                cancellationToken);
             if (manifestErrors.Count > 0)
             {
                 errorList.AddRange(manifestErrors);
@@ -337,8 +304,7 @@ internal sealed class FileCryptDirectoryService(
 
         return errorList.Count > 0 && processedFiles == 0
             ? Result<FileCryptResult>.Failure(
-                string.Format(Messages.AllFilesFailedFormat, string.Join("; ", errorList))
-            )
+                string.Format(Messages.AllFilesFailedFormat, string.Join("; ", errorList)))
             : Result<FileCryptResult>.Success(
                 new FileCryptResult(
                     isSuccess,
@@ -346,9 +312,35 @@ internal sealed class FileCryptDirectoryService(
                     totalBytes,
                     processedFiles,
                     filesToProcess.Length,
-                    errors: errorList
-                )
-            );
+                    errors: errorList));
+    }
+
+    private static Task<bool> ProcessSingleFileAsync(
+        IEncryptionAlgorithmStrategy encryptionService,
+        string sourceFile,
+        string destinationFile,
+        FileCryptRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return request.Operation switch
+        {
+            EncryptOperation.Encrypt => encryptionService.EncryptFileAsync(
+                sourceFile,
+                destinationFile,
+                request.Password,
+                request.KeyDerivationAlgorithm,
+                request.Compression,
+                cancellationToken),
+            EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
+                sourceFile,
+                destinationFile,
+                request.Password,
+                request.KeyDerivationAlgorithm,
+                cancellationToken),
+            _ => throw new NotSupportedException($"Unsupported operation: {request.Operation}"),
+        };
     }
 
     private string ObfuscateFullPath(
@@ -357,13 +349,11 @@ internal sealed class FileCryptDirectoryService(
         string relativePath,
         string destinationRoot,
         INameObfuscationStrategy obfuscationService,
-        ConcurrentDictionary<string, string> directoryCache
-    )
+        ConcurrentDictionary<string, string> directoryCache)
     {
         string[] segments = relativePath.Split(
             Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar
-        );
+            Path.AltDirectorySeparatorChar);
 
         List<string> obfuscatedSegments = new(segments.Length);
         string currentSourcePath = sourcePath;
@@ -378,8 +368,7 @@ internal sealed class FileCryptDirectoryService(
                 string filenameWithExtension = segment + FileCryptConstants.AppFileExtension;
                 string obfuscatedFilename = obfuscationService.ObfuscateFileName(
                     sourceFilePath,
-                    filenameWithExtension
-                );
+                    filenameWithExtension);
                 obfuscatedSegments.Add(obfuscatedFilename);
             }
             else
@@ -391,44 +380,12 @@ internal sealed class FileCryptDirectoryService(
 
                 string obfuscatedDirName = directoryCache.GetOrAdd(
                     directoryKey,
-                    _ => obfuscationService.ObfuscateFileName(capturedSourcePath, capturedSegment)
-                );
+                    _ => obfuscationService.ObfuscateFileName(capturedSourcePath, capturedSegment));
 
                 obfuscatedSegments.Add(obfuscatedDirName);
             }
         }
 
         return fileOperations.CombinePath([destinationRoot, .. obfuscatedSegments]);
-    }
-
-    private static Task<bool> ProcessSingleFileAsync(
-        IEncryptionAlgorithmStrategy encryptionService,
-        string sourceFile,
-        string destinationFile,
-        FileCryptRequest request,
-        CancellationToken cancellationToken
-    )
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        return request.Operation switch
-        {
-            EncryptOperation.Encrypt => encryptionService.EncryptFileAsync(
-                sourceFile,
-                destinationFile,
-                request.Password,
-                request.KeyDerivationAlgorithm,
-                request.Compression,
-                cancellationToken
-            ),
-            EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
-                sourceFile,
-                destinationFile,
-                request.Password,
-                request.KeyDerivationAlgorithm,
-                cancellationToken
-            ),
-            _ => throw new NotSupportedException($"Unsupported operation: {request.Operation}"),
-        };
     }
 }

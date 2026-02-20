@@ -1,11 +1,11 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Compression;
+
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
 using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
 internal class GZipCompressionStrategy : ICompressionStrategy
 {
@@ -19,34 +19,32 @@ internal class GZipCompressionStrategy : ICompressionStrategy
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         using (
             GZipStream gzip = new(
                 new NonClosingStreamWrapper(output),
                 CompressionMode.Compress,
-                CompressionLevel.Default
-            )
-        )
+                CompressionLevel.Default))
         {
             await inputStream.CopyToAsync(gzip, StreamConstants.CopyBufferSize, cancellationToken);
         }
+
         output.Position = 0;
         return output;
     }
 
     public async Task<Stream> DecompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
         using (GZipStream gzip = new(inputStream, CompressionMode.Decompress))
         {
             await gzip.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
+
         output.Position = 0;
         return output;
     }
@@ -65,7 +63,6 @@ internal class GZipCompressionStrategy : ICompressionStrategy
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = StreamConstants.CopyBufferSize,
-            }
-        );
+            });
     }
 }

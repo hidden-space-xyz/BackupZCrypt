@@ -1,41 +1,41 @@
+namespace CloudZCrypt.Test.Infrastructure.Strategies.KeyDerivation;
+
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
-
-namespace CloudZCrypt.Test.Infrastructure.Strategies.KeyDerivation;
 
 [TestFixture]
 internal sealed class Pbkdf2KeyDerivationStrategyTests
 {
-    private Pbkdf2KeyDerivationStrategy _strategy = null!;
+    private Pbkdf2KeyDerivationStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _strategy = new Pbkdf2KeyDerivationStrategy();
+        this.strategy = new Pbkdf2KeyDerivationStrategy();
     }
 
     [Test]
     public void Id_ReturnsPBKDF2()
     {
-        Assert.That(_strategy.Id, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
+        Assert.That(this.strategy.Id, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
     }
 
     [Test]
     public void DisplayName_ContainsPBKDF2()
     {
-        Assert.That(_strategy.DisplayName, Does.Contain("PBKDF2"));
+        Assert.That(this.strategy.DisplayName, Does.Contain("PBKDF2"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(_strategy.Description, Is.Not.Empty);
+        Assert.That(this.strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(_strategy.Summary, Is.Not.Empty);
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
@@ -44,7 +44,7 @@ internal sealed class Pbkdf2KeyDerivationStrategyTests
         byte[] salt = new byte[32];
         Random.Shared.NextBytes(salt);
 
-        byte[] key = _strategy.DeriveKey("testPassword123!", salt, 256);
+        byte[] key = this.strategy.DeriveKey("testPassword123!", salt, 256);
 
         Assert.That(key, Has.Length.EqualTo(32));
     }
@@ -55,8 +55,8 @@ internal sealed class Pbkdf2KeyDerivationStrategyTests
         byte[] salt = new byte[32];
         Random.Shared.NextBytes(salt);
 
-        byte[] key1 = _strategy.DeriveKey("password", salt, 256);
-        byte[] key2 = _strategy.DeriveKey("password", salt, 256);
+        byte[] key1 = this.strategy.DeriveKey("password", salt, 256);
+        byte[] key2 = this.strategy.DeriveKey("password", salt, 256);
 
         Assert.That(key1, Is.EqualTo(key2));
     }
@@ -67,8 +67,8 @@ internal sealed class Pbkdf2KeyDerivationStrategyTests
         byte[] salt = new byte[32];
         Random.Shared.NextBytes(salt);
 
-        byte[] key1 = _strategy.DeriveKey("password1", salt, 256);
-        byte[] key2 = _strategy.DeriveKey("password2", salt, 256);
+        byte[] key1 = this.strategy.DeriveKey("password1", salt, 256);
+        byte[] key2 = this.strategy.DeriveKey("password2", salt, 256);
 
         Assert.That(key1, Is.Not.EqualTo(key2));
     }
@@ -81,8 +81,8 @@ internal sealed class Pbkdf2KeyDerivationStrategyTests
         Random.Shared.NextBytes(salt1);
         Random.Shared.NextBytes(salt2);
 
-        byte[] key1 = _strategy.DeriveKey("password", salt1, 256);
-        byte[] key2 = _strategy.DeriveKey("password", salt2, 256);
+        byte[] key1 = this.strategy.DeriveKey("password", salt1, 256);
+        byte[] key2 = this.strategy.DeriveKey("password", salt2, 256);
 
         Assert.That(key1, Is.Not.EqualTo(key2));
     }
@@ -93,7 +93,7 @@ internal sealed class Pbkdf2KeyDerivationStrategyTests
         byte[] salt = new byte[32];
         Random.Shared.NextBytes(salt);
 
-        byte[] key = _strategy.DeriveKey("password", salt, 256);
+        byte[] key = this.strategy.DeriveKey("password", salt, 256);
 
         Assert.That(key.Any(b => b != 0), Is.True);
     }

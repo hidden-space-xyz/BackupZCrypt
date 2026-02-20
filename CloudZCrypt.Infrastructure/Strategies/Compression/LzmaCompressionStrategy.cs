@@ -1,10 +1,10 @@
+namespace CloudZCrypt.Infrastructure.Strategies.Compression;
+
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Constants;
 using CloudZCrypt.Infrastructure.Resources;
 using CloudZCrypt.Infrastructure.Streams;
 using SharpCompress.Compressors.LZMA;
-
-namespace CloudZCrypt.Infrastructure.Strategies.Compression;
 
 internal class LzmaCompressionStrategy : ICompressionStrategy
 {
@@ -18,8 +18,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         const int headerSize = 5 + sizeof(long) + sizeof(long);
         Stream? tempInput = null;
@@ -38,8 +37,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
                 await inputStream.CopyToAsync(
                     tempInput,
                     StreamConstants.CopyBufferSize,
-                    cancellationToken
-                );
+                    cancellationToken);
                 tempInput.Position = 0;
                 effectiveInput = tempInput;
                 uncompressedSize = tempInput.Length;
@@ -56,8 +54,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
                 await effectiveInput.CopyToAsync(
                     lzma,
                     StreamConstants.CopyBufferSize,
-                    cancellationToken
-                );
+                    cancellationToken);
                 lzmaProperties = lzma.Properties;
             }
 
@@ -78,8 +75,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
 
     public async Task<Stream> DecompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         byte[] properties = new byte[5];
         await inputStream.ReadExactlyAsync(properties, cancellationToken);
@@ -97,6 +93,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         {
             await lzma.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
+
         output.Position = 0;
         return output;
     }
@@ -115,7 +112,6 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = StreamConstants.CopyBufferSize,
-            }
-        );
+            });
     }
 }

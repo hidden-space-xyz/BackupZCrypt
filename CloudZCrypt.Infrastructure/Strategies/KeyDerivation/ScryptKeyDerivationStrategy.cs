@@ -1,11 +1,11 @@
+namespace CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
+
 using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using CloudZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
-
-namespace CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
@@ -34,8 +34,7 @@ internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
                 CostParameter,
                 BlockSize,
                 Parallelization,
-                keySize / 8
-            );
+                keySize / 8);
         }
         catch (Exception ex)
         {
