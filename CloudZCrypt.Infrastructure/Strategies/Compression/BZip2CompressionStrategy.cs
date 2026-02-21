@@ -23,9 +23,10 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
     {
         FileStream output = CreateTempStream();
         using (
-            BZip2Stream bzip2 = new(
+            BZip2Stream bzip2 = await BZip2Stream.CreateAsync(
                 new NonClosingStreamWrapper(output),
                 CompressionMode.Compress,
+                false,
                 false))
         {
             await inputStream.CopyToAsync(bzip2, StreamConstants.CopyBufferSize, cancellationToken);
@@ -40,7 +41,7 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        using (BZip2Stream bzip2 = new(inputStream, CompressionMode.Decompress, false))
+        using (BZip2Stream bzip2 = await BZip2Stream.CreateAsync(inputStream, CompressionMode.Decompress, false, false))
         {
             await bzip2.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
@@ -51,7 +52,7 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
 
     private static FileStream CreateTempStream()
     {
-        string tempFilePath = Path.GetTempFileName();
+        string tempFilePath = Path.GetRandomFileName();
         return new FileStream(
             tempFilePath,
             new FileStreamOptions
