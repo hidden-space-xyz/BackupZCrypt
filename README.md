@@ -29,38 +29,20 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 
 ## ⭐ Features for Privacy Enthusiasts
 
-- **🔄 Multiple Encryption Algorithms** - AES, ChaCha20, Twofish, Serpent, and Camellia
-- **🔑 Multiple Key Derivation Algorithms** - Argon2id and PBKDF2.
-- **🕵️ Filename Obfuscation** - Prevents sensitive information from being leaked via original file/folder names.
-- **📊 Password Strength Guidance** - Built-in analyzer helps you create truly secure passwords
-- **💻 Local Processing Only** - Your files and passwords never leave your computer
-- **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
+* **🔄 Multiple Encryption Algorithms** - AES, ChaCha20, Twofish, Serpent, and Camellia
+* **🔑 Multiple Key Derivation Algorithms** - Argon2id, Scrypt and PBKDF2.
+* **🗜️ Multiple Compression Algorithms** - GZip, BZip2, and LZMA (7-Zip).
+* **🕵️ Filename Obfuscation** - Prevents sensitive information from being leaked via original file/folder names.
+* **📊 Password Strength Guidance** - Built-in analyzer helps you create truly secure passwords
+* **💻 Local Processing Only** - Your files and passwords never leave your computer
+* **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
 
-## 📘 How to Use BackupZCrypt
-
-**To Encrypt:**
-1. Select the file(s) or folder you want to encrypt
-2. Choose where to save the encrypted files
-3. Select your preferred encryption settings.
-4. Create a strong password (and save it somewhere safe!)
-5. Click "Encrypt" and wait for the process to complete
-
-**To Decrypt:**
-1. Select the encrypted file(s)
-2. Choose where to save the decrypted files
-3. Select the same encryption settings you used previously
-4. Enter the password you used to encrypt
-5. Click "Decrypt" and wait for completion
-
-**Important:** ⚠️ There is no password recovery. If you forget your password, your encrypted files cannot be decrypted.
 
 ## 🚀 Roadmap
 
 BackupZCrypt is constantly evolving. Here's what we're planning for future releases:
 
-- **🐧 Linux Support** - We're working to make BackupZCrypt available for Linux users
 - **🎨 Enhanced User Interface** - Upcoming UI improvements for better usability and aesthetics
-- **🔐 Additional Encryption Algorithms** - Expanding our cryptography options with more advanced algorithms
 - **⚙️ Advanced Parameter Configuration** - Expert mode allowing customization of encryption parameters for advanced users
 - **👥 Community-Driven Development** - We highly value community suggestions and contributions to guide the project's future
 
@@ -72,14 +54,11 @@ We're committed to continuously improving BackupZCrypt based on user feedback an
 <img width="886" height="578" alt="image" src="https://github.com/user-attachments/assets/e8c9a10d-3ad7-4cf0-bd83-9cd4fa5292c3" />
 </p>
 
-## 🧩 About the Name
-
-BackupZCrypt originated from its initial purpose: creating a tool that would encrypt files securely for cloud storage services. The name combines "Cloud" (representing cloud storage), "Z" (as a stylistic element), and "Crypt" (for encryption). While the application was originally designed for securing files before uploading them to any cloud storage service, it works equally well for encrypting files stored locally on your device, offering versatile protection regardless of where your files ultimately reside.
-
 ## 🔍 Security Notes
 
 - 🔑 Your security depends on your password strength - use long, complex passwords
 - 🔄 Keep your operating system and BackupZCrypt updated
+- ⚠️ There is no password recovery. If you forget your password, your encrypted files cannot be decrypted.
 
 ## 💡How to Contribute
 
