@@ -6,20 +6,20 @@
 <img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge" />
 </p>
 
- # 🔐 CloudZCrypt
+ # 🔐 BackupZCrypt
 
-**CloudZCrypt is a simple, powerful tool that helps you protect your sensitive files with military-grade encryption.**
+**BackupZCrypt is a simple, powerful tool that helps you protect your sensitive files with military-grade encryption.**
 
-## 📋 What CloudZCrypt Does For You
+## 📋 What BackupZCrypt Does For You
 
-CloudZCrypt gives you privacy and security in a few simple clicks:
+BackupZCrypt gives you privacy and security in a few simple clicks:
 
 - **🛡️ Protect Sensitive Documents** - Encrypt financial records, personal photos, medical information, and more
 - **☁️ Secure Cloud Storage** - Safely store encrypted files on any cloud like Dropbox, Google Drive, or OneDrive
 - **🔒 Control Your Privacy** - Keep your data private, even when sharing devices or storage
 - **✅ Peace of Mind** - Industry-standard encryption means your files stay private until you decide otherwise
 
-## ❓ Why Choose CloudZCrypt?
+## ❓ Why Choose BackupZCrypt?
 
 - **🖱️ Simple Interface** - No cryptography knowledge needed - just select files, choose a password, and encrypt
 - **🏦 Military-Grade Security** - Uses the same encryption standards trusted by financial institutions
@@ -36,7 +36,7 @@ CloudZCrypt gives you privacy and security in a few simple clicks:
 - **💻 Local Processing Only** - Your files and passwords never leave your computer
 - **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
 
-## 📘 How to Use CloudZCrypt
+## 📘 How to Use BackupZCrypt
 
 **To Encrypt:**
 1. Select the file(s) or folder you want to encrypt
@@ -56,15 +56,15 @@ CloudZCrypt gives you privacy and security in a few simple clicks:
 
 ## 🚀 Roadmap
 
-CloudZCrypt is constantly evolving. Here's what we're planning for future releases:
+BackupZCrypt is constantly evolving. Here's what we're planning for future releases:
 
-- **🐧 Linux Support** - We're working to make CloudZCrypt available for Linux users
+- **🐧 Linux Support** - We're working to make BackupZCrypt available for Linux users
 - **🎨 Enhanced User Interface** - Upcoming UI improvements for better usability and aesthetics
 - **🔐 Additional Encryption Algorithms** - Expanding our cryptography options with more advanced algorithms
 - **⚙️ Advanced Parameter Configuration** - Expert mode allowing customization of encryption parameters for advanced users
 - **👥 Community-Driven Development** - We highly value community suggestions and contributions to guide the project's future
 
-We're committed to continuously improving CloudZCrypt based on user feedback and security best practices. Your suggestions are always welcome and will help shape the application's future.
+We're committed to continuously improving BackupZCrypt based on user feedback and security best practices. Your suggestions are always welcome and will help shape the application's future.
 
 ## 📸 Screenshots
 
@@ -74,12 +74,12 @@ We're committed to continuously improving CloudZCrypt based on user feedback and
 
 ## 🧩 About the Name
 
-CloudZCrypt originated from its initial purpose: creating a tool that would encrypt files securely for cloud storage services. The name combines "Cloud" (representing cloud storage), "Z" (as a stylistic element), and "Crypt" (for encryption). While the application was originally designed for securing files before uploading them to any cloud storage service, it works equally well for encrypting files stored locally on your device, offering versatile protection regardless of where your files ultimately reside.
+BackupZCrypt originated from its initial purpose: creating a tool that would encrypt files securely for cloud storage services. The name combines "Cloud" (representing cloud storage), "Z" (as a stylistic element), and "Crypt" (for encryption). While the application was originally designed for securing files before uploading them to any cloud storage service, it works equally well for encrypting files stored locally on your device, offering versatile protection regardless of where your files ultimately reside.
 
 ## 🔍 Security Notes
 
 - 🔑 Your security depends on your password strength - use long, complex passwords
-- 🔄 Keep your operating system and CloudZCrypt updated
+- 🔄 Keep your operating system and BackupZCrypt updated
 
 ## 💡How to Contribute
 
