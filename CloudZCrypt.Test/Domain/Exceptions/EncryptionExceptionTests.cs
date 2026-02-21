@@ -11,8 +11,11 @@ internal sealed class EncryptionExceptionTests
     {
         EncryptionFileNotFoundException ex = new("test.txt");
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileNotFound));
-        Assert.That(ex.Message, Does.Contain("test.txt"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileNotFound));
+            Assert.That(ex.Message, Does.Contain("test.txt"));
+        }
     }
 
     [Test]
@@ -21,9 +24,12 @@ internal sealed class EncryptionExceptionTests
         Exception inner = new("denied");
         EncryptionAccessDeniedException ex = new("secret.dat", inner);
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.AccessDenied));
-        Assert.That(ex.Message, Does.Contain("secret.dat"));
-        Assert.That(ex.InnerException, Is.SameAs(inner));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.AccessDenied));
+            Assert.That(ex.Message, Does.Contain("secret.dat"));
+            Assert.That(ex.InnerException, Is.SameAs(inner));
+        }
     }
 
     [Test]
@@ -31,8 +37,11 @@ internal sealed class EncryptionExceptionTests
     {
         EncryptionInsufficientSpaceException ex = new(@"D:\");
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.InsufficientDiskSpace));
-        Assert.That(ex.Message, Does.Contain(@"D:\"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.InsufficientDiskSpace));
+            Assert.That(ex.Message, Does.Contain(@"D:\"));
+        }
     }
 
     [Test]
@@ -48,8 +57,11 @@ internal sealed class EncryptionExceptionTests
     {
         EncryptionCorruptedFileException ex = new("corrupted.czc");
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileCorruption));
-        Assert.That(ex.Message, Does.Contain("corrupted.czc"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileCorruption));
+            Assert.That(ex.Message, Does.Contain("corrupted.czc"));
+        }
     }
 
     [Test]
@@ -58,8 +70,11 @@ internal sealed class EncryptionExceptionTests
         Exception inner = new("key error");
         EncryptionKeyDerivationException ex = new(inner);
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.KeyDerivationFailed));
-        Assert.That(ex.InnerException, Is.SameAs(inner));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.KeyDerivationFailed));
+            Assert.That(ex.InnerException, Is.SameAs(inner));
+        }
     }
 
     [Test]
@@ -68,8 +83,11 @@ internal sealed class EncryptionExceptionTests
         Exception inner = new("cipher error");
         EncryptionCipherException ex = new("encryption", inner);
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.CipherOperationFailed));
-        Assert.That(ex.Message, Does.Contain("encryption"));
-        Assert.That(ex.InnerException, Is.SameAs(inner));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.CipherOperationFailed));
+            Assert.That(ex.Message, Does.Contain("encryption"));
+            Assert.That(ex.InnerException, Is.SameAs(inner));
+        }
     }
 }

@@ -8,7 +8,7 @@ using CloudZCrypt.Domain.Strategies.Interfaces;
 internal class NameObfuscationServiceFactory(IEnumerable<INameObfuscationStrategy> strategies)
     : INameObfuscationServiceFactory
 {
-    private readonly IReadOnlyDictionary<NameObfuscationMode, INameObfuscationStrategy> strategies =
+    private readonly Dictionary<NameObfuscationMode, INameObfuscationStrategy> strategies =
         strategies.ToDictionary(s => s.Id, s => s);
 
     public INameObfuscationStrategy Create(NameObfuscationMode obfuscationMode)

@@ -8,7 +8,7 @@ using CloudZCrypt.Domain.Strategies.Interfaces;
 internal class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy> strategies)
     : IEncryptionServiceFactory
 {
-    private readonly IReadOnlyDictionary<
+    private readonly Dictionary<
         EncryptionAlgorithm,
         IEncryptionAlgorithmStrategy
     > strategies = strategies.ToDictionary(s => s.Id, s => s);

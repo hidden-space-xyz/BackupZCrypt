@@ -247,7 +247,7 @@ namespace CloudZCrypt.Application.Services
         private static double SequencePenalty(string password)
         {
             double penalty = 0;
-            string lower = password.ToLowerInvariant();
+            string lower = password.ToUpperInvariant();
 
             foreach (string seq in LinearSequences)
             {
@@ -292,7 +292,7 @@ namespace CloudZCrypt.Application.Services
         private static double PatternPenalty(string password)
         {
             double penalty = 0;
-            string lower = password.ToLowerInvariant();
+            string lower = password.ToUpperInvariant();
 
             penalty = CommonSubstrings.Where(lower.Contains).Sum(p => 6);
             string canon = NormalizeLeet(lower);
@@ -303,14 +303,23 @@ namespace CloudZCrypt.Application.Services
 
         private static double YearPenalty(string password)
         {
-            return YearRegex.Matches(password).Count * 4.0;
+            return YearRegex.Count(password) * 4.0;
         }
 
         private static double HomogeneousClassPenalty(PasswordComposition flags, string password)
         {
-            return flags.CategoryCount <= 1 ? Math.Min(20, password.Length * 2)
-                : flags.CategoryCount == 2 && password.Length < 10 ? 10
-                : 0;
+            if (flags.CategoryCount <= 1)
+            {
+                return Math.Min(20, password.Length * 2);
+            }
+            else if (flags.CategoryCount == 2 && password.Length < 10)
+            {
+                return 10;
+            }
+            else
+            {
+                return 0;
+            }
         }
 
         private static string NormalizeLeet(string input)
@@ -426,7 +435,7 @@ namespace CloudZCrypt.Application.Services
 
         private static bool HasObviousSequence(string password)
         {
-            string lower = password.ToLowerInvariant();
+            string lower = password.ToUpperInvariant();
 
             return LinearSequences.Any(seq => lower.Contains(seq[..Math.Min(seq.Length, 4)]))
                 || LinearSequences.Any(seq =>

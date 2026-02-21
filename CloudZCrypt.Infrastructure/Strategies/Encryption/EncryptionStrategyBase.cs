@@ -31,7 +31,7 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            using Stream sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
+            await using Stream sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
 
             encryptionFileService.EnsureDirectoryExists(destinationFilePath);
             encryptionFileService.ValidateDiskSpace(sourceFilePath, destinationFilePath);
@@ -41,17 +41,17 @@ internal abstract class EncryptionStrategyBase(
                 keyDerivationAlgorithm,
                 compression);
 
-            using Stream destinationFile = encryptionFileService.CreateWriteStream(
+            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
 
             await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
 
             ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
                 compression);
-            using Stream compressedSource = await compressionStrategy.CompressAsync(
+            await using Stream compressedSource = await compressionStrategy.CompressAsync(
                 sourceFile,
                 cancellationToken);
-            await this.EncryptStreamAsync(
+            await EncryptStreamAsync(
                 compressedSource,
                 destinationFile,
                 session.Key,
@@ -97,7 +97,7 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            using Stream sourceFile = encryptionFileService.OpenSourceFile(
+            await using Stream sourceFile = encryptionFileService.OpenSourceFile(
                 sourceFilePath,
                 validateHeader: true);
 
@@ -110,8 +110,8 @@ internal abstract class EncryptionStrategyBase(
                     keyDerivationAlgorithm,
                     cancellationToken);
 
-            using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
-            await this.DecryptStreamAsync(
+            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await DecryptStreamAsync(
                 sourceFile,
                 decryptedBuffer,
                 session.Key,
@@ -122,11 +122,11 @@ internal abstract class EncryptionStrategyBase(
 
             ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
                 session.Compression);
-            using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+            await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
                 decryptedBuffer,
                 cancellationToken);
 
-            using Stream destinationFile = encryptionFileService.CreateWriteStream(
+            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
             await decompressedStream.CopyToAsync(destinationFile, BufferSize, cancellationToken);
 
@@ -193,17 +193,17 @@ internal abstract class EncryptionStrategyBase(
                 keyDerivationAlgorithm,
                 compression);
 
-            using Stream destinationFile = encryptionFileService.CreateWriteStream(
+            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
             await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
 
-            using Stream source = new MemoryStream(plaintextData, writable: false);
+            await using Stream source = new MemoryStream(plaintextData, writable: false);
             ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
                 compression);
-            using Stream compressedSource = await compressionStrategy.CompressAsync(
+            await using Stream compressedSource = await compressionStrategy.CompressAsync(
                 source,
                 cancellationToken);
-            await this.EncryptStreamAsync(
+            await EncryptStreamAsync(
                 compressedSource,
                 destinationFile,
                 session.Key,
@@ -248,7 +248,7 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            using Stream source = encryptionFileService.OpenSourceFile(
+            await using Stream source = encryptionFileService.OpenSourceFile(
                 sourceFilePath,
                 validateHeader: true);
 
@@ -259,8 +259,8 @@ internal abstract class EncryptionStrategyBase(
                     keyDerivationAlgorithm,
                     cancellationToken);
 
-            using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
-            await this.DecryptStreamAsync(
+            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await DecryptStreamAsync(
                 source,
                 decryptedBuffer,
                 session.Key,
@@ -271,10 +271,10 @@ internal abstract class EncryptionStrategyBase(
 
             ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
                 session.Compression);
-            using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+            await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
                 decryptedBuffer,
                 cancellationToken);
-            using MemoryStream resultBuffer = new();
+            await using MemoryStream resultBuffer = new();
             await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
             return resultBuffer.ToArray();
         }
@@ -316,7 +316,7 @@ internal abstract class EncryptionStrategyBase(
         byte[] associatedData,
         CancellationToken cancellationToken);
 
-    protected Task ProcessFileWithCipherAsync(
+    protected static Task ProcessFileWithCipherAsync(
         Stream sourceStream,
         Stream destinationStream,
         Org.BouncyCastle.Crypto.Modes.IAeadCipher cipher,

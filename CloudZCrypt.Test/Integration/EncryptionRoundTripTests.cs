@@ -1,5 +1,6 @@
 namespace CloudZCrypt.Test.Integration;
 
+using System.Security.Cryptography;
 using System.Text;
 using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Enums;
@@ -20,7 +21,7 @@ internal sealed class EncryptionRoundTripTests
     {
         byte[] plaintext = Encoding.UTF8.GetBytes("In-memory plaintext data for testing");
         string encryptedFile = Path.Combine(this.testDir, $"inmem-{algorithm}.czc");
-        string password = "TestP@ssw0rd!Str0ng";
+        const string password = "TestP@ssw0rd!Str0ng";
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
 
@@ -112,11 +113,11 @@ internal sealed class EncryptionRoundTripTests
         EncryptionAlgorithm algorithm,
         KeyDerivationAlgorithm kdf)
     {
-        string originalContent = "This is a test file for encryption round trip!";
+        const string originalContent = "This is a test file for encryption round trip!";
         string sourceFile = this.CreateTestFile("original.txt", originalContent);
         string encryptedFile = Path.Combine(this.testDir, "encrypted.czc");
         string decryptedFile = Path.Combine(this.testDir, "decrypted.txt");
-        string password = "TestP@ssw0rd!Str0ng";
+        const string password = "TestP@ssw0rd!Str0ng";
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
 
@@ -125,8 +126,11 @@ internal sealed class EncryptionRoundTripTests
             encryptedFile,
             password,
             kdf);
-        Assert.That(encryptResult, Is.True);
-        Assert.That(File.Exists(encryptedFile), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(encryptResult, Is.True);
+            Assert.That(File.Exists(encryptedFile), Is.True);
+        }
 
         byte[] encryptedBytes = await File.ReadAllBytesAsync(encryptedFile);
         byte[] originalBytes = Encoding.UTF8.GetBytes(originalContent);
@@ -137,8 +141,11 @@ internal sealed class EncryptionRoundTripTests
             decryptedFile,
             password,
             kdf);
-        Assert.That(decryptResult, Is.True);
-        Assert.That(File.Exists(decryptedFile), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult, Is.True);
+            Assert.That(File.Exists(decryptedFile), Is.True);
+        }
 
         string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
@@ -155,7 +162,7 @@ internal sealed class EncryptionRoundTripTests
         string sourceFile = this.CreateTestFile($"compress-test-{compression}.txt", originalContent);
         string encryptedFile = Path.Combine(this.testDir, $"encrypted-{compression}.czc");
         string decryptedFile = Path.Combine(this.testDir, $"decrypted-{compression}.txt");
-        string password = "TestP@ssw0rd!Str0ng";
+        const string password = "TestP@ssw0rd!Str0ng";
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
 
@@ -182,13 +189,13 @@ internal sealed class EncryptionRoundTripTests
     public async Task EncryptFile_LargerFile_RoundTrip()
     {
         byte[] largeData = new byte[256 * 1024];
-        Random.Shared.NextBytes(largeData);
+        RandomNumberGenerator.Fill(largeData);
         string sourceFile = Path.Combine(this.testDir, "large.bin");
         await File.WriteAllBytesAsync(sourceFile, largeData);
 
         string encryptedFile = Path.Combine(this.testDir, "large.czc");
         string decryptedFile = Path.Combine(this.testDir, "large-decrypted.bin");
-        string password = "TestP@ssw0rd!Str0ng";
+        const string password = "TestP@ssw0rd!Str0ng";
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 

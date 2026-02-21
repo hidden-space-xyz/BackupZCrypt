@@ -10,8 +10,11 @@ internal sealed class ManifestEntryTests
     {
         ManifestEntry entry = new("original/path.txt", "obfuscated/hash.czc");
 
-        Assert.That(entry.OriginalRelativePath, Is.EqualTo("original/path.txt"));
-        Assert.That(entry.ObfuscatedRelativePath, Is.EqualTo("obfuscated/hash.czc"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(entry.OriginalRelativePath, Is.EqualTo("original/path.txt"));
+            Assert.That(entry.ObfuscatedRelativePath, Is.EqualTo("obfuscated/hash.czc"));
+        }
     }
 
     [Test]

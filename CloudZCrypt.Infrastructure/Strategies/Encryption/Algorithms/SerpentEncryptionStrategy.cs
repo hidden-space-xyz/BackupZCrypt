@@ -40,7 +40,7 @@ internal class SerpentEncryptionStrategy(
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(true, parameters);
 
-        await this.ProcessFileWithCipherAsync(
+        await ProcessFileWithCipherAsync(
             sourceStream,
             destinationStream,
             gcmCipher,
@@ -60,7 +60,7 @@ internal class SerpentEncryptionStrategy(
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         gcmCipher.Init(false, parameters);
 
-        await this.ProcessFileWithCipherAsync(
+        await ProcessFileWithCipherAsync(
             sourceStream,
             destinationStream,
             gcmCipher,

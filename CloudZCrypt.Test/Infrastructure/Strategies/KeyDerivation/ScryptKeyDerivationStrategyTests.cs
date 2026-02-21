@@ -2,6 +2,7 @@ namespace CloudZCrypt.Test.Infrastructure.Strategies.KeyDerivation;
 
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Infrastructure.Strategies.KeyDerivation;
+using System.Security.Cryptography;
 
 [TestFixture]
 internal sealed class ScryptKeyDerivationStrategyTests
@@ -42,7 +43,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     public void DeriveKey_ReturnsCorrectKeySize()
     {
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key = this.strategy.DeriveKey("testPassword123!", salt, 256);
 
@@ -53,7 +54,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     public void DeriveKey_SameInputs_ProducesSameKey()
     {
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = this.strategy.DeriveKey("password", salt, 256);
         byte[] key2 = this.strategy.DeriveKey("password", salt, 256);
@@ -65,7 +66,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     public void DeriveKey_DifferentPasswords_ProducesDifferentKeys()
     {
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = this.strategy.DeriveKey("password1", salt, 256);
         byte[] key2 = this.strategy.DeriveKey("password2", salt, 256);
@@ -78,8 +79,8 @@ internal sealed class ScryptKeyDerivationStrategyTests
     {
         byte[] salt1 = new byte[32];
         byte[] salt2 = new byte[32];
-        Random.Shared.NextBytes(salt1);
-        Random.Shared.NextBytes(salt2);
+        RandomNumberGenerator.Fill(salt1);
+        RandomNumberGenerator.Fill(salt2);
 
         byte[] key1 = this.strategy.DeriveKey("password", salt1, 256);
         byte[] key2 = this.strategy.DeriveKey("password", salt2, 256);
@@ -91,7 +92,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     public void DeriveKey_ReturnsNonZeroKey()
     {
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key = this.strategy.DeriveKey("password", salt, 256);
 

@@ -43,9 +43,9 @@ internal sealed class NoCompressionStrategyTests
     public async Task CompressAsync_ReturnsIdenticalData()
     {
         byte[] data = Encoding.UTF8.GetBytes("Hello, world!");
-        using MemoryStream input = new(data);
+        await using MemoryStream input = new(data);
 
-        Stream result = await this.strategy.CompressAsync(input);
+        Stream result = await strategy.CompressAsync(input);
 
         byte[] output = new byte[result.Length];
         await result.ReadExactlyAsync(output);
@@ -57,9 +57,9 @@ internal sealed class NoCompressionStrategyTests
     public async Task DecompressAsync_ReturnsIdenticalData()
     {
         byte[] data = Encoding.UTF8.GetBytes("Hello, world!");
-        using MemoryStream input = new(data);
+        await using MemoryStream input = new(data);
 
-        Stream result = await this.strategy.DecompressAsync(input);
+        Stream result = await strategy.DecompressAsync(input);
 
         byte[] output = new byte[result.Length];
         await result.ReadExactlyAsync(output);
@@ -70,9 +70,9 @@ internal sealed class NoCompressionStrategyTests
     [Test]
     public async Task CompressAsync_StreamPositionIsZero()
     {
-        using MemoryStream input = new([1, 2, 3]);
+        await using MemoryStream input = new([1, 2, 3]);
 
-        Stream result = await this.strategy.CompressAsync(input);
+        Stream result = await strategy.CompressAsync(input);
 
         Assert.That(result.Position, Is.EqualTo(0));
     }
@@ -80,9 +80,9 @@ internal sealed class NoCompressionStrategyTests
     [Test]
     public async Task CompressAsync_EmptyStream_ReturnsEmptyStream()
     {
-        using MemoryStream input = new();
+        await using MemoryStream input = new();
 
-        Stream result = await this.strategy.CompressAsync(input);
+        Stream result = await strategy.CompressAsync(input);
 
         Assert.That(result.Length, Is.EqualTo(0));
     }

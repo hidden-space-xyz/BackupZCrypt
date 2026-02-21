@@ -23,7 +23,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest(dest: string.Empty);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("destination"));
     }
@@ -41,7 +41,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("empty"));
     }
@@ -57,7 +57,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest();
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("empty"));
     }
@@ -67,7 +67,7 @@ internal sealed class FileCryptRequestValidatorTests
     {
         FileCryptRequest request = CreateRequest(password: string.Empty, confirmPassword: string.Empty);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("password"));
     }
@@ -84,7 +84,7 @@ internal sealed class FileCryptRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("do not match"));
     }
@@ -102,7 +102,7 @@ internal sealed class FileCryptRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("too long"));
     }
@@ -119,7 +119,7 @@ internal sealed class FileCryptRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("spaces"));
     }
@@ -136,7 +136,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest(source: path, dest: path);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("cannot be the same"));
     }
@@ -151,7 +151,7 @@ internal sealed class FileCryptRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("at least 8 characters"));
     }
@@ -166,7 +166,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest();
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("does not exist"));
     }
@@ -182,7 +182,7 @@ internal sealed class FileCryptRequestValidatorTests
 
         FileCryptRequest request = CreateRequest();
 
-        IReadOnlyList<string> errors = await this.validator.AnalyzeErrorsAsync(request);
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Is.Empty);
     }

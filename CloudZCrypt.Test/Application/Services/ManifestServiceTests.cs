@@ -41,7 +41,7 @@ internal sealed class ManifestServiceTests
                     Arg.Any<KeyDerivationAlgorithm>())
                 .Returns(false);
 
-            ManifestData? result = await this.service.TryReadManifestAsync(
+            ManifestData? result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -65,7 +65,7 @@ internal sealed class ManifestServiceTests
 
         try
         {
-            ManifestData? result = await this.service.TryReadManifestAsync(
+            ManifestData? result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -85,7 +85,7 @@ internal sealed class ManifestServiceTests
         IEncryptionAlgorithmStrategy encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
 
-        IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
+        IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
             [],
             CreateHeader(),
             @"C:\dest",
@@ -117,7 +117,7 @@ internal sealed class ManifestServiceTests
         {
             List<ManifestEntry> entries = [new("original.txt", "obfuscated.czc")];
 
-            IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
+            IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,
@@ -155,7 +155,7 @@ internal sealed class ManifestServiceTests
         {
             List<ManifestEntry> entries = [new("a.txt", "b.czc")];
 
-            IReadOnlyList<string> errors = await this.service.TrySaveManifestAsync(
+            IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,

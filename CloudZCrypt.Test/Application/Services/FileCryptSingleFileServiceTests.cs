@@ -28,15 +28,18 @@ internal sealed class FileCryptSingleFileServiceTests
     {
         string manifestPath = @$"C:\source\{FileCryptConstants.ManifestFileName}";
 
-        Result<FileCryptResult> result = await this.service.ProcessAsync(
+        Result<FileCryptResult> result = await service.ProcessAsync(
             manifestPath,
             @"C:\dest\manifest",
             CreateRequest(EncryptOperation.Decrypt),
-            this.progress,
+            progress,
             CancellationToken.None);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.ProcessedFiles, Is.EqualTo(0));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(0));
+        }
     }
 
     [Test]
@@ -51,15 +54,18 @@ internal sealed class FileCryptSingleFileServiceTests
                 Arg.Any<KeyDerivationAlgorithm>())
             .Returns(true);
 
-        Result<FileCryptResult> result = await this.service.ProcessAsync(
+        Result<FileCryptResult> result = await service.ProcessAsync(
             @"C:\source\file.czc",
             @"C:\dest\file.txt",
             CreateRequest(EncryptOperation.Decrypt),
-            this.progress,
+            progress,
             CancellationToken.None);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.IsSuccess, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.IsSuccess, Is.True);
+        }
     }
 
     [Test]
@@ -80,11 +86,11 @@ internal sealed class FileCryptSingleFileServiceTests
                 Arg.Any<CompressionMode>())
             .Returns(true);
 
-        await this.service.ProcessAsync(
+        await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.czc",
             CreateRequest(),
-            this.progress,
+            progress,
             CancellationToken.None);
 
         this.obfuscationStrategy.Received(1).ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>());
@@ -108,17 +114,20 @@ internal sealed class FileCryptSingleFileServiceTests
                 Arg.Any<CompressionMode>())
             .Returns(true);
 
-        Result<FileCryptResult> result = await this.service.ProcessAsync(
+        Result<FileCryptResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.czc",
             CreateRequest(),
-            this.progress,
+            progress,
             CancellationToken.None);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.IsSuccess, Is.True);
-        Assert.That(result.Value.ProcessedFiles, Is.EqualTo(1));
-        Assert.That(result.Value.TotalFiles, Is.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.IsSuccess, Is.True);
+            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(1));
+            Assert.That(result.Value.TotalFiles, Is.EqualTo(1));
+        }
     }
 
     [Test]
@@ -139,11 +148,11 @@ internal sealed class FileCryptSingleFileServiceTests
                 Arg.Any<CompressionMode>())
             .ThrowsAsync(new EncryptionInvalidPasswordException());
 
-        Result<FileCryptResult> result = await this.service.ProcessAsync(
+        Result<FileCryptResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.czc",
             CreateRequest(),
-            this.progress,
+            progress,
             CancellationToken.None);
 
         Assert.That(result.IsSuccess, Is.False);
@@ -167,11 +176,11 @@ internal sealed class FileCryptSingleFileServiceTests
                 Arg.Any<CompressionMode>())
             .Returns(true);
 
-        await this.service.ProcessAsync(
+        await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.czc",
             CreateRequest(),
-            this.progress,
+            progress,
             CancellationToken.None);
 
         this.progress.Received(2).Report(Arg.Any<FileCryptStatus>());

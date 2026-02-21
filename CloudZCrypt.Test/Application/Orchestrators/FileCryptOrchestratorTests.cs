@@ -43,7 +43,7 @@ internal sealed class FileCryptOrchestratorTests
             .Returns<Result<FileCryptResult>>(_ => throw new OperationCanceledException());
 
         Assert.ThrowsAsync<OperationCanceledException>(async () =>
-            await this.orchestrator.ExecuteAsync(CreateRequest(), this.progress));
+            await orchestrator.ExecuteAsync(CreateRequest(), progress));
     }
 
     [Test]
@@ -69,12 +69,12 @@ internal sealed class FileCryptOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<FileCryptResult>.Success(expected));
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
-        await this.directoryService
+        await directoryService
             .Received(1)
             .ProcessAsync(
                 Arg.Any<string>(),
@@ -108,12 +108,12 @@ internal sealed class FileCryptOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<FileCryptResult>.Success(expected));
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
-        await this.singleFileService
+        await singleFileService
             .Received(1)
             .ProcessAsync(
                 Arg.Any<string>(),
@@ -136,9 +136,9 @@ internal sealed class FileCryptOrchestratorTests
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
         Assert.That(result.IsSuccess, Is.False);
     }
@@ -166,12 +166,15 @@ internal sealed class FileCryptOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns<Result<FileCryptResult>>(_ => throw new InvalidOperationException("boom"));
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors, Has.Some.Contains("unexpected"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors, Has.Some.Contains("unexpected"));
+        }
     }
 
     [Test]
@@ -181,12 +184,15 @@ internal sealed class FileCryptOrchestratorTests
             .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "error1" });
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
+        }
     }
 
     [Test]
@@ -199,9 +205,9 @@ internal sealed class FileCryptOrchestratorTests
             .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "warning1" });
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
-            this.progress);
+            progress);
 
         Assert.That(result.Value.HasWarnings, Is.True);
     }
@@ -232,7 +238,7 @@ internal sealed class FileCryptOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<FileCryptResult>.Success(expected));
 
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, this.progress);
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
     }

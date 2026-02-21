@@ -4,6 +4,7 @@ using CloudZCrypt.Composition;
 using CloudZCrypt.Domain.Enums;
 using CloudZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
 
 [TestFixture]
 internal sealed class KeyDerivationRoundTripTests
@@ -35,7 +36,7 @@ internal sealed class KeyDerivationRoundTripTests
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key = strategy.DeriveKey("password123!", salt, 256);
 
@@ -53,7 +54,7 @@ internal sealed class KeyDerivationRoundTripTests
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = strategy.DeriveKey("password", salt, 256);
         byte[] key2 = strategy.DeriveKey("password", salt, 256);
@@ -72,7 +73,7 @@ internal sealed class KeyDerivationRoundTripTests
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
         byte[] salt = new byte[32];
-        Random.Shared.NextBytes(salt);
+        RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = strategy.DeriveKey("password1", salt, 256);
         byte[] key2 = strategy.DeriveKey("password2", salt, 256);
@@ -91,8 +92,11 @@ internal sealed class KeyDerivationRoundTripTests
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
 
-        Assert.That(strategy.DisplayName, Is.Not.Null.And.Not.Empty);
-        Assert.That(strategy.Description, Is.Not.Null.And.Not.Empty);
-        Assert.That(strategy.Summary, Is.Not.Null.And.Not.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(strategy.DisplayName, Is.Not.Null.And.Not.Empty);
+            Assert.That(strategy.Description, Is.Not.Null.And.Not.Empty);
+            Assert.That(strategy.Summary, Is.Not.Null.And.Not.Empty);
+        }
     }
 }

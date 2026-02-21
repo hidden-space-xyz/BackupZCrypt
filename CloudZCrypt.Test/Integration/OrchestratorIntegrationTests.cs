@@ -46,12 +46,12 @@ internal sealed class OrchestratorIntegrationTests
     [Test]
     public async Task ExecuteAsync_SingleFile_EncryptAndDecrypt_RoundTrip()
     {
-        string originalContent = "Integration test file content!";
+        const string originalContent = "Integration test file content!";
         string sourceFile = Path.Combine(this.sourceDir, "test.txt");
         await File.WriteAllTextAsync(sourceFile, originalContent);
 
         string encryptedFile = Path.Combine(this.destDir, "test.czc");
-        string password = "IntegrationP@ss1";
+        const string password = "IntegrationP@ss1";
 
         FileCryptRequest encryptRequest = new(
             sourceFile,
@@ -65,13 +65,16 @@ internal sealed class OrchestratorIntegrationTests
             ProceedOnWarnings: true);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> encryptResult = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
             encryptRequest,
             progress);
 
-        Assert.That(encryptResult.IsSuccess, Is.True);
-        Assert.That(encryptResult.Value.IsSuccess, Is.True);
-        Assert.That(File.Exists(encryptedFile), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(encryptResult.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.IsSuccess, Is.True);
+            Assert.That(File.Exists(encryptedFile), Is.True);
+        }
 
         string decryptedDir = Path.Combine(this.testDir, "decrypted");
         Directory.CreateDirectory(decryptedDir);
@@ -88,12 +91,15 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Result<FileCryptResult> decryptResult = await this.orchestrator.ExecuteAsync(
+        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
             decryptRequest,
             progress);
 
-        Assert.That(decryptResult.IsSuccess, Is.True);
-        Assert.That(decryptResult.Value.IsSuccess, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+        }
 
         string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
@@ -117,10 +123,13 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.HasErrors, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.HasErrors, Is.True);
+        }
     }
 
     [Test]
@@ -141,10 +150,13 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.HasErrors, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.HasErrors, Is.True);
+        }
     }
 
     [Test]
@@ -164,20 +176,23 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.HasErrors, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.HasErrors, Is.True);
+        }
     }
 
     [Test]
     public async Task ExecuteAsync_Directory_EncryptMultipleFiles()
     {
-        await File.WriteAllTextAsync(Path.Combine(this.sourceDir, "file1.txt"), "Content 1");
-        await File.WriteAllTextAsync(Path.Combine(this.sourceDir, "file2.txt"), "Content 2");
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file1.txt"), "Content 1");
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file2.txt"), "Content 2");
 
         string encryptedDir = Path.Combine(this.testDir, "encrypted");
-        string password = "IntegrationP@ss1";
+        const string password = "IntegrationP@ss1";
 
         FileCryptRequest request = new(
             this.sourceDir,
@@ -191,10 +206,13 @@ internal sealed class OrchestratorIntegrationTests
             ProceedOnWarnings: true);
 
         Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await this.orchestrator.ExecuteAsync(request, progress);
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.ProcessedFiles, Is.EqualTo(2));
-        Assert.That(result.Value.TotalFiles, Is.EqualTo(2));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(2));
+            Assert.That(result.Value.TotalFiles, Is.EqualTo(2));
+        }
     }
 }

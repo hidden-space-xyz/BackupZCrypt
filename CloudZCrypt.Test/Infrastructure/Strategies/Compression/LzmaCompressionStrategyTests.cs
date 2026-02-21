@@ -45,10 +45,10 @@ internal sealed class LzmaCompressionStrategyTests
         byte[] original = Encoding.UTF8.GetBytes(
             "This is a test string that should be compressible. "
                 + "This is a test string that should be compressible.");
-        using MemoryStream input = new(original);
+        await using MemoryStream input = new(original);
 
-        Stream compressed = await this.strategy.CompressAsync(input);
-        Stream decompressed = await this.strategy.DecompressAsync(compressed);
+        Stream compressed = await strategy.CompressAsync(input);
+        Stream decompressed = await strategy.DecompressAsync(compressed);
 
         byte[] result = new byte[decompressed.Length];
         await decompressed.ReadExactlyAsync(result);
@@ -61,9 +61,9 @@ internal sealed class LzmaCompressionStrategyTests
     {
         string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 100));
         byte[] data = Encoding.UTF8.GetBytes(text);
-        using MemoryStream input = new(data);
+        await using MemoryStream input = new(data);
 
-        Stream compressed = await this.strategy.CompressAsync(input);
+        Stream compressed = await strategy.CompressAsync(input);
 
         Assert.That(compressed.Length, Is.LessThan(data.Length));
     }
@@ -72,9 +72,9 @@ internal sealed class LzmaCompressionStrategyTests
     public async Task CompressAsync_StreamPositionIsZero()
     {
         string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
-        using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
 
-        Stream compressed = await this.strategy.CompressAsync(input);
+        Stream compressed = await strategy.CompressAsync(input);
 
         Assert.That(compressed.Position, Is.EqualTo(0));
     }
@@ -83,10 +83,10 @@ internal sealed class LzmaCompressionStrategyTests
     public async Task DecompressAsync_StreamPositionIsZero()
     {
         string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
-        using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
-        Stream compressed = await this.strategy.CompressAsync(input);
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
+        Stream compressed = await strategy.CompressAsync(input);
 
-        Stream decompressed = await this.strategy.DecompressAsync(compressed);
+        Stream decompressed = await strategy.DecompressAsync(compressed);
 
         Assert.That(decompressed.Position, Is.EqualTo(0));
     }

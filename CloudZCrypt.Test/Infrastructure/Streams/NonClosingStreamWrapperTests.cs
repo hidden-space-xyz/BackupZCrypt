@@ -49,8 +49,11 @@ internal sealed class NonClosingStreamWrapperTests
 
         wrapper.Position = 3;
 
-        Assert.That(wrapper.Position, Is.EqualTo(3));
-        Assert.That(inner.Position, Is.EqualTo(3));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(wrapper.Position, Is.EqualTo(3));
+            Assert.That(inner.Position, Is.EqualTo(3));
+        }
     }
 
     [Test]
@@ -62,8 +65,11 @@ internal sealed class NonClosingStreamWrapperTests
         byte[] buffer = new byte[3];
         int read = wrapper.Read(buffer, 0, 3);
 
-        Assert.That(read, Is.EqualTo(3));
-        Assert.That(buffer, Is.EqualTo(new byte[] { 10, 20, 30 }));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(read, Is.EqualTo(3));
+            Assert.That(buffer, Is.EqualTo(new byte[] { 10, 20, 30 }));
+        }
     }
 
     [Test]
@@ -80,23 +86,26 @@ internal sealed class NonClosingStreamWrapperTests
     [Test]
     public async Task ReadAsync_DelegatesToInner()
     {
-        using MemoryStream inner = new([10, 20, 30]);
-        using NonClosingStreamWrapper wrapper = new(inner);
+        await using MemoryStream inner = new([10, 20, 30]);
+        await using NonClosingStreamWrapper wrapper = new(inner);
 
         byte[] buffer = new byte[3];
         int read = await wrapper.ReadAsync(buffer, 0, 3);
 
-        Assert.That(read, Is.EqualTo(3));
-        Assert.That(buffer, Is.EqualTo(new byte[] { 10, 20, 30 }));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(read, Is.EqualTo(3));
+            Assert.That(buffer, Is.EqualTo(new byte[] { 10, 20, 30 }));
+        }
     }
 
     [Test]
     public async Task WriteAsync_DelegatesToInner()
     {
-        using MemoryStream inner = new();
-        using NonClosingStreamWrapper wrapper = new(inner);
+        await using MemoryStream inner = new();
+        await using NonClosingStreamWrapper wrapper = new(inner);
 
-        await wrapper.WriteAsync(new byte[] { 4, 5, 6 }, 0, 3);
+        await wrapper.WriteAsync([4, 5, 6], 0, 3);
 
         Assert.That(inner.ToArray(), Is.EqualTo(new byte[] { 4, 5, 6 }));
     }
@@ -109,8 +118,11 @@ internal sealed class NonClosingStreamWrapperTests
 
         long position = wrapper.Seek(2, SeekOrigin.Begin);
 
-        Assert.That(position, Is.EqualTo(2));
-        Assert.That(inner.Position, Is.EqualTo(2));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(position, Is.EqualTo(2));
+            Assert.That(inner.Position, Is.EqualTo(2));
+        }
     }
 
     [Test]
@@ -164,15 +176,15 @@ internal sealed class NonClosingStreamWrapperTests
         using MemoryStream inner = new();
         using NonClosingStreamWrapper wrapper = new(inner);
 
-        Assert.DoesNotThrow(() => wrapper.Flush());
+        Assert.DoesNotThrow(wrapper.Flush);
     }
 
     [Test]
     public async Task FlushAsync_DelegatesToInner()
     {
-        using MemoryStream inner = new();
-        using NonClosingStreamWrapper wrapper = new(inner);
+        await using MemoryStream inner = new();
+        await using NonClosingStreamWrapper wrapper = new(inner);
 
-        Assert.DoesNotThrowAsync(async () => await wrapper.FlushAsync());
+        Assert.DoesNotThrowAsync(wrapper.FlushAsync);
     }
 }

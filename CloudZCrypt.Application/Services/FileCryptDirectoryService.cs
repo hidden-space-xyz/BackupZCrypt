@@ -144,7 +144,7 @@ internal sealed class FileCryptDirectoryService(
 
                     if (request.Operation == EncryptOperation.Encrypt)
                     {
-                        destinationFilePath = this.ObfuscateFullPath(
+                        destinationFilePath = ObfuscateFullPath(
                             sourcePath,
                             file,
                             relativePath,

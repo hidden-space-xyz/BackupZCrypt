@@ -11,11 +11,14 @@ internal sealed class FileCryptStatusTests
     {
         FileCryptStatus status = new(2, 5, 512, 1024, TimeSpan.FromSeconds(3));
 
-        Assert.That(status.ProcessedFiles, Is.EqualTo(2));
-        Assert.That(status.TotalFiles, Is.EqualTo(5));
-        Assert.That(status.ProcessedBytes, Is.EqualTo(512));
-        Assert.That(status.TotalBytes, Is.EqualTo(1024));
-        Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(3)));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(status.ProcessedFiles, Is.EqualTo(2));
+            Assert.That(status.TotalFiles, Is.EqualTo(5));
+            Assert.That(status.ProcessedBytes, Is.EqualTo(512));
+            Assert.That(status.TotalBytes, Is.EqualTo(1024));
+            Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(3)));
+        }
     }
 
     [Test]
@@ -67,7 +70,10 @@ internal sealed class FileCryptStatusTests
     {
         FileCryptStatus status = new(0, 0, 0, 0, TimeSpan.Zero);
 
-        Assert.That(status.ProcessedFiles, Is.EqualTo(0));
-        Assert.That(status.TotalFiles, Is.EqualTo(0));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(status.ProcessedFiles, Is.EqualTo(0));
+            Assert.That(status.TotalFiles, Is.EqualTo(0));
+        }
     }
 }

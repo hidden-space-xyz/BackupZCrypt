@@ -14,9 +14,12 @@ internal sealed class ValidationExceptionTests
             "Length must be positive",
             "length");
 
-        Assert.That(ex.Code, Is.EqualTo(ValidationErrorCode.PasswordLengthNonPositive));
-        Assert.That(ex.Message, Is.EqualTo("Length must be positive"));
-        Assert.That(ex.ParameterName, Is.EqualTo("length"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Code, Is.EqualTo(ValidationErrorCode.PasswordLengthNonPositive));
+            Assert.That(ex.Message, Is.EqualTo("Length must be positive"));
+            Assert.That(ex.ParameterName, Is.EqualTo("length"));
+        }
     }
 
     [Test]
@@ -24,7 +27,10 @@ internal sealed class ValidationExceptionTests
     {
         ValidationException ex = new(ValidationErrorCode.Unknown);
 
-        Assert.That(ex.Message, Is.EqualTo(nameof(ValidationErrorCode.Unknown)));
-        Assert.That(ex.ParameterName, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ex.Message, Is.EqualTo(nameof(ValidationErrorCode.Unknown)));
+            Assert.That(ex.ParameterName, Is.Null);
+        }
     }
 }

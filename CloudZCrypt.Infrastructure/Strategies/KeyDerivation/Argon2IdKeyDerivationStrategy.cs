@@ -43,10 +43,7 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         }
         catch (Exception ex)
         {
-            if (key != null)
-            {
-                Array.Clear(key, 0, key.Length);
-            }
+            Array.Clear(key, 0, key.Length);
 
             throw new CryptographicException(Messages.Argon2idKeyDerivationError, ex);
         }

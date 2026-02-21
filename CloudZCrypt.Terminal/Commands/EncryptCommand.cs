@@ -68,7 +68,7 @@ internal sealed class EncryptCommand(
 
             if (
                 !await AnsiConsole.ConfirmAsync(
-                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
             {
                 AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
                 return;
@@ -86,7 +86,7 @@ internal sealed class EncryptCommand(
                 selectedCompression.Id,
                 ProceedOnWarnings: false);
 
-            await this.RunOperationAsync(request, operationName, operationIngName);
+            await RunOperationAsync(request, operationName, operationIngName);
         }
         else
         {
@@ -94,7 +94,7 @@ internal sealed class EncryptCommand(
 
             if (
                 !await AnsiConsole.ConfirmAsync(
-                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToLower())}[/]"))
+                    $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
             {
                 AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
                 return;
@@ -110,7 +110,7 @@ internal sealed class EncryptCommand(
                 operation,
                 NameObfuscationMode.None);
 
-            await this.RunOperationAsync(request, operationName, operationIngName);
+            await RunOperationAsync(request, operationName, operationIngName);
         }
     }
 
@@ -221,8 +221,7 @@ internal sealed class EncryptCommand(
         AnsiConsole.WriteLine();
 
         if (
-            !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToLower())}[/]"))
+            !await AnsiConsole.ConfirmAsync($"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToUpperInvariant())}[/]", cancellationToken: cancellationToken))
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return null;
@@ -304,7 +303,7 @@ internal sealed class EncryptCommand(
 
             if (response.HasWarnings && !request.ProceedOnWarnings)
             {
-                response = await this.HandleWarningsAsync(
+                response = await HandleWarningsAsync(
                     response,
                     request,
                     operationName,

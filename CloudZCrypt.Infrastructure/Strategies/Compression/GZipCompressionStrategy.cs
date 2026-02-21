@@ -22,7 +22,7 @@ internal class GZipCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        using (
+        await using (
             GZipStream gzip = new(
                 new NonClosingStreamWrapper(output),
                 CompressionMode.Compress,
@@ -40,7 +40,7 @@ internal class GZipCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        using (GZipStream gzip = new(inputStream, CompressionMode.Decompress))
+        await using (GZipStream gzip = new(inputStream, CompressionMode.Decompress))
         {
             await gzip.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }

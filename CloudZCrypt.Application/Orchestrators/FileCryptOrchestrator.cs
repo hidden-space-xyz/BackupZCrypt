@@ -20,7 +20,7 @@ internal sealed class FileCryptOrchestrator(
         IProgress<FileCryptStatus> progress,
         CancellationToken cancellationToken = default)
     {
-        Result<FileCryptResult>? validationResult = await this.ValidateRequestAsync(
+        Result<FileCryptResult>? validationResult = await ValidateRequestAsync(
             request,
             cancellationToken);
         if (validationResult is not null)
@@ -38,7 +38,7 @@ internal sealed class FileCryptOrchestrator(
             return Result<FileCryptResult>.Failure(Messages.SourcePathNotExist);
         }
 
-        await this.EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
+        await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
 
         try
         {

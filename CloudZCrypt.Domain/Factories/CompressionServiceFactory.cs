@@ -8,7 +8,7 @@ using CloudZCrypt.Domain.Strategies.Interfaces;
 internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
 {
-    private readonly IReadOnlyDictionary<CompressionMode, ICompressionStrategy> strategies =
+    private readonly Dictionary<CompressionMode, ICompressionStrategy> strategies =
         strategies.ToDictionary(s => s.Id, s => s);
 
     public ICompressionStrategy Create(CompressionMode mode)

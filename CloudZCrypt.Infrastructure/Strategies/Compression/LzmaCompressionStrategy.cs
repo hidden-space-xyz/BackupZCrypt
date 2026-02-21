@@ -49,7 +49,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
             LzmaEncoderProperties encoderProps = new(false);
             byte[] lzmaProperties;
 
-            using (LzmaStream lzma = LzmaStream.Create(encoderProps, false, new NonClosingStreamWrapper(output)))
+            await using (LzmaStream lzma = LzmaStream.Create(encoderProps, false, new NonClosingStreamWrapper(output)))
             {
                 await effectiveInput.CopyToAsync(
                     lzma,
@@ -92,7 +92,7 @@ internal class LzmaCompressionStrategy : ICompressionStrategy
         long compressedSize = BitConverter.ToInt64(compressedSizeBytes, 0);
 
         FileStream output = CreateTempStream();
-        using (LzmaStream lzma = await LzmaStream.CreateAsync(properties, inputStream, compressedSize, uncompressedSize, false))
+        await using (LzmaStream lzma = await LzmaStream.CreateAsync(properties, inputStream, compressedSize, uncompressedSize, false))
         {
             await lzma.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }

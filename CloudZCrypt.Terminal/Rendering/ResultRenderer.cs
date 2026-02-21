@@ -11,13 +11,47 @@ internal static class ResultRenderer
     {
         AnsiConsole.WriteLine();
 
-        string statusIcon = response.IsSuccess ? "✅" : (response.IsPartialSuccess ? "⚠" : "❌");
-        string statusColor = response.IsSuccess
-            ? "green"
-            : (response.IsPartialSuccess ? "yellow" : "red");
-        string statusText = response.IsSuccess
-            ? Messages.CompletedSuccessfully
-            : (response.IsPartialSuccess ? Messages.PartiallyCompleted : Messages.Failed);
+        string statusIcon;
+        if (response.IsSuccess)
+        {
+            statusIcon = "✅";
+        }
+        else if (response.IsPartialSuccess)
+        {
+            statusIcon = "⚠";
+        }
+        else
+        {
+            statusIcon = "❌";
+        }
+
+        string statusColor;
+        if (response.IsSuccess)
+        {
+            statusColor = "green";
+        }
+        else if (response.IsPartialSuccess)
+        {
+            statusColor = "yellow";
+        }
+        else
+        {
+            statusColor = "red";
+        }
+
+        string statusText;
+        if (response.IsSuccess)
+        {
+            statusText = Messages.CompletedSuccessfully;
+        }
+        else if (response.IsPartialSuccess)
+        {
+            statusText = Messages.PartiallyCompleted;
+        }
+        else
+        {
+            statusText = Messages.Failed;
+        }
 
         AnsiConsole.MarkupLine(
             $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]");

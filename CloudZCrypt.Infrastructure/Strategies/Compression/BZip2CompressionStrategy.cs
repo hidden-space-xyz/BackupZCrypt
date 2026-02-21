@@ -22,12 +22,8 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        using (
-            BZip2Stream bzip2 = await BZip2Stream.CreateAsync(
-                new NonClosingStreamWrapper(output),
-                CompressionMode.Compress,
-                false,
-                false))
+        await using (
+            BZip2Stream bzip2 = await BZip2Stream.CreateAsync(new NonClosingStreamWrapper(output), CompressionMode.Compress, false, false, cancellationToken))
         {
             await inputStream.CopyToAsync(bzip2, StreamConstants.CopyBufferSize, cancellationToken);
         }
@@ -41,7 +37,7 @@ internal class BZip2CompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        using (BZip2Stream bzip2 = await BZip2Stream.CreateAsync(inputStream, CompressionMode.Decompress, false, false))
+        await using (BZip2Stream bzip2 = await BZip2Stream.CreateAsync(inputStream, CompressionMode.Decompress, false, false, cancellationToken))
         {
             await bzip2.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }

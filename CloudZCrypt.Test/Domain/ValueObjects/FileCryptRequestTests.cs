@@ -21,16 +21,19 @@ internal sealed class FileCryptRequestTests
             Compression: CompressionMode.GZip,
             ProceedOnWarnings: true);
 
-        Assert.That(request.SourcePath, Is.EqualTo(@"C:\source"));
-        Assert.That(request.DestinationPath, Is.EqualTo(@"C:\dest"));
-        Assert.That(request.Password, Is.EqualTo("password123"));
-        Assert.That(request.ConfirmPassword, Is.EqualTo("password123"));
-        Assert.That(request.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
-        Assert.That(request.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Argon2id));
-        Assert.That(request.Operation, Is.EqualTo(EncryptOperation.Encrypt));
-        Assert.That(request.NameObfuscation, Is.EqualTo(NameObfuscationMode.None));
-        Assert.That(request.Compression, Is.EqualTo(CompressionMode.GZip));
-        Assert.That(request.ProceedOnWarnings, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(request.SourcePath, Is.EqualTo(@"C:\source"));
+            Assert.That(request.DestinationPath, Is.EqualTo(@"C:\dest"));
+            Assert.That(request.Password, Is.EqualTo("password123"));
+            Assert.That(request.ConfirmPassword, Is.EqualTo("password123"));
+            Assert.That(request.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
+            Assert.That(request.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Argon2id));
+            Assert.That(request.Operation, Is.EqualTo(EncryptOperation.Encrypt));
+            Assert.That(request.NameObfuscation, Is.EqualTo(NameObfuscationMode.None));
+            Assert.That(request.Compression, Is.EqualTo(CompressionMode.GZip));
+            Assert.That(request.ProceedOnWarnings, Is.True);
+        }
     }
 
     [Test]
@@ -46,8 +49,11 @@ internal sealed class FileCryptRequestTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        Assert.That(request.Compression, Is.EqualTo(CompressionMode.None));
-        Assert.That(request.ProceedOnWarnings, Is.False);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(request.Compression, Is.EqualTo(CompressionMode.None));
+            Assert.That(request.ProceedOnWarnings, Is.False);
+        }
     }
 
     [Test]
@@ -65,7 +71,10 @@ internal sealed class FileCryptRequestTests
 
         FileCryptRequest modified = original with { Operation = EncryptOperation.Decrypt };
 
-        Assert.That(modified.Operation, Is.EqualTo(EncryptOperation.Decrypt));
-        Assert.That(modified.SourcePath, Is.EqualTo(original.SourcePath));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(modified.Operation, Is.EqualTo(EncryptOperation.Decrypt));
+            Assert.That(modified.SourcePath, Is.EqualTo(original.SourcePath));
+        }
     }
 }

@@ -10,8 +10,11 @@ internal sealed class ResultTests
     {
         Result result = Result.Failure("error message");
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors, Has.Length.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors, Has.Length.EqualTo(1));
+        }
         Assert.That(result.Errors[0], Is.EqualTo("error message"));
     }
 
@@ -28,8 +31,11 @@ internal sealed class ResultTests
     {
         Result result = "some error";
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors[0], Is.EqualTo("some error"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors[0], Is.EqualTo("some error"));
+        }
     }
 
     [Test]
@@ -37,9 +43,12 @@ internal sealed class ResultTests
     {
         Result<int> result = Result<int>.Success(42);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo(42));
-        Assert.That(result.Errors, Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Is.EqualTo(42));
+            Assert.That(result.Errors, Is.Empty);
+        }
     }
 
     [Test]
@@ -56,8 +65,11 @@ internal sealed class ResultTests
     {
         Result<string> result = Result<string>.Success("hello");
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo("hello"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Is.EqualTo("hello"));
+        }
     }
 
     [Test]

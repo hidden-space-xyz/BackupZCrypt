@@ -38,7 +38,7 @@ internal class ChaCha20EncryptionStrategy(
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         chacha20Poly1305.Init(true, parameters);
 
-        await this.ProcessFileWithCipherAsync(
+        await ProcessFileWithCipherAsync(
             sourceStream,
             destinationStream,
             chacha20Poly1305,
@@ -57,7 +57,7 @@ internal class ChaCha20EncryptionStrategy(
         AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
         chacha20Poly1305.Init(false, parameters);
 
-        await this.ProcessFileWithCipherAsync(
+        await ProcessFileWithCipherAsync(
             sourceStream,
             destinationStream,
             chacha20Poly1305,

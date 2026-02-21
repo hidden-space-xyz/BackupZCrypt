@@ -16,13 +16,16 @@ internal sealed class FileCryptResultTests
 
         FileCryptResult result = new(true, elapsed, 1024, 3, 5, errors, warnings);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.ElapsedTime, Is.EqualTo(elapsed));
-        Assert.That(result.TotalBytes, Is.EqualTo(1024));
-        Assert.That(result.ProcessedFiles, Is.EqualTo(3));
-        Assert.That(result.TotalFiles, Is.EqualTo(5));
-        Assert.That(result.Errors, Has.Count.EqualTo(1));
-        Assert.That(result.Warnings, Has.Count.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.ElapsedTime, Is.EqualTo(elapsed));
+            Assert.That(result.TotalBytes, Is.EqualTo(1024));
+            Assert.That(result.ProcessedFiles, Is.EqualTo(3));
+            Assert.That(result.TotalFiles, Is.EqualTo(5));
+            Assert.That(result.Errors, Has.Count.EqualTo(1));
+            Assert.That(result.Warnings, Has.Count.EqualTo(1));
+        }
     }
 
     [Test]
@@ -30,8 +33,11 @@ internal sealed class FileCryptResultTests
     {
         FileCryptResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
-        Assert.That(result.Errors, Is.Empty);
-        Assert.That(result.Warnings, Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(result.Warnings, Is.Empty);
+        }
     }
 
     [Test]

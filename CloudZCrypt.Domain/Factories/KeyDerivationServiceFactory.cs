@@ -8,7 +8,7 @@ using CloudZCrypt.Domain.Strategies.Interfaces;
 internal class KeyDerivationServiceFactory(IEnumerable<IKeyDerivationAlgorithmStrategy> strategies)
     : IKeyDerivationServiceFactory
 {
-    private readonly IReadOnlyDictionary<
+    private readonly Dictionary<
         KeyDerivationAlgorithm,
         IKeyDerivationAlgorithmStrategy
     > strategies = strategies.ToDictionary(s => s.Id, s => s);

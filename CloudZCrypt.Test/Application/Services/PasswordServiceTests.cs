@@ -21,8 +21,11 @@ internal sealed class PasswordServiceTests
     {
         PasswordStrengthAnalysis result = this.service.AnalyzePasswordStrength(string.Empty);
 
-        Assert.That(result.Strength, Is.EqualTo(PasswordStrength.VeryWeak));
-        Assert.That(result.Score, Is.EqualTo(0));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.Strength, Is.EqualTo(PasswordStrength.VeryWeak));
+            Assert.That(result.Score, Is.EqualTo(0));
+        }
     }
 
     [Test]
@@ -46,8 +49,11 @@ internal sealed class PasswordServiceTests
     {
         PasswordStrengthAnalysis result = this.service.AnalyzePasswordStrength("Kj9$mP2!xL7&nQ4#wR8@");
 
-        Assert.That(result.Strength, Is.EqualTo(PasswordStrength.Strong));
-        Assert.That(result.Score, Is.GreaterThanOrEqualTo(85));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.Strength, Is.EqualTo(PasswordStrength.Strong));
+            Assert.That(result.Score, Is.GreaterThanOrEqualTo(85));
+        }
     }
 
     [Test]
@@ -162,8 +168,8 @@ internal sealed class PasswordServiceTests
                 | PasswordGenerationOptions.IncludeNumbers
                 | PasswordGenerationOptions.ExcludeSimilarCharacters);
 
-        string similarChars = "il1Lo0O";
-        Assert.That(password.Any(c => similarChars.Contains(c)), Is.False);
+        const string similarChars = "il1Lo0O";
+        Assert.That(password.Any(similarChars.Contains), Is.False);
     }
 
     [Test]

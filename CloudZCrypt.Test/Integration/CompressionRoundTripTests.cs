@@ -38,12 +38,12 @@ internal sealed class CompressionRoundTripTests
 
         byte[] original = Encoding.UTF8.GetBytes(
             string.Concat(Enumerable.Repeat("Round trip compression test data! ", 30)));
-        using MemoryStream input = new(original);
+        await using MemoryStream input = new(original);
 
         Stream compressed = await strategy.CompressAsync(input);
         Stream decompressed = await strategy.DecompressAsync(compressed);
 
-        using MemoryStream resultStream = new();
+        await using MemoryStream resultStream = new();
         await decompressed.CopyToAsync(resultStream);
 
         Assert.That(resultStream.ToArray(), Is.EqualTo(original));
@@ -62,7 +62,7 @@ internal sealed class CompressionRoundTripTests
 
         string repeatedText = string.Concat(Enumerable.Repeat("AAAAABBBBBCCCCC", 200));
         byte[] original = Encoding.UTF8.GetBytes(repeatedText);
-        using MemoryStream input = new(original);
+        await using MemoryStream input = new(original);
 
         Stream compressed = await strategy.CompressAsync(input);
 
@@ -83,12 +83,12 @@ internal sealed class CompressionRoundTripTests
 
         ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
 
-        using MemoryStream input = new([]);
+        await using MemoryStream input = new([]);
 
         Stream compressed = await strategy.CompressAsync(input);
         Stream decompressed = await strategy.DecompressAsync(compressed);
 
-        using MemoryStream resultStream = new();
+        await using MemoryStream resultStream = new();
         await decompressed.CopyToAsync(resultStream);
 
         Assert.That(resultStream.ToArray(), Is.Empty);
@@ -106,8 +106,11 @@ internal sealed class CompressionRoundTripTests
 
         ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
 
-        Assert.That(strategy.DisplayName, Is.Not.Null.And.Not.Empty);
-        Assert.That(strategy.Description, Is.Not.Null.And.Not.Empty);
-        Assert.That(strategy.Summary, Is.Not.Null.And.Not.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(strategy.DisplayName, Is.Not.Null.And.Not.Empty);
+            Assert.That(strategy.Description, Is.Not.Null.And.Not.Empty);
+            Assert.That(strategy.Summary, Is.Not.Null.And.Not.Empty);
+        }
     }
 }

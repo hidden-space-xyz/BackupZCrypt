@@ -11,9 +11,12 @@ internal sealed class PasswordStrengthAnalysisTests
     {
         PasswordStrengthAnalysis analysis = new(PasswordStrength.Strong, "Strong password", 92.5);
 
-        Assert.That(analysis.Strength, Is.EqualTo(PasswordStrength.Strong));
-        Assert.That(analysis.Description, Is.EqualTo("Strong password"));
-        Assert.That(analysis.Score, Is.EqualTo(92.5));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(analysis.Strength, Is.EqualTo(PasswordStrength.Strong));
+            Assert.That(analysis.Description, Is.EqualTo("Strong password"));
+            Assert.That(analysis.Score, Is.EqualTo(92.5));
+        }
     }
 
     [Test]

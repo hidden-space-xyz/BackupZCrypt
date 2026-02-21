@@ -12,8 +12,11 @@ internal sealed class PathNormalizationHelperTests
             @"C:\temp\file.txt",
             out string? error);
 
-        Assert.That(error, Is.Null);
-        Assert.That(result, Is.Not.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(error, Is.Null);
+            Assert.That(result, Is.Not.Null);
+        }
         Assert.That(result, Does.Contain("file.txt"));
     }
 
@@ -22,8 +25,11 @@ internal sealed class PathNormalizationHelperTests
     {
         string? result = PathNormalizationHelper.TryNormalize(string.Empty, out string? error);
 
-        Assert.That(error, Is.Null);
-        Assert.That(result, Is.EqualTo(string.Empty));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(error, Is.Null);
+            Assert.That(result, Is.EqualTo(string.Empty));
+        }
     }
 
     [Test]
@@ -31,8 +37,11 @@ internal sealed class PathNormalizationHelperTests
     {
         string? result = PathNormalizationHelper.TryNormalize("   ", out string? error);
 
-        Assert.That(error, Is.Null);
-        Assert.That(result, Is.EqualTo(string.Empty));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(error, Is.Null);
+            Assert.That(result, Is.EqualTo(string.Empty));
+        }
     }
 
     [Test]
@@ -42,8 +51,11 @@ internal sealed class PathNormalizationHelperTests
             new string('\0', 5),
             out string? error);
 
-        Assert.That(result, Is.Null);
-        Assert.That(error, Is.Not.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result, Is.Null);
+            Assert.That(error, Is.Not.Null);
+        }
         Assert.That(error, Does.StartWith("Invalid path:"));
     }
 }
