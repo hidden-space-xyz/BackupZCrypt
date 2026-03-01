@@ -211,10 +211,10 @@
     <value>SHA-512</value>
   </data>
   <data name="Sha512Description" xml:space="preserve">
-    <value>Same as SHA-256 but generates a longer 128-character code, offering even stronger uniqueness guarantees. Use when you need maximum assurance that no two different files share a name.</value>
+    <value>Same as SHA-256 but generates a longer 50-character code, offering even stronger uniqueness guarantees. Use when you need maximum assurance that no two different files share a name.</value>
   </data>
   <data name="Sha512Summary" xml:space="preserve">
-    <value>Content-based name (128 characters, stronger)</value>
+    <value>Content-based name (50 characters, stronger)</value>
   </data>
   <data name="GuidDisplayName" xml:space="preserve">
     <value>GUID</value>

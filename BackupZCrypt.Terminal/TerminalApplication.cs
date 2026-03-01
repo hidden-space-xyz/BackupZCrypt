@@ -8,7 +8,6 @@ using Spectre.Console;
 
 internal sealed class TerminalApplication(
     EncryptCommand encryptCommand,
-    GeneratePasswordCommand generatePasswordCommand,
     AlgorithmInfoCommand algorithmInfoCommand)
 {
     public async Task RunAsync()
@@ -24,7 +23,6 @@ internal sealed class TerminalApplication(
                     .AddChoices(
                         Messages.MenuEncrypt,
                         Messages.MenuDecrypt,
-                        Messages.MenuGeneratePassword,
                         Messages.MenuAlgorithmInfo,
                         Messages.MenuExit));
 
@@ -35,10 +33,6 @@ internal sealed class TerminalApplication(
             else if (choice == Messages.MenuDecrypt)
             {
                 await encryptCommand.ExecuteAsync(EncryptOperation.Decrypt);
-            }
-            else if (choice == Messages.MenuGeneratePassword)
-            {
-                generatePasswordCommand.Execute();
             }
             else if (choice == Messages.MenuAlgorithmInfo)
             {

@@ -211,10 +211,10 @@
     <value>SHA-512</value>
   </data>
   <data name="Sha512Description" xml:space="preserve">
-    <value>Similar a SHA-256 pero genera un código más largo de 128 caracteres, ofreciendo garantías de unicidad aún más fuertes. Úselo cuando necesite máxima seguridad de que ningún archivo diferente comparta nombre.</value>
+    <value>Similar a SHA-256 pero genera un código más largo de 50 caracteres, ofreciendo garantías de unicidad aún más fuertes. Úselo cuando necesite máxima seguridad de que ningún archivo diferente comparta nombre.</value>
   </data>
   <data name="Sha512Summary" xml:space="preserve">
-    <value>Nombre basado en contenido (128 caracteres, más seguro)</value>
+    <value>Nombre basado en contenido (50 caracteres, más seguro)</value>
   </data>
   <data name="GuidDisplayName" xml:space="preserve">
     <value>GUID</value>

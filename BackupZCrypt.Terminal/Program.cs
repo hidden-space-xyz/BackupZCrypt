@@ -42,14 +42,12 @@ EncryptCommand encryptCommand = new(
     nameObfuscationStrategies,
     compressionStrategies);
 
-GeneratePasswordCommand generatePasswordCommand = new(passwordService);
-
 AlgorithmInfoCommand algorithmInfoCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
     compressionStrategies);
 
-TerminalApplication app = new(encryptCommand, generatePasswordCommand, algorithmInfoCommand);
+TerminalApplication app = new(encryptCommand, algorithmInfoCommand);
 
 await app.RunAsync();
