@@ -109,15 +109,68 @@ internal sealed class FileCryptDirectoryService(
             await fileOperations.CreateDirectoryAsync(destinationPath, cancellationToken);
         }
 
-        long totalBytes = filesToProcess.Sum(fileOperations.GetFileSize);
-        long processedBytes = 0;
-        int processedFiles = 0;
-
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
             StringComparer.OrdinalIgnoreCase);
 
+        List<(string SourceFilePath, string DestinationFilePath)> filesWithDestination = [];
+
+        if (request.Operation == EncryptOperation.Encrypt)
+        {
+            HashSet<string> uniqueDestinationPaths = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string file in filesToProcess)
+            {
+                string relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                string destinationFilePath = ObfuscateFullPath(
+                    sourcePath,
+                    file,
+                    relativePath,
+                    destinationPath,
+                    obfuscationService,
+                    directoryObfuscationCache);
+
+                if (!uniqueDestinationPaths.Add(destinationFilePath))
+                {
+                    continue;
+                }
+
+                filesWithDestination.Add((file, destinationFilePath));
+
+                string obfuscatedRelativePath = fileOperations.GetRelativePath(
+                    destinationPath,
+                    destinationFilePath);
+                manifestEntries.Add(new ManifestEntry(relativePath, obfuscatedRelativePath));
+            }
+        }
+        else
+        {
+            foreach (string file in filesToProcess)
+            {
+                string relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                string destinationFilePath = fileOperations.CombinePath(
+                    destinationPath,
+                    relativePath.Replace(FileCryptConstants.AppFileExtension, string.Empty));
+
+                if (
+                    manifestMap is not null
+                    && manifestMap.TryGetValue(relativePath, out string? originalRelativePath))
+                {
+                    destinationFilePath = fileOperations.CombinePath(
+                        destinationPath,
+                        originalRelativePath);
+                }
+
+                filesWithDestination.Add((file, destinationFilePath));
+            }
+        }
+
+        int totalFilesToProcess = filesWithDestination.Count;
+        long totalBytes = filesWithDestination.Sum(item => fileOperations.GetFileSize(item.SourceFilePath));
+        long processedBytes = 0;
+        int processedFiles = 0;
+
         progress?.Report(
-            new FileCryptStatus(0, filesToProcess.Length, 0, totalBytes, TimeSpan.Zero));
+            new FileCryptStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
 
         ConcurrentBag<string> errors = [];
         string? fatalError = null;
@@ -135,46 +188,12 @@ internal sealed class FileCryptDirectoryService(
         try
         {
             await Parallel.ForEachAsync(
-                filesToProcess,
+                filesWithDestination,
                 parallelOptions,
-                async (file, token) =>
+                async (fileItem, token) =>
                 {
-                    string relativePath = fileOperations.GetRelativePath(sourcePath, file);
-                    string destinationFilePath;
-
-                    if (request.Operation == EncryptOperation.Encrypt)
-                    {
-                        destinationFilePath = ObfuscateFullPath(
-                            sourcePath,
-                            file,
-                            relativePath,
-                            destinationPath,
-                            obfuscationService,
-                            directoryObfuscationCache);
-
-                        string obfuscatedRelativePath = fileOperations.GetRelativePath(
-                            destinationPath,
-                            destinationFilePath);
-                        manifestEntries.Add(
-                            new ManifestEntry(relativePath, obfuscatedRelativePath));
-                    }
-                    else
-                    {
-                        destinationFilePath = fileOperations.CombinePath(
-                            destinationPath,
-                            relativePath.Replace(FileCryptConstants.AppFileExtension, string.Empty));
-
-                        if (
-                            manifestMap is not null
-                            && manifestMap.TryGetValue(
-                                relativePath,
-                                out string? originalRelativePath))
-                        {
-                            destinationFilePath = fileOperations.CombinePath(
-                                destinationPath,
-                                originalRelativePath);
-                        }
-                    }
+                    string file = fileItem.SourceFilePath;
+                    string destinationFilePath = fileItem.DestinationFilePath;
 
                     string? destDir = fileOperations.GetDirectoryName(destinationFilePath);
                     if (!string.IsNullOrEmpty(destDir))
@@ -265,7 +284,7 @@ internal sealed class FileCryptDirectoryService(
                     progress?.Report(
                         new FileCryptStatus(
                             currentProcessedFiles,
-                            filesToProcess.Length,
+                            totalFilesToProcess,
                             currentProcessedBytes,
                             totalBytes,
                             stopwatch.Elapsed));
@@ -300,7 +319,7 @@ internal sealed class FileCryptDirectoryService(
         }
 
         stopwatch.Stop();
-        bool isSuccess = errorList.Count == 0 && processedFiles == filesToProcess.Length;
+        bool isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
 
         return errorList.Count > 0 && processedFiles == 0
             ? Result<FileCryptResult>.Failure(
@@ -311,7 +330,7 @@ internal sealed class FileCryptDirectoryService(
                     stopwatch.Elapsed,
                     totalBytes,
                     processedFiles,
-                    filesToProcess.Length,
+                    totalFilesToProcess,
                     errors: errorList));
     }
 
