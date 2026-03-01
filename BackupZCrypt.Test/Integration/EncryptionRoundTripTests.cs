@@ -20,7 +20,7 @@ internal sealed class EncryptionRoundTripTests
     public async Task CreateEncryptedFileAndReadBack_RoundTrip(EncryptionAlgorithm algorithm)
     {
         byte[] plaintext = Encoding.UTF8.GetBytes("In-memory plaintext data for testing");
-        string encryptedFile = Path.Combine(this.testDir, $"inmem-{algorithm}.czc");
+        string encryptedFile = Path.Combine(this.testDir, $"inmem-{algorithm}.bzc");
         const string password = "TestP@ssw0rd!Str0ng";
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
@@ -43,7 +43,7 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public void DecryptFile_CorruptedFile_ThrowsEncryptionCorruptedFileException()
     {
-        string corruptedFile = Path.Combine(this.testDir, "corrupted.czc");
+        string corruptedFile = Path.Combine(this.testDir, "corrupted.bzc");
         File.WriteAllBytes(corruptedFile, [1, 2, 3]);
         string dest = Path.Combine(this.testDir, "out.txt");
 
@@ -61,7 +61,7 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public void DecryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
     {
-        string nonExistent = Path.Combine(this.testDir, "nonexistent.czc");
+        string nonExistent = Path.Combine(this.testDir, "nonexistent.bzc");
         string dest = Path.Combine(this.testDir, "out.txt");
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
@@ -79,7 +79,7 @@ internal sealed class EncryptionRoundTripTests
     public async Task DecryptFile_WrongPassword_ThrowsEncryptionInvalidPasswordException()
     {
         string sourceFile = this.CreateTestFile("wrong-pass.txt", "secret data");
-        string encryptedFile = Path.Combine(this.testDir, "wrong-pass.czc");
+        string encryptedFile = Path.Combine(this.testDir, "wrong-pass.bzc");
         string decryptedFile = Path.Combine(this.testDir, "wrong-pass-out.txt");
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
@@ -115,7 +115,7 @@ internal sealed class EncryptionRoundTripTests
     {
         const string originalContent = "This is a test file for encryption round trip!";
         string sourceFile = this.CreateTestFile("original.txt", originalContent);
-        string encryptedFile = Path.Combine(this.testDir, "encrypted.czc");
+        string encryptedFile = Path.Combine(this.testDir, "encrypted.bzc");
         string decryptedFile = Path.Combine(this.testDir, "decrypted.txt");
         const string password = "TestP@ssw0rd!Str0ng";
 
@@ -160,7 +160,7 @@ internal sealed class EncryptionRoundTripTests
     {
         string originalContent = string.Concat(Enumerable.Repeat("Compressible data block. ", 200));
         string sourceFile = this.CreateTestFile($"compress-test-{compression}.txt", originalContent);
-        string encryptedFile = Path.Combine(this.testDir, $"encrypted-{compression}.czc");
+        string encryptedFile = Path.Combine(this.testDir, $"encrypted-{compression}.bzc");
         string decryptedFile = Path.Combine(this.testDir, $"decrypted-{compression}.txt");
         const string password = "TestP@ssw0rd!Str0ng";
 
@@ -193,7 +193,7 @@ internal sealed class EncryptionRoundTripTests
         string sourceFile = Path.Combine(this.testDir, "large.bin");
         await File.WriteAllBytesAsync(sourceFile, largeData);
 
-        string encryptedFile = Path.Combine(this.testDir, "large.czc");
+        string encryptedFile = Path.Combine(this.testDir, "large.bzc");
         string decryptedFile = Path.Combine(this.testDir, "large-decrypted.bin");
         const string password = "TestP@ssw0rd!Str0ng";
 
@@ -219,7 +219,7 @@ internal sealed class EncryptionRoundTripTests
     public void EncryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
     {
         string nonExistent = Path.Combine(this.testDir, "nonexistent.txt");
-        string dest = Path.Combine(this.testDir, "out.czc");
+        string dest = Path.Combine(this.testDir, "out.bzc");
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 

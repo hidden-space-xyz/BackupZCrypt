@@ -55,7 +55,7 @@ internal sealed class FileCryptSingleFileServiceTests
             .Returns(true);
 
         Result<FileCryptResult> result = await service.ProcessAsync(
-            @"C:\source\file.czc",
+            @"C:\source\file.bzc",
             @"C:\dest\file.txt",
             CreateRequest(EncryptOperation.Decrypt),
             progress,
@@ -73,10 +73,10 @@ internal sealed class FileCryptSingleFileServiceTests
     {
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
-        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\obfuscated.czc");
+        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\obfuscated.bzc");
         this.obfuscationStrategy
             .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
-            .Returns("obfuscated.czc");
+            .Returns("obfuscated.bzc");
         this.encryptionStrategy
             .EncryptFileAsync(
                 Arg.Any<string>(),
@@ -88,7 +88,7 @@ internal sealed class FileCryptSingleFileServiceTests
 
         await service.ProcessAsync(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             CreateRequest(),
             progress,
             CancellationToken.None);
@@ -101,10 +101,10 @@ internal sealed class FileCryptSingleFileServiceTests
     {
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
-        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
+        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.bzc");
         this.obfuscationStrategy
             .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
-            .Returns("file.czc");
+            .Returns("file.bzc");
         this.encryptionStrategy
             .EncryptFileAsync(
                 Arg.Any<string>(),
@@ -116,7 +116,7 @@ internal sealed class FileCryptSingleFileServiceTests
 
         Result<FileCryptResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             CreateRequest(),
             progress,
             CancellationToken.None);
@@ -135,10 +135,10 @@ internal sealed class FileCryptSingleFileServiceTests
     {
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
-        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
+        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.bzc");
         this.obfuscationStrategy
             .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
-            .Returns("file.czc");
+            .Returns("file.bzc");
         this.encryptionStrategy
             .EncryptFileAsync(
                 Arg.Any<string>(),
@@ -150,7 +150,7 @@ internal sealed class FileCryptSingleFileServiceTests
 
         Result<FileCryptResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             CreateRequest(),
             progress,
             CancellationToken.None);
@@ -163,10 +163,10 @@ internal sealed class FileCryptSingleFileServiceTests
     {
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
-        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.czc");
+        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.bzc");
         this.obfuscationStrategy
             .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
-            .Returns("file.czc");
+            .Returns("file.bzc");
         this.encryptionStrategy
             .EncryptFileAsync(
                 Arg.Any<string>(),
@@ -178,7 +178,7 @@ internal sealed class FileCryptSingleFileServiceTests
 
         await service.ProcessAsync(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             CreateRequest(),
             progress,
             CancellationToken.None);
@@ -211,7 +211,7 @@ internal sealed class FileCryptSingleFileServiceTests
         EncryptOperation operation = EncryptOperation.Encrypt) =>
         new(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             "StrongP@ss1",
             "StrongP@ss1",
             EncryptionAlgorithm.Aes,

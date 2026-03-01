@@ -13,7 +13,7 @@ internal sealed class ManifestService : IManifestService
 {
     private const int PreambleSize = 2;
 
-    private static string AppFileExtension => ".czc";
+    private static string AppFileExtension => ".bzc";
 
     private static string ManifestFileName => "manifest" + AppFileExtension;
 
@@ -137,7 +137,7 @@ internal sealed class ManifestService : IManifestService
     {
         string tempEncryptedPath = Path.Combine(
             Path.GetTempPath(),
-            $"czc-manifest-{Guid.NewGuid():N}.czc");
+            $"bzc-manifest-{Guid.NewGuid():N}.bzc");
 
         try
         {

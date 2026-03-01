@@ -6,15 +6,15 @@ using BackupZCrypt.Domain.Constants;
 internal sealed class FileCryptConstantsTests
 {
     [Test]
-    public void AppFileExtension_IsCzc()
+    public void AppFileExtension_IsBzc()
     {
-        Assert.That(FileCryptConstants.AppFileExtension, Is.EqualTo(".czc"));
+        Assert.That(FileCryptConstants.AppFileExtension, Is.EqualTo(".bzc"));
     }
 
     [Test]
     public void ManifestFileName_ContainsExtension()
     {
-        Assert.That(FileCryptConstants.ManifestFileName, Is.EqualTo("manifest.czc"));
+        Assert.That(FileCryptConstants.ManifestFileName, Is.EqualTo("manifest.bzc"));
     }
 
     [Test]

@@ -198,7 +198,7 @@ internal sealed class FileCryptRequestValidatorTests
 
     private static FileCryptRequest CreateRequest(
         string source = @"C:\source\file.txt",
-        string dest = @"C:\dest\file.czc",
+        string dest = @"C:\dest\file.bzc",
         string password = "StrongP@ss1",
         string confirmPassword = "StrongP@ss1",
         EncryptOperation operation = EncryptOperation.Encrypt) =>

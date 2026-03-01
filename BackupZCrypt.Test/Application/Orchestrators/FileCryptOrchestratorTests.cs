@@ -262,7 +262,7 @@ internal sealed class FileCryptOrchestratorTests
     private static FileCryptRequest CreateRequest() =>
         new(
             @"C:\source\file.txt",
-            @"C:\dest\file.czc",
+            @"C:\dest\file.bzc",
             "StrongP@ss1",
             "StrongP@ss1",
             EncryptionAlgorithm.Aes,

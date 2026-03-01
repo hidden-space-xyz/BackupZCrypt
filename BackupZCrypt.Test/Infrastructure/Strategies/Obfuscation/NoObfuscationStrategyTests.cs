@@ -47,10 +47,10 @@ internal sealed class NoObfuscationStrategyTests
     }
 
     [Test]
-    public void ObfuscateFileName_WithCzcExtension_ReturnsOriginalName()
+    public void ObfuscateFileName_WithBzcExtension_ReturnsOriginalName()
     {
-        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt.czc");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.txt.bzc");
 
-        Assert.That(result, Is.EqualTo("file.txt.czc"));
+        Assert.That(result, Is.EqualTo("file.txt.bzc"));
     }
 }

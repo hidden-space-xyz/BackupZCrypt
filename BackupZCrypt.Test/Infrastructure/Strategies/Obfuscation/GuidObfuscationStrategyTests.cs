@@ -41,9 +41,9 @@ internal sealed class GuidObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_ReturnsGuidWithExtension()
     {
-        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
+        string result = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.bzc");
 
-        Assert.That(result, Does.EndWith(".czc"));
+        Assert.That(result, Does.EndWith(".bzc"));
         string guidPart = Path.GetFileNameWithoutExtension(result);
         Assert.That(Guid.TryParse(guidPart, out _), Is.True);
     }
@@ -59,8 +59,8 @@ internal sealed class GuidObfuscationStrategyTests
     [Test]
     public void ObfuscateFileName_DifferentCallsProduceDifferentNames()
     {
-        string result1 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
-        string result2 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.czc");
+        string result1 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.bzc");
+        string result2 = this.strategy.ObfuscateFileName(@"C:\source\file.txt", "file.bzc");
 
         Assert.That(result1, Is.Not.EqualTo(result2));
     }

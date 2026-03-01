@@ -50,7 +50,7 @@ internal sealed class OrchestratorIntegrationTests
         string sourceFile = Path.Combine(this.sourceDir, "test.txt");
         await File.WriteAllTextAsync(sourceFile, originalContent);
 
-        string encryptedFile = Path.Combine(this.destDir, "test.czc");
+        string encryptedFile = Path.Combine(this.destDir, "test.bzc");
         const string password = "IntegrationP@ss1";
 
         FileCryptRequest encryptRequest = new(
@@ -110,7 +110,7 @@ internal sealed class OrchestratorIntegrationTests
     {
         string sourceFile = Path.Combine(this.sourceDir, "test.txt");
         await File.WriteAllTextAsync(sourceFile, "content");
-        string destFile = Path.Combine(this.destDir, "test.czc");
+        string destFile = Path.Combine(this.destDir, "test.bzc");
 
         FileCryptRequest request = new(
             sourceFile,
@@ -137,7 +137,7 @@ internal sealed class OrchestratorIntegrationTests
     {
         string sourceFile = Path.Combine(this.sourceDir, "test.txt");
         await File.WriteAllTextAsync(sourceFile, "content");
-        string destFile = Path.Combine(this.destDir, "test.czc");
+        string destFile = Path.Combine(this.destDir, "test.bzc");
 
         FileCryptRequest request = new(
             sourceFile,
@@ -163,7 +163,7 @@ internal sealed class OrchestratorIntegrationTests
     public async Task ExecuteAsync_SourceNotFound_ReturnsErrors()
     {
         string nonExistent = Path.Combine(this.sourceDir, "nonexistent.txt");
-        string destFile = Path.Combine(this.destDir, "out.czc");
+        string destFile = Path.Combine(this.destDir, "out.bzc");
 
         FileCryptRequest request = new(
             nonExistent,

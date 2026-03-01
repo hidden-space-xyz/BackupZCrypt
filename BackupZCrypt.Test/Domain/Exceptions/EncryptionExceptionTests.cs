@@ -55,12 +55,12 @@ internal sealed class EncryptionExceptionTests
     [Test]
     public void EncryptionCorruptedFileException_SetsCode()
     {
-        EncryptionCorruptedFileException ex = new("corrupted.czc");
+        EncryptionCorruptedFileException ex = new("corrupted.bzc");
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileCorruption));
-            Assert.That(ex.Message, Does.Contain("corrupted.czc"));
+            Assert.That(ex.Message, Does.Contain("corrupted.bzc"));
         }
     }
 

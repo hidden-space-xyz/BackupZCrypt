@@ -23,12 +23,12 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_DecryptionFails_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
             byte[] preamble = [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.Argon2id];
             byte[] fakeEncryptedContent = [1, 2, 3];
             await File.WriteAllBytesAsync(manifestPath, [.. preamble, .. fakeEncryptedContent]);
@@ -62,7 +62,7 @@ internal sealed class ManifestServiceTests
     {
         IEncryptionAlgorithmStrategy encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -84,12 +84,12 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_FileTooShortForPreamble_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
             await File.WriteAllBytesAsync(manifestPath, [1]);
 
             IEncryptionAlgorithmStrategy encryptionService =
@@ -112,12 +112,12 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_NoMatchingStrategy_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
             byte[] preamble = [(byte)EncryptionAlgorithm.ChaCha20, (byte)KeyDerivationAlgorithm.Argon2id];
             await File.WriteAllBytesAsync(manifestPath, [.. preamble, 1, 2, 3]);
 
@@ -170,12 +170,12 @@ internal sealed class ManifestServiceTests
                 Arg.Any<CompressionMode>())
             .Returns(false);
 
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            List<ManifestEntry> entries = [new("original.txt", "obfuscated.czc")];
+            List<ManifestEntry> entries = [new("original.txt", "obfuscated.bzc")];
 
             IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,
@@ -208,12 +208,12 @@ internal sealed class ManifestServiceTests
                 Arg.Any<CompressionMode>())
             .ThrowsAsync(new IOException("disk error"));
 
-        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            List<ManifestEntry> entries = [new("a.txt", "b.czc")];
+            List<ManifestEntry> entries = [new("a.txt", "b.bzc")];
 
             IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,
