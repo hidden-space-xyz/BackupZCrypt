@@ -11,6 +11,8 @@ using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
 internal sealed class ManifestService : IManifestService
 {
+    private const int PreambleSize = 2;
+
     private static string AppFileExtension => ".czc";
 
     private static string ManifestFileName => "manifest" + AppFileExtension;
@@ -29,24 +31,30 @@ internal sealed class ManifestService : IManifestService
                 return null;
             }
 
-            foreach (IEncryptionAlgorithmStrategy strategy in encryptionStrategies)
+            byte[] rawFile = await File.ReadAllBytesAsync(
+                encryptedManifestPath,
+                cancellationToken);
+            if (rawFile.Length < PreambleSize)
             {
-                foreach (KeyDerivationAlgorithm kdf in Enum.GetValues<KeyDerivationAlgorithm>())
-                {
-                    ManifestData? result = await TryReadWithStrategyAsync(
-                        encryptedManifestPath,
-                        strategy,
-                        password,
-                        kdf,
-                        cancellationToken);
-                    if (result is not null)
-                    {
-                        return result;
-                    }
-                }
+                return null;
             }
 
-            return null;
+            EncryptionAlgorithm algorithm = (EncryptionAlgorithm)rawFile[0];
+            KeyDerivationAlgorithm kdf = (KeyDerivationAlgorithm)rawFile[1];
+
+            IEncryptionAlgorithmStrategy? strategy = encryptionStrategies
+                .FirstOrDefault(s => s.Id == algorithm);
+            if (strategy is null)
+            {
+                return null;
+            }
+
+            return await TryReadWithStrategyAsync(
+                rawFile.AsMemory(PreambleSize),
+                strategy,
+                password,
+                kdf,
+                cancellationToken);
         }
         catch
         {
@@ -90,6 +98,14 @@ internal sealed class ManifestService : IManifestService
                 errors.Add(
                     string.Format(Messages.ManifestCreateFailedFormat, encryptedManifestPath));
             }
+            else
+            {
+                await PrependPreambleAsync(
+                    encryptedManifestPath,
+                    header.EncryptionAlgorithm,
+                    header.KeyDerivationAlgorithm,
+                    cancellationToken);
+            }
         }
         catch (Exception ex)
         {
@@ -99,34 +115,44 @@ internal sealed class ManifestService : IManifestService
         return errors;
     }
 
+    private static async Task PrependPreambleAsync(
+        string filePath,
+        EncryptionAlgorithm algorithm,
+        KeyDerivationAlgorithm kdf,
+        CancellationToken cancellationToken)
+    {
+        byte[] encryptedContent = await File.ReadAllBytesAsync(filePath, cancellationToken);
+        await using FileStream fs = new(filePath, FileMode.Create, FileAccess.Write);
+        byte[] preamble = [(byte)algorithm, (byte)kdf];
+        await fs.WriteAsync(preamble, cancellationToken);
+        await fs.WriteAsync(encryptedContent, cancellationToken);
+    }
+
     private static async Task<ManifestData?> TryReadWithStrategyAsync(
-        string encryptedManifestPath,
+        ReadOnlyMemory<byte> encryptedContent,
         IEncryptionAlgorithmStrategy encryptionService,
         string password,
         KeyDerivationAlgorithm kdf,
         CancellationToken cancellationToken)
     {
-        string tempJsonPath = Path.Combine(
+        string tempEncryptedPath = Path.Combine(
             Path.GetTempPath(),
-            $"czc-manifest-{Guid.NewGuid():N}.json");
+            $"czc-manifest-{Guid.NewGuid():N}.czc");
 
         try
         {
-            bool ok = await encryptionService.DecryptFileAsync(
-                encryptedManifestPath,
-                tempJsonPath,
+            await File.WriteAllBytesAsync(
+                tempEncryptedPath,
+                encryptedContent.ToArray(),
+                cancellationToken);
+
+            byte[] plaintext = await encryptionService.ReadEncryptedFileAsync(
+                tempEncryptedPath,
                 password,
                 kdf,
                 cancellationToken);
-            if (!ok)
-            {
-                return null;
-            }
 
-            await using FileStream fs = File.OpenRead(tempJsonPath);
-            ManifestDocument? doc = await JsonSerializer.DeserializeAsync<ManifestDocument>(
-                fs,
-                cancellationToken: cancellationToken);
+            ManifestDocument? doc = JsonSerializer.Deserialize<ManifestDocument>(plaintext);
 
             if (doc is null)
             {
@@ -155,9 +181,9 @@ internal sealed class ManifestService : IManifestService
         {
             try
             {
-                if (File.Exists(tempJsonPath))
+                if (File.Exists(tempEncryptedPath))
                 {
-                    File.Delete(tempJsonPath);
+                    File.Delete(tempEncryptedPath);
                 }
             }
             catch

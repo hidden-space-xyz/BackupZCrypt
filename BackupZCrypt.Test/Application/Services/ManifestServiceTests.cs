@@ -29,17 +29,19 @@ internal sealed class ManifestServiceTests
         try
         {
             string manifestPath = Path.Combine(tempDir, "manifest.czc");
-            await File.WriteAllBytesAsync(manifestPath, [1, 2, 3]);
+            byte[] preamble = [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.Argon2id];
+            byte[] fakeEncryptedContent = [1, 2, 3];
+            await File.WriteAllBytesAsync(manifestPath, [.. preamble, .. fakeEncryptedContent]);
 
             IEncryptionAlgorithmStrategy encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
+            encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
             encryptionService
-                .DecryptFileAsync(
-                    Arg.Any<string>(),
+                .ReadEncryptedFileAsync(
                     Arg.Any<string>(),
                     Arg.Any<string>(),
                     Arg.Any<KeyDerivationAlgorithm>())
-                .Returns(false);
+                .ThrowsAsync(new InvalidOperationException("decryption failed"));
 
             ManifestData? result = await service.TryReadManifestAsync(
                 tempDir,
@@ -65,6 +67,64 @@ internal sealed class ManifestServiceTests
 
         try
         {
+            ManifestData? result = await service.TryReadManifestAsync(
+                tempDir,
+                [encryptionService],
+                "StrongP@ss1",
+                CancellationToken.None);
+
+            Assert.That(result, Is.Null);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task TryReadManifestAsync_FileTooShortForPreamble_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            await File.WriteAllBytesAsync(manifestPath, [1]);
+
+            IEncryptionAlgorithmStrategy encryptionService =
+                Substitute.For<IEncryptionAlgorithmStrategy>();
+
+            ManifestData? result = await service.TryReadManifestAsync(
+                tempDir,
+                [encryptionService],
+                "StrongP@ss1",
+                CancellationToken.None);
+
+            Assert.That(result, Is.Null);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task TryReadManifestAsync_NoMatchingStrategy_ReturnsNull()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"czc-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string manifestPath = Path.Combine(tempDir, "manifest.czc");
+            byte[] preamble = [(byte)EncryptionAlgorithm.ChaCha20, (byte)KeyDerivationAlgorithm.Argon2id];
+            await File.WriteAllBytesAsync(manifestPath, [.. preamble, 1, 2, 3]);
+
+            IEncryptionAlgorithmStrategy encryptionService =
+                Substitute.For<IEncryptionAlgorithmStrategy>();
+            encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
+
             ManifestData? result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
