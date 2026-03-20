@@ -7,7 +7,7 @@ using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 internal sealed class TerminalApplication(
-    EncryptCommand encryptCommand,
+    BackupCommand backupCommand,
     AlgorithmInfoCommand algorithmInfoCommand)
 {
     public async Task RunAsync()
@@ -21,18 +21,18 @@ internal sealed class TerminalApplication(
                 new SelectionPrompt<string>()
                     .HighlightStyle(Style.Parse("bold cyan"))
                     .AddChoices(
-                        Messages.MenuEncrypt,
-                        Messages.MenuDecrypt,
+                        Messages.MenuCreateBackup,
+                        Messages.MenuRestoreBackup,
                         Messages.MenuAlgorithmInfo,
                         Messages.MenuExit));
 
-            if (choice == Messages.MenuEncrypt)
+            if (choice == Messages.MenuCreateBackup)
             {
-                await encryptCommand.ExecuteAsync(EncryptOperation.Encrypt);
+                await backupCommand.ExecuteAsync(EncryptOperation.Encrypt);
             }
-            else if (choice == Messages.MenuDecrypt)
+            else if (choice == Messages.MenuRestoreBackup)
             {
-                await encryptCommand.ExecuteAsync(EncryptOperation.Decrypt);
+                await backupCommand.ExecuteAsync(EncryptOperation.Decrypt);
             }
             else if (choice == Messages.MenuAlgorithmInfo)
             {

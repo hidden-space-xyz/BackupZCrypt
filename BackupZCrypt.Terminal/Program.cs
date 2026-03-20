@@ -34,7 +34,7 @@ List<ICompressionStrategy> compressionStrategies =
     .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
 ];
 
-EncryptCommand encryptCommand = new(
+BackupCommand backupCommand = new(
     orchestrator,
     passwordService,
     encryptionStrategies,
@@ -48,6 +48,6 @@ AlgorithmInfoCommand algorithmInfoCommand = new(
     nameObfuscationStrategies,
     compressionStrategies);
 
-TerminalApplication app = new(encryptCommand, algorithmInfoCommand);
+TerminalApplication app = new(backupCommand, algorithmInfoCommand);
 
 await app.RunAsync();

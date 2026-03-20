@@ -79,7 +79,16 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a A simple military-grade file encryption tool.
+        ///   Busca una cadena traducida similar a Is the backup encrypted?.
+        /// </summary>
+        internal static string BackupEncryptedPrompt {
+            get {
+                return ResourceManager.GetString("BackupEncryptedPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a A simple military-grade file backup tool.
         /// </summary>
         internal static string BannerSubtitle {
             get {
@@ -138,6 +147,24 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string CompressionModes {
             get {
                 return ResourceManager.GetString("CompressionModes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Copying.
+        /// </summary>
+        internal static string Copying {
+            get {
+                return ResourceManager.GetString("Copying", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Create Backup.
+        /// </summary>
+        internal static string CreateBackup {
+            get {
+                return ResourceManager.GetString("CreateBackup", resourceCulture);
             }
         }
         
@@ -246,6 +273,15 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string EncryptionAlgorithms {
             get {
                 return ResourceManager.GetString("EncryptionAlgorithms", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Do you want to encrypt the backup?.
+        /// </summary>
+        internal static string EncryptBackupPrompt {
+            get {
+                return ResourceManager.GetString("EncryptBackupPrompt", resourceCulture);
             }
         }
         
@@ -376,20 +412,20 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a 🔓 Decrypt.
+        ///   Busca una cadena traducida similar a 📂 Restore Backup.
         /// </summary>
-        internal static string MenuDecrypt {
+        internal static string MenuRestoreBackup {
             get {
-                return ResourceManager.GetString("MenuDecrypt", resourceCulture);
+                return ResourceManager.GetString("MenuRestoreBackup", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a 🔒 Encrypt.
+        ///   Busca una cadena traducida similar a 💾 Create Backup.
         /// </summary>
-        internal static string MenuEncrypt {
+        internal static string MenuCreateBackup {
             get {
-                return ResourceManager.GetString("MenuEncrypt", resourceCulture);
+                return ResourceManager.GetString("MenuCreateBackup", resourceCulture);
             }
         }
         
@@ -651,6 +687,15 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string ProceedConfirmFormat {
             get {
                 return ResourceManager.GetString("ProceedConfirmFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Restore Backup.
+        /// </summary>
+        internal static string RestoreBackup {
+            get {
+                return ResourceManager.GetString("RestoreBackup", resourceCulture);
             }
         }
         
