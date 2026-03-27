@@ -231,4 +231,10 @@
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
     <value>Failed to write or encrypt manifest: {0}</value>
   </data>
+  <data name="CompressionErrorFormat" xml:space="preserve">
+    <value>Compression error for file: {0} - {1}</value>
+  </data>
+  <data name="InvalidCompressedFileFormat" xml:space="preserve">
+    <value>Invalid or corrupted compressed file: {0}</value>
+  </data>
 </root>

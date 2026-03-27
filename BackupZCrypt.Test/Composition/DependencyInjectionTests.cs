@@ -164,7 +164,6 @@ internal sealed class DependencyInjectionTests
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
     }
 
-    [TestCase(CompressionMode.None)]
     [TestCase(CompressionMode.GZip)]
     [TestCase(CompressionMode.BZip2)]
     [TestCase(CompressionMode.LZMA)]
@@ -179,7 +178,6 @@ internal sealed class DependencyInjectionTests
         Assert.That(strategy.Id, Is.EqualTo(mode));
     }
 
-    [TestCase(NameObfuscationMode.None)]
     [TestCase(NameObfuscationMode.Guid)]
     [TestCase(NameObfuscationMode.Sha256)]
     [TestCase(NameObfuscationMode.Sha512)]

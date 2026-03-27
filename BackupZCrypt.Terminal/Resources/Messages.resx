@@ -375,4 +375,19 @@
   <data name="Copying" xml:space="preserve">
     <value>Copying</value>
   </data>
+  <data name="CompressBackupPrompt" xml:space="preserve">
+    <value>Do you want to compress the backup?</value>
+  </data>
+  <data name="BackupCompressedPrompt" xml:space="preserve">
+    <value>Is the backup compressed?</value>
+  </data>
+  <data name="Compressing" xml:space="preserve">
+    <value>Compressing</value>
+  </data>
+  <data name="Decompressing" xml:space="preserve">
+    <value>Decompressing</value>
+  </data>
+  <data name="ObfuscateNamesPrompt" xml:space="preserve">
+    <value>Do you want to obfuscate file names?</value>
+  </data>
 </root>

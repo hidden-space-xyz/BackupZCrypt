@@ -46,18 +46,31 @@ internal abstract class EncryptionStrategyBase(
 
             await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
 
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                compression);
-            await using Stream compressedSource = await compressionStrategy.CompressAsync(
-                sourceFile,
-                cancellationToken);
-            await EncryptStreamAsync(
-                compressedSource,
-                destinationFile,
-                session.Key,
-                session.Nonce,
-                session.AssociatedData,
-                cancellationToken);
+            if (compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    compression);
+                await using Stream compressedSource = await compressionStrategy.CompressAsync(
+                    sourceFile,
+                    cancellationToken);
+                await EncryptStreamAsync(
+                    compressedSource,
+                    destinationFile,
+                    session.Key,
+                    session.Nonce,
+                    session.AssociatedData,
+                    cancellationToken);
+            }
+            else
+            {
+                await EncryptStreamAsync(
+                    sourceFile,
+                    destinationFile,
+                    session.Key,
+                    session.Nonce,
+                    session.AssociatedData,
+                    cancellationToken);
+            }
 
             return true;
         }
@@ -120,15 +133,30 @@ internal abstract class EncryptionStrategyBase(
                 cancellationToken);
             decryptedBuffer.Position = 0;
 
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                session.Compression);
-            await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
-                decryptedBuffer,
-                cancellationToken);
+            if (session.Compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    session.Compression);
+                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                    decryptedBuffer,
+                    cancellationToken);
 
-            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
-                destinationFilePath);
-            await decompressedStream.CopyToAsync(destinationFile, BufferSize, cancellationToken);
+                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                    destinationFilePath);
+                await decompressedStream.CopyToAsync(
+                    destinationFile,
+                    BufferSize,
+                    cancellationToken);
+            }
+            else
+            {
+                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                    destinationFilePath);
+                await decryptedBuffer.CopyToAsync(
+                    destinationFile,
+                    BufferSize,
+                    cancellationToken);
+            }
 
             return true;
         }
@@ -198,18 +226,32 @@ internal abstract class EncryptionStrategyBase(
             await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
 
             await using Stream source = new MemoryStream(plaintextData, writable: false);
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                compression);
-            await using Stream compressedSource = await compressionStrategy.CompressAsync(
-                source,
-                cancellationToken);
-            await EncryptStreamAsync(
-                compressedSource,
-                destinationFile,
-                session.Key,
-                session.Nonce,
-                session.AssociatedData,
-                cancellationToken);
+
+            if (compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    compression);
+                await using Stream compressedSource = await compressionStrategy.CompressAsync(
+                    source,
+                    cancellationToken);
+                await EncryptStreamAsync(
+                    compressedSource,
+                    destinationFile,
+                    session.Key,
+                    session.Nonce,
+                    session.AssociatedData,
+                    cancellationToken);
+            }
+            else
+            {
+                await EncryptStreamAsync(
+                    source,
+                    destinationFile,
+                    session.Key,
+                    session.Nonce,
+                    session.AssociatedData,
+                    cancellationToken);
+            }
         }
         catch (EncryptionException)
         {
@@ -269,13 +311,21 @@ internal abstract class EncryptionStrategyBase(
                 cancellationToken);
             decryptedBuffer.Position = 0;
 
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                session.Compression);
-            await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
-                decryptedBuffer,
-                cancellationToken);
             await using MemoryStream resultBuffer = new();
-            await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
+
+            if (session.Compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    session.Compression);
+                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                    decryptedBuffer,
+                    cancellationToken);
+                await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
+            }
+            else
+            {
+                await decryptedBuffer.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
+            }
             return resultBuffer.ToArray();
         }
         catch (InvalidCipherTextException)

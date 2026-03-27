@@ -89,7 +89,7 @@ internal sealed class FileCryptSingleFileServiceTests
         await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
-            CreateRequest(),
+            CreateRequest(NameObfuscation: NameObfuscationMode.Guid),
             progress,
             CancellationToken.None);
 
@@ -201,14 +201,18 @@ internal sealed class FileCryptSingleFileServiceTests
 
         this.progress = Substitute.For<IProgress<FileCryptStatus>>();
 
+        ICompressionServiceFactory compressionFactory = Substitute.For<ICompressionServiceFactory>();
+
         this.service = new FileCryptSingleFileService(
             this.encryptionFactory,
+            compressionFactory,
             this.obfuscationFactory,
             this.fileOps);
     }
 
     private static FileCryptRequest CreateRequest(
-        EncryptOperation operation = EncryptOperation.Encrypt) =>
+        EncryptOperation operation = EncryptOperation.Encrypt,
+        NameObfuscationMode NameObfuscation = NameObfuscationMode.None) =>
         new(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
@@ -217,5 +221,5 @@ internal sealed class FileCryptSingleFileServiceTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
             operation,
-            NameObfuscationMode.None);
+            NameObfuscation);
 }

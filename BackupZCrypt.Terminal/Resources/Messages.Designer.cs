@@ -833,5 +833,50 @@ namespace BackupZCrypt.Terminal.Resources {
                 return ResourceManager.GetString("WarningsLabel", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Do you want to compress the backup?.
+        /// </summary>
+        internal static string CompressBackupPrompt {
+            get {
+                return ResourceManager.GetString("CompressBackupPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Is the backup compressed?.
+        /// </summary>
+        internal static string BackupCompressedPrompt {
+            get {
+                return ResourceManager.GetString("BackupCompressedPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Compressing.
+        /// </summary>
+        internal static string Compressing {
+            get {
+                return ResourceManager.GetString("Compressing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Decompressing.
+        /// </summary>
+        internal static string Decompressing {
+            get {
+                return ResourceManager.GetString("Decompressing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Do you want to obfuscate file names?.
+        /// </summary>
+        internal static string ObfuscateNamesPrompt {
+            get {
+                return ResourceManager.GetString("ObfuscateNamesPrompt", resourceCulture);
+            }
+        }
     }
 }

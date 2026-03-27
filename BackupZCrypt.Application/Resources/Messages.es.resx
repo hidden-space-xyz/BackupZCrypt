@@ -231,4 +231,10 @@
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
     <value>No se pudo escribir o cifrar el manifiesto: {0}</value>
   </data>
+  <data name="CompressionErrorFormat" xml:space="preserve">
+    <value>Error de compresión en el archivo: {0} - {1}</value>
+  </data>
+  <data name="InvalidCompressedFileFormat" xml:space="preserve">
+    <value>Archivo comprimido inválido o corrupto: {0}</value>
+  </data>
 </root>

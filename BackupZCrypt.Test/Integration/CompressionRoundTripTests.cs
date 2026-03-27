@@ -25,7 +25,6 @@ internal sealed class CompressionRoundTripTests
         this.provider.Dispose();
     }
 
-    [TestCase(CompressionMode.None)]
     [TestCase(CompressionMode.GZip)]
     [TestCase(CompressionMode.BZip2)]
     public async Task AllCompressionStrategies_RoundTrip_PreservesData(CompressionMode mode)
@@ -72,7 +71,6 @@ internal sealed class CompressionRoundTripTests
             $"{mode} should compress highly repetitive data");
     }
 
-    [TestCase(CompressionMode.None)]
     [TestCase(CompressionMode.GZip)]
     [TestCase(CompressionMode.BZip2)]
     public async Task AllStrategies_EmptyInput_RoundTrip(CompressionMode mode)
@@ -94,7 +92,6 @@ internal sealed class CompressionRoundTripTests
         Assert.That(resultStream.ToArray(), Is.Empty);
     }
 
-    [TestCase(CompressionMode.None)]
     [TestCase(CompressionMode.GZip)]
     [TestCase(CompressionMode.BZip2)]
     [TestCase(CompressionMode.LZMA)]

@@ -635,5 +635,23 @@ namespace BackupZCrypt.Application.Resources {
                 return ResourceManager.GetString("WeakPasswordWarning", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Compression error for file '{0}': {1}.
+        /// </summary>
+        public static string CompressionErrorFormat {
+            get {
+                return ResourceManager.GetString("CompressionErrorFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Invalid compressed file format: {0}.
+        /// </summary>
+        public static string InvalidCompressedFileFormat {
+            get {
+                return ResourceManager.GetString("InvalidCompressedFileFormat", resourceCulture);
+            }
+        }
     }
 }

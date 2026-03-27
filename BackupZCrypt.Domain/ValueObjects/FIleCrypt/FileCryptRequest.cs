@@ -12,4 +12,5 @@ public sealed record FileCryptRequest(
     EncryptOperation Operation,
     NameObfuscationMode NameObfuscation,
     CompressionMode Compression = CompressionMode.None,
-    bool ProceedOnWarnings = false);
+    bool ProceedOnWarnings = false,
+    bool UseEncryption = true);

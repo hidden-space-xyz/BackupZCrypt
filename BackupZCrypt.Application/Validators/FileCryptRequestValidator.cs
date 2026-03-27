@@ -138,11 +138,11 @@ internal sealed class FileCryptRequestValidator(
             }
         }
 
-        if (string.IsNullOrWhiteSpace(request.Password))
+        if (request.UseEncryption && string.IsNullOrWhiteSpace(request.Password))
         {
             errors.Add(Messages.PasswordRequired);
         }
-        else
+        else if (request.UseEncryption)
         {
             if (request.Password.Length < 8)
             {
@@ -160,7 +160,7 @@ internal sealed class FileCryptRequestValidator(
             }
         }
 
-        if (request.Operation == EncryptOperation.Encrypt)
+        if (request.UseEncryption && request.Operation == EncryptOperation.Encrypt)
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
@@ -323,11 +323,14 @@ internal sealed class FileCryptRequestValidator(
                         existingFileCount.ToString("N0")));
             }
 
-            PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(
-                request.Password);
-            if (strength.Score < 60)
+            if (request.UseEncryption)
             {
-                warnings.Add(Messages.WeakPasswordWarning);
+                PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(
+                    request.Password);
+                if (strength.Score < 60)
+                {
+                    warnings.Add(Messages.WeakPasswordWarning);
+                }
             }
         }
         catch

@@ -41,13 +41,11 @@ public static class DependencyInjection
         services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
 
         // Compression Strategies
-        services.AddSingleton<ICompressionStrategy, NoCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, GZipCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, BZip2CompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, LzmaCompressionStrategy>();
 
         // Name Obfuscation Strategies
-        services.AddSingleton<INameObfuscationStrategy, NoObfuscationStrategy>();
         services.AddSingleton<INameObfuscationStrategy, GuidObfuscationStrategy>();
         services.AddSingleton<INameObfuscationStrategy, Sha256ObfuscationStrategy>();
         services.AddSingleton<INameObfuscationStrategy, Sha512ObfuscationStrategy>();

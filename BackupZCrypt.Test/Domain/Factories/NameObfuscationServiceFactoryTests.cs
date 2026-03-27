@@ -9,31 +9,19 @@ using NSubstitute;
 internal sealed class NameObfuscationServiceFactoryTests
 {
     private NameObfuscationServiceFactory factory = null!;
-    private INameObfuscationStrategy noneStrategy = null!;
     private INameObfuscationStrategy guidStrategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.noneStrategy = Substitute.For<INameObfuscationStrategy>();
-        this.noneStrategy.Id.Returns(NameObfuscationMode.None);
-
         this.guidStrategy = Substitute.For<INameObfuscationStrategy>();
         this.guidStrategy.Id.Returns(NameObfuscationMode.Guid);
 
-        this.factory = new NameObfuscationServiceFactory([this.noneStrategy, this.guidStrategy]);
+        this.factory = new NameObfuscationServiceFactory([this.guidStrategy]);
     }
 
     [Test]
     public void Create_RegisteredMode_ReturnsStrategy()
-    {
-        INameObfuscationStrategy result = this.factory.Create(NameObfuscationMode.None);
-
-        Assert.That(result, Is.SameAs(this.noneStrategy));
-    }
-
-    [Test]
-    public void Create_GuidMode_ReturnsCorrectStrategy()
     {
         INameObfuscationStrategy result = this.factory.Create(NameObfuscationMode.Guid);
 
@@ -45,5 +33,12 @@ internal sealed class NameObfuscationServiceFactoryTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             this.factory.Create(NameObfuscationMode.Sha256));
+    }
+
+    [Test]
+    public void Create_NoneMode_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            this.factory.Create(NameObfuscationMode.None));
     }
 }
