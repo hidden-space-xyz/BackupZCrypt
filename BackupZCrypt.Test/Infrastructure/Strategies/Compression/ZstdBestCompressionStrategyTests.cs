@@ -5,26 +5,26 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
 
 [TestFixture]
-internal sealed class BZip2CompressionStrategyTests
+internal sealed class ZstdBestCompressionStrategyTests
 {
-    private BZip2CompressionStrategy strategy = null!;
+    private ZstdBestCompressionStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.strategy = new BZip2CompressionStrategy();
+        this.strategy = new ZstdBestCompressionStrategy();
     }
 
     [Test]
-    public void Id_ReturnsBZip2()
+    public void Id_ReturnsZstdBest()
     {
-        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.BZip2));
+        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.ZstdBest));
     }
 
     [Test]
-    public void DisplayName_ReturnsBZip2()
+    public void DisplayName_ContainsZstandard()
     {
-        Assert.That(this.strategy.DisplayName, Is.EqualTo("BZip2"));
+        Assert.That(this.strategy.DisplayName, Does.Contain("Zstandard"));
     }
 
     [Test]
@@ -71,7 +71,8 @@ internal sealed class BZip2CompressionStrategyTests
     [Test]
     public async Task CompressAsync_StreamPositionIsZero()
     {
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes("data"));
+        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
 
         Stream compressed = await strategy.CompressAsync(input);
 
@@ -81,7 +82,8 @@ internal sealed class BZip2CompressionStrategyTests
     [Test]
     public async Task DecompressAsync_StreamPositionIsZero()
     {
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes("data"));
+        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
         Stream compressed = await strategy.CompressAsync(input);
 
         Stream decompressed = await strategy.DecompressAsync(compressed);

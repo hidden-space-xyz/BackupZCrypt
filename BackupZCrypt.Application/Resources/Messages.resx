@@ -237,4 +237,7 @@
   <data name="InvalidCompressedFileFormat" xml:space="preserve">
     <value>Invalid or corrupted compressed file: {0}</value>
   </data>
+  <data name="ManifestRequiredForDecryption" xml:space="preserve">
+    <value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value>
+  </data>
 </root>

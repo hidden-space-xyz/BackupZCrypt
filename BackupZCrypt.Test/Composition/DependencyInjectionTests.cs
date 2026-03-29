@@ -164,9 +164,9 @@ internal sealed class DependencyInjectionTests
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
     }
 
-    [TestCase(CompressionMode.GZip)]
-    [TestCase(CompressionMode.BZip2)]
-    [TestCase(CompressionMode.LZMA)]
+    [TestCase(CompressionMode.ZstdFast)]
+    [TestCase(CompressionMode.Zstd)]
+    [TestCase(CompressionMode.ZstdBest)]
     public void CompressionFactory_ResolvesAllModes(CompressionMode mode)
     {
         ICompressionServiceFactory factory =

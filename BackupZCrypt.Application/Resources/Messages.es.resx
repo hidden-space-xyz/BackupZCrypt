@@ -237,4 +237,7 @@
   <data name="InvalidCompressedFileFormat" xml:space="preserve">
     <value>Archivo comprimido inválido o corrupto: {0}</value>
   </data>
+  <data name="ManifestRequiredForDecryption" xml:space="preserve">
+    <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación de origen. No se puede restaurar sin manifiesto.</value>
+  </data>
 </root>

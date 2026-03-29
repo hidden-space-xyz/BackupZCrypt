@@ -20,4 +20,10 @@ public interface IManifestService
         IEncryptionAlgorithmStrategy encryptionService,
         FileCryptRequest request,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
+        IReadOnlyList<ManifestEntry> entries,
+        ManifestHeader header,
+        string destinationRoot,
+        CancellationToken cancellationToken);
 }

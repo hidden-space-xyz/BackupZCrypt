@@ -5,26 +5,38 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
 
 [TestFixture]
-internal sealed class GZipCompressionStrategyTests
+internal sealed class ZstdFastCompressionStrategyTests
 {
-    private GZipCompressionStrategy strategy = null!;
+    private ZstdFastCompressionStrategy strategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.strategy = new GZipCompressionStrategy();
+        this.strategy = new ZstdFastCompressionStrategy();
     }
 
     [Test]
-    public void Id_ReturnsGZip()
+    public void Id_ReturnsZstdFast()
     {
-        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.GZip));
+        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.ZstdFast));
     }
 
     [Test]
-    public void DisplayName_ReturnsGZip()
+    public void DisplayName_ContainsZstandard()
     {
-        Assert.That(this.strategy.DisplayName, Is.EqualTo("GZip"));
+        Assert.That(this.strategy.DisplayName, Does.Contain("Zstandard"));
+    }
+
+    [Test]
+    public void Description_IsNotEmpty()
+    {
+        Assert.That(this.strategy.Description, Is.Not.Empty);
+    }
+
+    [Test]
+    public void Summary_IsNotEmpty()
+    {
+        Assert.That(this.strategy.Summary, Is.Not.Empty);
     }
 
     [Test]

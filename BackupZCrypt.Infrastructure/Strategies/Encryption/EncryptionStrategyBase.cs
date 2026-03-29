@@ -21,7 +21,7 @@ internal abstract class EncryptionStrategyBase(
     protected const int MacSize = EncryptionConstants.MacSize;
     protected const int BufferSize = EncryptionConstants.BufferSize;
 
-    public async Task<bool> EncryptFileAsync(
+    public async Task<EncryptionMetadata> EncryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -43,8 +43,6 @@ internal abstract class EncryptionStrategyBase(
 
             await using Stream destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
-
-            await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
 
             if (compression != CompressionMode.None)
             {
@@ -72,7 +70,10 @@ internal abstract class EncryptionStrategyBase(
                     cancellationToken);
             }
 
-            return true;
+            return new EncryptionMetadata(
+                (byte[])session.Salt.Clone(),
+                (byte[])session.Nonce.Clone(),
+                compression);
         }
         catch (EncryptionException)
         {
@@ -98,6 +99,104 @@ internal abstract class EncryptionStrategyBase(
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
             throw new EncryptionCipherException(Messages.OperationEncryption, ex);
+        }
+    }
+
+    public async Task<bool> DecryptFileAsync(
+        string sourceFilePath,
+        string destinationFilePath,
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        EncryptionMetadata metadata,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using Stream sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
+
+            encryptionFileService.EnsureDirectoryExists(destinationFilePath);
+
+            using EncryptionSession session = encryptionSessionFactory.CreateDecryptionSession(
+                password,
+                keyDerivationAlgorithm,
+                metadata);
+
+            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await DecryptStreamAsync(
+                sourceFile,
+                decryptedBuffer,
+                session.Key,
+                session.Nonce,
+                session.AssociatedData,
+                cancellationToken);
+            decryptedBuffer.Position = 0;
+
+            if (session.Compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    session.Compression);
+                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                    decryptedBuffer,
+                    cancellationToken);
+
+                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                    destinationFilePath);
+                await decompressedStream.CopyToAsync(
+                    destinationFile,
+                    BufferSize,
+                    cancellationToken);
+            }
+            else
+            {
+                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                    destinationFilePath);
+                await decryptedBuffer.CopyToAsync(
+                    destinationFile,
+                    BufferSize,
+                    cancellationToken);
+            }
+
+            return true;
+        }
+        catch (EncryptionException)
+        {
+            throw;
+        }
+        catch (InvalidCipherTextException)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+            throw new EncryptionInvalidPasswordException();
+        }
+        catch (CryptographicException)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+            throw new EncryptionInvalidPasswordException();
+        }
+        catch (EndOfStreamException)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+            throw new EncryptionCorruptedFileException(sourceFilePath);
+        }
+        catch (IOException ex)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+
+            if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new EncryptionInsufficientSpaceException(destinationFilePath);
+            }
+
+            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new EncryptionAccessDeniedException(destinationFilePath, ex);
+        }
+        catch (Exception ex)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+
+            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
         }
     }
 

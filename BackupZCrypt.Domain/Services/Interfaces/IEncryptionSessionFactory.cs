@@ -15,4 +15,9 @@ public interface IEncryptionSessionFactory
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,
         CancellationToken cancellationToken);
+
+    EncryptionSession CreateDecryptionSession(
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        EncryptionMetadata metadata);
 }

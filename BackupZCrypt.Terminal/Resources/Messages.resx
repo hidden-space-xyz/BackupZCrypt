@@ -390,4 +390,28 @@
   <data name="ObfuscateNamesPrompt" xml:space="preserve">
     <value>Do you want to obfuscate file names?</value>
   </data>
+  <data name="NoneNoEncryption" xml:space="preserve">
+    <value>None (no encryption)</value>
+  </data>
+  <data name="NoneNoCompression" xml:space="preserve">
+    <value>None (no compression)</value>
+  </data>
+  <data name="NoneNoObfuscation" xml:space="preserve">
+    <value>None (no obfuscation)</value>
+  </data>
+  <data name="EncryptedBackupDetected" xml:space="preserve">
+    <value>Encrypted backup detected.</value>
+  </data>
+  <data name="NoEncryptionDetected" xml:space="preserve">
+    <value>No encryption detected, proceeding without password.</value>
+  </data>
+  <data name="Restoring" xml:space="preserve">
+    <value>Restoring</value>
+  </data>
+  <data name="WeakPasswordConfirm" xml:space="preserve">
+    <value>Your password is weak. Would you like to change it?</value>
+  </data>
+  <data name="ManifestNotFound" xml:space="preserve">
+    <value>No manifest file found. Cannot restore a backup without a manifest file.</value>
+  </data>
 </root>

@@ -215,4 +215,151 @@ internal sealed class OrchestratorIntegrationTests
             Assert.That(result.Value.TotalFiles, Is.EqualTo(2));
         }
     }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_EncryptAndDecrypt_RoundTrip()
+    {
+        string content1 = string.Concat(Enumerable.Repeat("File one content! ", 50));
+        string content2 = string.Concat(Enumerable.Repeat("File two content! ", 50));
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "doc1.txt"), content1);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "doc2.txt"), content2);
+
+        string encryptedDir = Path.Combine(this.testDir, "encrypted");
+        string decryptedDir = Path.Combine(this.testDir, "decrypted");
+        const string password = "IntegrationP@ss1";
+
+        FileCryptRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
+            CompressionMode.Zstd,
+            ProceedOnWarnings: true);
+
+        Progress<FileCryptStatus> progress = new();
+        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
+            encryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(encryptResult.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.IsSuccess, Is.True);
+            Assert.That(File.Exists(Path.Combine(encryptedDir, "manifest.bzc")), Is.True);
+        }
+
+        FileCryptRequest decryptRequest = new(
+            encryptedDir,
+            decryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.ProcessedFiles, Is.EqualTo(2));
+        }
+
+        string decrypted1 = await File.ReadAllTextAsync(Path.Combine(decryptedDir, "doc1.txt"));
+        string decrypted2 = await File.ReadAllTextAsync(Path.Combine(decryptedDir, "doc2.txt"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decrypted1, Is.EqualTo(content1));
+            Assert.That(decrypted2, Is.EqualTo(content2));
+        }
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_WithObfuscation_RoundTrip()
+    {
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret.txt"), "Secret content");
+
+        string encryptedDir = Path.Combine(this.testDir, "encrypted-obf");
+        string decryptedDir = Path.Combine(this.testDir, "decrypted-obf");
+        const string password = "IntegrationP@ss1";
+
+        FileCryptRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.Guid,
+            ProceedOnWarnings: true);
+
+        Progress<FileCryptStatus> progress = new();
+        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
+            encryptRequest, progress);
+
+        Assert.That(encryptResult.IsSuccess, Is.True);
+
+        string[] encryptedFiles = Directory.GetFiles(encryptedDir, "*.bzc")
+            .Where(f => !f.EndsWith("manifest.bzc", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        Assert.That(encryptedFiles.All(f => !Path.GetFileName(f).Contains("secret")), Is.True);
+
+        FileCryptRequest decryptRequest = new(
+            encryptedDir,
+            decryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+        }
+
+        string decryptedContent = await File.ReadAllTextAsync(
+            Path.Combine(decryptedDir, "secret.txt"));
+        Assert.That(decryptedContent, Is.EqualTo("Secret content"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_DecryptWithoutManifest_Fails()
+    {
+        string noManifestDir = Path.Combine(this.testDir, "no-manifest");
+        Directory.CreateDirectory(noManifestDir);
+        await File.WriteAllTextAsync(Path.Combine(noManifestDir, "file.bzc"), "fake");
+
+        FileCryptRequest decryptRequest = new(
+            noManifestDir,
+            this.destDir,
+            "IntegrationP@ss1",
+            "IntegrationP@ss1",
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Progress<FileCryptStatus> progress = new();
+        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
 }

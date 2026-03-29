@@ -25,8 +25,9 @@ internal sealed class CompressionRoundTripTests
         this.provider.Dispose();
     }
 
-    [TestCase(CompressionMode.GZip)]
-    [TestCase(CompressionMode.BZip2)]
+    [TestCase(CompressionMode.ZstdFast)]
+    [TestCase(CompressionMode.Zstd)]
+    [TestCase(CompressionMode.ZstdBest)]
     public async Task AllCompressionStrategies_RoundTrip_PreservesData(CompressionMode mode)
     {
         IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
@@ -48,9 +49,9 @@ internal sealed class CompressionRoundTripTests
         Assert.That(resultStream.ToArray(), Is.EqualTo(original));
     }
 
-    [TestCase(CompressionMode.GZip)]
-    [TestCase(CompressionMode.BZip2)]
-    [TestCase(CompressionMode.LZMA)]
+    [TestCase(CompressionMode.ZstdFast)]
+    [TestCase(CompressionMode.Zstd)]
+    [TestCase(CompressionMode.ZstdBest)]
     public async Task CompressionStrategies_ActuallyCompressData(CompressionMode mode)
     {
         IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
@@ -71,8 +72,9 @@ internal sealed class CompressionRoundTripTests
             $"{mode} should compress highly repetitive data");
     }
 
-    [TestCase(CompressionMode.GZip)]
-    [TestCase(CompressionMode.BZip2)]
+    [TestCase(CompressionMode.ZstdFast)]
+    [TestCase(CompressionMode.Zstd)]
+    [TestCase(CompressionMode.ZstdBest)]
     public async Task AllStrategies_EmptyInput_RoundTrip(CompressionMode mode)
     {
         IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
@@ -92,9 +94,9 @@ internal sealed class CompressionRoundTripTests
         Assert.That(resultStream.ToArray(), Is.Empty);
     }
 
-    [TestCase(CompressionMode.GZip)]
-    [TestCase(CompressionMode.BZip2)]
-    [TestCase(CompressionMode.LZMA)]
+    [TestCase(CompressionMode.ZstdFast)]
+    [TestCase(CompressionMode.Zstd)]
+    [TestCase(CompressionMode.ZstdBest)]
     public void AllStrategies_HaveMetadata(CompressionMode mode)
     {
         IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<

@@ -17,6 +17,7 @@ ServiceProvider provider = services.BuildServiceProvider();
 
 IFileCryptOrchestrator orchestrator = provider.GetRequiredService<IFileCryptOrchestrator>();
 IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
+IManifestService manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
 [
     .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.Id),
@@ -37,6 +38,7 @@ List<ICompressionStrategy> compressionStrategies =
 BackupCommand backupCommand = new(
     orchestrator,
     passwordService,
+    manifestService,
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,

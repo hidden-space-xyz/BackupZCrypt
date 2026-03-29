@@ -323,7 +323,8 @@ internal sealed class FileCryptRequestValidator(
                         existingFileCount.ToString("N0")));
             }
 
-            if (request.UseEncryption)
+            if (request.UseEncryption
+                && request.Operation == EncryptOperation.Encrypt)
             {
                 PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(
                     request.Password);

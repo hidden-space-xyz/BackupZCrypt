@@ -44,17 +44,18 @@ internal sealed class ManifestService : IManifestService
 
             IEncryptionAlgorithmStrategy? strategy = encryptionStrategies
                 .FirstOrDefault(s => s.Id == algorithm);
-            if (strategy is null)
+
+            if (strategy is not null)
             {
-                return null;
+                return await TryReadWithStrategyAsync(
+                    rawFile.AsMemory(PreambleSize),
+                    strategy,
+                    password,
+                    kdf,
+                    cancellationToken);
             }
 
-            return await TryReadWithStrategyAsync(
-                rawFile.AsMemory(PreambleSize),
-                strategy,
-                password,
-                kdf,
-                cancellationToken);
+            return TryParsePlainManifest(rawFile);
         }
         catch
         {
@@ -115,6 +116,39 @@ internal sealed class ManifestService : IManifestService
         return errors;
     }
 
+    public async Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
+        IReadOnlyList<ManifestEntry> entries,
+        ManifestHeader header,
+        string destinationRoot,
+        CancellationToken cancellationToken)
+    {
+        List<string> errors = [];
+        if (entries.Count == 0)
+        {
+            return errors;
+        }
+
+        try
+        {
+            ManifestDocument document = new(
+                header.EncryptionAlgorithm,
+                header.KeyDerivationAlgorithm,
+                header.NameObfuscation,
+                header.Compression,
+                [.. entries]);
+
+            byte[] manifestBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
+            string manifestPath = Path.Combine(destinationRoot, ManifestFileName);
+            await File.WriteAllBytesAsync(manifestPath, manifestBytes, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            errors.Add(string.Format(Messages.ManifestWriteFailedFormat, ex.Message));
+        }
+
+        return errors;
+    }
+
     private static async Task PrependPreambleAsync(
         string filePath,
         EncryptionAlgorithm algorithm,
@@ -165,10 +199,15 @@ internal sealed class ManifestService : IManifestService
                 doc.NameObfuscation,
                 doc.Compression);
 
-            Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, ManifestFileInfo> map = new(StringComparer.OrdinalIgnoreCase);
             foreach (ManifestEntry e in doc.Entries)
             {
-                map[e.ObfuscatedRelativePath] = e.OriginalRelativePath;
+                byte[] salt = Convert.FromBase64String(e.Salt);
+                byte[] nonce = Convert.FromBase64String(e.Nonce);
+                map[e.RelativePath] = new ManifestFileInfo(
+                    e.OriginalRelativePath,
+                    salt,
+                    nonce);
             }
 
             return new ManifestData(header, map);
@@ -189,6 +228,45 @@ internal sealed class ManifestService : IManifestService
             catch
             { /* ignore */
             }
+        }
+    }
+
+    private static ManifestData? TryParsePlainManifest(byte[] rawFile)
+    {
+        try
+        {
+            ManifestDocument? doc = JsonSerializer.Deserialize<ManifestDocument>(rawFile);
+            if (doc is null)
+            {
+                return null;
+            }
+
+            ManifestHeader header = new(
+                doc.EncryptionAlgorithm,
+                doc.KeyDerivationAlgorithm,
+                doc.NameObfuscation,
+                doc.Compression);
+
+            Dictionary<string, ManifestFileInfo> map = new(StringComparer.OrdinalIgnoreCase);
+            foreach (ManifestEntry e in doc.Entries)
+            {
+                byte[] salt = string.IsNullOrEmpty(e.Salt)
+                    ? []
+                    : Convert.FromBase64String(e.Salt);
+                byte[] nonce = string.IsNullOrEmpty(e.Nonce)
+                    ? []
+                    : Convert.FromBase64String(e.Nonce);
+                map[e.RelativePath] = new ManifestFileInfo(
+                    e.OriginalRelativePath,
+                    salt,
+                    nonce);
+            }
+
+            return new ManifestData(header, map);
+        }
+        catch
+        {
+            return null;
         }
     }
 }

@@ -6,6 +6,7 @@ using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Encryption;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
@@ -84,7 +85,7 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        await strategy.EncryptFileAsync(
+        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             "CorrectPassword1!",
@@ -96,7 +97,8 @@ internal sealed class EncryptionRoundTripTests
                     encryptedFile,
                     decryptedFile,
                     "WrongPassword1!!",
-                    KeyDerivationAlgorithm.PBKDF2));
+                    KeyDerivationAlgorithm.PBKDF2,
+                    metadata));
     }
 
     [TestCase(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2)]
@@ -121,14 +123,14 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
 
-        bool encryptResult = await strategy.EncryptFileAsync(
+        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
             kdf);
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(encryptResult, Is.True);
+            Assert.That(metadata, Is.Not.Null);
             Assert.That(File.Exists(encryptedFile), Is.True);
         }
 
@@ -140,7 +142,8 @@ internal sealed class EncryptionRoundTripTests
             encryptedFile,
             decryptedFile,
             password,
-            kdf);
+            kdf,
+            metadata);
         using (Assert.EnterMultipleScope())
         {
             Assert.That(decryptResult, Is.True);
@@ -152,8 +155,8 @@ internal sealed class EncryptionRoundTripTests
     }
 
     [TestCase(EncryptionAlgorithm.Aes, CompressionMode.None)]
-    [TestCase(EncryptionAlgorithm.Aes, CompressionMode.GZip)]
-    [TestCase(EncryptionAlgorithm.Aes, CompressionMode.BZip2)]
+    [TestCase(EncryptionAlgorithm.Aes, CompressionMode.Zstd)]
+    [TestCase(EncryptionAlgorithm.Aes, CompressionMode.ZstdBest)]
     public async Task EncryptAndDecryptFile_AllCompressionModes_RoundTrip(
         EncryptionAlgorithm algorithm,
         CompressionMode compression)
@@ -166,19 +169,20 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
 
-        bool encryptResult = await strategy.EncryptFileAsync(
+        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
             KeyDerivationAlgorithm.PBKDF2,
             compression);
-        Assert.That(encryptResult, Is.True);
+        Assert.That(metadata, Is.Not.Null);
 
         bool decryptResult = await strategy.DecryptFileAsync(
             encryptedFile,
             decryptedFile,
             password,
-            KeyDerivationAlgorithm.PBKDF2);
+            KeyDerivationAlgorithm.PBKDF2,
+            metadata);
         Assert.That(decryptResult, Is.True);
 
         string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
@@ -199,7 +203,7 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        await strategy.EncryptFileAsync(
+        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -209,7 +213,8 @@ internal sealed class EncryptionRoundTripTests
             encryptedFile,
             decryptedFile,
             password,
-            KeyDerivationAlgorithm.PBKDF2);
+            KeyDerivationAlgorithm.PBKDF2,
+            metadata);
 
         byte[] decryptedData = await File.ReadAllBytesAsync(decryptedFile);
         Assert.That(decryptedData, Is.EqualTo(largeData));

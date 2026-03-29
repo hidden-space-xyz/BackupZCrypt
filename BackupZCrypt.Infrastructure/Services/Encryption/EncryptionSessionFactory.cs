@@ -41,6 +41,33 @@ internal sealed class EncryptionSessionFactory(
         }
     }
 
+    public EncryptionSession CreateDecryptionSession(
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        EncryptionMetadata metadata)
+    {
+        byte[] salt = [];
+        byte[] nonce = [];
+        byte[] key = [];
+
+        try
+        {
+            salt = metadata.Salt.ToArray();
+            nonce = metadata.Nonce.ToArray();
+            byte[] associatedData = BuildAssociatedData(salt, nonce, metadata.Compression);
+            key = this.DeriveKeySafe(password, salt, keyDerivationAlgorithm);
+
+            return new EncryptionSession(salt, nonce, key, metadata.Compression, associatedData);
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(salt);
+            CryptographicOperations.ZeroMemory(nonce);
+            throw;
+        }
+    }
+
     public EncryptionSession CreateEncryptionSession(
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,

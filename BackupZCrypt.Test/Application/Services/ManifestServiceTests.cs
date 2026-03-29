@@ -175,7 +175,7 @@ internal sealed class ManifestServiceTests
 
         try
         {
-            List<ManifestEntry> entries = [new("original.txt", "obfuscated.bzc")];
+            List<ManifestEntry> entries = [new("obfuscated.bzc", "original.txt", "c2FsdA==", "bm9uY2U=")];
 
             IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,
@@ -213,7 +213,7 @@ internal sealed class ManifestServiceTests
 
         try
         {
-            List<ManifestEntry> entries = [new("a.txt", "b.bzc")];
+            List<ManifestEntry> entries = [new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=")];
 
             IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
                 entries,

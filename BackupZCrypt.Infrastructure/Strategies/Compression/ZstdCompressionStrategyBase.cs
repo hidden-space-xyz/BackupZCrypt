@@ -2,20 +2,20 @@ namespace BackupZCrypt.Infrastructure.Strategies.Compression;
 
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
-using BackupZCrypt.Infrastructure.Resources;
 using BackupZCrypt.Infrastructure.Streams;
-using SharpCompress.Compressors;
-using SharpCompress.Compressors.Deflate;
+using ZstdSharp;
 
-internal class GZipCompressionStrategy : ICompressionStrategy
+internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
 {
-    public Domain.Enums.CompressionMode Id => Domain.Enums.CompressionMode.GZip;
+    public abstract Domain.Enums.CompressionMode Id { get; }
 
-    public string DisplayName => Messages.GZipDisplayName;
+    public abstract string DisplayName { get; }
 
-    public string Description => Messages.GZipDescription;
+    public abstract string Description { get; }
 
-    public string Summary => Messages.GZipSummary;
+    public abstract string Summary { get; }
+
+    protected abstract int CompressionLevel { get; }
 
     public async Task<Stream> CompressAsync(
         Stream inputStream,
@@ -23,12 +23,11 @@ internal class GZipCompressionStrategy : ICompressionStrategy
     {
         FileStream output = CreateTempStream();
         await using (
-            GZipStream gzip = new(
+            CompressionStream zstd = new(
                 new NonClosingStreamWrapper(output),
-                CompressionMode.Compress,
-                CompressionLevel.Default))
+                CompressionLevel))
         {
-            await inputStream.CopyToAsync(gzip, StreamConstants.CopyBufferSize, cancellationToken);
+            await inputStream.CopyToAsync(zstd, StreamConstants.CopyBufferSize, cancellationToken);
         }
 
         output.Position = 0;
@@ -40,9 +39,9 @@ internal class GZipCompressionStrategy : ICompressionStrategy
         CancellationToken cancellationToken = default)
     {
         FileStream output = CreateTempStream();
-        await using (GZipStream gzip = new(inputStream, CompressionMode.Decompress))
+        await using (DecompressionStream zstd = new(inputStream))
         {
-            await gzip.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
+            await zstd.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
         }
 
         output.Position = 0;

@@ -18,7 +18,7 @@ internal sealed class FileCryptRequestTests
             KeyDerivationAlgorithm: KeyDerivationAlgorithm.Argon2id,
             Operation: EncryptOperation.Encrypt,
             NameObfuscation: NameObfuscationMode.None,
-            Compression: CompressionMode.GZip,
+            Compression: CompressionMode.Zstd,
             ProceedOnWarnings: true);
 
         using (Assert.EnterMultipleScope())
@@ -31,7 +31,7 @@ internal sealed class FileCryptRequestTests
             Assert.That(request.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Argon2id));
             Assert.That(request.Operation, Is.EqualTo(EncryptOperation.Encrypt));
             Assert.That(request.NameObfuscation, Is.EqualTo(NameObfuscationMode.None));
-            Assert.That(request.Compression, Is.EqualTo(CompressionMode.GZip));
+            Assert.That(request.Compression, Is.EqualTo(CompressionMode.Zstd));
             Assert.That(request.ProceedOnWarnings, Is.True);
         }
     }

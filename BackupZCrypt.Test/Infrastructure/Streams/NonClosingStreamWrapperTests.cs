@@ -90,7 +90,7 @@ internal sealed class NonClosingStreamWrapperTests
         await using NonClosingStreamWrapper wrapper = new(inner);
 
         byte[] buffer = new byte[3];
-        int read = await wrapper.ReadAsync(buffer, 0, 3);
+        int read = await wrapper.ReadAsync(buffer.AsMemory(0, 3));
 
         using (Assert.EnterMultipleScope())
         {
@@ -105,7 +105,7 @@ internal sealed class NonClosingStreamWrapperTests
         await using MemoryStream inner = new();
         await using NonClosingStreamWrapper wrapper = new(inner);
 
-        await wrapper.WriteAsync([4, 5, 6], 0, 3);
+        await wrapper.WriteAsync(new byte[] { 4, 5, 6 }.AsMemory());
 
         Assert.That(inner.ToArray(), Is.EqualTo(new byte[] { 4, 5, 6 }));
     }
@@ -164,7 +164,7 @@ internal sealed class NonClosingStreamWrapperTests
         Assert.That(inner.CanRead, Is.True);
         inner.Position = 0;
         byte[] buffer = new byte[3];
-        int read = await inner.ReadAsync(buffer, 0, 3);
+        int read = await inner.ReadAsync(buffer.AsMemory(0, 3));
         Assert.That(read, Is.EqualTo(3));
 
         await inner.DisposeAsync();

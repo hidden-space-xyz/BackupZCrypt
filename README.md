@@ -1,5 +1,5 @@
 <p align="center">
-<img alt=".NET" src="https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+<img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
 <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
@@ -29,11 +29,12 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 
 ## ⭐ Features for Privacy Enthusiasts
 
-* **🔄 Multiple Encryption Algorithms** - AES, ChaCha20, Twofish, Serpent, and Camellia
-* **🔑 Multiple Key Derivation Algorithms** - Argon2id, Scrypt and PBKDF2.
-* **🗜️ Multiple Compression Algorithms** - GZip, BZip2, and LZMA (7-Zip).
-* **🕵️ Filename Obfuscation** - Prevents sensitive information from being leaked via original file/folder names.
-* **📊 Password Strength Guidance** - Built-in analyzer helps you create truly secure passwords
+* **🔄 Multiple Encryption Algorithms** - AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM
+* **🔑 Multiple Key Derivation Algorithms** - Argon2id, Scrypt, and PBKDF2
+* **🗜️ Zstandard Compression** - Three compression presets: Fast (speed-optimized), Normal (balanced, default), and Best (maximum compression)
+* **🕵️ Filename Obfuscation** - Hide original file and folder names using GUID, SHA-256, or SHA-512 obfuscation
+* **📄 Manifest-Based Architecture** - Encrypted manifest files store all metadata needed for restoration, eliminating per-file headers and simplifying the restore process
+* **📊 Password Strength Guidance** - Built-in analyzer evaluates your password and warns you before using a weak one
 * **💻 Local Processing Only** - Your files and passwords never leave your computer
 * **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
 

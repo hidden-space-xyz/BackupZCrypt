@@ -234,32 +234,32 @@
   <data name="NoObfuscationSummary" xml:space="preserve">
     <value>Mantiene el nombre original (por defecto)</value>
   </data>
-  <data name="GZipDisplayName" xml:space="preserve">
-    <value>GZip</value>
+  <data name="ZstdFastDisplayName" xml:space="preserve">
+    <value>Zstandard (Rápido)</value>
   </data>
-  <data name="GZipDescription" xml:space="preserve">
-    <value>Un método de compresión rápido y universal que reduce el tamaño del archivo antes del cifrado. Funciona bien con la mayoría de tipos de archivo y es compatible con prácticamente todos los sistemas.</value>
+  <data name="ZstdFastDescription" xml:space="preserve">
+    <value>Compresión Zstandard a nivel mínimo, priorizando la velocidad sobre el tamaño del archivo. Ideal cuando desea algo de compresión con impacto mínimo en el rendimiento.</value>
   </data>
-  <data name="GZipSummary" xml:space="preserve">
-    <value>Buen equilibrio entre velocidad y compresión</value>
+  <data name="ZstdFastSummary" xml:space="preserve">
+    <value>Compresión más rápida, archivos más grandes</value>
   </data>
-  <data name="BZip2DisplayName" xml:space="preserve">
-    <value>BZip2</value>
+  <data name="ZstdDisplayName" xml:space="preserve">
+    <value>Zstandard (Normal)</value>
   </data>
-  <data name="BZip2Description" xml:space="preserve">
-    <value>Comprime más que GZip pero tarda más. Ideal cuando desea archivos más pequeños y no le importa esperar un poco más.</value>
+  <data name="ZstdDescription" xml:space="preserve">
+    <value>Compresión Zstandard a nivel predeterminado, ofreciendo un buen equilibrio entre velocidad y ratio de compresión. Recomendado para la mayoría de casos de uso.</value>
   </data>
-  <data name="BZip2Summary" xml:space="preserve">
-    <value>Archivos más pequeños que GZip (más lento)</value>
+  <data name="ZstdSummary" xml:space="preserve">
+    <value>Buen equilibrio entre velocidad y compresión (recomendado)</value>
   </data>
-  <data name="LzmaDisplayName" xml:space="preserve">
-    <value>LZMA (7-Zip)</value>
+  <data name="ZstdBestDisplayName" xml:space="preserve">
+    <value>Zstandard (Mejor)</value>
   </data>
-  <data name="LzmaDescription" xml:space="preserve">
-    <value>El método de compresión utilizado por 7-Zip, logrando los archivos más pequeños posibles. Ideal para archivos grandes donde minimizar el tamaño es más importante que la velocidad.</value>
+  <data name="ZstdBestDescription" xml:space="preserve">
+    <value>Compresión Zstandard a nivel máximo, logrando los archivos más pequeños a costa de mayor tiempo de compresión. Ideal para archivos grandes donde minimizar el tamaño es lo más importante.</value>
   </data>
-  <data name="LzmaSummary" xml:space="preserve">
-    <value>Archivos lo más pequeños posible (más lento)</value>
+  <data name="ZstdBestSummary" xml:space="preserve">
+    <value>Archivos más pequeños, compresión más lenta</value>
   </data>
   <data name="NoCompressionDisplayName" xml:space="preserve">
     <value>Ninguna</value>

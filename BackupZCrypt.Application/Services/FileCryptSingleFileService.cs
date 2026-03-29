@@ -4,18 +4,22 @@ using System.Diagnostics;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
 internal sealed class FileCryptSingleFileService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
-    IFileOperationsService fileOperations) : IFileCryptSingleFileService
+    IFileOperationsService fileOperations,
+    IManifestService manifestService,
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IFileCryptSingleFileService
 {
     public async Task<Result<FileCryptResult>> ProcessAsync(
         string sourcePath,
@@ -76,20 +80,106 @@ internal sealed class FileCryptSingleFileService(
             {
                 IEncryptionAlgorithmStrategy encryptionService =
                     encryptionServiceFactory.Create(request.EncryptionAlgorithm);
-                result = await ProcessEncryptedFileAsync(
-                    encryptionService,
-                    sourcePath,
-                    destFile,
-                    request,
-                    cancellationToken);
+
+                if (request.Operation == EncryptOperation.Encrypt)
+                {
+                    EncryptionMetadata metadata = await encryptionService.EncryptFileAsync(
+                        sourcePath,
+                        destFile,
+                        request.Password,
+                        request.KeyDerivationAlgorithm,
+                        request.Compression,
+                        cancellationToken);
+
+                    string? destDir = fileOperations.GetDirectoryName(destFile)
+                        ?? Path.GetDirectoryName(destFile);
+
+                    if (!string.IsNullOrEmpty(destDir))
+                    {
+                        string destRelativePath = Path.GetFileName(destFile);
+                        string originalRelativePath = Path.GetFileName(sourcePath);
+
+                        ManifestEntry entry = new(
+                            destRelativePath,
+                            originalRelativePath,
+                            Convert.ToBase64String(metadata.Salt),
+                            Convert.ToBase64String(metadata.Nonce));
+
+                        ManifestHeader header = new(
+                            request.EncryptionAlgorithm,
+                            request.KeyDerivationAlgorithm,
+                            request.NameObfuscation,
+                            request.Compression);
+
+                        await manifestService.TrySaveManifestAsync(
+                            [entry],
+                            header,
+                            destDir,
+                            encryptionService,
+                            request,
+                            cancellationToken);
+                    }
+
+                    result = true;
+                }
+                else
+                {
+                    result = await DecryptWithManifestAsync(
+                        encryptionService,
+                        sourcePath,
+                        destFile,
+                        request,
+                        cancellationToken);
+                }
             }
             else
             {
-                result = await ProcessCompressedFileAsync(
-                    sourcePath,
-                    destFile,
-                    request,
-                    cancellationToken);
+                if (request.Operation == EncryptOperation.Encrypt)
+                {
+                    result = await ProcessCompressedFileAsync(
+                        sourcePath,
+                        destFile,
+                        request,
+                        cancellationToken);
+
+                    if (result)
+                    {
+                        string? destDir = fileOperations.GetDirectoryName(destFile)
+                            ?? Path.GetDirectoryName(destFile);
+
+                        if (!string.IsNullOrEmpty(destDir))
+                        {
+                            string destRelativePath = Path.GetFileName(destFile);
+                            string originalRelativePath = Path.GetFileName(sourcePath);
+
+                            ManifestEntry entry = new(
+                                destRelativePath,
+                                originalRelativePath,
+                                string.Empty,
+                                string.Empty);
+
+                            ManifestHeader header = new(
+                                default,
+                                default,
+                                NameObfuscationMode.None,
+                                request.Compression);
+
+                            await manifestService.TrySavePlainManifestAsync(
+                                [entry],
+                                header,
+                                destDir,
+                                cancellationToken);
+                        }
+                    }
+                }
+                else
+                {
+                    result = await DecryptCompressedWithManifestAsync(
+                        sourcePath,
+                        destFile,
+                        request,
+                        cancellationToken);
+                }
             }
 
             progress?.Report(new FileCryptStatus(1, 1, fileSize, fileSize, stopwatch.Elapsed));
@@ -117,33 +207,92 @@ internal sealed class FileCryptSingleFileService(
         }
     }
 
-    private static Task<bool> ProcessEncryptedFileAsync(
+    private async Task<bool> DecryptWithManifestAsync(
         IEncryptionAlgorithmStrategy encryptionService,
-        string sourceFile,
-        string destinationFile,
+        string sourcePath,
+        string destinationPath,
         FileCryptRequest request,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        return request.Operation switch
+        string? sourceDir = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrEmpty(sourceDir))
         {
-            EncryptOperation.Encrypt => encryptionService.EncryptFileAsync(
-                sourceFile,
-                destinationFile,
+            throw new InvalidOperationException(
+                Messages.ManifestRequiredForDecryption);
+        }
+
+        ManifestData? manifest = await manifestService.TryReadManifestAsync(
+            sourceDir,
+            [.. encryptionStrategies],
+            request.Password,
+            cancellationToken);
+
+        if (manifest is null)
+        {
+            throw new InvalidOperationException(
+                Messages.ManifestRequiredForDecryption);
+        }
+
+        string sourceFileName = Path.GetFileName(sourcePath);
+        if (manifest.FileMap.TryGetValue(sourceFileName, out ManifestFileInfo? fileInfo))
+        {
+            EncryptionMetadata metadata = new(
+                fileInfo.Salt,
+                fileInfo.Nonce,
+                manifest.Header.Compression);
+
+            string resolvedDestination = Path.Combine(
+                Path.GetDirectoryName(destinationPath) ?? destinationPath,
+                fileInfo.OriginalRelativePath);
+
+            return await encryptionService.DecryptFileAsync(
+                sourcePath,
+                resolvedDestination,
                 request.Password,
-                request.KeyDerivationAlgorithm,
-                request.Compression,
-                cancellationToken),
-            EncryptOperation.Decrypt => encryptionService.DecryptFileAsync(
-                sourceFile,
-                destinationFile,
-                request.Password,
-                request.KeyDerivationAlgorithm,
-                cancellationToken),
-            _ => throw new NotSupportedException(
-                string.Format(Messages.UnsupportedOperationFormat, request.Operation)),
-        };
+                manifest.Header.KeyDerivationAlgorithm,
+                metadata,
+                cancellationToken);
+        }
+
+        return false;
+    }
+
+    private async Task<bool> DecryptCompressedWithManifestAsync(
+        string sourcePath,
+        string destinationPath,
+        FileCryptRequest request,
+        CancellationToken cancellationToken)
+    {
+        string? sourceDir = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrEmpty(sourceDir))
+        {
+            throw new InvalidOperationException(
+                Messages.ManifestRequiredForDecryption);
+        }
+
+        ManifestData? manifest = await manifestService.TryReadManifestAsync(
+            sourceDir,
+            [.. encryptionStrategies],
+            string.Empty,
+            cancellationToken);
+
+        if (manifest is null)
+        {
+            throw new InvalidOperationException(
+                Messages.ManifestRequiredForDecryption);
+        }
+
+        string sourceFileName = Path.GetFileName(sourcePath);
+        string resolvedDestination = destinationPath;
+
+        if (manifest.FileMap.TryGetValue(sourceFileName, out ManifestFileInfo? fileInfo))
+        {
+            resolvedDestination = Path.Combine(
+                Path.GetDirectoryName(destinationPath) ?? destinationPath,
+                fileInfo.OriginalRelativePath);
+        }
+
+        return await DecompressFileAsync(sourcePath, resolvedDestination, cancellationToken);
     }
 
     private async Task<bool> ProcessCompressedFileAsync(

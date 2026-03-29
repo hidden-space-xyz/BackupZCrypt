@@ -9,29 +9,29 @@ using NSubstitute;
 internal sealed class CompressionServiceFactoryTests
 {
     private CompressionServiceFactory factory = null!;
-    private ICompressionStrategy gzipStrategy = null!;
+    private ICompressionStrategy zstdStrategy = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.gzipStrategy = Substitute.For<ICompressionStrategy>();
-        this.gzipStrategy.Id.Returns(CompressionMode.GZip);
+        this.zstdStrategy = Substitute.For<ICompressionStrategy>();
+        this.zstdStrategy.Id.Returns(CompressionMode.Zstd);
 
-        this.factory = new CompressionServiceFactory([this.gzipStrategy]);
+        this.factory = new CompressionServiceFactory([this.zstdStrategy]);
     }
 
     [Test]
     public void Create_RegisteredMode_ReturnsStrategy()
     {
-        ICompressionStrategy result = this.factory.Create(CompressionMode.GZip);
+        ICompressionStrategy result = this.factory.Create(CompressionMode.Zstd);
 
-        Assert.That(result, Is.SameAs(this.gzipStrategy));
+        Assert.That(result, Is.SameAs(this.zstdStrategy));
     }
 
     [Test]
     public void Create_UnregisteredMode_ThrowsArgumentOutOfRangeException()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => this.factory.Create(CompressionMode.LZMA));
+        Assert.Throws<ArgumentOutOfRangeException>(() => this.factory.Create(CompressionMode.ZstdBest));
     }
 
     [Test]

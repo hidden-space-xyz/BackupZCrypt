@@ -41,9 +41,9 @@ public static class DependencyInjection
         services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
 
         // Compression Strategies
-        services.AddSingleton<ICompressionStrategy, GZipCompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, BZip2CompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, LzmaCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, ZstdFastCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
+        services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
 
         // Name Obfuscation Strategies
         services.AddSingleton<INameObfuscationStrategy, GuidObfuscationStrategy>();
