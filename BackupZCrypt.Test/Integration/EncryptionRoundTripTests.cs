@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
@@ -50,7 +51,7 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<BackupZCrypt.Domain.Exceptions.EncryptionCorruptedFileException>(
+        Assert.ThrowsAsync<EncryptionCorruptedFileException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     corruptedFile,
@@ -67,7 +68,7 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<BackupZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(
+        Assert.ThrowsAsync<EncryptionFileNotFoundException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     nonExistent,
@@ -91,7 +92,7 @@ internal sealed class EncryptionRoundTripTests
             "CorrectPassword1!",
             KeyDerivationAlgorithm.PBKDF2);
 
-        Assert.ThrowsAsync<BackupZCrypt.Domain.Exceptions.EncryptionInvalidPasswordException>(
+        Assert.ThrowsAsync<EncryptionInvalidPasswordException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     encryptedFile,
@@ -228,7 +229,7 @@ internal sealed class EncryptionRoundTripTests
 
         IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<BackupZCrypt.Domain.Exceptions.EncryptionFileNotFoundException>(
+        Assert.ThrowsAsync<EncryptionFileNotFoundException>(
             async () =>
                 await strategy.EncryptFileAsync(
                     nonExistent,

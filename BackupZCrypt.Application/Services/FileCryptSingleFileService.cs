@@ -91,8 +91,7 @@ internal sealed class FileCryptSingleFileService(
                         request.Compression,
                         cancellationToken);
 
-                    string? destDir = fileOperations.GetDirectoryName(destFile)
-                        ?? Path.GetDirectoryName(destFile);
+                    string? destDir = fileOperations.GetDirectoryName(destFile);
 
                     if (!string.IsNullOrEmpty(destDir))
                     {
@@ -144,8 +143,7 @@ internal sealed class FileCryptSingleFileService(
 
                     if (result)
                     {
-                        string? destDir = fileOperations.GetDirectoryName(destFile)
-                            ?? Path.GetDirectoryName(destFile);
+                        string? destDir = fileOperations.GetDirectoryName(destFile);
 
                         if (!string.IsNullOrEmpty(destDir))
                         {
@@ -413,9 +411,7 @@ internal sealed class FileCryptSingleFileService(
         string sourceFile,
         INameObfuscationStrategy obfuscationService)
     {
-        string dir =
-            fileOperations.GetDirectoryName(destinationFile)
-            ?? Path.GetDirectoryName(destinationFile)!;
+        string dir = fileOperations.GetDirectoryName(destinationFile)!;
 
         string name = Path.GetFileName(destinationFile);
         string obfuscated = obfuscationService.ObfuscateFileName(sourceFile, name);

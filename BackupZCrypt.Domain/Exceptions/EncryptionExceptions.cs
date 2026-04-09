@@ -20,17 +20,5 @@ public abstract class EncryptionException : Exception
         this.Code = code;
     }
 
-    protected EncryptionException()
-    {
-    }
-
-    protected EncryptionException(string? message) : base(message)
-    {
-    }
-
-    protected EncryptionException(string? message, Exception? innerException) : base(message, innerException)
-    {
-    }
-
     public EncryptionErrorCode Code { get; }
 }

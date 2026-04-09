@@ -2,7 +2,7 @@ namespace BackupZCrypt.Infrastructure.Services.FileSystem;
 
 using BackupZCrypt.Domain.Services.Interfaces;
 
-internal class FileOperationsService : IFileOperationsService
+internal sealed class FileOperationsService : IFileOperationsService
 {
     public async Task<string[]> GetFilesAsync(
         string directoryPath,

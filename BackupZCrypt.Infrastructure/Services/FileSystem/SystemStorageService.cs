@@ -2,7 +2,7 @@ namespace BackupZCrypt.Infrastructure.Services.FileSystem;
 
 using BackupZCrypt.Domain.Services.Interfaces;
 
-internal class SystemStorageService : ISystemStorageService
+internal sealed class SystemStorageService : ISystemStorageService
 {
     public string? GetPathRoot(string fullPath)
     {

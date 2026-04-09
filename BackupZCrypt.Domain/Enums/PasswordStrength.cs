@@ -1,11 +1,10 @@
-namespace BackupZCrypt.Domain.Enums
+namespace BackupZCrypt.Domain.Enums;
+
+public enum PasswordStrength
 {
-    public enum PasswordStrength
-    {
-        VeryWeak,
-        Weak,
-        Fair,
-        Good,
-        Strong,
-    }
+    VeryWeak,
+    Weak,
+    Fair,
+    Good,
+    Strong,
 }

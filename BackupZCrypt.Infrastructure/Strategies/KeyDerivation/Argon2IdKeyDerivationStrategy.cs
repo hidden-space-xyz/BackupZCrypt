@@ -33,7 +33,7 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
                 .Build());
 
         byte[] key = new byte[keySize / 8];
-        char[]? passwordChars = null;
+        char[] passwordChars = [];
 
         try
         {
@@ -49,10 +49,7 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         }
         finally
         {
-            if (passwordChars != null)
-            {
-                Array.Clear(passwordChars, 0, passwordChars.Length);
-            }
+            Array.Clear(passwordChars, 0, passwordChars.Length);
         }
     }
 }

@@ -1,12 +1,11 @@
-namespace BackupZCrypt.Application.Services.Interfaces
+namespace BackupZCrypt.Application.Services.Interfaces;
+
+using BackupZCrypt.Application.ValueObjects.Password;
+using BackupZCrypt.Domain.Enums;
+
+public interface IPasswordService
 {
-    using BackupZCrypt.Application.ValueObjects.Password;
-    using BackupZCrypt.Domain.Enums;
+    PasswordStrengthAnalysis AnalyzePasswordStrength(string password);
 
-    public interface IPasswordService
-    {
-        PasswordStrengthAnalysis AnalyzePasswordStrength(string password);
-
-        string GeneratePassword(int length, PasswordGenerationOptions options);
-    }
+    string GeneratePassword(int length, PasswordGenerationOptions options);
 }
