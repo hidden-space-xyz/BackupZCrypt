@@ -1,14 +1,324 @@
-[*.cs]
+# ============================================================
+# Enterprise .editorconfig for .NET + Roslynator
+# ============================================================
+# Purpose:
+# - Establish consistent coding conventions across the solution.
+# - Use Roslynator as a quality gate for readability and maintainability.
+# - Keep formatting rules strict, but avoid excessive noise from low-value hints.
+#
+# Notes:
+# - Roslynator supports configuration through .editorconfig.
+# - Analyzer severities are controlled with:
+#     dotnet_diagnostic.<ID>.severity
+# - Roslynator also supports named options such as:
+#     roslynator_use_var
+#     roslynator_prefix_field_identifier_with_underscore
+#     roslynator_null_check_style
+#     roslynator_doc_comment_summary_style
+#     roslynator_use_collection_expression
+#   and many others documented in the official guide.
+#
+# Strategy used here:
+# - Errors: only for rules that should block CI or prevent risky patterns.
+# - Warnings: important maintainability/readability issues.
+# - Suggestions/Silent: style nudges that should not disrupt delivery.
+# - None: rules that are too noisy or overlap with formatter/editor defaults.
+# ============================================================
 
-dotnet_diagnostic.CA1031.severity = none
-dotnet_diagnostic.CA1032.severity = none
-dotnet_diagnostic.CA1035.severity = none
-dotnet_diagnostic.CA1304.severity = none
-dotnet_diagnostic.CA1305.severity = none
-dotnet_diagnostic.CA1307.severity = none
-dotnet_diagnostic.CA1720.severity = none
-dotnet_diagnostic.CA1724.severity = none
-dotnet_diagnostic.CA1819.severity = none
-dotnet_diagnostic.CA1863.severity = none
-dotnet_diagnostic.CA2007.severity = none
-dotnet_diagnostic.CA2201.severity = none
+root = true
+
+# ------------------------------------------------------------
+# Global defaults
+# ------------------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ------------------------------------------------------------
+# C# files
+# ------------------------------------------------------------
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# ============================================================
+# Core Roslynator style options
+# These option names and allowed values are defined by Roslynator.
+# ============================================================
+
+# Prefer explicit accessibility on all declarations.
+# This is usually desirable in enterprise code because visibility
+# is part of the public contract and should not be implicit.
+roslynator_accessibility_modifiers = explicit
+
+# Keep braces multi-line for clarity and diff stability.
+roslynator_accessor_braces_style = multi_line
+roslynator_block_braces_style = multi_line
+
+# Use file-scoped namespace spacing that reads cleanly.
+roslynator_blank_line_after_file_scoped_namespace_declaration = true
+
+# Group using directives visually.
+roslynator_blank_line_between_using_directives = separate_groups
+
+# Keep expression-bodied members controlled rather than pervasive.
+# In enterprise codebases, full block bodies are often easier to debug,
+# annotate, and extend.
+roslynator_body_style = block
+roslynator_use_block_body_when_declaration_spans_over_multiple_lines = true
+roslynator_use_block_body_when_expression_spans_over_multiple_lines = true
+
+# Prefer modern null checking style.
+roslynator_null_check_style = pattern_matching
+
+# Keep doc comment summaries multi-line for easier maintenance.
+roslynator_doc_comment_summary_style = multi_line
+
+# Prefer String.Empty over literal empty string when normalizing style.
+roslynator_empty_string_style = field
+
+# Keep maximum line length aligned with common enterprise practice.
+# Roslynator's documented default is 140.
+roslynator_max_line_length = 140
+roslynator_tab_length = 4
+roslynator_new_line_at_end_of_file = true
+
+# Prefer underscore-prefixed private fields.
+# This is common in layered business applications and reduces naming ambiguity.
+roslynator_prefix_field_identifier_with_underscore = true
+
+# Prefer trailing commas in multi-line constructs to improve diffs.
+roslynator_trailing_comma_style = include
+
+# Prefer collection expressions where applicable, but do not force var everywhere.
+roslynator_use_collection_expression = true
+roslynator_use_var = when_type_is_obvious
+roslynator_use_var_instead_of_implicit_object_creation = false
+
+# Prefer implicit object/array creation only when obvious.
+roslynator_array_creation_type_style = implicit_when_type_is_obvious
+roslynator_object_creation_type_style = implicit_when_type_is_obvious
+roslynator_object_creation_parentheses_style = include
+
+# Prefer method groups where they are clean and obvious.
+roslynator_use_anonymous_function_or_method_group = method_group
+
+# Normalize enum flag style for readability.
+roslynator_enum_flag_value_style = shift_operator
+roslynator_enum_has_flag_style = operator
+
+# Use modern collection/loop/readability conventions.
+roslynator_infinite_loop_style = while
+
+# Keep operator line breaks consistent.
+roslynator_arrow_token_new_line = before
+roslynator_binary_operator_new_line = before
+roslynator_conditional_operator_new_line = before
+roslynator_equals_token_new_line = before
+roslynator_null_conditional_operator_new_line = before
+
+# Conditional style: allow concise conditions when obvious.
+roslynator_conditional_operator_condition_parentheses_style = omit_when_condition_is_single_token
+
+# Prefer line break before while in do/while for clarity.
+roslynator_new_line_before_while_in_do_statement = true
+
+# ============================================================
+# Roslynator analyzers - baseline policy
+# ============================================================
+
+# Start from a moderate baseline for Roslynator analyzers enabled by default.
+dotnet_analyzer_diagnostic.category-roslynator.severity = suggestion
+
+# ------------------------------------------------------------
+# Escalated maintainability and correctness-oriented rules
+# ------------------------------------------------------------
+
+# Use nameof operator
+dotnet_diagnostic.rcs1015.severity = warning
+
+# Simplify argument null check
+dotnet_diagnostic.rcs1255.severity = warning
+
+# Invalid argument null check
+dotnet_diagnostic.rcs1256.severity = warning
+
+# Duplicate word in a comment
+dotnet_diagnostic.rcs1243.severity = warning
+
+# Fix documentation comment tag
+dotnet_diagnostic.rcs1247.severity = warning
+
+# Remove redundant catch block
+dotnet_diagnostic.rcs1265.severity = warning
+
+# Unnecessary null-forgiving operator
+dotnet_diagnostic.rcs1249.severity = warning
+
+# Unnecessary conditional access
+dotnet_diagnostic.rcs9003.severity = warning
+
+# Unnecessary null check
+dotnet_diagnostic.rcs9005.severity = warning
+
+# Call Any instead of Count
+dotnet_diagnostic.rcs9004.severity = suggestion
+
+# Use property SyntaxNode.SpanStart
+dotnet_diagnostic.rcs9002.severity = suggestion
+
+# ------------------------------------------------------------
+# Formatting and style normalization rules
+# Keep visible, but do not make them disruptive.
+# ------------------------------------------------------------
+
+# Add/remove blank line between using directives
+dotnet_diagnostic.rcs0015.severity = suggestion
+
+# Format accessor braces
+dotnet_diagnostic.rcs0020.severity = suggestion
+
+# Format block braces
+dotnet_diagnostic.rcs0021.severity = suggestion
+
+# Place new line after/before binary operator
+dotnet_diagnostic.rcs0027.severity = silent
+
+# Place new line after/before ?: operator
+dotnet_diagnostic.rcs0028.severity = silent
+
+# Place new line after/before arrow token
+dotnet_diagnostic.rcs0032.severity = silent
+
+# Add/remove new line before while in do statement
+dotnet_diagnostic.rcs0051.severity = silent
+
+# Place new line after/before equals token
+dotnet_diagnostic.rcs0052.severity = silent
+
+# Normalize max line length / wrapping-related formatting
+dotnet_diagnostic.rcs0056.severity = suggestion
+
+# Ensure final newline
+dotnet_diagnostic.rcs0058.severity = suggestion
+
+# Normalize conditional null-check style
+dotnet_diagnostic.rcs1248.severity = suggestion
+
+# Format documentation comment summary
+dotnet_diagnostic.rcs1253.severity = suggestion
+
+# Normalize enum flag value
+dotnet_diagnostic.rcs1254.severity = suggestion
+
+# Use var or explicit type
+dotnet_diagnostic.rcs1264.severity = suggestion
+
+# Use raw string literal where appropriate
+dotnet_diagnostic.rcs1266.severity = suggestion
+
+# Use string interpolation instead of string.Concat
+dotnet_diagnostic.rcs1267.severity = suggestion
+
+# Simplify numeric comparison
+dotnet_diagnostic.rcs1268.severity = suggestion
+
+# ------------------------------------------------------------
+# Rules intentionally disabled to avoid enterprise noise
+# ------------------------------------------------------------
+
+# Add blank line after embedded statement
+dotnet_diagnostic.rcs0001.severity = none
+
+# Add blank line after #region
+dotnet_diagnostic.rcs0002.severity = none
+
+# Add blank line before #endregion
+dotnet_diagnostic.rcs0005.severity = none
+
+# Add blank line before using directive list
+dotnet_diagnostic.rcs0006.severity = none
+
+# Add blank line between accessors
+dotnet_diagnostic.rcs0007.severity = none
+
+# Add blank line between closing brace and next statement
+dotnet_diagnostic.rcs0008.severity = none
+
+# Add blank line between declarations
+dotnet_diagnostic.rcs0010.severity = none
+
+# Add/remove blank line between single-line accessors
+dotnet_diagnostic.rcs0011.severity = none
+
+# Put attribute list on its own line
+dotnet_diagnostic.rcs0016.severity = none
+
+# Format type declaration braces
+dotnet_diagnostic.rcs0023.severity = none
+
+# Put constructor initializer on its own line
+dotnet_diagnostic.rcs0029.severity = none
+
+# Put embedded statement on its own line
+dotnet_diagnostic.rcs0030.severity = none
+
+# Put enum member on its own line
+dotnet_diagnostic.rcs0031.severity = none
+
+# Put statement on its own line
+dotnet_diagnostic.rcs0033.severity = none
+
+# Remove new line before base list
+dotnet_diagnostic.rcs0039.severity = none
+
+# Use carriage return + linefeed as new line
+dotnet_diagnostic.rcs0044.severity = none
+
+# Use linefeed as new line
+dotnet_diagnostic.rcs0045.severity = none
+
+# Use spaces instead of tab
+dotnet_diagnostic.rcs0046.severity = none
+
+# Add blank line after top comment
+dotnet_diagnostic.rcs0049.severity = none
+
+# Add blank line before top declaration
+dotnet_diagnostic.rcs0050.severity = none
+
+# Merge else with nested if
+dotnet_diagnostic.rcs1006.severity = none
+
+# Add braces
+# Usually covered by existing team standards or IDE analyzers.
+dotnet_diagnostic.rcs1007.severity = none
+
+# Use predefined type
+dotnet_diagnostic.rcs1013.severity = none
+
+# Use implicitly/explicitly typed array
+dotnet_diagnostic.rcs1014.severity = suggestion
+
+# Normalize expression-bodied member style
+dotnet_diagnostic.rcs1016.severity = none
+
+# Use implicit/explicit object creation
+dotnet_diagnostic.rcs1250.severity = suggestion
+
+# Normalize usage of infinite loop
+dotnet_diagnostic.rcs1252.severity = none
+
+# ------------------------------------------------------------
+# Optional: generated code exclusion
+# ------------------------------------------------------------
+[*.g.cs]
+dotnet_analyzer_diagnostic.category-roslynator.severity = none
+
+[*.designer.cs]
+dotnet_analyzer_diagnostic.category-roslynator.severity = none
+
+[*.generated.cs]
+dotnet_analyzer_diagnostic.category-roslynator.severity = none
