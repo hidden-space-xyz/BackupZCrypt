@@ -10,7 +10,7 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
-internal sealed class FileCryptRequestValidator(
+internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
     IPasswordService passwordService) : IFileCryptRequestValidator

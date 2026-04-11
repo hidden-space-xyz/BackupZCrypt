@@ -9,7 +9,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
-internal sealed class FileCryptOrchestrator(
+internal sealed class BackupOrchestrator(
     IFileCryptRequestValidator fileProcessingRequestValidator,
     IFileOperationsService fileOperations,
     IFileCryptSingleFileService singleFileProcessor,

@@ -13,7 +13,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
-internal sealed class FileCryptSingleFileService(
+internal sealed class SingleFileBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,

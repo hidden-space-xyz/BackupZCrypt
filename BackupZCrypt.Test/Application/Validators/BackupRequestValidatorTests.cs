@@ -8,12 +8,12 @@ using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 
 [TestFixture]
-internal sealed class FileCryptRequestValidatorTests
+internal sealed class BackupRequestValidatorTests
 {
     private IFileOperationsService fileOps = null!;
     private IPasswordService passwordService = null!;
     private ISystemStorageService storage = null!;
-    private FileCryptRequestValidator validator = null!;
+    private BackupRequestValidator validator = null!;
 
     [Test]
     public async Task AnalyzeErrors_EmptyDestination_ReturnsError()
@@ -193,7 +193,7 @@ internal sealed class FileCryptRequestValidatorTests
         this.fileOps = Substitute.For<IFileOperationsService>();
         this.storage = Substitute.For<ISystemStorageService>();
         this.passwordService = Substitute.For<IPasswordService>();
-        this.validator = new FileCryptRequestValidator(this.fileOps, this.storage, this.passwordService);
+        this.validator = new BackupRequestValidator(this.fileOps, this.storage, this.passwordService);
     }
 
     private static FileCryptRequest CreateRequest(

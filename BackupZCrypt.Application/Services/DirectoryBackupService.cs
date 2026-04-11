@@ -14,7 +14,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
-internal sealed class FileCryptDirectoryService(
+internal sealed class DirectoryBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,

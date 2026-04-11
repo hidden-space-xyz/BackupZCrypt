@@ -16,7 +16,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
 [TestFixture]
-internal sealed class FileCryptSingleFileServiceTests
+internal sealed class SingleFileBackupServiceTests
 {
     private IEncryptionServiceFactory encryptionFactory = null!;
     private IEncryptionAlgorithmStrategy encryptionStrategy = null!;
@@ -25,7 +25,7 @@ internal sealed class FileCryptSingleFileServiceTests
     private INameObfuscationServiceFactory obfuscationFactory = null!;
     private INameObfuscationStrategy obfuscationStrategy = null!;
     private IProgress<FileCryptStatus> progress = null!;
-    private FileCryptSingleFileService service = null!;
+    private SingleFileBackupService service = null!;
 
     [Test]
     public async Task ProcessAsync_Decrypt_ManifestFile_IgnoresAndReturnsSuccess()
@@ -234,7 +234,7 @@ internal sealed class FileCryptSingleFileServiceTests
 
         ICompressionServiceFactory compressionFactory = Substitute.For<ICompressionServiceFactory>();
 
-        this.service = new FileCryptSingleFileService(
+        this.service = new SingleFileBackupService(
             this.encryptionFactory,
             compressionFactory,
             this.obfuscationFactory,

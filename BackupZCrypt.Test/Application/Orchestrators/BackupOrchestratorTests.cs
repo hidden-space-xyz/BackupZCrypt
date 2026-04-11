@@ -10,11 +10,11 @@ using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 
 [TestFixture]
-internal sealed class FileCryptOrchestratorTests
+internal sealed class BackupOrchestratorTests
 {
     private IFileCryptDirectoryService directoryService = null!;
     private IFileOperationsService fileOps = null!;
-    private FileCryptOrchestrator orchestrator = null!;
+    private BackupOrchestrator orchestrator = null!;
     private IProgress<FileCryptStatus> progress = null!;
     private IFileCryptSingleFileService singleFileService = null!;
     private IFileCryptRequestValidator validator = null!;
@@ -252,7 +252,7 @@ internal sealed class FileCryptOrchestratorTests
         this.directoryService = Substitute.For<IFileCryptDirectoryService>();
         this.progress = Substitute.For<IProgress<FileCryptStatus>>();
 
-        this.orchestrator = new FileCryptOrchestrator(
+        this.orchestrator = new BackupOrchestrator(
             this.validator,
             this.fileOps,
             this.singleFileService,

@@ -13,7 +13,7 @@ using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 
 [TestFixture]
-internal sealed class FileCryptDirectoryServiceTests
+internal sealed class DirectoryBackupServiceTests
 {
     private IEncryptionServiceFactory encryptionFactory = null!;
     private ICompressionServiceFactory compressionFactory = null!;
@@ -22,7 +22,7 @@ internal sealed class FileCryptDirectoryServiceTests
     private IManifestService manifestService = null!;
     private IEncryptionAlgorithmStrategy encryptionStrategy = null!;
     private IProgress<FileCryptStatus> progress = null!;
-    private FileCryptDirectoryService service = null!;
+    private DirectoryBackupService service = null!;
 
     [SetUp]
     public void SetUp()
@@ -40,7 +40,7 @@ internal sealed class FileCryptDirectoryServiceTests
 
         this.progress = Substitute.For<IProgress<FileCryptStatus>>();
 
-        this.service = new FileCryptDirectoryService(
+        this.service = new DirectoryBackupService(
             this.encryptionFactory,
             this.compressionFactory,
             this.obfuscationFactory,
