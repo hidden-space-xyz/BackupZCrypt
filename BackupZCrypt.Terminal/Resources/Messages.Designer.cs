@@ -79,24 +79,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Is the backup compressed?.
-        /// </summary>
-        internal static string BackupCompressedPrompt {
-            get {
-                return ResourceManager.GetString("BackupCompressedPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Is the backup encrypted?.
-        /// </summary>
-        internal static string BackupEncryptedPrompt {
-            get {
-                return ResourceManager.GetString("BackupEncryptedPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a A simple military-grade file backup tool.
         /// </summary>
         internal static string BannerSubtitle {
@@ -129,15 +111,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string CompletedSuccessfully {
             get {
                 return ResourceManager.GetString("CompletedSuccessfully", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Do you want to compress the backup?.
-        /// </summary>
-        internal static string CompressBackupPrompt {
-            get {
-                return ResourceManager.GetString("CompressBackupPrompt", resourceCulture);
             }
         }
         
@@ -223,15 +196,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Decrypt.
-        /// </summary>
-        internal static string Decrypt {
-            get {
-                return ResourceManager.GetString("Decrypt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Decrypting.
         /// </summary>
         internal static string Decrypting {
@@ -273,24 +237,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string ElapsedTime {
             get {
                 return ResourceManager.GetString("ElapsedTime", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Encrypt.
-        /// </summary>
-        internal static string Encrypt {
-            get {
-                return ResourceManager.GetString("Encrypt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Do you want to encrypt the backup?.
-        /// </summary>
-        internal static string EncryptBackupPrompt {
-            get {
-                return ResourceManager.GetString("EncryptBackupPrompt", resourceCulture);
             }
         }
         
@@ -399,15 +345,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string Goodbye {
             get {
                 return ResourceManager.GetString("Goodbye", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Include:.
-        /// </summary>
-        internal static string IncludePrompt {
-            get {
-                return ResourceManager.GetString("IncludePrompt", resourceCulture);
             }
         }
         
@@ -574,15 +511,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Do you want to obfuscate file names?.
-        /// </summary>
-        internal static string ObfuscateNamesPrompt {
-            get {
-                return ResourceManager.GetString("ObfuscateNamesPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Operation cancelled..
         /// </summary>
         internal static string OperationCancelled {
@@ -619,42 +547,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Lowercase (a-z).
-        /// </summary>
-        internal static string OptionLowercase {
-            get {
-                return ResourceManager.GetString("OptionLowercase", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Numbers (0-9).
-        /// </summary>
-        internal static string OptionNumbers {
-            get {
-                return ResourceManager.GetString("OptionNumbers", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Special characters (!@#$).
-        /// </summary>
-        internal static string OptionSpecialChars {
-            get {
-                return ResourceManager.GetString("OptionSpecialChars", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Uppercase (A-Z).
-        /// </summary>
-        internal static string OptionUppercase {
-            get {
-                return ResourceManager.GetString("OptionUppercase", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Partially completed.
         /// </summary>
         internal static string PartiallyCompleted {
@@ -669,42 +561,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string PasswordCannotBeEmpty {
             get {
                 return ResourceManager.GetString("PasswordCannotBeEmpty", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Password Generator.
-        /// </summary>
-        internal static string PasswordGenerator {
-            get {
-                return ResourceManager.GetString("PasswordGenerator", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Length must be between 16 and 256.
-        /// </summary>
-        internal static string PasswordLengthError {
-            get {
-                return ResourceManager.GetString("PasswordLengthError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Password length.
-        /// </summary>
-        internal static string PasswordLengthPrompt {
-            get {
-                return ResourceManager.GetString("PasswordLengthPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a (16–256):.
-        /// </summary>
-        internal static string PasswordLengthRange {
-            get {
-                return ResourceManager.GetString("PasswordLengthRange", resourceCulture);
             }
         }
         
@@ -799,15 +655,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Restoring.
-        /// </summary>
-        internal static string Restoring {
-            get {
-                return ResourceManager.GetString("Restoring", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Results.
         /// </summary>
         internal static string Results {
@@ -853,15 +700,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Strength:.
-        /// </summary>
-        internal static string StrengthLabel {
-            get {
-                return ResourceManager.GetString("StrengthLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Summary.
         /// </summary>
         internal static string SummaryTitle {
@@ -876,15 +714,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string Throughput {
             get {
                 return ResourceManager.GetString("Throughput", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a (Press &lt;space&gt; to toggle, &lt;enter&gt; to confirm).
-        /// </summary>
-        internal static string ToggleInstructions {
-            get {
-                return ResourceManager.GetString("ToggleInstructions", resourceCulture);
             }
         }
         

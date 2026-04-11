@@ -225,15 +225,6 @@
   <data name="GuidSummary" xml:space="preserve">
     <value>Nombre completamente aleatorio (máxima privacidad)</value>
   </data>
-  <data name="NoObfuscationDisplayName" xml:space="preserve">
-    <value>Ninguna</value>
-  </data>
-  <data name="NoObfuscationDescription" xml:space="preserve">
-    <value>Mantiene el nombre de archivo original tal cual. Úselo cuando no necesite ocultar los nombres de archivo y prefiera mantenerlos legibles y organizados.</value>
-  </data>
-  <data name="NoObfuscationSummary" xml:space="preserve">
-    <value>Mantiene el nombre original (por defecto)</value>
-  </data>
   <data name="ZstdFastDisplayName" xml:space="preserve">
     <value>Zstandard (Rápido)</value>
   </data>
@@ -260,15 +251,6 @@
   </data>
   <data name="ZstdBestSummary" xml:space="preserve">
     <value>Archivos más pequeños, compresión más lenta</value>
-  </data>
-  <data name="NoCompressionDisplayName" xml:space="preserve">
-    <value>Ninguna</value>
-  </data>
-  <data name="NoCompressionDescription" xml:space="preserve">
-    <value>No se aplica compresión — los archivos se cifran con su tamaño original. Ideal cuando la velocidad es lo más importante o los archivos ya están comprimidos (ej. ZIP, JPEG, MP4).</value>
-  </data>
-  <data name="NoCompressionSummary" xml:space="preserve">
-    <value>Sin compresión, más rápido (por defecto)</value>
   </data>
   <data name="OperationEncryption" xml:space="preserve">
     <value>cifrado</value>

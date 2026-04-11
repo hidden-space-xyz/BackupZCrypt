@@ -138,14 +138,8 @@
   <data name="PressAnyKey" xml:space="preserve">
     <value>Press any key to return to the menu…</value>
   </data>
-  <data name="Encrypt" xml:space="preserve">
-    <value>Encrypt</value>
-  </data>
   <data name="Encrypting" xml:space="preserve">
     <value>Encrypting</value>
-  </data>
-  <data name="Decrypt" xml:space="preserve">
-    <value>Decrypt</value>
   </data>
   <data name="Decrypting" xml:space="preserve">
     <value>Decrypting</value>
@@ -309,39 +303,6 @@
   <data name="Description" xml:space="preserve">
     <value>Description</value>
   </data>
-  <data name="PasswordGenerator" xml:space="preserve">
-    <value>Password Generator</value>
-  </data>
-  <data name="PasswordLengthPrompt" xml:space="preserve">
-    <value>Password length</value>
-  </data>
-  <data name="PasswordLengthRange" xml:space="preserve">
-    <value>(16–256):</value>
-  </data>
-  <data name="PasswordLengthError" xml:space="preserve">
-    <value>Length must be between 16 and 256</value>
-  </data>
-  <data name="IncludePrompt" xml:space="preserve">
-    <value>Include:</value>
-  </data>
-  <data name="ToggleInstructions" xml:space="preserve">
-    <value>(Press &lt;space&gt; to toggle, &lt;enter&gt; to confirm)</value>
-  </data>
-  <data name="OptionUppercase" xml:space="preserve">
-    <value>Uppercase (A-Z)</value>
-  </data>
-  <data name="OptionLowercase" xml:space="preserve">
-    <value>Lowercase (a-z)</value>
-  </data>
-  <data name="OptionNumbers" xml:space="preserve">
-    <value>Numbers (0-9)</value>
-  </data>
-  <data name="OptionSpecialChars" xml:space="preserve">
-    <value>Special characters (!@#$)</value>
-  </data>
-  <data name="StrengthLabel" xml:space="preserve">
-    <value>Strength:</value>
-  </data>
   <data name="LengthLabel" xml:space="preserve">
     <value>Length:</value>
   </data>
@@ -366,29 +327,14 @@
   <data name="RestoreBackup" xml:space="preserve">
     <value>Restore Backup</value>
   </data>
-  <data name="EncryptBackupPrompt" xml:space="preserve">
-    <value>Do you want to encrypt the backup?</value>
-  </data>
-  <data name="BackupEncryptedPrompt" xml:space="preserve">
-    <value>Is the backup encrypted?</value>
-  </data>
   <data name="Copying" xml:space="preserve">
     <value>Copying</value>
-  </data>
-  <data name="CompressBackupPrompt" xml:space="preserve">
-    <value>Do you want to compress the backup?</value>
-  </data>
-  <data name="BackupCompressedPrompt" xml:space="preserve">
-    <value>Is the backup compressed?</value>
   </data>
   <data name="Compressing" xml:space="preserve">
     <value>Compressing</value>
   </data>
   <data name="Decompressing" xml:space="preserve">
     <value>Decompressing</value>
-  </data>
-  <data name="ObfuscateNamesPrompt" xml:space="preserve">
-    <value>Do you want to obfuscate file names?</value>
   </data>
   <data name="NoneNoEncryption" xml:space="preserve">
     <value>None (no encryption)</value>
@@ -404,9 +350,6 @@
   </data>
   <data name="NoEncryptionDetected" xml:space="preserve">
     <value>No encryption detected, proceeding without password.</value>
-  </data>
-  <data name="Restoring" xml:space="preserve">
-    <value>Restoring</value>
   </data>
   <data name="WeakPasswordConfirm" xml:space="preserve">
     <value>Your password is weak. Would you like to change it?</value>

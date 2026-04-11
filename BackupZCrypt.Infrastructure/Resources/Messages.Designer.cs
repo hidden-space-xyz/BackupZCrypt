@@ -205,60 +205,6 @@ namespace BackupZCrypt.Infrastructure.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a No compression is applied — files are encrypted at their original size. Best when speed matters most or files are already compressed (e.g., ZIP, JPEG, MP4)..
-        /// </summary>
-        internal static string NoCompressionDescription {
-            get {
-                return ResourceManager.GetString("NoCompressionDescription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a None.
-        /// </summary>
-        internal static string NoCompressionDisplayName {
-            get {
-                return ResourceManager.GetString("NoCompressionDisplayName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a No compression, fastest (default).
-        /// </summary>
-        internal static string NoCompressionSummary {
-            get {
-                return ResourceManager.GetString("NoCompressionSummary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Keeps the original filename as-is. Use when you don&apos;t need to hide filenames and prefer to keep them readable and organized..
-        /// </summary>
-        internal static string NoObfuscationDescription {
-            get {
-                return ResourceManager.GetString("NoObfuscationDescription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a None.
-        /// </summary>
-        internal static string NoObfuscationDisplayName {
-            get {
-                return ResourceManager.GetString("NoObfuscationDisplayName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Keeps original filename (default).
-        /// </summary>
-        internal static string NoObfuscationSummary {
-            get {
-                return ResourceManager.GetString("NoObfuscationSummary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a decryption.
         /// </summary>
         internal static string OperationDecryption {

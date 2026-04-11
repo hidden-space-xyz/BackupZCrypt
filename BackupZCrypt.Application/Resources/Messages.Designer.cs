@@ -646,15 +646,6 @@ namespace BackupZCrypt.Application.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Unsupported operation: {0}.
-        /// </summary>
-        public static string UnsupportedOperationFormat {
-            get {
-                return ResourceManager.GetString("UnsupportedOperationFormat", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Password strength is below recommended level. Consider using a stronger password..
         /// </summary>
         public static string WeakPasswordWarning {

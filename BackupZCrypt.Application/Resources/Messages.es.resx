@@ -192,9 +192,6 @@
   <data name="ManifestIgnored" xml:space="preserve">
     <value>Archivo de manifiesto ignorado durante el descifrado.</value>
   </data>
-  <data name="UnsupportedOperationFormat" xml:space="preserve">
-    <value>Operación no soportada: {0}</value>
-  </data>
   <data name="NoFilesInSourceDirectory" xml:space="preserve">
     <value>No se encontraron archivos en el directorio de origen.</value>
   </data>
