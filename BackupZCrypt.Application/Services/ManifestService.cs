@@ -207,7 +207,8 @@ internal sealed class ManifestService : IManifestService
                 map[e.RelativePath] = new ManifestFileInfo(
                     e.OriginalRelativePath,
                     salt,
-                    nonce);
+                    nonce,
+                    e.SourceHash);
             }
 
             return new ManifestData(header, map);
@@ -259,7 +260,8 @@ internal sealed class ManifestService : IManifestService
                 map[e.RelativePath] = new ManifestFileInfo(
                     e.OriginalRelativePath,
                     salt,
-                    nonce);
+                    nonce,
+                    e.SourceHash);
             }
 
             return new ManifestData(header, map);

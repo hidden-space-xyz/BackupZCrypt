@@ -315,4 +315,13 @@
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
     <value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value>
   </data>
+  <data name="ManifestRequiredForUpdate" xml:space="preserve">
+    <value>Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest.</value>
+  </data>
+  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
+    <value>Update operation is only supported for directory backups.</value>
+  </data>
+  <data name="BackupDestinationMustExist" xml:space="preserve">
+    <value>Backup destination directory does not exist. Cannot update a non-existent backup.</value>
+  </data>
 </root>

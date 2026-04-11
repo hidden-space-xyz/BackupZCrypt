@@ -31,6 +31,12 @@ internal sealed class DirectoryBackupService(
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
+        if (request.Operation == EncryptOperation.Update)
+        {
+            return await ProcessUpdateAsync(
+                sourcePath, destinationPath, request, progress, stopwatch, cancellationToken);
+        }
+
         IEncryptionAlgorithmStrategy? encryptionService = null;
         INameObfuscationStrategy? obfuscationService = null;
 
@@ -264,6 +270,8 @@ internal sealed class DirectoryBackupService(
                                         request.Compression,
                                         token);
 
+                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+
                                 string destRelativePath = fileOperations.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
@@ -272,7 +280,8 @@ internal sealed class DirectoryBackupService(
                                     destRelativePath,
                                     fileItem.OriginalRelativePath,
                                     Convert.ToBase64String(metadata.Salt),
-                                    Convert.ToBase64String(metadata.Nonce)));
+                                    Convert.ToBase64String(metadata.Nonce),
+                                    sourceHash));
 
                                 Interlocked.Increment(ref processedFiles);
                             }
@@ -314,11 +323,14 @@ internal sealed class DirectoryBackupService(
                                     destinationPath,
                                     destinationFilePath);
 
+                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+
                                 manifestEntries.Add(new ManifestEntry(
                                     destRelativePath,
                                     fileItem.OriginalRelativePath,
                                     string.Empty,
-                                    string.Empty));
+                                    string.Empty,
+                                    sourceHash));
                             }
 
                             bool operationResult = await ProcessCompressedFileAsync(
@@ -621,5 +633,396 @@ internal sealed class DirectoryBackupService(
         }
 
         return fileOperations.CombinePath([destinationRoot, .. obfuscatedSegments]);
+    }
+
+    private async Task<Result<BackupResult>> ProcessUpdateAsync(
+        string sourcePath,
+        string destinationPath,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        ManifestData? manifestData = await manifestService.TryReadManifestAsync(
+            destinationPath,
+            [.. encryptionStrategies],
+            request.UseEncryption ? request.Password : string.Empty,
+            cancellationToken);
+
+        if (manifestData is null)
+        {
+            return Result<BackupResult>.Failure(Messages.ManifestRequiredForUpdate);
+        }
+
+        request = request with
+        {
+            EncryptionAlgorithm = manifestData.Header.EncryptionAlgorithm,
+            KeyDerivationAlgorithm = manifestData.Header.KeyDerivationAlgorithm,
+            NameObfuscation = manifestData.Header.NameObfuscation,
+            Compression = manifestData.Header.Compression,
+        };
+
+        IEncryptionAlgorithmStrategy? encryptionService = null;
+        INameObfuscationStrategy? obfuscationService = null;
+
+        if (request.UseEncryption)
+        {
+            encryptionService = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
+        }
+
+        if (request.NameObfuscation != NameObfuscationMode.None)
+        {
+            obfuscationService = nameObfuscationServiceFactory.Create(request.NameObfuscation);
+        }
+
+        Dictionary<string, (string RelativePath, ManifestFileInfo Info)> existingEntries = new(
+            StringComparer.OrdinalIgnoreCase);
+        if (manifestData.FileMap is not null)
+        {
+            foreach (var kvp in manifestData.FileMap)
+            {
+                existingEntries[kvp.Value.OriginalRelativePath] = (kvp.Key, kvp.Value);
+            }
+        }
+
+        string[] sourceFiles = await fileOperations.GetFilesAsync(
+            sourcePath, "*.*", cancellationToken);
+
+        ConcurrentDictionary<string, string> directoryObfuscationCache = new(
+            StringComparer.OrdinalIgnoreCase);
+        if (obfuscationService is not null && manifestData.FileMap is not null)
+        {
+            RebuildDirectoryObfuscationCache(manifestData.FileMap, directoryObfuscationCache);
+        }
+
+        ConcurrentBag<ManifestEntry> updatedManifestEntries = [];
+        List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath)>
+            filesToProcess = [];
+        HashSet<string> sourceOriginalPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string file in sourceFiles)
+        {
+            string originalRelativePath = fileOperations.GetRelativePath(sourcePath, file);
+            sourceOriginalPaths.Add(originalRelativePath);
+
+            if (existingEntries.TryGetValue(originalRelativePath, out var existing))
+            {
+                string currentHash = await fileOperations.ComputeFileHashAsync(file, cancellationToken);
+
+                if (string.Equals(
+                        currentHash, existing.Info.SourceHash, StringComparison.Ordinal))
+                {
+                    updatedManifestEntries.Add(new ManifestEntry(
+                        existing.RelativePath,
+                        existing.Info.OriginalRelativePath,
+                        Convert.ToBase64String(existing.Info.Salt),
+                        Convert.ToBase64String(existing.Info.Nonce),
+                        existing.Info.SourceHash));
+                }
+                else
+                {
+                    string destFilePath = fileOperations.CombinePath(
+                        destinationPath, existing.RelativePath);
+                    filesToProcess.Add((file, destFilePath, originalRelativePath));
+                }
+            }
+            else
+            {
+                string destFilePath;
+                if (request.UseEncryption && obfuscationService is not null)
+                {
+                    destFilePath = ObfuscateFullPath(
+                        sourcePath, file, originalRelativePath, destinationPath,
+                        obfuscationService, directoryObfuscationCache);
+                }
+                else
+                {
+                    destFilePath = fileOperations.CombinePath(
+                        destinationPath,
+                        originalRelativePath + BackupConstants.AppFileExtension);
+                }
+
+                filesToProcess.Add((file, destFilePath, originalRelativePath));
+            }
+        }
+
+        foreach (var kvp in existingEntries)
+        {
+            if (!sourceOriginalPaths.Contains(kvp.Key))
+            {
+                string destFilePath = fileOperations.CombinePath(
+                    destinationPath, kvp.Value.RelativePath);
+                try
+                {
+                    if (fileOperations.FileExists(destFilePath))
+                    {
+                        File.Delete(destFilePath);
+                    }
+                }
+                catch
+                {
+                    // Ignore deletion errors for removed files
+                }
+            }
+        }
+
+        int totalFilesToProcess = filesToProcess.Count;
+        long totalBytes = filesToProcess.Sum(
+            item => fileOperations.GetFileSize(item.SourceFilePath));
+        long processedBytes = 0;
+        int processedFiles = 0;
+
+        progress?.Report(
+            new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
+
+        ConcurrentBag<string> errors = [];
+        string? fatalError = null;
+
+        if (totalFilesToProcess > 0)
+        {
+            using CancellationTokenSource linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
+                CancellationToken = linkedCts.Token,
+            };
+
+            try
+            {
+                await Parallel.ForEachAsync(
+                    filesToProcess,
+                    parallelOptions,
+                    async (fileItem, token) =>
+                    {
+                        string file = fileItem.SourceFilePath;
+                        string destinationFilePath = fileItem.DestinationFilePath;
+
+                        string? destDir = fileOperations.GetDirectoryName(destinationFilePath);
+                        if (!string.IsNullOrEmpty(destDir))
+                        {
+                            await fileOperations.CreateDirectoryAsync(destDir, token);
+                        }
+
+                        try
+                        {
+                            if (request.UseEncryption)
+                            {
+                                EncryptionMetadata metadata =
+                                    await encryptionService!.EncryptFileAsync(
+                                        file,
+                                        destinationFilePath,
+                                        request.Password,
+                                        request.KeyDerivationAlgorithm,
+                                        request.Compression,
+                                        token);
+
+                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+
+                                string destRelativePath = fileOperations.GetRelativePath(
+                                    destinationPath,
+                                    destinationFilePath);
+
+                                updatedManifestEntries.Add(new ManifestEntry(
+                                    destRelativePath,
+                                    fileItem.OriginalRelativePath,
+                                    Convert.ToBase64String(metadata.Salt),
+                                    Convert.ToBase64String(metadata.Nonce),
+                                    sourceHash));
+                            }
+                            else
+                            {
+                                string destRelativePath = fileOperations.GetRelativePath(
+                                    destinationPath,
+                                    destinationFilePath);
+
+                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+
+                                updatedManifestEntries.Add(new ManifestEntry(
+                                    destRelativePath,
+                                    fileItem.OriginalRelativePath,
+                                    string.Empty,
+                                    string.Empty,
+                                    sourceHash));
+
+                                await CompressFileAsync(
+                                    file,
+                                    destinationFilePath,
+                                    request.Compression,
+                                    token);
+                            }
+
+                            Interlocked.Increment(ref processedFiles);
+                        }
+                        catch (Domain.Exceptions.EncryptionAccessDeniedException ex)
+                        {
+                            Interlocked.CompareExchange(
+                                ref fatalError,
+                                string.Format(Messages.AccessDeniedStoppedFormat, ex.Message),
+                                null);
+                            await linkedCts.CancelAsync();
+                            return;
+                        }
+                        catch (Domain.Exceptions.EncryptionInsufficientSpaceException ex)
+                        {
+                            Interlocked.CompareExchange(
+                                ref fatalError,
+                                string.Format(
+                                    Messages.InsufficientSpaceStoppedFormat, ex.Message),
+                                null);
+                            await linkedCts.CancelAsync();
+                            return;
+                        }
+                        catch (Domain.Exceptions.EncryptionInvalidPasswordException ex)
+                        {
+                            Interlocked.CompareExchange(
+                                ref fatalError,
+                                string.Format(
+                                    Messages.InvalidPasswordStoppedFormat, ex.Message),
+                                null);
+                            await linkedCts.CancelAsync();
+                            return;
+                        }
+                        catch (Domain.Exceptions.EncryptionKeyDerivationException ex)
+                        {
+                            Interlocked.CompareExchange(
+                                ref fatalError,
+                                string.Format(
+                                    Messages.KeyDerivationStoppedFormat, ex.Message),
+                                null);
+                            await linkedCts.CancelAsync();
+                            return;
+                        }
+                        catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
+                        {
+                            errors.Add(
+                                string.Format(
+                                    Messages.FileNotFoundSkippedFormat, file, ex.Message));
+                        }
+                        catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
+                        {
+                            errors.Add(
+                                string.Format(
+                                    Messages.CorruptedFileSkippedFormat, file, ex.Message));
+                        }
+                        catch (Domain.Exceptions.EncryptionCipherException ex)
+                        {
+                            errors.Add(
+                                string.Format(Messages.CipherErrorFormat, file, ex.Message));
+                        }
+                        catch (Domain.Exceptions.EncryptionException ex)
+                        {
+                            errors.Add(
+                                string.Format(Messages.EncryptionErrorFormat, file, ex.Message));
+                        }
+                        catch (Exception ex) when (!request.UseEncryption)
+                        {
+                            errors.Add(
+                                string.Format(
+                                    Messages.CompressionErrorFormat, file, ex.Message));
+                        }
+
+                        long fileSize = 0;
+                        try
+                        {
+                            fileSize = fileOperations.GetFileSize(file);
+                        }
+                        catch
+                        {
+                            // Ignore file size retrieval errors
+                        }
+
+                        long currentProcessedBytes =
+                            Interlocked.Add(ref processedBytes, fileSize);
+                        int currentProcessedFiles = Volatile.Read(ref processedFiles);
+                        progress?.Report(
+                            new BackupStatus(
+                                currentProcessedFiles,
+                                totalFilesToProcess,
+                                currentProcessedBytes,
+                                totalBytes,
+                                stopwatch.Elapsed));
+                    });
+            }
+            catch (OperationCanceledException) when (fatalError is not null)
+            {
+                stopwatch.Stop();
+                return Result<BackupResult>.Failure(fatalError);
+            }
+        }
+
+        List<string> errorList = [.. errors];
+
+        ManifestHeader header = new(
+            request.EncryptionAlgorithm,
+            request.KeyDerivationAlgorithm,
+            request.NameObfuscation,
+            request.Compression);
+
+        IReadOnlyList<string> manifestErrors;
+        if (request.UseEncryption)
+        {
+            manifestErrors = await manifestService.TrySaveManifestAsync(
+                [.. updatedManifestEntries],
+                header,
+                destinationPath,
+                encryptionService!,
+                request,
+                cancellationToken);
+        }
+        else
+        {
+            manifestErrors = await manifestService.TrySavePlainManifestAsync(
+                [.. updatedManifestEntries],
+                header,
+                destinationPath,
+                cancellationToken);
+        }
+
+        if (manifestErrors.Count > 0)
+        {
+            errorList.AddRange(manifestErrors);
+        }
+
+        stopwatch.Stop();
+        bool isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
+
+        return errorList.Count > 0 && processedFiles == 0 && updatedManifestEntries.IsEmpty
+            ? Result<BackupResult>.Failure(
+                string.Format(Messages.AllFilesFailedFormat, string.Join("; ", errorList)))
+            : Result<BackupResult>.Success(
+                new BackupResult(
+                    isSuccess,
+                    stopwatch.Elapsed,
+                    totalBytes,
+                    processedFiles,
+                    totalFilesToProcess,
+                    errors: errorList));
+    }
+
+    private static void RebuildDirectoryObfuscationCache(
+        Dictionary<string, ManifestFileInfo> fileMap,
+        ConcurrentDictionary<string, string> cache)
+    {
+        foreach (var kvp in fileMap)
+        {
+            string relPath = kvp.Key;
+            string origPath = kvp.Value.OriginalRelativePath;
+
+            string[] origSegments = origPath.Split(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string[] relSegments = relPath.Split(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            for (int i = 0; i < origSegments.Length - 1 && i < relSegments.Length - 1; i++)
+            {
+                string origDirKey = string.Join(
+                    Path.DirectorySeparatorChar.ToString(),
+                    origSegments.Take(i + 1));
+                cache.TryAdd(origDirKey, relSegments[i]);
+            }
+        }
     }
 }

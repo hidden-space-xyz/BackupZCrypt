@@ -4,4 +4,5 @@ public sealed record ManifestEntry(
     string RelativePath,
     string OriginalRelativePath,
     string Salt,
-    string Nonce);
+    string Nonce,
+    string SourceHash);

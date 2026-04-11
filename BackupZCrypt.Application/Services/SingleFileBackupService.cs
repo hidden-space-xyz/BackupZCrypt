@@ -98,11 +98,15 @@ internal sealed class SingleFileBackupService(
                         string destRelativePath = Path.GetFileName(destFile);
                         string originalRelativePath = Path.GetFileName(sourcePath);
 
+                        string sourceHash = await fileOperations.ComputeFileHashAsync(
+                            sourcePath, cancellationToken);
+
                         ManifestEntry entry = new(
                             destRelativePath,
                             originalRelativePath,
                             Convert.ToBase64String(metadata.Salt),
-                            Convert.ToBase64String(metadata.Nonce));
+                            Convert.ToBase64String(metadata.Nonce),
+                            sourceHash);
 
                         ManifestHeader header = new(
                             request.EncryptionAlgorithm,
@@ -153,6 +157,7 @@ internal sealed class SingleFileBackupService(
                             ManifestEntry entry = new(
                                 destRelativePath,
                                 originalRelativePath,
+                                string.Empty,
                                 string.Empty,
                                 string.Empty);
 

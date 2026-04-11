@@ -779,5 +779,86 @@ namespace BackupZCrypt.Terminal.Resources {
                 return ResourceManager.GetString("WeakPasswordConfirm", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🔄 Update Backup.
+        /// </summary>
+        internal static string MenuUpdateBackup {
+            get {
+                return ResourceManager.GetString("MenuUpdateBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Update Backup.
+        /// </summary>
+        internal static string UpdateBackup {
+            get {
+                return ResourceManager.GetString("UpdateBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Updating.
+        /// </summary>
+        internal static string Updating {
+            get {
+                return ResourceManager.GetString("Updating", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Original source path.
+        /// </summary>
+        internal static string UpdateSourcePathPrompt {
+            get {
+                return ResourceManager.GetString("UpdateSourcePathPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a (directory with current files):.
+        /// </summary>
+        internal static string UpdateSourcePathHint {
+            get {
+                return ResourceManager.GetString("UpdateSourcePathHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Existing backup path.
+        /// </summary>
+        internal static string UpdateBackupPathPrompt {
+            get {
+                return ResourceManager.GetString("UpdateBackupPathPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a (directory with manifest.bzc):.
+        /// </summary>
+        internal static string UpdateBackupPathHint {
+            get {
+                return ResourceManager.GetString("UpdateBackupPathHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a No manifest file found in the backup directory. Cannot update without a manifest file..
+        /// </summary>
+        internal static string UpdateManifestNotFound {
+            get {
+                return ResourceManager.GetString("UpdateManifestNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Update is only supported for directories. Please provide a directory path as source..
+        /// </summary>
+        internal static string UpdateSourceMustBeDirectory {
+            get {
+                return ResourceManager.GetString("UpdateSourceMustBeDirectory", resourceCulture);
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ internal sealed class TerminalApplication(
                     .HighlightStyle(Style.Parse("bold cyan"))
                     .AddChoices(
                         Messages.MenuCreateBackup,
+                        Messages.MenuUpdateBackup,
                         Messages.MenuRestoreBackup,
                         Messages.MenuAlgorithmInfo,
                         Messages.MenuExit));
@@ -29,6 +30,10 @@ internal sealed class TerminalApplication(
             if (choice == Messages.MenuCreateBackup)
             {
                 await backupCommand.ExecuteAsync(EncryptOperation.Encrypt);
+            }
+            else if (choice == Messages.MenuUpdateBackup)
+            {
+                await backupCommand.ExecuteAsync(EncryptOperation.Update);
             }
             else if (choice == Messages.MenuRestoreBackup)
             {

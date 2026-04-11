@@ -315,7 +315,7 @@ internal sealed class BackupRequestValidator(
                 }
             }
 
-            if (hasExistingFiles)
+            if (hasExistingFiles && request.Operation != EncryptOperation.Update)
             {
                 warnings.Add(
                     string.Format(

@@ -1,6 +1,7 @@
 namespace BackupZCrypt.Infrastructure.Services.FileSystem;
 
 using BackupZCrypt.Domain.Services.Interfaces;
+using System.Security.Cryptography;
 
 internal sealed class FileOperationsService : IFileOperationsService
 {
@@ -39,6 +40,14 @@ internal sealed class FileOperationsService : IFileOperationsService
     public void DeleteFile(string filePath)
     {
         File.Delete(filePath);
+    }
+
+    public async Task DeleteDirectoryAsync(
+        string directoryPath,
+        bool recursive,
+        CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Directory.Delete(directoryPath, recursive), cancellationToken);
     }
 
     public long GetFileSize(string filePath)
@@ -107,5 +116,21 @@ internal sealed class FileOperationsService : IFileOperationsService
                     | FileOptions.DeleteOnClose,
                 BufferSize = bufferSize,
             });
+    }
+
+    public async Task<string> ComputeFileHashAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        await using FileStream stream = new(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken);
+        return Convert.ToBase64String(hash);
     }
 }

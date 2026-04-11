@@ -237,4 +237,13 @@
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
     <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación de origen. No se puede restaurar sin manifiesto.</value>
   </data>
+  <data name="ManifestRequiredForUpdate" xml:space="preserve">
+    <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación del backup. No se puede actualizar sin manifiesto.</value>
+  </data>
+  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
+    <value>La operación de actualización solo es compatible con copias de seguridad de directorios.</value>
+  </data>
+  <data name="BackupDestinationMustExist" xml:space="preserve">
+    <value>El directorio de destino del backup no existe. No se puede actualizar un backup inexistente.</value>
+  </data>
 </root>

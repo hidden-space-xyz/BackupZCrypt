@@ -59,7 +59,7 @@ internal sealed class SingleFileBackupServiceTests
                 CompressionMode.None),
             new Dictionary<string, ManifestFileInfo>(StringComparer.OrdinalIgnoreCase)
             {
-                ["file.bzc"] = new ManifestFileInfo("file.txt", new byte[16], new byte[12]),
+                ["file.bzc"] = new ManifestFileInfo("file.txt", new byte[16], new byte[12], string.Empty),
             });
 
         this.manifestService

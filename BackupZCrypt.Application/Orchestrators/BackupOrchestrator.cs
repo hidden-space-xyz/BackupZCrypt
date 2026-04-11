@@ -6,6 +6,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
@@ -38,10 +39,39 @@ internal sealed class BackupOrchestrator(
             return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
         }
 
+        if (request.Operation == EncryptOperation.Update)
+        {
+            if (!isDirectory)
+            {
+                return Result<BackupResult>.Failure(Messages.UpdateSourceMustBeDirectory);
+            }
+
+            if (!fileOperations.DirectoryExists(destinationPath))
+            {
+                return Result<BackupResult>.Failure(Messages.BackupDestinationMustExist);
+            }
+        }
+
+        if (request.Operation == EncryptOperation.Encrypt && isDirectory
+            && fileOperations.DirectoryExists(destinationPath))
+        {
+            await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
+        }
+
         await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
 
         try
         {
+            if (request.Operation == EncryptOperation.Update)
+            {
+                return await directoryProcessor.ProcessAsync(
+                    sourcePath,
+                    destinationPath,
+                    request,
+                    progress,
+                    cancellationToken);
+            }
+
             if (isFile)
             {
                 return await singleFileProcessor.ProcessAsync(
@@ -81,6 +111,14 @@ internal sealed class BackupOrchestrator(
             ?? request.DestinationPath;
 
         return (sourcePath, destinationPath);
+    }
+
+    private async Task CleanDestinationDirectoryAsync(
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        await fileOperations.DeleteDirectoryAsync(destinationPath, recursive: true, cancellationToken);
+        await fileOperations.CreateDirectoryAsync(destinationPath, cancellationToken);
     }
 
     private async Task EnsureDestinationDirectoryAsync(

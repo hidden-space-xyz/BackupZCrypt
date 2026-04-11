@@ -12,7 +12,8 @@ internal sealed class ManifestEntryTests
             "obfuscated/hash.bzc",
             "original/path.txt",
             "c2FsdA==",
-            "bm9uY2U=");
+            "bm9uY2U=",
+            string.Empty);
 
         using (Assert.EnterMultipleScope())
         {
@@ -26,8 +27,8 @@ internal sealed class ManifestEntryTests
     [Test]
     public void Record_EqualityByValue()
     {
-        ManifestEntry a = new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=");
-        ManifestEntry b = new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=");
+        ManifestEntry a = new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=", string.Empty);
+        ManifestEntry b = new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=", string.Empty);
 
         Assert.That(a, Is.EqualTo(b));
     }

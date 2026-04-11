@@ -26,12 +26,22 @@ internal sealed class BackupCommand(
 {
     public async Task ExecuteAsync(EncryptOperation operation)
     {
-        string operationName =
-            operation == EncryptOperation.Encrypt ? Messages.CreateBackup : Messages.RestoreBackup;
+        string operationName = operation switch
+        {
+            EncryptOperation.Encrypt => Messages.CreateBackup,
+            EncryptOperation.Update => Messages.UpdateBackup,
+            _ => Messages.RestoreBackup,
+        };
 
         AnsiConsole.Write(
             new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey")));
         AnsiConsole.WriteLine();
+
+        if (operation == EncryptOperation.Update)
+        {
+            await ExecuteUpdateBackupAsync(operationName);
+            return;
+        }
 
         string sourcePath = PromptSourcePath();
         string destinationPath = PromptDestinationPath();
@@ -214,6 +224,87 @@ internal sealed class BackupCommand(
         }
     }
 
+    private async Task ExecuteUpdateBackupAsync(string operationName)
+    {
+        string sourcePath = AnsiConsole.Prompt(
+            new TextPrompt<string>(
+                $"[green]{Messages.UpdateSourcePathPrompt}[/] {Messages.UpdateSourcePathHint}")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
+                .Validate(p =>
+                    !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error(
+                            $"[red]{Messages.UpdateSourceMustBeDirectory}[/]")));
+
+        string backupPath = AnsiConsole.Prompt(
+            new TextPrompt<string>(
+                $"[green]{Messages.UpdateBackupPathPrompt}[/] {Messages.UpdateBackupPathHint}")
+                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
+                .Validate(p =>
+                    !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")));
+
+        if (!DetectManifest(backupPath))
+        {
+            AnsiConsole.MarkupLine($"[red]{Messages.UpdateManifestNotFound}[/]");
+            return;
+        }
+
+        bool isEncrypted = DetectEncryptedManifest(backupPath);
+
+        string password = string.Empty;
+        if (isEncrypted)
+        {
+            AnsiConsole.MarkupLine($"[cyan]{Messages.EncryptedBackupDetected}[/]");
+            password = PromptDecryptionPassword();
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[dim]{Messages.NoEncryptionDetected}[/]");
+        }
+
+        if (
+            !await AnsiConsole.ConfirmAsync(
+                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
+        {
+            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
+            return;
+        }
+
+        if (isEncrypted)
+        {
+            BackupRequest request = new(
+                sourcePath,
+                backupPath,
+                password,
+                password,
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.Argon2id,
+                EncryptOperation.Update,
+                NameObfuscationMode.None);
+
+            await RunOperationAsync(request, operationName, Messages.Updating);
+        }
+        else
+        {
+            BackupRequest request = new(
+                sourcePath,
+                backupPath,
+                string.Empty,
+                string.Empty,
+                default,
+                default,
+                EncryptOperation.Update,
+                NameObfuscationMode.None,
+                compressionStrategies[0].Id,
+                ProceedOnWarnings: false,
+                UseEncryption: false);
+
+            await RunOperationAsync(request, operationName, Messages.Updating);
+        }
+    }
+
     private async Task ExecutePlainCopyAsync(
         string operationName,
         string sourcePath,
@@ -387,6 +478,7 @@ internal sealed class BackupCommand(
                             relativePath,
                             relativePath,
                             string.Empty,
+                            string.Empty,
                             string.Empty));
                     }
                 }
@@ -400,6 +492,7 @@ internal sealed class BackupCommand(
                     entries.Add(new ManifestEntry(
                         fileName,
                         fileName,
+                        string.Empty,
                         string.Empty,
                         string.Empty));
                 }

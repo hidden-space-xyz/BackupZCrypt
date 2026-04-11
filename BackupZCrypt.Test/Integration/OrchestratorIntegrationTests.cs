@@ -361,4 +361,243 @@ internal sealed class OrchestratorIntegrationTests
 
         Assert.That(result.IsSuccess, Is.False);
     }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_Update_AddModifyDelete_RoundTrip()
+    {
+        string content1 = "Original file one content";
+        string content2 = "Original file two content";
+        string content3 = "Original file three content";
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file1.txt"), content1);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file2.txt"), content2);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file3.txt"), content3);
+
+        string encryptedDir = Path.Combine(this.testDir, "encrypted-upd");
+        const string password = "IntegrationP@ss1";
+
+        BackupRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
+            CompressionMode.Zstd,
+            ProceedOnWarnings: true);
+
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> encryptResult = await orchestrator.ExecuteAsync(
+            encryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(encryptResult.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.ProcessedFiles, Is.EqualTo(3));
+        }
+
+        // Modify source: change file1, delete file2, add file4
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file1.txt"), "Modified file one content");
+        File.Delete(Path.Combine(sourceDir, "file2.txt"));
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "file4.txt"), "New file four content");
+
+        BackupRequest updateRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Update,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Result<BackupResult> updateResult = await orchestrator.ExecuteAsync(
+            updateRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(updateResult.IsSuccess, Is.True);
+            Assert.That(updateResult.Value.IsSuccess, Is.True);
+            // file1 modified + file4 new = 2 processed; file3 unchanged
+            Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(2));
+        }
+
+        // file2.bzc should be deleted from backup
+        Assert.That(File.Exists(Path.Combine(encryptedDir, "file2.txt.bzc")), Is.False);
+
+        // Decrypt and verify content matches updated source
+        string decryptedDir = Path.Combine(this.testDir, "decrypted-upd");
+
+        BackupRequest decryptRequest = new(
+            encryptedDir,
+            decryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Result<BackupResult> decryptResult = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.ProcessedFiles, Is.EqualTo(3));
+        }
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "file1.txt")),
+                Is.EqualTo("Modified file one content"));
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "file3.txt")),
+                Is.EqualTo(content3));
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "file4.txt")),
+                Is.EqualTo("New file four content"));
+            Assert.That(File.Exists(Path.Combine(decryptedDir, "file2.txt")), Is.False);
+        }
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_Update_NoChanges_ProcessesZeroFiles()
+    {
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "stable.txt"), "Stable content");
+
+        string encryptedDir = Path.Combine(this.testDir, "encrypted-nc");
+        const string password = "IntegrationP@ss1";
+
+        BackupRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Progress<BackupStatus> progress = new();
+        await orchestrator.ExecuteAsync(encryptRequest, progress);
+
+        BackupRequest updateRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Update,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        Result<BackupResult> updateResult = await orchestrator.ExecuteAsync(
+            updateRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(updateResult.IsSuccess, Is.True);
+            Assert.That(updateResult.Value.IsSuccess, Is.True);
+            Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(0));
+            Assert.That(updateResult.Value.TotalFiles, Is.EqualTo(0));
+        }
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_Update_WithObfuscation_RoundTrip()
+    {
+        string content1 = "Obfuscated file content one";
+        string content2 = "Obfuscated file content two";
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret1.txt"), content1);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret2.txt"), content2);
+
+        string encryptedDir = Path.Combine(this.testDir, "encrypted-obf-upd");
+        const string password = "IntegrationP@ss1";
+
+        BackupRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.Guid,
+            CompressionMode.Zstd,
+            ProceedOnWarnings: true);
+
+        Progress<BackupStatus> progress = new();
+        await orchestrator.ExecuteAsync(encryptRequest, progress);
+
+        // Modify source: change secret1, add secret3
+        await File.WriteAllTextAsync(
+            Path.Combine(sourceDir, "secret1.txt"), "Modified obfuscated content one");
+        await File.WriteAllTextAsync(
+            Path.Combine(sourceDir, "secret3.txt"), "New obfuscated file three");
+
+        BackupRequest updateRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Update,
+            NameObfuscationMode.Guid,
+            ProceedOnWarnings: true);
+
+        Result<BackupResult> updateResult = await orchestrator.ExecuteAsync(
+            updateRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(updateResult.IsSuccess, Is.True);
+            Assert.That(updateResult.Value.IsSuccess, Is.True);
+        }
+
+        // Decrypt and verify
+        string decryptedDir = Path.Combine(this.testDir, "decrypted-obf-upd");
+
+        BackupRequest decryptRequest = new(
+            encryptedDir,
+            decryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            EncryptOperation.Decrypt,
+            NameObfuscationMode.Guid,
+            ProceedOnWarnings: true);
+
+        Result<BackupResult> decryptResult = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+        }
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret1.txt")),
+                Is.EqualTo("Modified obfuscated content one"));
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret2.txt")),
+                Is.EqualTo(content2));
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret3.txt")),
+                Is.EqualTo("New obfuscated file three"));
+        }
+    }
 }

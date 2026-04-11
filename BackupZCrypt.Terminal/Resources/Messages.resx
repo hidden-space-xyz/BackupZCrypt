@@ -357,4 +357,31 @@
   <data name="ManifestNotFound" xml:space="preserve">
     <value>No manifest file found. Cannot restore a backup without a manifest file.</value>
   </data>
+  <data name="MenuUpdateBackup" xml:space="preserve">
+    <value>🔄 Update Backup</value>
+  </data>
+  <data name="UpdateBackup" xml:space="preserve">
+    <value>Update Backup</value>
+  </data>
+  <data name="Updating" xml:space="preserve">
+    <value>Updating</value>
+  </data>
+  <data name="UpdateSourcePathPrompt" xml:space="preserve">
+    <value>Original source path</value>
+  </data>
+  <data name="UpdateSourcePathHint" xml:space="preserve">
+    <value>(directory with current files):</value>
+  </data>
+  <data name="UpdateBackupPathPrompt" xml:space="preserve">
+    <value>Existing backup path</value>
+  </data>
+  <data name="UpdateBackupPathHint" xml:space="preserve">
+    <value>(directory with manifest.bzc):</value>
+  </data>
+  <data name="UpdateManifestNotFound" xml:space="preserve">
+    <value>No manifest file found in the backup directory. Cannot update without a manifest file.</value>
+  </data>
+  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
+    <value>Update is only supported for directories. Please provide a directory path as source.</value>
+  </data>
 </root>

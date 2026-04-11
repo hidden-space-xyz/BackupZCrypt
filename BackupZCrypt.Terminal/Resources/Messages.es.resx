@@ -357,4 +357,31 @@
   <data name="ManifestNotFound" xml:space="preserve">
     <value>No se encontró el archivo de manifiesto. No se puede restaurar una copia de seguridad sin manifiesto.</value>
   </data>
+  <data name="MenuUpdateBackup" xml:space="preserve">
+    <value>🔄 Actualizar copia de seguridad</value>
+  </data>
+  <data name="UpdateBackup" xml:space="preserve">
+    <value>Actualizar copia de seguridad</value>
+  </data>
+  <data name="Updating" xml:space="preserve">
+    <value>Actualizando</value>
+  </data>
+  <data name="UpdateSourcePathPrompt" xml:space="preserve">
+    <value>Ruta de origen original</value>
+  </data>
+  <data name="UpdateSourcePathHint" xml:space="preserve">
+    <value>(directorio con archivos actuales):</value>
+  </data>
+  <data name="UpdateBackupPathPrompt" xml:space="preserve">
+    <value>Ruta del backup existente</value>
+  </data>
+  <data name="UpdateBackupPathHint" xml:space="preserve">
+    <value>(directorio con manifest.bzc):</value>
+  </data>
+  <data name="UpdateManifestNotFound" xml:space="preserve">
+    <value>No se encontró el archivo de manifiesto en el directorio del backup. No se puede actualizar sin manifiesto.</value>
+  </data>
+  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
+    <value>La actualización solo es compatible con directorios. Proporcione una ruta de directorio como origen.</value>
+  </data>
 </root>

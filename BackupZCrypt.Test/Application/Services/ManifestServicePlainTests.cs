@@ -29,8 +29,8 @@ internal sealed class ManifestServicePlainTests
         {
             List<ManifestEntry> entries =
             [
-                new("file1.txt", "file1.txt", string.Empty, string.Empty),
-                new("file2.txt", "file2.txt", string.Empty, string.Empty),
+                new("file1.txt", "file1.txt", string.Empty, string.Empty, string.Empty),
+                new("file2.txt", "file2.txt", string.Empty, string.Empty, string.Empty),
             ];
 
             ManifestHeader header = new(
@@ -93,7 +93,7 @@ internal sealed class ManifestServicePlainTests
     {
         List<ManifestEntry> entries =
         [
-            new("file.txt", "file.txt", string.Empty, string.Empty),
+            new("file.txt", "file.txt", string.Empty, string.Empty, string.Empty),
         ];
 
         ManifestHeader header = new(
@@ -128,6 +128,7 @@ internal sealed class ManifestServicePlainTests
                     new ManifestEntry(
                         "abc123.bzc",
                         "original.txt",
+                        string.Empty,
                         string.Empty,
                         string.Empty),
                 ]);
@@ -203,8 +204,8 @@ internal sealed class ManifestServicePlainTests
         {
             List<ManifestEntry> entries =
             [
-                new("compressed1.bzc", "document.pdf", string.Empty, string.Empty),
-                new("compressed2.bzc", "photo.jpg", string.Empty, string.Empty),
+                new("compressed1.bzc", "document.pdf", string.Empty, string.Empty, string.Empty),
+                new("compressed2.bzc", "photo.jpg", string.Empty, string.Empty, string.Empty),
             ];
 
             ManifestHeader header = new(

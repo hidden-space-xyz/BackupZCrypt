@@ -653,5 +653,32 @@ namespace BackupZCrypt.Application.Resources {
                 return ResourceManager.GetString("WeakPasswordWarning", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest..
+        /// </summary>
+        public static string ManifestRequiredForUpdate {
+            get {
+                return ResourceManager.GetString("ManifestRequiredForUpdate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Update operation is only supported for directory backups..
+        /// </summary>
+        public static string UpdateSourceMustBeDirectory {
+            get {
+                return ResourceManager.GetString("UpdateSourceMustBeDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Backup destination directory does not exist. Cannot update a non-existent backup..
+        /// </summary>
+        public static string BackupDestinationMustExist {
+            get {
+                return ResourceManager.GetString("BackupDestinationMustExist", resourceCulture);
+            }
+        }
     }
 }

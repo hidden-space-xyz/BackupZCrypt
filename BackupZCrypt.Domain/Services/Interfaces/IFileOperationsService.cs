@@ -17,6 +17,11 @@ public interface IFileOperationsService
 
     void DeleteFile(string filePath);
 
+    Task DeleteDirectoryAsync(
+        string directoryPath,
+        bool recursive,
+        CancellationToken cancellationToken = default);
+
     long GetFileSize(string filePath);
 
     string GetFullPath(string filePath);
@@ -32,4 +37,6 @@ public interface IFileOperationsService
     Stream CreateWriteStream(string filePath, int bufferSize);
 
     Stream CreateTempStream(int bufferSize);
+
+    Task<string> ComputeFileHashAsync(string filePath, CancellationToken cancellationToken = default);
 }
