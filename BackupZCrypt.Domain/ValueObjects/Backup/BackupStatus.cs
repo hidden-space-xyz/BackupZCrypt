@@ -1,10 +1,10 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileCrypt;
+namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 using BackupZCrypt.Domain.Enums;
 
-public sealed record FileCryptStatus
+public sealed record BackupStatus
 {
-    public FileCryptStatus(
+    public BackupStatus(
         int processedFiles,
         int totalFiles,
         long processedBytes,

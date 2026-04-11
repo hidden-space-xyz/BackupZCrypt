@@ -8,15 +8,15 @@ using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
-    IPasswordService passwordService) : IFileCryptRequestValidator
+    IPasswordService passwordService) : IBackupRequestValidator
 {
     public async Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken = default)
     {
         List<string> errors = [];
@@ -223,7 +223,7 @@ internal sealed class BackupRequestValidator(
     }
 
     public async Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken = default)
     {
         List<string> warnings = [];

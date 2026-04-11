@@ -5,7 +5,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using System.Text;
 using System.Text.Json;
 
@@ -68,7 +68,7 @@ internal sealed class ManifestService : IManifestService
         ManifestHeader header,
         string destinationRoot,
         IEncryptionAlgorithmStrategy encryptionService,
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken)
     {
         List<string> errors = [];

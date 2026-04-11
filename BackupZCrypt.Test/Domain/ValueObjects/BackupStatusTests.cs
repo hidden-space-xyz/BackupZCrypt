@@ -1,15 +1,15 @@
 namespace BackupZCrypt.Test.Domain.ValueObjects;
 
 using BackupZCrypt.Domain.Exceptions;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 [TestFixture]
-internal sealed class FileCryptStatusTests
+internal sealed class BackupStatusTests
 {
     [Test]
     public void Constructor_WithValidInputs_SetsProperties()
     {
-        FileCryptStatus status = new(2, 5, 512, 1024, TimeSpan.FromSeconds(3));
+        BackupStatus status = new(2, 5, 512, 1024, TimeSpan.FromSeconds(3));
 
         using (Assert.EnterMultipleScope())
         {
@@ -24,51 +24,51 @@ internal sealed class FileCryptStatusTests
     [Test]
     public void Constructor_NegativeProcessedFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptStatus(-1, 5, 0, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new BackupStatus(-1, 5, 0, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, -1, 0, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new BackupStatus(0, -1, 0, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeProcessedBytes_Throws()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, 0, -1, 0, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new BackupStatus(0, 0, -1, 0, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeTotalBytes_Throws()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptStatus(0, 0, 0, -1, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new BackupStatus(0, 0, 0, -1, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_NegativeElapsed_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1)));
+            new BackupStatus(0, 0, 0, 0, TimeSpan.FromSeconds(-1)));
     }
 
     [Test]
     public void Constructor_ProcessedFilesExceedTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptStatus(6, 5, 0, 100, TimeSpan.Zero));
+        Assert.Throws<ValidationException>(() => new BackupStatus(6, 5, 0, 100, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_ProcessedBytesExceedTotalBytes_Throws()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptStatus(0, 5, 200, 100, TimeSpan.Zero));
+            new BackupStatus(0, 5, 200, 100, TimeSpan.Zero));
     }
 
     [Test]
     public void Constructor_AllZeros_Succeeds()
     {
-        FileCryptStatus status = new(0, 0, 0, 0, TimeSpan.Zero);
+        BackupStatus status = new(0, 0, 0, 0, TimeSpan.Zero);
 
         using (Assert.EnterMultipleScope())
         {

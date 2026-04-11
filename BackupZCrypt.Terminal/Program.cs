@@ -17,7 +17,7 @@ services.AddDomainServices();
 services.AddApplicationServices();
 ServiceProvider provider = services.BuildServiceProvider();
 
-IFileCryptOrchestrator orchestrator = provider.GetRequiredService<IFileCryptOrchestrator>();
+IBackupOrchestrator orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
 IManifestService manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =

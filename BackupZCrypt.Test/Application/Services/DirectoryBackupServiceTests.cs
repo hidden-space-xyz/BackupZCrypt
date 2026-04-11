@@ -8,8 +8,8 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 
 [TestFixture]
@@ -21,7 +21,7 @@ internal sealed class DirectoryBackupServiceTests
     private IFileOperationsService fileOps = null!;
     private IManifestService manifestService = null!;
     private IEncryptionAlgorithmStrategy encryptionStrategy = null!;
-    private IProgress<FileCryptStatus> progress = null!;
+    private IProgress<BackupStatus> progress = null!;
     private DirectoryBackupService service = null!;
 
     [SetUp]
@@ -38,7 +38,7 @@ internal sealed class DirectoryBackupServiceTests
             .Returns(this.encryptionStrategy);
         this.encryptionStrategy.Id.Returns(EncryptionAlgorithm.Aes);
 
-        this.progress = Substitute.For<IProgress<FileCryptStatus>>();
+        this.progress = Substitute.For<IProgress<BackupStatus>>();
 
         this.service = new DirectoryBackupService(
             this.encryptionFactory,
@@ -60,7 +60,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns((ManifestData?)null);
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -81,7 +81,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns((ManifestData?)null);
 
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             @"C:\source",
             @"C:\dest",
             string.Empty,
@@ -93,7 +93,7 @@ internal sealed class DirectoryBackupServiceTests
             CompressionMode.Zstd,
             UseEncryption: false);
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             request,
@@ -167,7 +167,7 @@ internal sealed class DirectoryBackupServiceTests
         this.fileOps.GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<string>());
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Encrypt),
@@ -215,7 +215,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<ManifestHeader>(),
                 Arg.Any<string>(),
                 Arg.Any<IEncryptionAlgorithmStrategy>(),
-                Arg.Any<FileCryptRequest>(),
+                Arg.Any<BackupRequest>(),
                 Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
@@ -231,7 +231,7 @@ internal sealed class DirectoryBackupServiceTests
             Arg.Any<ManifestHeader>(),
             Arg.Any<string>(),
             Arg.Any<IEncryptionAlgorithmStrategy>(),
-            Arg.Any<FileCryptRequest>(),
+            Arg.Any<BackupRequest>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -276,7 +276,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(true);
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -290,7 +290,7 @@ internal sealed class DirectoryBackupServiceTests
         }
     }
 
-    private static FileCryptRequest CreateRequest(
+    private static BackupRequest CreateRequest(
         EncryptOperation operation = EncryptOperation.Encrypt) =>
         new(
             @"C:\source",

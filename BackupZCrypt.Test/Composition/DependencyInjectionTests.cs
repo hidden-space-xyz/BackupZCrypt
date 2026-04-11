@@ -91,37 +91,37 @@ internal sealed class DependencyInjectionTests
     }
 
     [Test]
-    public void AddApplicationServices_ResolvesFileCryptOrchestrator()
+    public void AddApplicationServices_ResolvesBackupOrchestrator()
     {
-        IFileCryptOrchestrator orchestrator =
-            this.provider.GetRequiredService<IFileCryptOrchestrator>();
+        IBackupOrchestrator orchestrator =
+            this.provider.GetRequiredService<IBackupOrchestrator>();
 
         Assert.That(orchestrator, Is.Not.Null);
     }
 
     [Test]
-    public void AddApplicationServices_ResolvesFileCryptSingleFileService()
+    public void AddApplicationServices_ResolvesSingleFileBackupService()
     {
-        IFileCryptSingleFileService service =
-            this.provider.GetRequiredService<IFileCryptSingleFileService>();
+        ISingleFileBackupService service =
+            this.provider.GetRequiredService<ISingleFileBackupService>();
 
         Assert.That(service, Is.Not.Null);
     }
 
     [Test]
-    public void AddApplicationServices_ResolvesFileCryptDirectoryService()
+    public void AddApplicationServices_ResolvesDirectoryBackupService()
     {
-        IFileCryptDirectoryService service =
-            this.provider.GetRequiredService<IFileCryptDirectoryService>();
+        IDirectoryBackupService service =
+            this.provider.GetRequiredService<IDirectoryBackupService>();
 
         Assert.That(service, Is.Not.Null);
     }
 
     [Test]
-    public void AddApplicationServices_ResolvesFileCryptRequestValidator()
+    public void AddApplicationServices_ResolvesBackupRequestValidator()
     {
-        IFileCryptRequestValidator validator =
-            this.provider.GetRequiredService<IFileCryptRequestValidator>();
+        IBackupRequestValidator validator =
+            this.provider.GetRequiredService<IBackupRequestValidator>();
 
         Assert.That(validator, Is.Not.Null);
     }

@@ -1,8 +1,8 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileCrypt;
+namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 using BackupZCrypt.Domain.Enums;
 
-public sealed record FileCryptRequest(
+public sealed record BackupRequest(
     string SourcePath,
     string DestinationPath,
     string Password,

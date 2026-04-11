@@ -1,10 +1,10 @@
 namespace BackupZCrypt.Test.Domain.ValueObjects;
 
 using BackupZCrypt.Domain.Exceptions;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 [TestFixture]
-internal sealed class FileCryptResultTests
+internal sealed class BackupResultTests
 {
     [Test]
     public void Constructor_WithValidInputs_SetsProperties()
@@ -13,7 +13,7 @@ internal sealed class FileCryptResultTests
         string[] errors = ["error1"];
         string[] warnings = ["warn1"];
 
-        FileCryptResult result = new(true, elapsed, 1024, 3, 5, errors, warnings);
+        BackupResult result = new(true, elapsed, 1024, 3, 5, errors, warnings);
 
         using (Assert.EnterMultipleScope())
         {
@@ -30,7 +30,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void Constructor_WithNullErrorsAndWarnings_DefaultsToEmpty()
     {
-        FileCryptResult result = new(true, TimeSpan.Zero, 0, 0, 0);
+        BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
         using (Assert.EnterMultipleScope())
         {
@@ -43,40 +43,40 @@ internal sealed class FileCryptResultTests
     public void Constructor_NegativeElapsedTime_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0));
+            new BackupResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0));
     }
 
     [Test]
     public void Constructor_NegativeTotalBytes_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, -1, 0, 0));
+            new BackupResult(true, TimeSpan.Zero, -1, 0, 0));
     }
 
     [Test]
     public void Constructor_NegativeProcessedFiles_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, 0, -1, 0));
+            new BackupResult(true, TimeSpan.Zero, 0, -1, 0));
     }
 
     [Test]
     public void Constructor_NegativeTotalFiles_ThrowsValidationException()
     {
         Assert.Throws<ValidationException>(() =>
-            new FileCryptResult(true, TimeSpan.Zero, 0, 0, -1));
+            new BackupResult(true, TimeSpan.Zero, 0, 0, -1));
     }
 
     [Test]
     public void Constructor_ProcessedFilesExceedTotalFiles_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => new FileCryptResult(true, TimeSpan.Zero, 0, 5, 3));
+        Assert.Throws<ValidationException>(() => new BackupResult(true, TimeSpan.Zero, 0, 5, 3));
     }
 
     [Test]
     public void HasErrors_WithErrors_ReturnsTrue()
     {
-        FileCryptResult result = new(false, TimeSpan.Zero, 0, 0, 0, errors: ["err"]);
+        BackupResult result = new(false, TimeSpan.Zero, 0, 0, 0, errors: ["err"]);
 
         Assert.That(result.HasErrors, Is.True);
     }
@@ -84,7 +84,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void HasErrors_WithoutErrors_ReturnsFalse()
     {
-        FileCryptResult result = new(true, TimeSpan.Zero, 0, 0, 0);
+        BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
         Assert.That(result.HasErrors, Is.False);
     }
@@ -92,7 +92,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void HasWarnings_WithWarnings_ReturnsTrue()
     {
-        FileCryptResult result = new(false, TimeSpan.Zero, 0, 0, 0, warnings: ["w"]);
+        BackupResult result = new(false, TimeSpan.Zero, 0, 0, 0, warnings: ["w"]);
 
         Assert.That(result.HasWarnings, Is.True);
     }
@@ -100,7 +100,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void FailedFiles_ReturnsCorrectCount()
     {
-        FileCryptResult result = new(false, TimeSpan.FromSeconds(1), 100, 3, 5);
+        BackupResult result = new(false, TimeSpan.FromSeconds(1), 100, 3, 5);
 
         Assert.That(result.FailedFiles, Is.EqualTo(2));
     }
@@ -108,7 +108,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void SuccessRate_AllProcessed_ReturnsOne()
     {
-        FileCryptResult result = new(true, TimeSpan.FromSeconds(1), 100, 5, 5);
+        BackupResult result = new(true, TimeSpan.FromSeconds(1), 100, 5, 5);
 
         Assert.That(result.SuccessRate, Is.EqualTo(1.0));
     }
@@ -116,7 +116,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void SuccessRate_ZeroTotal_ReturnsZero()
     {
-        FileCryptResult result = new(true, TimeSpan.Zero, 0, 0, 0);
+        BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
         Assert.That(result.SuccessRate, Is.Zero);
     }
@@ -124,7 +124,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void IsPartialSuccess_SomeProcessed_ReturnsTrue()
     {
-        FileCryptResult result = new(false, TimeSpan.FromSeconds(1), 100, 3, 5);
+        BackupResult result = new(false, TimeSpan.FromSeconds(1), 100, 3, 5);
 
         Assert.That(result.IsPartialSuccess, Is.True);
     }
@@ -132,7 +132,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void IsPartialSuccess_AllProcessed_ReturnsFalse()
     {
-        FileCryptResult result = new(true, TimeSpan.FromSeconds(1), 100, 5, 5);
+        BackupResult result = new(true, TimeSpan.FromSeconds(1), 100, 5, 5);
 
         Assert.That(result.IsPartialSuccess, Is.False);
     }
@@ -140,7 +140,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void BytesPerSecond_WithElapsedTime_CalculatesCorrectly()
     {
-        FileCryptResult result = new(true, TimeSpan.FromSeconds(2), 1000, 1, 1);
+        BackupResult result = new(true, TimeSpan.FromSeconds(2), 1000, 1, 1);
 
         Assert.That(result.BytesPerSecond, Is.EqualTo(500.0));
     }
@@ -148,7 +148,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void BytesPerSecond_ZeroElapsed_ReturnsZero()
     {
-        FileCryptResult result = new(true, TimeSpan.Zero, 1000, 1, 1);
+        BackupResult result = new(true, TimeSpan.Zero, 1000, 1, 1);
 
         Assert.That(result.BytesPerSecond, Is.Zero);
     }
@@ -156,7 +156,7 @@ internal sealed class FileCryptResultTests
     [Test]
     public void FilesPerSecond_WithElapsedTime_CalculatesCorrectly()
     {
-        FileCryptResult result = new(true, TimeSpan.FromSeconds(2), 100, 10, 10);
+        BackupResult result = new(true, TimeSpan.FromSeconds(2), 100, 10, 10);
 
         Assert.That(result.FilesPerSecond, Is.EqualTo(5.0));
     }

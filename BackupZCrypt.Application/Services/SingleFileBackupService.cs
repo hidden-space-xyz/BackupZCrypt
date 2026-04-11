@@ -9,8 +9,8 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using System.Diagnostics;
 
 internal sealed class SingleFileBackupService(
@@ -19,13 +19,13 @@ internal sealed class SingleFileBackupService(
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
     IFileOperationsService fileOperations,
     IManifestService manifestService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IFileCryptSingleFileService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : ISingleFileBackupService
 {
-    public async Task<Result<FileCryptResult>> ProcessAsync(
+    public async Task<Result<BackupResult>> ProcessAsync(
         string sourcePath,
         string destinationPath,
-        FileCryptRequest request,
-        IProgress<FileCryptStatus> progress,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
         CancellationToken cancellationToken)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -36,12 +36,12 @@ internal sealed class SingleFileBackupService(
                 request.Operation == EncryptOperation.Decrypt
                 && string.Equals(
                     Path.GetFileName(sourcePath),
-                    FileCryptConstants.ManifestFileName,
+                    BackupConstants.ManifestFileName,
                     StringComparison.OrdinalIgnoreCase))
             {
                 stopwatch.Stop();
-                return Result<FileCryptResult>.Success(
-                    new FileCryptResult(
+                return Result<BackupResult>.Success(
+                    new BackupResult(
                         true,
                         stopwatch.Elapsed,
                         0,
@@ -73,7 +73,7 @@ internal sealed class SingleFileBackupService(
                 // Ignore file size retrieval errors and proceed with a size of 0 for progress reporting
             }
 
-            progress?.Report(new FileCryptStatus(0, 1, 0, fileSize, TimeSpan.Zero));
+            progress?.Report(new BackupStatus(0, 1, 0, fileSize, TimeSpan.Zero));
 
             bool result;
             if (request.UseEncryption)
@@ -179,11 +179,11 @@ internal sealed class SingleFileBackupService(
                 }
             }
 
-            progress?.Report(new FileCryptStatus(1, 1, fileSize, fileSize, stopwatch.Elapsed));
+            progress?.Report(new BackupStatus(1, 1, fileSize, fileSize, stopwatch.Elapsed));
             stopwatch.Stop();
 
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(
+            return Result<BackupResult>.Success(
+                new BackupResult(
                     result,
                     stopwatch.Elapsed,
                     fileSize,
@@ -194,12 +194,12 @@ internal sealed class SingleFileBackupService(
         catch (Domain.Exceptions.EncryptionException ex)
         {
             stopwatch.Stop();
-            return Result<FileCryptResult>.Failure(ex.Message);
+            return Result<BackupResult>.Failure(ex.Message);
         }
         catch (Exception ex) when (!request.UseEncryption && ex is not OperationCanceledException)
         {
             stopwatch.Stop();
-            return Result<FileCryptResult>.Failure(
+            return Result<BackupResult>.Failure(
                 string.Format(Messages.CompressionErrorFormat, sourcePath, ex.Message));
         }
     }
@@ -208,7 +208,7 @@ internal sealed class SingleFileBackupService(
         IEncryptionAlgorithmStrategy encryptionService,
         string sourcePath,
         string destinationPath,
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken)
     {
         string? sourceDir = Path.GetDirectoryName(sourcePath);
@@ -283,7 +283,7 @@ internal sealed class SingleFileBackupService(
     private async Task<bool> ProcessCompressedFileAsync(
         string sourceFile,
         string destinationFile,
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -335,7 +335,7 @@ internal sealed class SingleFileBackupService(
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Write BZC header: magic bytes + compression mode
-        await destination.WriteAsync(FileCryptConstants.CompressedFileMagic, cancellationToken);
+        await destination.WriteAsync(BackupConstants.CompressedFileMagic, cancellationToken);
         await destination.WriteAsync(new byte[] { (byte)compression }, cancellationToken);
 
         await compressedStream.CopyToAsync(destination, cancellationToken);
@@ -357,10 +357,10 @@ internal sealed class SingleFileBackupService(
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Read and validate BZC header
-        var magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
+        var magic = new byte[BackupConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
-        if (!magic.AsSpan().SequenceEqual(FileCryptConstants.CompressedFileMagic))
+        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic))
         {
             throw new InvalidOperationException(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));

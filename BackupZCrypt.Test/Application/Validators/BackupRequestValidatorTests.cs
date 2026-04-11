@@ -4,7 +4,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using NSubstitute;
 
 [TestFixture]
@@ -21,7 +21,7 @@ internal sealed class BackupRequestValidatorTests
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
 
-        FileCryptRequest request = CreateRequest(dest: string.Empty);
+        BackupRequest request = CreateRequest(dest: string.Empty);
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -39,7 +39,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
+        BackupRequest request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -55,7 +55,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest();
+        BackupRequest request = CreateRequest();
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -65,7 +65,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_EmptyPassword_ReturnsError()
     {
-        FileCryptRequest request = CreateRequest(password: string.Empty, confirmPassword: string.Empty);
+        BackupRequest request = CreateRequest(password: string.Empty, confirmPassword: string.Empty);
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -75,7 +75,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_PasswordMismatch_ReturnsError()
     {
-        FileCryptRequest request = CreateRequest(
+        BackupRequest request = CreateRequest(
             password: "StrongP@ss1",
             confirmPassword: "DifferentPass1");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -93,7 +93,7 @@ internal sealed class BackupRequestValidatorTests
     public async Task AnalyzeErrors_PasswordTooLong_ReturnsError()
     {
         string longPassword = new('A', 1001);
-        FileCryptRequest request = CreateRequest(
+        BackupRequest request = CreateRequest(
             password: longPassword,
             confirmPassword: longPassword);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -110,7 +110,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_PasswordWithLeadingSpaces_ReturnsError()
     {
-        FileCryptRequest request = CreateRequest(
+        BackupRequest request = CreateRequest(
             password: " StrongP@ss1",
             confirmPassword: " StrongP@ss1");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -134,7 +134,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest(source: path, dest: path);
+        BackupRequest request = CreateRequest(source: path, dest: path);
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -144,7 +144,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_ShortPassword_ReturnsError()
     {
-        FileCryptRequest request = CreateRequest(password: "short", confirmPassword: "short");
+        BackupRequest request = CreateRequest(password: "short", confirmPassword: "short");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -164,7 +164,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest();
+        BackupRequest request = CreateRequest();
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -180,7 +180,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        FileCryptRequest request = CreateRequest();
+        BackupRequest request = CreateRequest();
 
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -196,7 +196,7 @@ internal sealed class BackupRequestValidatorTests
         this.validator = new BackupRequestValidator(this.fileOps, this.storage, this.passwordService);
     }
 
-    private static FileCryptRequest CreateRequest(
+    private static BackupRequest CreateRequest(
         string source = @"C:\source\file.txt",
         string dest = @"C:\dest\file.bzc",
         string password = "StrongP@ss1",

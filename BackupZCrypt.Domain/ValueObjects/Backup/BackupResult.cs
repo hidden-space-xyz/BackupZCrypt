@@ -1,10 +1,10 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileCrypt;
+namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 using BackupZCrypt.Domain.Enums;
 
-public sealed record FileCryptResult
+public sealed record BackupResult
 {
-    public FileCryptResult(
+    public BackupResult(
         bool isSuccess,
         TimeSpan elapsedTime,
         long totalBytes,

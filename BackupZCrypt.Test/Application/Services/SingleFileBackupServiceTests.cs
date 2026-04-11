@@ -10,8 +10,8 @@ using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -24,15 +24,15 @@ internal sealed class SingleFileBackupServiceTests
     private IManifestService manifestService = null!;
     private INameObfuscationServiceFactory obfuscationFactory = null!;
     private INameObfuscationStrategy obfuscationStrategy = null!;
-    private IProgress<FileCryptStatus> progress = null!;
+    private IProgress<BackupStatus> progress = null!;
     private SingleFileBackupService service = null!;
 
     [Test]
     public async Task ProcessAsync_Decrypt_ManifestFile_IgnoresAndReturnsSuccess()
     {
-        string manifestPath = @$"C:\source\{FileCryptConstants.ManifestFileName}";
+        string manifestPath = @$"C:\source\{BackupConstants.ManifestFileName}";
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             manifestPath,
             @"C:\dest\manifest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -80,7 +80,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(true);
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source\file.bzc",
             @"C:\dest\file.txt",
             CreateRequest(EncryptOperation.Decrypt),
@@ -142,7 +142,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
             CreateRequest(),
@@ -177,7 +177,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .ThrowsAsync(new EncryptionInvalidPasswordException());
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        Result<BackupResult> result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
             CreateRequest(),
@@ -213,7 +213,7 @@ internal sealed class SingleFileBackupServiceTests
             progress,
             CancellationToken.None);
 
-        this.progress.Received(2).Report(Arg.Any<FileCryptStatus>());
+        this.progress.Received(2).Report(Arg.Any<BackupStatus>());
     }
 
     [SetUp]
@@ -230,7 +230,7 @@ internal sealed class SingleFileBackupServiceTests
         this.encryptionFactory.Create(Arg.Any<EncryptionAlgorithm>()).Returns(this.encryptionStrategy);
         this.obfuscationFactory.Create(Arg.Any<NameObfuscationMode>()).Returns(this.obfuscationStrategy);
 
-        this.progress = Substitute.For<IProgress<FileCryptStatus>>();
+        this.progress = Substitute.For<IProgress<BackupStatus>>();
 
         ICompressionServiceFactory compressionFactory = Substitute.For<ICompressionServiceFactory>();
 
@@ -243,7 +243,7 @@ internal sealed class SingleFileBackupServiceTests
             [this.encryptionStrategy]);
     }
 
-    private static FileCryptRequest CreateRequest(
+    private static BackupRequest CreateRequest(
         EncryptOperation operation = EncryptOperation.Encrypt,
         NameObfuscationMode NameObfuscation = NameObfuscationMode.None) =>
         new(

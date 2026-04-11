@@ -7,20 +7,20 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 internal sealed class BackupOrchestrator(
-    IFileCryptRequestValidator fileProcessingRequestValidator,
+    IBackupRequestValidator fileProcessingRequestValidator,
     IFileOperationsService fileOperations,
-    IFileCryptSingleFileService singleFileProcessor,
-    IFileCryptDirectoryService directoryProcessor) : IFileCryptOrchestrator
+    ISingleFileBackupService singleFileProcessor,
+    IDirectoryBackupService directoryProcessor) : IBackupOrchestrator
 {
-    public async Task<Result<FileCryptResult>> ExecuteAsync(
-        FileCryptRequest request,
-        IProgress<FileCryptStatus> progress,
+    public async Task<Result<BackupResult>> ExecuteAsync(
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
         CancellationToken cancellationToken = default)
     {
-        Result<FileCryptResult>? validationResult = await ValidateRequestAsync(
+        Result<BackupResult>? validationResult = await ValidateRequestAsync(
             request,
             cancellationToken);
         if (validationResult is not null)
@@ -35,7 +35,7 @@ internal sealed class BackupOrchestrator(
 
         if (!isDirectory && !isFile)
         {
-            return Result<FileCryptResult>.Failure(Messages.SourcePathNotExist);
+            return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
         }
 
         await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
@@ -65,13 +65,13 @@ internal sealed class BackupOrchestrator(
         }
         catch (Exception ex)
         {
-            return Result<FileCryptResult>.Failure(
+            return Result<BackupResult>.Failure(
                 string.Format(Messages.UnexpectedErrorFormat, ex.Message));
         }
     }
 
     private static (string SourcePath, string DestinationPath) NormalizePaths(
-        FileCryptRequest request)
+        BackupRequest request)
     {
         string sourcePath =
             PathNormalizationHelper.TryNormalize(request.SourcePath, out _) ?? request.SourcePath;
@@ -102,8 +102,8 @@ internal sealed class BackupOrchestrator(
         }
     }
 
-    private async Task<Result<FileCryptResult>?> ValidateRequestAsync(
-        FileCryptRequest request,
+    private async Task<Result<BackupResult>?> ValidateRequestAsync(
+        BackupRequest request,
         CancellationToken cancellationToken)
     {
         IReadOnlyList<string> errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
@@ -111,8 +111,8 @@ internal sealed class BackupOrchestrator(
             cancellationToken);
         if (errors.Count > 0)
         {
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
+            return Result<BackupResult>.Success(
+                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
         }
 
         IReadOnlyList<string> warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
@@ -120,8 +120,8 @@ internal sealed class BackupOrchestrator(
             cancellationToken);
         if (warnings.Count > 0 && !request.ProceedOnWarnings)
         {
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings));
+            return Result<BackupResult>.Success(
+                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings));
         }
 
         return null;

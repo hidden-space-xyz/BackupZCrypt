@@ -2,19 +2,19 @@ namespace BackupZCrypt.Terminal.Rendering;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 internal static class ProgressRunner
 {
-    public static async Task<Result<FileCryptResult>> RunAsync(
-        IFileCryptOrchestrator orchestrator,
-        FileCryptRequest request,
+    public static async Task<Result<BackupResult>> RunAsync(
+        IBackupOrchestrator orchestrator,
+        BackupRequest request,
         string operationIngName,
         CancellationToken cancellationToken)
     {
-        Result<FileCryptResult>? result = null;
+        Result<BackupResult>? result = null;
 
         await AnsiConsole
             .Progress()
@@ -32,7 +32,7 @@ internal static class ProgressRunner
                     $"[cyan]{string.Format(Messages.OperationIngFormat, operationIngName)}[/]",
                     maxValue: 100);
 
-                Progress<FileCryptStatus> progress = new(update =>
+                Progress<BackupStatus> progress = new(update =>
                 {
                     task.Value = (update.TotalBytes > 0
                             ? (double)update.ProcessedBytes / update.TotalBytes * 100

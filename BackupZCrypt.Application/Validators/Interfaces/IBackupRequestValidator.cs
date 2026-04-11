@@ -1,14 +1,14 @@
 namespace BackupZCrypt.Application.Validators.Interfaces;
 
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
-public interface IFileCryptRequestValidator
+public interface IBackupRequestValidator
 {
     Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken = default);
 }

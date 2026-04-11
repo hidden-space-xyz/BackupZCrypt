@@ -62,10 +62,10 @@ public static class DependencyInjection
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddSingleton<IFileCryptOrchestrator, BackupOrchestrator>();
-        services.AddSingleton<IFileCryptSingleFileService, SingleFileBackupService>();
-        services.AddSingleton<IFileCryptDirectoryService, DirectoryBackupService>();
-        services.AddSingleton<IFileCryptRequestValidator, BackupRequestValidator>();
+        services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
+        services.AddSingleton<ISingleFileBackupService, SingleFileBackupService>();
+        services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
+        services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         services.AddSingleton<IManifestService, ManifestService>();
 
         return services;

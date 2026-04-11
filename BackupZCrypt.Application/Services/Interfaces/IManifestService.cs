@@ -2,7 +2,7 @@ namespace BackupZCrypt.Application.Services.Interfaces;
 
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 public interface IManifestService
 {
@@ -17,7 +17,7 @@ public interface IManifestService
         ManifestHeader header,
         string destinationRoot,
         IEncryptionAlgorithmStrategy encryptionService,
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<string>> TrySavePlainManifestAsync(

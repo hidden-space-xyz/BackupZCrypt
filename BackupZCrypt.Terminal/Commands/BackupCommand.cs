@@ -9,14 +9,14 @@ using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
 using System.Diagnostics;
 
 internal sealed class BackupCommand(
-    IFileCryptOrchestrator orchestrator,
+    IBackupOrchestrator orchestrator,
     IPasswordService passwordService,
     IManifestService manifestService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
@@ -112,7 +112,7 @@ internal sealed class BackupCommand(
 
         if (selectedEncryption is not null)
         {
-            FileCryptRequest request = new(
+            BackupRequest request = new(
                 sourcePath,
                 destinationPath,
                 password,
@@ -128,7 +128,7 @@ internal sealed class BackupCommand(
         }
         else if (selectedCompression is not null)
         {
-            FileCryptRequest request = new(
+            BackupRequest request = new(
                 sourcePath,
                 destinationPath,
                 string.Empty,
@@ -183,7 +183,7 @@ internal sealed class BackupCommand(
 
         if (isEncrypted)
         {
-            FileCryptRequest request = new(
+            BackupRequest request = new(
                 sourcePath,
                 destinationPath,
                 password,
@@ -197,7 +197,7 @@ internal sealed class BackupCommand(
         }
         else
         {
-            FileCryptRequest request = new(
+            BackupRequest request = new(
                 sourcePath,
                 destinationPath,
                 string.Empty,
@@ -417,7 +417,7 @@ internal sealed class BackupCommand(
                     cts.Token);
             }
 
-            FileCryptResult result = new(
+            BackupResult result = new(
                 errors.Count == 0,
                 sw.Elapsed,
                 totalBytes,
@@ -622,7 +622,7 @@ internal sealed class BackupCommand(
             : Path.GetDirectoryName(sourcePath) ?? string.Empty;
 
         return !string.IsNullOrEmpty(dir)
-            && File.Exists(Path.Combine(dir, FileCryptConstants.ManifestFileName));
+            && File.Exists(Path.Combine(dir, BackupConstants.ManifestFileName));
     }
 
     private static bool DetectEncryptedManifest(string sourcePath)
@@ -636,7 +636,7 @@ internal sealed class BackupCommand(
             return false;
         }
 
-        string manifestPath = Path.Combine(dir, FileCryptConstants.ManifestFileName);
+        string manifestPath = Path.Combine(dir, BackupConstants.ManifestFileName);
         if (!File.Exists(manifestPath))
         {
             return false;
@@ -654,9 +654,9 @@ internal sealed class BackupCommand(
         }
     }
 
-    private async Task<FileCryptResult?> HandleWarningsAsync(
-        FileCryptResult response,
-        FileCryptRequest request,
+    private async Task<BackupResult?> HandleWarningsAsync(
+        BackupResult response,
+        BackupRequest request,
         string operationName,
         string operationIngName,
         CancellationToken cancellationToken)
@@ -676,9 +676,9 @@ internal sealed class BackupCommand(
             return null;
         }
 
-        FileCryptRequest proceedRequest = request with { ProceedOnWarnings = true };
+        BackupRequest proceedRequest = request with { ProceedOnWarnings = true };
 
-        Result<FileCryptResult> result = await ProgressRunner.RunAsync(
+        Result<BackupResult> result = await ProgressRunner.RunAsync(
             orchestrator,
             proceedRequest,
             operationIngName,
@@ -719,7 +719,7 @@ internal sealed class BackupCommand(
     }
 
     private async Task RunOperationAsync(
-        FileCryptRequest request,
+        BackupRequest request,
         string operationName,
         string operationIngName)
     {
@@ -736,7 +736,7 @@ internal sealed class BackupCommand(
 
         try
         {
-            Result<FileCryptResult> result = await ProgressRunner.RunAsync(
+            Result<BackupResult> result = await ProgressRunner.RunAsync(
                 orchestrator,
                 request,
                 operationIngName,
@@ -748,7 +748,7 @@ internal sealed class BackupCommand(
                 return;
             }
 
-            FileCryptResult? response = result.Value;
+            BackupResult? response = result.Value;
 
             if (response.HasErrors && response.TotalFiles == 0 && response.ProcessedFiles == 0)
             {

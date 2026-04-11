@@ -6,27 +6,27 @@ using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using NSubstitute;
 
 [TestFixture]
 internal sealed class BackupOrchestratorTests
 {
-    private IFileCryptDirectoryService directoryService = null!;
+    private IDirectoryBackupService directoryService = null!;
     private IFileOperationsService fileOps = null!;
     private BackupOrchestrator orchestrator = null!;
-    private IProgress<FileCryptStatus> progress = null!;
-    private IFileCryptSingleFileService singleFileService = null!;
-    private IFileCryptRequestValidator validator = null!;
+    private IProgress<BackupStatus> progress = null!;
+    private ISingleFileBackupService singleFileService = null!;
+    private IBackupRequestValidator validator = null!;
 
     [Test]
     public void Execute_Cancellation_ThrowsOperationCanceled()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -37,10 +37,10 @@ internal sealed class BackupOrchestratorTests
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>())
-            .Returns<Result<FileCryptResult>>(_ => throw new OperationCanceledException());
+            .Returns<Result<BackupResult>>(_ => throw new OperationCanceledException());
 
         Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await orchestrator.ExecuteAsync(CreateRequest(), progress));
@@ -50,26 +50,26 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_DirectorySource_DelegatesToDirectoryService()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
 
-        FileCryptResult expected = new(true, TimeSpan.FromSeconds(1), 500, 5, 5);
+        BackupResult expected = new(true, TimeSpan.FromSeconds(1), 500, 5, 5);
         this.directoryService
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Result<FileCryptResult>.Success(expected));
+            .Returns(Result<BackupResult>.Success(expected));
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -79,8 +79,8 @@ internal sealed class BackupOrchestratorTests
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>());
     }
 
@@ -88,27 +88,27 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_FileSource_DelegatesToSingleFileService()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
 
-        FileCryptResult expected = new(true, TimeSpan.FromSeconds(1), 100, 1, 1);
+        BackupResult expected = new(true, TimeSpan.FromSeconds(1), 100, 1, 1);
         this.singleFileService
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Result<FileCryptResult>.Success(expected));
+            .Returns(Result<BackupResult>.Success(expected));
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -118,8 +118,8 @@ internal sealed class BackupOrchestratorTests
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>());
     }
 
@@ -127,16 +127,16 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_SourceDoesNotExist_ReturnsFailure()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -147,10 +147,10 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_UnexpectedException_ReturnsFailure()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -161,12 +161,12 @@ internal sealed class BackupOrchestratorTests
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>())
-            .Returns<Result<FileCryptResult>>(_ => throw new InvalidOperationException("boom"));
+            .Returns<Result<BackupResult>>(_ => throw new InvalidOperationException("boom"));
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -181,10 +181,10 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_WithValidationErrors_ReturnsResultWithErrors()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "error1" });
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -199,13 +199,13 @@ internal sealed class BackupOrchestratorTests
     public async Task Execute_WithWarningsAndNotProceeding_ReturnsWarnings()
     {
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "warning1" });
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -215,30 +215,30 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_WithWarningsAndProceedOnWarnings_ProcessesFile()
     {
-        FileCryptRequest request = CreateRequest() with { ProceedOnWarnings = true };
+        BackupRequest request = CreateRequest() with { ProceedOnWarnings = true };
 
         this.validator
-            .AnalyzeErrorsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string>());
         this.validator
-            .AnalyzeWarningsAsync(Arg.Any<FileCryptRequest>(), Arg.Any<CancellationToken>())
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
             .Returns(new List<string> { "warning1" });
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
 
-        FileCryptResult expected = new(true, TimeSpan.FromSeconds(1), 100, 1, 1);
+        BackupResult expected = new(true, TimeSpan.FromSeconds(1), 100, 1, 1);
         this.singleFileService
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<FileCryptRequest>(),
-                Arg.Any<IProgress<FileCryptStatus>>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Result<FileCryptResult>.Success(expected));
+            .Returns(Result<BackupResult>.Success(expected));
 
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
     }
@@ -246,11 +246,11 @@ internal sealed class BackupOrchestratorTests
     [SetUp]
     public void SetUp()
     {
-        this.validator = Substitute.For<IFileCryptRequestValidator>();
+        this.validator = Substitute.For<IBackupRequestValidator>();
         this.fileOps = Substitute.For<IFileOperationsService>();
-        this.singleFileService = Substitute.For<IFileCryptSingleFileService>();
-        this.directoryService = Substitute.For<IFileCryptDirectoryService>();
-        this.progress = Substitute.For<IProgress<FileCryptStatus>>();
+        this.singleFileService = Substitute.For<ISingleFileBackupService>();
+        this.directoryService = Substitute.For<IDirectoryBackupService>();
+        this.progress = Substitute.For<IProgress<BackupStatus>>();
 
         this.orchestrator = new BackupOrchestrator(
             this.validator,
@@ -259,7 +259,7 @@ internal sealed class BackupOrchestratorTests
             this.directoryService);
     }
 
-    private static FileCryptRequest CreateRequest() =>
+    private static BackupRequest CreateRequest() =>
         new(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",

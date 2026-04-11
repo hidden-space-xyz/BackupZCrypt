@@ -4,7 +4,7 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -238,7 +238,7 @@ internal sealed class ManifestServiceTests
             NameObfuscationMode.None,
             CompressionMode.None);
 
-    private static FileCryptRequest CreateRequest() =>
+    private static BackupRequest CreateRequest() =>
         new(
             @"C:\source",
             @"C:\dest",

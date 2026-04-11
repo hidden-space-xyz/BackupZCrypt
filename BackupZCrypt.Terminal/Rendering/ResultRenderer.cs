@@ -1,13 +1,13 @@
 namespace BackupZCrypt.Terminal.Rendering;
 
 using BackupZCrypt.Application.Utilities.Formatters;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
 
 internal static class ResultRenderer
 {
-    public static void Print(FileCryptResult response, string operationName)
+    public static void Print(BackupResult response, string operationName)
     {
         AnsiConsole.WriteLine();
 

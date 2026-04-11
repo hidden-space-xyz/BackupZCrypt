@@ -4,14 +4,14 @@ using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
 internal sealed class OrchestratorIntegrationTests
 {
     private ServiceProvider provider = null!;
-    private IFileCryptOrchestrator orchestrator = null!;
+    private IBackupOrchestrator orchestrator = null!;
     private string testDir = null!;
     private string sourceDir = null!;
     private string destDir = null!;
@@ -23,7 +23,7 @@ internal sealed class OrchestratorIntegrationTests
         services.AddDomainServices();
         services.AddApplicationServices();
         this.provider = services.BuildServiceProvider();
-        this.orchestrator = this.provider.GetRequiredService<IFileCryptOrchestrator>();
+        this.orchestrator = this.provider.GetRequiredService<IBackupOrchestrator>();
 
         this.testDir = Path.Combine(Path.GetTempPath(), $"BackupZCrypt-orch-{Guid.NewGuid():N}");
         this.sourceDir = Path.Combine(this.testDir, "source");
@@ -52,7 +52,7 @@ internal sealed class OrchestratorIntegrationTests
         string encryptedFile = Path.Combine(this.destDir, "test.bzc");
         const string password = "IntegrationP@ss1";
 
-        FileCryptRequest encryptRequest = new(
+        BackupRequest encryptRequest = new(
             sourceFile,
             encryptedFile,
             password,
@@ -63,8 +63,8 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> encryptResult = await orchestrator.ExecuteAsync(
             encryptRequest,
             progress);
 
@@ -79,7 +79,7 @@ internal sealed class OrchestratorIntegrationTests
         Directory.CreateDirectory(decryptedDir);
         string decryptedFile = Path.Combine(decryptedDir, "test.txt");
 
-        FileCryptRequest decryptRequest = new(
+        BackupRequest decryptRequest = new(
             encryptedFile,
             decryptedFile,
             password,
@@ -90,7 +90,7 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
+        Result<BackupResult> decryptResult = await orchestrator.ExecuteAsync(
             decryptRequest,
             progress);
 
@@ -111,7 +111,7 @@ internal sealed class OrchestratorIntegrationTests
         await File.WriteAllTextAsync(sourceFile, "content");
         string destFile = Path.Combine(this.destDir, "test.bzc");
 
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             sourceFile,
             destFile,
             string.Empty,
@@ -121,8 +121,8 @@ internal sealed class OrchestratorIntegrationTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         using (Assert.EnterMultipleScope())
         {
@@ -138,7 +138,7 @@ internal sealed class OrchestratorIntegrationTests
         await File.WriteAllTextAsync(sourceFile, "content");
         string destFile = Path.Combine(this.destDir, "test.bzc");
 
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             sourceFile,
             destFile,
             "Password1!",
@@ -148,8 +148,8 @@ internal sealed class OrchestratorIntegrationTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         using (Assert.EnterMultipleScope())
         {
@@ -164,7 +164,7 @@ internal sealed class OrchestratorIntegrationTests
         string nonExistent = Path.Combine(this.sourceDir, "nonexistent.txt");
         string destFile = Path.Combine(this.destDir, "out.bzc");
 
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             nonExistent,
             destFile,
             "Password1!",
@@ -174,8 +174,8 @@ internal sealed class OrchestratorIntegrationTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         using (Assert.EnterMultipleScope())
         {
@@ -193,7 +193,7 @@ internal sealed class OrchestratorIntegrationTests
         string encryptedDir = Path.Combine(this.testDir, "encrypted");
         const string password = "IntegrationP@ss1";
 
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             this.sourceDir,
             encryptedDir,
             password,
@@ -204,8 +204,8 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(request, progress);
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
 
         using (Assert.EnterMultipleScope())
         {
@@ -227,7 +227,7 @@ internal sealed class OrchestratorIntegrationTests
         string decryptedDir = Path.Combine(this.testDir, "decrypted");
         const string password = "IntegrationP@ss1";
 
-        FileCryptRequest encryptRequest = new(
+        BackupRequest encryptRequest = new(
             this.sourceDir,
             encryptedDir,
             password,
@@ -239,8 +239,8 @@ internal sealed class OrchestratorIntegrationTests
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> encryptResult = await orchestrator.ExecuteAsync(
             encryptRequest, progress);
 
         using (Assert.EnterMultipleScope())
@@ -250,7 +250,7 @@ internal sealed class OrchestratorIntegrationTests
             Assert.That(File.Exists(Path.Combine(encryptedDir, "manifest.bzc")), Is.True);
         }
 
-        FileCryptRequest decryptRequest = new(
+        BackupRequest decryptRequest = new(
             encryptedDir,
             decryptedDir,
             password,
@@ -261,7 +261,7 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
+        Result<BackupResult> decryptResult = await orchestrator.ExecuteAsync(
             decryptRequest, progress);
 
         using (Assert.EnterMultipleScope())
@@ -290,7 +290,7 @@ internal sealed class OrchestratorIntegrationTests
         string decryptedDir = Path.Combine(this.testDir, "decrypted-obf");
         const string password = "IntegrationP@ss1";
 
-        FileCryptRequest encryptRequest = new(
+        BackupRequest encryptRequest = new(
             this.sourceDir,
             encryptedDir,
             password,
@@ -301,8 +301,8 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.Guid,
             ProceedOnWarnings: true);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> encryptResult = await orchestrator.ExecuteAsync(
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> encryptResult = await orchestrator.ExecuteAsync(
             encryptRequest, progress);
 
         Assert.That(encryptResult.IsSuccess, Is.True);
@@ -312,7 +312,7 @@ internal sealed class OrchestratorIntegrationTests
             .ToArray();
         Assert.That(encryptedFiles.All(f => !Path.GetFileName(f).Contains("secret")), Is.True);
 
-        FileCryptRequest decryptRequest = new(
+        BackupRequest decryptRequest = new(
             encryptedDir,
             decryptedDir,
             password,
@@ -323,7 +323,7 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Result<FileCryptResult> decryptResult = await orchestrator.ExecuteAsync(
+        Result<BackupResult> decryptResult = await orchestrator.ExecuteAsync(
             decryptRequest, progress);
 
         using (Assert.EnterMultipleScope())
@@ -344,7 +344,7 @@ internal sealed class OrchestratorIntegrationTests
         Directory.CreateDirectory(noManifestDir);
         await File.WriteAllTextAsync(Path.Combine(noManifestDir, "file.bzc"), "fake");
 
-        FileCryptRequest decryptRequest = new(
+        BackupRequest decryptRequest = new(
             noManifestDir,
             this.destDir,
             "IntegrationP@ss1",
@@ -355,8 +355,8 @@ internal sealed class OrchestratorIntegrationTests
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
-        Progress<FileCryptStatus> progress = new();
-        Result<FileCryptResult> result = await orchestrator.ExecuteAsync(
+        Progress<BackupStatus> progress = new();
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(
             decryptRequest, progress);
 
         Assert.That(result.IsSuccess, Is.False);

@@ -1,15 +1,15 @@
 namespace BackupZCrypt.Test.Domain.ValueObjects;
 
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 
 [TestFixture]
-internal sealed class FileCryptRequestTests
+internal sealed class BackupRequestTests
 {
     [Test]
     public void Record_SetsAllProperties()
     {
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             SourcePath: @"C:\source",
             DestinationPath: @"C:\dest",
             Password: "password123",
@@ -39,7 +39,7 @@ internal sealed class FileCryptRequestTests
     [Test]
     public void Record_DefaultCompression_IsNone()
     {
-        FileCryptRequest request = new(
+        BackupRequest request = new(
             @"C:\source",
             @"C:\dest",
             "pass",
@@ -59,7 +59,7 @@ internal sealed class FileCryptRequestTests
     [Test]
     public void Record_WithExpression_CreatesModifiedCopy()
     {
-        FileCryptRequest original = new(
+        BackupRequest original = new(
             @"C:\source",
             @"C:\dest",
             "pass",
@@ -69,7 +69,7 @@ internal sealed class FileCryptRequestTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        FileCryptRequest modified = original with { Operation = EncryptOperation.Decrypt };
+        BackupRequest modified = original with { Operation = EncryptOperation.Decrypt };
 
         using (Assert.EnterMultipleScope())
         {

@@ -9,8 +9,8 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
@@ -20,13 +20,13 @@ internal sealed class DirectoryBackupService(
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
     IFileOperationsService fileOperations,
     IManifestService manifestService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IFileCryptDirectoryService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IDirectoryBackupService
 {
-    public async Task<Result<FileCryptResult>> ProcessAsync(
+    public async Task<Result<BackupResult>> ProcessAsync(
         string sourcePath,
         string destinationPath,
-        FileCryptRequest request,
-        IProgress<FileCryptStatus> progress,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
         CancellationToken cancellationToken)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -49,7 +49,7 @@ internal sealed class DirectoryBackupService(
 
                 if (manifestData is null)
                 {
-                    return Result<FileCryptResult>.Failure(
+                    return Result<BackupResult>.Failure(
                         Messages.ManifestRequiredForDecryption);
                 }
 
@@ -91,7 +91,7 @@ internal sealed class DirectoryBackupService(
 
             if (manifestData is null)
             {
-                return Result<FileCryptResult>.Failure(
+                return Result<BackupResult>.Failure(
                     Messages.ManifestRequiredForDecryption);
             }
 
@@ -107,8 +107,8 @@ internal sealed class DirectoryBackupService(
         if (files.Length == 0)
         {
             stopwatch.Stop();
-            return Result<FileCryptResult>.Success(
-                new FileCryptResult(
+            return Result<BackupResult>.Success(
+                new BackupResult(
                     false,
                     stopwatch.Elapsed,
                     0,
@@ -119,7 +119,7 @@ internal sealed class DirectoryBackupService(
 
         string manifestEncryptedAbsolute = Path.Combine(
             sourcePath,
-            FileCryptConstants.ManifestFileName);
+            BackupConstants.ManifestFileName);
         string manifestEncryptedRelative = fileOperations.GetRelativePath(
             sourcePath,
             manifestEncryptedAbsolute);
@@ -179,7 +179,7 @@ internal sealed class DirectoryBackupService(
                     string relativePath = fileOperations.GetRelativePath(sourcePath, file);
                     string destinationFilePath = fileOperations.CombinePath(
                         destinationPath,
-                        relativePath + FileCryptConstants.AppFileExtension);
+                        relativePath + BackupConstants.AppFileExtension);
 
                     filesWithDestination.Add((file, destinationFilePath, relativePath));
                 }
@@ -218,7 +218,7 @@ internal sealed class DirectoryBackupService(
         int processedFiles = 0;
 
         progress?.Report(
-            new FileCryptStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
+            new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
 
         ConcurrentBag<string> errors = [];
         string? fatalError = null;
@@ -406,7 +406,7 @@ internal sealed class DirectoryBackupService(
                     long currentProcessedBytes = Interlocked.Add(ref processedBytes, fileSize);
                     int currentProcessedFiles = Volatile.Read(ref processedFiles);
                     progress?.Report(
-                        new FileCryptStatus(
+                        new BackupStatus(
                             currentProcessedFiles,
                             totalFilesToProcess,
                             currentProcessedBytes,
@@ -417,7 +417,7 @@ internal sealed class DirectoryBackupService(
         catch (OperationCanceledException) when (fatalError is not null)
         {
             stopwatch.Stop();
-            return Result<FileCryptResult>.Failure(fatalError);
+            return Result<BackupResult>.Failure(fatalError);
         }
 
         List<string> errorList = [.. errors];
@@ -460,10 +460,10 @@ internal sealed class DirectoryBackupService(
         bool isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
 
         return errorList.Count > 0 && processedFiles == 0
-            ? Result<FileCryptResult>.Failure(
+            ? Result<BackupResult>.Failure(
                 string.Format(Messages.AllFilesFailedFormat, string.Join("; ", errorList)))
-            : Result<FileCryptResult>.Success(
-                new FileCryptResult(
+            : Result<BackupResult>.Success(
+                new BackupResult(
                     isSuccess,
                     stopwatch.Elapsed,
                     totalBytes,
@@ -475,7 +475,7 @@ internal sealed class DirectoryBackupService(
     private async Task<bool> ProcessCompressedFileAsync(
         string sourceFile,
         string destinationFile,
-        FileCryptRequest request,
+        BackupRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -520,7 +520,7 @@ internal sealed class DirectoryBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        await destination.WriteAsync(FileCryptConstants.CompressedFileMagic, cancellationToken);
+        await destination.WriteAsync(BackupConstants.CompressedFileMagic, cancellationToken);
         await destination.WriteAsync(new byte[] { (byte)compression }, cancellationToken);
 
         await compressedStream.CopyToAsync(destination, cancellationToken);
@@ -541,10 +541,10 @@ internal sealed class DirectoryBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        var magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
+        var magic = new byte[BackupConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
-        if (!magic.AsSpan().SequenceEqual(FileCryptConstants.CompressedFileMagic))
+        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic))
         {
             throw new InvalidOperationException(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
@@ -599,7 +599,7 @@ internal sealed class DirectoryBackupService(
 
             if (isLastSegment)
             {
-                string filenameWithExtension = segment + FileCryptConstants.AppFileExtension;
+                string filenameWithExtension = segment + BackupConstants.AppFileExtension;
                 string obfuscatedFilename = obfuscationService.ObfuscateFileName(
                     sourceFilePath,
                     filenameWithExtension);
