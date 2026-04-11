@@ -18,7 +18,7 @@ internal sealed class PasswordCompositionTests
     {
         PasswordComposition comp = new(false, false, false, false, false);
 
-        Assert.That(comp.CategoryCount, Is.EqualTo(0));
+        Assert.That(comp.CategoryCount, Is.Zero);
     }
 
     [Test]

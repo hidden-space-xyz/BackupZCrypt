@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Test.Integration;
 
-using System.Text;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Composition;
@@ -20,7 +19,7 @@ internal sealed class OrchestratorIntegrationTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         services.AddApplicationServices();
         this.provider = services.BuildServiceProvider();

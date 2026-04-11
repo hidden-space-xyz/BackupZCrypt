@@ -1,10 +1,10 @@
 namespace BackupZCrypt.Test.Integration;
 
-using System.Text;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text;
 
 [TestFixture]
 internal sealed class CompressionRoundTripTests
@@ -14,7 +14,7 @@ internal sealed class CompressionRoundTripTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         this.provider = services.BuildServiceProvider();
     }

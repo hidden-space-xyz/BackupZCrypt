@@ -24,7 +24,7 @@ internal sealed class PasswordServiceTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.Strength, Is.EqualTo(PasswordStrength.VeryWeak));
-            Assert.That(result.Score, Is.EqualTo(0));
+            Assert.That(result.Score, Is.Zero);
         }
     }
 

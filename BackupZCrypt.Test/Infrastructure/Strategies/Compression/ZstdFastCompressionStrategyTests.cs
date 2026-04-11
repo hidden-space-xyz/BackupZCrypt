@@ -1,8 +1,8 @@
 namespace BackupZCrypt.Test.Infrastructure.Strategies.Compression;
 
-using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
+using System.Text;
 
 [TestFixture]
 internal sealed class ZstdFastCompressionStrategyTests
@@ -50,7 +50,7 @@ internal sealed class ZstdFastCompressionStrategyTests
         Stream compressed = await strategy.CompressAsync(input);
         Stream decompressed = await strategy.DecompressAsync(compressed);
 
-        byte[] result = new byte[decompressed.Length];
+        var result = new byte[decompressed.Length];
         await decompressed.ReadExactlyAsync(result);
 
         Assert.That(result, Is.EqualTo(original));
@@ -75,7 +75,7 @@ internal sealed class ZstdFastCompressionStrategyTests
 
         Stream compressed = await strategy.CompressAsync(input);
 
-        Assert.That(compressed.Position, Is.EqualTo(0));
+        Assert.That(compressed.Position, Is.Zero);
     }
 
     [Test]
@@ -86,6 +86,6 @@ internal sealed class ZstdFastCompressionStrategyTests
 
         Stream decompressed = await strategy.DecompressAsync(compressed);
 
-        Assert.That(decompressed.Position, Is.EqualTo(0));
+        Assert.That(decompressed.Position, Is.Zero);
     }
 }

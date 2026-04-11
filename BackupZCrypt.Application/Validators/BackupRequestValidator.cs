@@ -262,7 +262,7 @@ internal sealed class BackupRequestValidator(
                         }
                     });
 
-                    long requiredSpace = (long)(totalSize * 1.2);
+                    var requiredSpace = (long)(totalSize * 1.2);
                     long available = systemStorage.GetAvailableFreeSpace(destinationDrive);
                     if (available >= 0 && available < requiredSpace)
                     {
@@ -294,7 +294,7 @@ internal sealed class BackupRequestValidator(
                 }
             }
 
-            bool hasExistingFiles = false;
+            var hasExistingFiles = false;
             int existingFileCount = 0;
 
             if (fileOperations.FileExists(sourcePath) && fileOperations.FileExists(destinationPath))

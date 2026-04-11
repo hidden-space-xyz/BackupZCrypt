@@ -42,7 +42,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     [Test]
     public void DeriveKey_ReturnsCorrectKeySize()
     {
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key = this.strategy.DeriveKey("testPassword123!", salt, 256);
@@ -53,7 +53,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     [Test]
     public void DeriveKey_SameInputs_ProducesSameKey()
     {
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = this.strategy.DeriveKey("password", salt, 256);
@@ -65,7 +65,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     [Test]
     public void DeriveKey_DifferentPasswords_ProducesDifferentKeys()
     {
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = this.strategy.DeriveKey("password1", salt, 256);
@@ -77,8 +77,8 @@ internal sealed class ScryptKeyDerivationStrategyTests
     [Test]
     public void DeriveKey_DifferentSalts_ProducesDifferentKeys()
     {
-        byte[] salt1 = new byte[32];
-        byte[] salt2 = new byte[32];
+        var salt1 = new byte[32];
+        var salt2 = new byte[32];
         RandomNumberGenerator.Fill(salt1);
         RandomNumberGenerator.Fill(salt2);
 
@@ -91,7 +91,7 @@ internal sealed class ScryptKeyDerivationStrategyTests
     [Test]
     public void DeriveKey_ReturnsNonZeroKey()
     {
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key = this.strategy.DeriveKey("password", salt, 256);

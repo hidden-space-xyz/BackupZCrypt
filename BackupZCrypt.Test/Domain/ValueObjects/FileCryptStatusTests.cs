@@ -72,8 +72,8 @@ internal sealed class FileCryptStatusTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(status.ProcessedFiles, Is.EqualTo(0));
-            Assert.That(status.TotalFiles, Is.EqualTo(0));
+            Assert.That(status.ProcessedFiles, Is.Zero);
+            Assert.That(status.TotalFiles, Is.Zero);
         }
     }
 }

@@ -1,11 +1,11 @@
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
-using System.Security.Cryptography;
-using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
+using System.Security.Cryptography;
+using System.Text;
 
 internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
@@ -42,7 +42,7 @@ internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         }
         finally
         {
-            if (passwordBytes != null)
+            if (passwordBytes is not null)
             {
                 Array.Clear(passwordBytes, 0, passwordBytes.Length);
             }

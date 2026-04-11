@@ -1,7 +1,5 @@
 namespace BackupZCrypt.Test.Integration;
 
-using System.Security.Cryptography;
-using System.Text;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
@@ -9,6 +7,8 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
+using System.Text;
 
 [TestFixture]
 internal sealed class EncryptionRoundTripTests
@@ -193,7 +193,7 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public async Task EncryptFile_LargerFile_RoundTrip()
     {
-        byte[] largeData = new byte[256 * 1024];
+        var largeData = new byte[256 * 1024];
         RandomNumberGenerator.Fill(largeData);
         string sourceFile = Path.Combine(this.testDir, "large.bin");
         await File.WriteAllBytesAsync(sourceFile, largeData);
@@ -241,7 +241,7 @@ internal sealed class EncryptionRoundTripTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         this.provider = services.BuildServiceProvider();
         this.encryptionFactory = this.provider.GetRequiredService<IEncryptionServiceFactory>();

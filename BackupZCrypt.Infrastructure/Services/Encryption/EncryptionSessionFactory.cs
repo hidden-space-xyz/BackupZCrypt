@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Infrastructure.Services.Encryption;
 
-using System.Security.Cryptography;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
@@ -8,6 +7,7 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Infrastructure.Constants;
+using System.Security.Cryptography;
 
 internal sealed class EncryptionSessionFactory(
     IKeyDerivationServiceFactory keyDerivationServiceFactory) : IEncryptionSessionFactory
@@ -100,7 +100,7 @@ internal sealed class EncryptionSessionFactory(
         byte[] nonce,
         CompressionMode compression)
     {
-        byte[] header = new byte[EncryptionConstants.HeaderSize];
+        var header = new byte[EncryptionConstants.HeaderSize];
         Buffer.BlockCopy(salt, 0, header, 0, EncryptionConstants.SaltSize);
         Buffer.BlockCopy(
             nonce,
@@ -114,14 +114,14 @@ internal sealed class EncryptionSessionFactory(
 
     private static byte[] GenerateNonce()
     {
-        byte[] nonce = new byte[EncryptionConstants.NonceSize];
+        var nonce = new byte[EncryptionConstants.NonceSize];
         RandomNumberGenerator.Fill(nonce);
         return nonce;
     }
 
     private static byte[] GenerateSalt()
     {
-        byte[] salt = new byte[EncryptionConstants.SaltSize];
+        var salt = new byte[EncryptionConstants.SaltSize];
         RandomNumberGenerator.Fill(salt);
         return salt;
     }
@@ -141,7 +141,7 @@ internal sealed class EncryptionSessionFactory(
         Stream stream,
         CancellationToken cancellationToken)
     {
-        byte[] nonce = new byte[EncryptionConstants.NonceSize];
+        var nonce = new byte[EncryptionConstants.NonceSize];
         await stream.ReadExactlyAsync(nonce, cancellationToken);
         return nonce;
     }
@@ -150,7 +150,7 @@ internal sealed class EncryptionSessionFactory(
         Stream stream,
         CancellationToken cancellationToken)
     {
-        byte[] salt = new byte[EncryptionConstants.SaltSize];
+        var salt = new byte[EncryptionConstants.SaltSize];
         await stream.ReadExactlyAsync(salt, cancellationToken);
         return salt;
     }

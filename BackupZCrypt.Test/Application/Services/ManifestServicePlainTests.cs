@@ -1,13 +1,12 @@
 namespace BackupZCrypt.Test.Application.Services;
 
-using System.Text;
-using System.Text.Json;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 using NSubstitute;
+using System.Text;
+using System.Text.Json;
 
 [TestFixture]
 internal sealed class ManifestServicePlainTests

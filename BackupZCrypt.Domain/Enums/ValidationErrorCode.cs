@@ -3,22 +3,22 @@ namespace BackupZCrypt.Domain.Enums;
 public enum ValidationErrorCode
 {
     // Generic
-    Unknown,
+    Unknown = 0,
 
     // FileProcessingResult
-    ElapsedTimeNegative,
-    TotalBytesNegative,
-    ProcessedFilesNegative,
-    TotalFilesNegative,
-    ProcessedFilesExceedTotalFiles,
+    ElapsedTimeNegative = 1,
+    TotalBytesNegative = 2,
+    ProcessedFilesNegative = 3,
+    TotalFilesNegative = 4,
+    ProcessedFilesExceedTotalFiles = 5,
 
     // FileProcessingStatus
-    ProcessedBytesNegative,
-    ProcessedBytesExceedTotalBytes,
-    ElapsedNegative,
+    ProcessedBytesNegative = 6,
+    ProcessedBytesExceedTotalBytes = 7,
+    ElapsedNegative = 8,
 
     // PasswordService.GeneratePassword
-    PasswordLengthNonPositive,
-    PasswordOptionsNone,
-    NoCharactersAvailableForGeneration,
+    PasswordLengthNonPositive = 9,
+    PasswordOptionsNone = 10,
+    NoCharactersAvailableForGeneration = 11,
 }

@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Test.Application.Services;
 
-using System.Text;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;

@@ -42,7 +42,7 @@ internal sealed class SingleFileBackupServiceTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(0));
+            Assert.That(result.Value.ProcessedFiles, Is.Zero);
         }
     }
 

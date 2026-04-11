@@ -14,7 +14,7 @@ internal sealed class KeyDerivationRoundTripTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         this.provider = services.BuildServiceProvider();
     }
@@ -35,7 +35,7 @@ internal sealed class KeyDerivationRoundTripTests
         >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key = strategy.DeriveKey("password123!", salt, 256);
@@ -53,7 +53,7 @@ internal sealed class KeyDerivationRoundTripTests
         >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = strategy.DeriveKey("password", salt, 256);
@@ -72,7 +72,7 @@ internal sealed class KeyDerivationRoundTripTests
         >();
 
         IKeyDerivationAlgorithmStrategy strategy = strategies.First(s => s.Id == algorithm);
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
         byte[] key1 = strategy.DeriveKey("password1", salt, 256);

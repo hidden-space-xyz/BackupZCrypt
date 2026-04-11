@@ -1,7 +1,6 @@
 namespace BackupZCrypt.Domain.Exceptions;
 
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Resources;
 
 public abstract class EncryptionException : Exception
 {

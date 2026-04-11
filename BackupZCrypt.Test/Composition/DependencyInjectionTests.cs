@@ -18,7 +18,7 @@ internal sealed class DependencyInjectionTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         services.AddApplicationServices();
         this.provider = services.BuildServiceProvider();

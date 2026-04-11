@@ -1,10 +1,10 @@
 namespace BackupZCrypt.Infrastructure.Strategies.Obfuscation;
 
-using System.Security.Cryptography;
-using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
+using System.Security.Cryptography;
+using System.Text;
 
 internal class Sha512ObfuscationStrategy : INameObfuscationStrategy
 {

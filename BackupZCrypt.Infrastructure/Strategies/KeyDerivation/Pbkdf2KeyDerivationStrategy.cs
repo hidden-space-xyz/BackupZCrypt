@@ -1,12 +1,12 @@
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
-using System.Security.Cryptography;
-using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
+using System.Text;
 
 internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
@@ -32,10 +32,10 @@ internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
             Pkcs5S2ParametersGenerator pbkdf2 = new();
             pbkdf2.Init(passwordBytes, salt, Iterations);
 
-            KeyParameter keyParam = (KeyParameter)pbkdf2.GenerateDerivedMacParameters(keySize);
+            var keyParam = (KeyParameter)pbkdf2.GenerateDerivedMacParameters(keySize);
             key = keyParam.GetKey();
 
-            byte[] result = new byte[key.Length];
+            var result = new byte[key.Length];
             Array.Copy(key, result, key.Length);
             return result;
         }
@@ -45,12 +45,12 @@ internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
         }
         finally
         {
-            if (passwordBytes != null)
+            if (passwordBytes is not null)
             {
                 Array.Clear(passwordBytes, 0, passwordBytes.Length);
             }
 
-            if (key != null)
+            if (key is not null)
             {
                 Array.Clear(key, 0, key.Length);
             }

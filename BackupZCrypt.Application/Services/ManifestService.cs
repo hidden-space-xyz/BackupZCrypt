@@ -1,13 +1,13 @@
 namespace BackupZCrypt.Application.Services;
 
-using System.Text;
-using System.Text.Json;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using System.Text;
+using System.Text.Json;
 
 internal sealed class ManifestService : IManifestService
 {
@@ -39,8 +39,8 @@ internal sealed class ManifestService : IManifestService
                 return null;
             }
 
-            EncryptionAlgorithm algorithm = (EncryptionAlgorithm)rawFile[0];
-            KeyDerivationAlgorithm kdf = (KeyDerivationAlgorithm)rawFile[1];
+            var algorithm = (EncryptionAlgorithm)rawFile[0];
+            var kdf = (KeyDerivationAlgorithm)rawFile[1];
 
             IEncryptionAlgorithmStrategy? strategy = encryptionStrategies
                 .FirstOrDefault(s => s.Id == algorithm);

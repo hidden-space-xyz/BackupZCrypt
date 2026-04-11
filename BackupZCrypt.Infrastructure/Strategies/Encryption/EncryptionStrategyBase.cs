@@ -1,7 +1,5 @@
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
-using System.Buffers;
-using System.Security.Cryptography;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
@@ -12,6 +10,8 @@ using BackupZCrypt.Infrastructure.Constants;
 using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
+using System.Buffers;
+using System.Security.Cryptography;
 
 internal abstract class EncryptionStrategyBase(
     IEncryptionSessionFactory encryptionSessionFactory,

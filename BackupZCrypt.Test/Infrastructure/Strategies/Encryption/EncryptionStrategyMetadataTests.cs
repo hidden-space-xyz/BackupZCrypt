@@ -13,7 +13,7 @@ internal sealed class EncryptionStrategyMetadataTests
     [SetUp]
     public void SetUp()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddDomainServices();
         this.provider = services.BuildServiceProvider();
     }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using NUnit.Framework;
+
+namespace BackupZCrypt.Test;
 
 [SetUpFixture]
 internal sealed class GlobalSetUp

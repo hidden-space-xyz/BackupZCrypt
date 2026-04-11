@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Test.Domain.ValueObjects;
 
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 
@@ -119,7 +118,7 @@ internal sealed class FileCryptResultTests
     {
         FileCryptResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
-        Assert.That(result.SuccessRate, Is.EqualTo(0.0));
+        Assert.That(result.SuccessRate, Is.Zero);
     }
 
     [Test]
@@ -151,7 +150,7 @@ internal sealed class FileCryptResultTests
     {
         FileCryptResult result = new(true, TimeSpan.Zero, 1000, 1, 1);
 
-        Assert.That(result.BytesPerSecond, Is.EqualTo(0));
+        Assert.That(result.BytesPerSecond, Is.Zero);
     }
 
     [Test]

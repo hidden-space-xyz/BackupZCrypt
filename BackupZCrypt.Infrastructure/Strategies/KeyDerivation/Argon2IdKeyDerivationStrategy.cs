@@ -1,11 +1,11 @@
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
-using System.Security.Cryptography;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
 
 internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
@@ -32,7 +32,7 @@ internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
                 .WithParallelism(Parallelism)
                 .Build());
 
-        byte[] key = new byte[keySize / 8];
+        var key = new byte[keySize / 8];
         char[] passwordChars = [];
 
         try

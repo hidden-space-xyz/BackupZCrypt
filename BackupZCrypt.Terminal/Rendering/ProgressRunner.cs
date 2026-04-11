@@ -11,7 +11,6 @@ internal static class ProgressRunner
     public static async Task<Result<FileCryptResult>> RunAsync(
         IFileCryptOrchestrator orchestrator,
         FileCryptRequest request,
-        string operationName,
         string operationIngName,
         CancellationToken cancellationToken)
     {
@@ -35,11 +34,10 @@ internal static class ProgressRunner
 
                 Progress<FileCryptStatus> progress = new(update =>
                 {
-                    double pct =
-                        update.TotalBytes > 0
+                    task.Value = (update.TotalBytes > 0
                             ? (double)update.ProcessedBytes / update.TotalBytes * 100
-                            : 100;
-                    task.Value = pct;
+                            : 100);
+
                     task.Description =
                         $"[cyan]{string.Format(Messages.OperationIngFilesFormat, operationIngName, update.ProcessedFiles, update.TotalFiles)}[/]";
                 });

@@ -1,7 +1,7 @@
 namespace BackupZCrypt.Domain.ValueObjects.Encryption;
 
-using System.Security.Cryptography;
 using BackupZCrypt.Domain.Enums;
+using System.Security.Cryptography;
 
 public sealed class EncryptionSession(
     byte[] salt,

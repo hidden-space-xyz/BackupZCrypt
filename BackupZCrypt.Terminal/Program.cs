@@ -1,16 +1,18 @@
-using System.Text;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal;
 using BackupZCrypt.Terminal.Commands;
+
 using Microsoft.Extensions.DependencyInjection;
+
+using System.Text;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
 
-ServiceCollection services = new();
+ServiceCollection services = [];
 services.AddDomainServices();
 services.AddApplicationServices();
 ServiceProvider provider = services.BuildServiceProvider();

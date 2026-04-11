@@ -1,7 +1,5 @@
 namespace BackupZCrypt.Application.Services;
 
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
@@ -13,6 +11,8 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 internal sealed class DirectoryBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
@@ -520,8 +520,8 @@ internal sealed class DirectoryBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        destination.Write(FileCryptConstants.CompressedFileMagic);
-        destination.WriteByte((byte)compression);
+        await destination.WriteAsync(FileCryptConstants.CompressedFileMagic, cancellationToken);
+        await destination.WriteAsync(new byte[] { (byte)compression }, cancellationToken);
 
         await compressedStream.CopyToAsync(destination, cancellationToken);
 
@@ -541,7 +541,7 @@ internal sealed class DirectoryBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        byte[] magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
+        var magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
         if (!magic.AsSpan().SequenceEqual(FileCryptConstants.CompressedFileMagic))
@@ -557,7 +557,7 @@ internal sealed class DirectoryBackupService(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
         }
 
-        CompressionMode compression = (CompressionMode)compressionByte;
+        var compression = (CompressionMode)compressionByte;
         ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
 
         await using Stream decompressedStream = await strategy.DecompressAsync(

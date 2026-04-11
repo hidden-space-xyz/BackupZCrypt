@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Application.Services;
 
-using System.Diagnostics;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
@@ -12,6 +11,7 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
+using System.Diagnostics;
 
 internal sealed class SingleFileBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
@@ -175,7 +175,6 @@ internal sealed class SingleFileBackupService(
                     result = await DecryptCompressedWithManifestAsync(
                         sourcePath,
                         destFile,
-                        request,
                         cancellationToken);
                 }
             }
@@ -223,13 +222,8 @@ internal sealed class SingleFileBackupService(
             sourceDir,
             [.. encryptionStrategies],
             request.Password,
-            cancellationToken);
-
-        if (manifest is null)
-        {
-            throw new InvalidOperationException(
+            cancellationToken) ?? throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
-        }
 
         string sourceFileName = Path.GetFileName(sourcePath);
         if (manifest.FileMap.TryGetValue(sourceFileName, out ManifestFileInfo? fileInfo))
@@ -258,7 +252,6 @@ internal sealed class SingleFileBackupService(
     private async Task<bool> DecryptCompressedWithManifestAsync(
         string sourcePath,
         string destinationPath,
-        FileCryptRequest request,
         CancellationToken cancellationToken)
     {
         string? sourceDir = Path.GetDirectoryName(sourcePath);
@@ -272,14 +265,8 @@ internal sealed class SingleFileBackupService(
             sourceDir,
             [.. encryptionStrategies],
             string.Empty,
-            cancellationToken);
-
-        if (manifest is null)
-        {
-            throw new InvalidOperationException(
+            cancellationToken) ?? throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
-        }
-
         string sourceFileName = Path.GetFileName(sourcePath);
         string resolvedDestination = destinationPath;
 
@@ -348,8 +335,8 @@ internal sealed class SingleFileBackupService(
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Write BZC header: magic bytes + compression mode
-        destination.Write(FileCryptConstants.CompressedFileMagic);
-        destination.WriteByte((byte)compression);
+        await destination.WriteAsync(FileCryptConstants.CompressedFileMagic, cancellationToken);
+        await destination.WriteAsync(new byte[] { (byte)compression }, cancellationToken);
 
         await compressedStream.CopyToAsync(destination, cancellationToken);
 
@@ -370,7 +357,7 @@ internal sealed class SingleFileBackupService(
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Read and validate BZC header
-        byte[] magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
+        var magic = new byte[FileCryptConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
         if (!magic.AsSpan().SequenceEqual(FileCryptConstants.CompressedFileMagic))
@@ -386,7 +373,7 @@ internal sealed class SingleFileBackupService(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
         }
 
-        CompressionMode compression = (CompressionMode)compressionByte;
+        var compression = (CompressionMode)compressionByte;
         ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
 
         await using Stream decompressedStream = await strategy.DecompressAsync(

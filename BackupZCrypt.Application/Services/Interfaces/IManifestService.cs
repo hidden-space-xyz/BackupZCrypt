@@ -1,7 +1,6 @@
 namespace BackupZCrypt.Application.Services.Interfaces;
 
 using BackupZCrypt.Application.ValueObjects.Manifest;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileCrypt;
 

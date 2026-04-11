@@ -151,7 +151,7 @@ internal sealed class DirectoryBackupServiceTests
             .Returns(callInfo => Path.Combine(callInfo.ArgAt<string[]>(0)));
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -178,7 +178,7 @@ internal sealed class DirectoryBackupServiceTests
         {
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(result.Value.HasErrors, Is.True);
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(0));
+            Assert.That(result.Value.TotalFiles, Is.Zero);
         }
     }
 
@@ -219,7 +219,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(new List<string>());
 
-        Result<FileCryptResult> result = await service.ProcessAsync(
+        await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Encrypt),

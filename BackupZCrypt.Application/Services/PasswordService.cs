@@ -1,13 +1,13 @@
 namespace BackupZCrypt.Application.Services;
 
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 
 internal class PasswordService : IPasswordService
 {
@@ -18,11 +18,10 @@ internal class PasswordService : IPasswordService
     private const string SpecialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?";
     private const string SimilarChars = "il1Lo0O";
 
-    private static readonly Regex UpperCaseRegex = new(@"[A-Z]");
-    private static readonly Regex LowerCaseRegex = new(@"[a-z]");
-    private static readonly Regex NumberRegex = new(@"[0-9]");
-    private static readonly Regex SpecialCharRegex = new(
-        @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]");
+    private static readonly Regex UpperCaseRegex = new("[A-Z]");
+    private static readonly Regex LowerCaseRegex = new("[a-z]");
+    private static readonly Regex NumberRegex = new("[0-9]");
+    private static readonly Regex SpecialCharRegex = new(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]");
 
     private static readonly Regex YearRegex = new(@"\b(19|20)\d{2}\b");
 
@@ -163,7 +162,7 @@ internal class PasswordService : IPasswordService
         StringBuilder password = new(length);
         using RandomNumberGenerator rng = RandomNumberGenerator.Create();
 
-        byte[] buffer = new byte[length];
+        var buffer = new byte[length];
         rng.GetBytes(buffer);
 
         for (int i = 0; i < length; i++)
@@ -294,9 +293,9 @@ internal class PasswordService : IPasswordService
         double penalty = 0;
         string lower = password.ToLowerInvariant();
 
-        penalty = CommonSubstrings.Where(lower.Contains).Sum(p => 6);
+        penalty = CommonSubstrings.Where(lower.Contains).Sum(_ => 6);
         string canon = NormalizeLeet(lower);
-        penalty += CommonSubstrings.Where(canon.Contains).Sum(p => 6);
+        penalty += CommonSubstrings.Where(canon.Contains).Sum(_ => 6);
 
         return penalty;
     }
@@ -369,9 +368,8 @@ internal class PasswordService : IPasswordService
                 PasswordStrength.Good => Messages.StrengthGood,
                 PasswordStrength.Strong => Messages.StrengthStrong,
                 _ => "?",
-            });
-
-        sb.Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
+            })
+            .Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
 
         List<string> tips = [];
 
@@ -422,8 +420,8 @@ internal class PasswordService : IPasswordService
 
         if (tips.Count > 0)
         {
-            sb.Append($" // {Messages.Suggestions} ");
-            sb.Append(string.Join(", ", tips.Take(3)));
+            sb.Append($" // {Messages.Suggestions} ")
+                .AppendJoin(", ", tips.Take(3));
         }
         else if (strength == PasswordStrength.Strong)
         {
