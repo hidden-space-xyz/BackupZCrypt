@@ -28,4 +28,19 @@
 		<InternalsVisibleTo Include="BackupZCrypt.Composition" />
 		<InternalsVisibleTo Include="BackupZCrypt.Test" />
 	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Update="Resources\Messages.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Messages.Designer.cs</LastGenOutput>
+			<CustomToolNamespace>BackupZCrypt.Infrastructure.Resources</CustomToolNamespace>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\Messages.es.resx">
+			<DependentUpon>Messages.resx</DependentUpon>
+		</EmbeddedResource>
+		<Compile Update="Resources\Messages.Designer.cs">
+			<AutoGen>true</AutoGen>
+			<DesignTime>true</DesignTime>
+			<DependentUpon>Messages.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
 </Project>

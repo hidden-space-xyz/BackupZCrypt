@@ -25,7 +25,17 @@
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Update="Resources\Messages.resx">
-			<PublicClass>true</PublicClass>
+			<Generator>PublicResXFileCodeGenerator</Generator>
+			<LastGenOutput>Messages.Designer.cs</LastGenOutput>
+			<CustomToolNamespace>BackupZCrypt.Domain.Resources</CustomToolNamespace>
 		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\Messages.es.resx">
+			<DependentUpon>Messages.resx</DependentUpon>
+		</EmbeddedResource>
+		<Compile Update="Resources\Messages.Designer.cs">
+			<AutoGen>true</AutoGen>
+			<DesignTime>true</DesignTime>
+			<DependentUpon>Messages.resx</DependentUpon>
+		</Compile>
 	</ItemGroup>
 </Project>
