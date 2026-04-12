@@ -183,9 +183,13 @@ internal sealed class DirectoryBackupService(
                 foreach (string file in filesToProcess)
                 {
                     string relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                    string destinationRelativePath =
+                        !request.UseEncryption && request.Compression == CompressionMode.None
+                            ? relativePath
+                            : relativePath + BackupConstants.AppFileExtension;
                     string destinationFilePath = fileOperations.CombinePath(
                         destinationPath,
-                        relativePath + BackupConstants.AppFileExtension);
+                        destinationRelativePath);
 
                     filesWithDestination.Add((file, destinationFilePath, relativePath));
                 }
@@ -494,6 +498,11 @@ internal sealed class DirectoryBackupService(
 
         if (request.Operation == EncryptOperation.Encrypt)
         {
+            if (request.Compression == CompressionMode.None)
+            {
+                return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+            }
+
             return await CompressFileAsync(
                 sourceFile,
                 destinationFile,
@@ -501,7 +510,29 @@ internal sealed class DirectoryBackupService(
                 cancellationToken);
         }
 
+        if (request.Compression == CompressionMode.None)
+        {
+            return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+        }
+
         return await DecompressFileAsync(sourceFile, destinationFile, cancellationToken);
+    }
+
+    private async Task<bool> CopyFileAsync(
+        string sourceFile,
+        string destinationFile,
+        CancellationToken cancellationToken)
+    {
+        const int bufferSize = 81920;
+
+        await using Stream source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using Stream destination = fileOperations.CreateWriteStream(
+            destinationFile,
+            bufferSize);
+
+        await source.CopyToAsync(destination, cancellationToken);
+
+        return true;
     }
 
     private async Task<bool> CompressFileAsync(
@@ -510,6 +541,11 @@ internal sealed class DirectoryBackupService(
         CompressionMode compression,
         CancellationToken cancellationToken)
     {
+        if (compression == CompressionMode.None)
+        {
+            return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+        }
+
         ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
 
         await using FileStream source = new(
@@ -739,7 +775,9 @@ internal sealed class DirectoryBackupService(
                 {
                     destFilePath = fileOperations.CombinePath(
                         destinationPath,
-                        originalRelativePath + BackupConstants.AppFileExtension);
+                        request.Compression == CompressionMode.None
+                            ? originalRelativePath
+                            : originalRelativePath + BackupConstants.AppFileExtension);
                 }
 
                 filesToProcess.Add((file, destFilePath, originalRelativePath));

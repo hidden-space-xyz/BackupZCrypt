@@ -282,6 +282,11 @@ internal sealed class SingleFileBackupService(
                 fileInfo.OriginalRelativePath);
         }
 
+        if (manifest.Header.Compression == CompressionMode.None)
+        {
+            return await CopyFileAsync(sourcePath, resolvedDestination, cancellationToken);
+        }
+
         return await DecompressFileAsync(sourcePath, resolvedDestination, cancellationToken);
     }
 
@@ -301,6 +306,11 @@ internal sealed class SingleFileBackupService(
 
         if (request.Operation == EncryptOperation.Encrypt)
         {
+            if (request.Compression == CompressionMode.None)
+            {
+                return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+            }
+
             return await CompressFileAsync(
                 sourceFile,
                 destinationFile,
@@ -308,7 +318,35 @@ internal sealed class SingleFileBackupService(
                 cancellationToken);
         }
 
+        if (request.Compression == CompressionMode.None)
+        {
+            return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+        }
+
         return await DecompressFileAsync(sourceFile, destinationFile, cancellationToken);
+    }
+
+    private async Task<bool> CopyFileAsync(
+        string sourceFile,
+        string destinationFile,
+        CancellationToken cancellationToken)
+    {
+        const int bufferSize = 81920;
+
+        string? destDir = fileOperations.GetDirectoryName(destinationFile);
+        if (!string.IsNullOrEmpty(destDir))
+        {
+            await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
+        }
+
+        await using Stream source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using Stream destination = fileOperations.CreateWriteStream(
+            destinationFile,
+            bufferSize);
+
+        await source.CopyToAsync(destination, cancellationToken);
+
+        return true;
     }
 
     private async Task<bool> CompressFileAsync(
@@ -317,6 +355,11 @@ internal sealed class SingleFileBackupService(
         CompressionMode compression,
         CancellationToken cancellationToken)
     {
+        if (compression == CompressionMode.None)
+        {
+            return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
+        }
+
         ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
 
         await using FileStream source = new(

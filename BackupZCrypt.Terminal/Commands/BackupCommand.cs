@@ -310,14 +310,6 @@ internal sealed class BackupCommand(
         string sourcePath,
         string destinationPath)
     {
-        if (
-            !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
-        {
-            AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
-            return;
-        }
-
         AnsiConsole.WriteLine();
 
         using CancellationTokenSource cts = new();
@@ -339,6 +331,12 @@ internal sealed class BackupCommand(
 
             if (Directory.Exists(sourcePath))
             {
+                if (Directory.Exists(destinationPath))
+                {
+                    Directory.Delete(destinationPath, recursive: true);
+                    Directory.CreateDirectory(destinationPath);
+                }
+
                 string[] files = Directory.GetFiles(
                     sourcePath, "*", SearchOption.AllDirectories);
                 totalFileCount = files.Length;
