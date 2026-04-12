@@ -1,42 +1,47 @@
 namespace BackupZCrypt.Test.Infrastructure.Strategies.Compression;
 
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
 using System.Text;
 
-[TestFixture]
-internal sealed class ZstdCompressionStrategyTests
+[TestFixtureSource(nameof(Strategies))]
+internal sealed class CompressionStrategyTests(
+    ICompressionStrategy strategy,
+    CompressionMode expectedId)
 {
-    private ZstdCompressionStrategy strategy = null!;
-
-    [SetUp]
-    public void SetUp()
+    private static IEnumerable<TestFixtureData> Strategies()
     {
-        this.strategy = new ZstdCompressionStrategy();
+        yield return new TestFixtureData(new ZstdFastCompressionStrategy(), CompressionMode.ZstdFast)
+            .SetArgDisplayNames("ZstdFast");
+        yield return new TestFixtureData(new ZstdCompressionStrategy(), CompressionMode.Zstd)
+            .SetArgDisplayNames("Zstd");
+        yield return new TestFixtureData(new ZstdBestCompressionStrategy(), CompressionMode.ZstdBest)
+            .SetArgDisplayNames("ZstdBest");
     }
 
     [Test]
-    public void Id_ReturnsZstd()
+    public void Id_ReturnsExpected()
     {
-        Assert.That(this.strategy.Id, Is.EqualTo(CompressionMode.Zstd));
+        Assert.That(strategy.Id, Is.EqualTo(expectedId));
     }
 
     [Test]
     public void DisplayName_ContainsZstandard()
     {
-        Assert.That(this.strategy.DisplayName, Does.Contain("Zstandard"));
+        Assert.That(strategy.DisplayName, Does.Contain("Zstandard"));
     }
 
     [Test]
     public void Description_IsNotEmpty()
     {
-        Assert.That(this.strategy.Description, Is.Not.Empty);
+        Assert.That(strategy.Description, Is.Not.Empty);
     }
 
     [Test]
     public void Summary_IsNotEmpty()
     {
-        Assert.That(this.strategy.Summary, Is.Not.Empty);
+        Assert.That(strategy.Summary, Is.Not.Empty);
     }
 
     [Test]
@@ -71,7 +76,8 @@ internal sealed class ZstdCompressionStrategyTests
     [Test]
     public async Task CompressAsync_StreamPositionIsZero()
     {
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes("data"));
+        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
 
         Stream compressed = await strategy.CompressAsync(input);
 
@@ -81,7 +87,8 @@ internal sealed class ZstdCompressionStrategyTests
     [Test]
     public async Task DecompressAsync_StreamPositionIsZero()
     {
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes("data"));
+        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
         Stream compressed = await strategy.CompressAsync(input);
 
         Stream decompressed = await strategy.DecompressAsync(compressed);

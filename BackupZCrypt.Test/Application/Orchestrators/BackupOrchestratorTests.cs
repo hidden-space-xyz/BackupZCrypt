@@ -243,6 +243,64 @@ internal sealed class BackupOrchestratorTests
         Assert.That(result.Value.IsSuccess, Is.True);
     }
 
+    [Test]
+    public async Task Execute_UpdateOperation_FileSource_ReturnsFailure()
+    {
+        BackupRequest request = CreateRequest() with { Operation = EncryptOperation.Update };
+
+        this.validator
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new List<string>());
+        this.validator
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new List<string>());
+
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
+
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
+
+    [Test]
+    public async Task Execute_UpdateOperation_DirectorySource_DelegatesToDirectoryService()
+    {
+        BackupRequest request = CreateRequest() with { Operation = EncryptOperation.Update };
+
+        this.validator
+            .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new List<string>());
+        this.validator
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new List<string>());
+
+        this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
+
+        BackupResult expected = new(true, TimeSpan.FromSeconds(1), 500, 5, 5);
+        this.directoryService
+            .ProcessAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Result<BackupResult>.Success(expected));
+
+        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
+
+        Assert.That(result.Value.IsSuccess, Is.True);
+        await directoryService
+            .Received(1)
+            .ProcessAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Is<BackupRequest>(r => r.Operation == EncryptOperation.Update),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>());
+    }
+
     [SetUp]
     public void SetUp()
     {

@@ -2,6 +2,7 @@ namespace BackupZCrypt.Test.Application.Validators;
 
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators;
+using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -185,6 +186,119 @@ internal sealed class BackupRequestValidatorTests
         IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Is.Empty);
+    }
+
+    [Test]
+    public async Task AnalyzeErrors_DestinationInsideSource_ReturnsError()
+    {
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
+        this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
+        this.fileOps
+            .GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(["file.txt"]);
+        this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
+        this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
+
+        BackupRequest request = CreateRequest(
+            source: @"C:\source",
+            dest: @"C:\source\subfolder");
+
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+
+        Assert.That(errors, Has.Some.Contains("inside"));
+    }
+
+    [Test]
+    public async Task AnalyzeErrors_DecryptOperation_DoesNotRequireConfirmPassword()
+    {
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
+        this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
+        this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
+
+        BackupRequest request = CreateRequest(
+            confirmPassword: string.Empty,
+            operation: EncryptOperation.Decrypt);
+
+        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+
+        Assert.That(errors, Has.None.Contains("confirm"));
+    }
+
+    [Test]
+    public async Task AnalyzeWarnings_LowDiskSpace_ReturnsWarning()
+    {
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
+        this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
+        this.fileOps
+            .GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([@"C:\source\file.txt"]);
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(1_000_000L);
+        this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
+        this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
+        this.storage.GetAvailableFreeSpace(Arg.Any<string>()).Returns(500L);
+
+        BackupRequest request = CreateRequest(source: @"C:\source", dest: @"C:\dest");
+
+        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+
+        Assert.That(warnings, Has.Some.Contains("space"));
+    }
+
+    [Test]
+    public async Task AnalyzeWarnings_WeakPassword_ReturnsWarning()
+    {
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, "Weak", 30.0));
+
+        BackupRequest request = CreateRequest(password: "weakpass", confirmPassword: "weakpass");
+
+        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+
+        Assert.That(warnings, Has.Some.Contains("password"));
+    }
+
+    [Test]
+    public async Task AnalyzeWarnings_ValidRequest_NoWarnings()
+    {
+        this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
+        this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
+        this.storage.GetAvailableFreeSpace(Arg.Any<string>()).Returns(long.MaxValue);
+        this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, "Strong", 90.0));
+
+        BackupRequest request = CreateRequest();
+
+        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+
+        Assert.That(warnings, Is.Empty);
+    }
+
+    [Test]
+    public async Task AnalyzeWarnings_ExistingFilesInDestination_ReturnsWarning()
+    {
+        this.fileOps.FileExists(@"C:\source\file.bzc").Returns(true);
+        this.fileOps.FileExists(@"C:\dest\file.txt").Returns(true);
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
+        this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
+        this.storage.GetAvailableFreeSpace(Arg.Any<string>()).Returns(long.MaxValue);
+
+        BackupRequest request = CreateRequest(
+            source: @"C:\source\file.bzc",
+            dest: @"C:\dest\file.txt",
+            operation: EncryptOperation.Decrypt);
+
+        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+
+        Assert.That(warnings, Has.Some.Contains("existing"));
     }
 
     [SetUp]

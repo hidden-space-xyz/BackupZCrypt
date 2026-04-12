@@ -216,6 +216,102 @@ internal sealed class SingleFileBackupServiceTests
         this.progress.Received(2).Report(Arg.Any<BackupStatus>());
     }
 
+    [Test]
+    public async Task ProcessAsync_NoEncryption_NoCompression_CopiesFile()
+    {
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
+        this.fileOps
+            .OpenReadStream(Arg.Any<string>(), Arg.Any<int>())
+            .Returns(new MemoryStream([1, 2, 3]));
+        this.fileOps
+            .CreateWriteStream(Arg.Any<string>(), Arg.Any<int>())
+            .Returns(new MemoryStream());
+
+        BackupRequest request = new(
+            @"C:\source\file.txt",
+            @"C:\dest\file.txt",
+            string.Empty,
+            string.Empty,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.Argon2id,
+            EncryptOperation.Encrypt,
+            NameObfuscationMode.None,
+            CompressionMode.None,
+            UseEncryption: false);
+
+        Result<BackupResult> result = await service.ProcessAsync(
+            @"C:\source\file.txt",
+            @"C:\dest\file.txt",
+            request,
+            progress,
+            CancellationToken.None);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.IsSuccess, Is.True);
+            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(1));
+        }
+    }
+
+    [Test]
+    public async Task ProcessAsync_Update_DelegatesToEncryptionStrategy()
+    {
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
+        this.fileOps.CombinePath(Arg.Any<string[]>()).Returns(@"C:\dest\file.bzc");
+        this.obfuscationStrategy
+            .ObfuscateFileName(Arg.Any<string>(), Arg.Any<string>())
+            .Returns("file.bzc");
+
+        this.manifestService
+            .TryReadManifestAsync(
+                Arg.Any<string>(),
+                Arg.Any<IReadOnlyList<IEncryptionAlgorithmStrategy>>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ManifestData(
+                new ManifestHeader(
+                    EncryptionAlgorithm.Aes,
+                    KeyDerivationAlgorithm.Argon2id,
+                    NameObfuscationMode.None,
+                    CompressionMode.None),
+                new Dictionary<string, ManifestFileInfo>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["file.bzc"] = new ManifestFileInfo("file.txt", new byte[16], new byte[12], string.Empty),
+                }));
+
+        this.encryptionStrategy
+            .DecryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<EncryptionMetadata>(),
+                Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        this.encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+
+        Result<BackupResult> result = await service.ProcessAsync(
+            @"C:\source\file.bzc",
+            @"C:\dest\file.bzc",
+            CreateRequest(EncryptOperation.Update),
+            progress,
+            CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.True);
+    }
+
     [SetUp]
     public void SetUp()
     {
