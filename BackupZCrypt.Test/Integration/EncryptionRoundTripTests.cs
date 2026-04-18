@@ -42,6 +42,28 @@ internal sealed class EncryptionRoundTripTests
         Assert.That(readBack, Is.EqualTo(plaintext));
     }
 
+    [TestCase(EncryptionAlgorithm.Aes)]
+    [TestCase(EncryptionAlgorithm.ChaCha20)]
+    public async Task CreateEncryptedDataAndReadBack_RoundTrip(EncryptionAlgorithm algorithm)
+    {
+        byte[] plaintext = Encoding.UTF8.GetBytes("In-memory manifest payload for testing");
+        const string password = "TestP@ssw0rd!Str0ng";
+
+        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
+
+        byte[] encryptedData = await strategy.CreateEncryptedDataAsync(
+            plaintext,
+            password,
+            KeyDerivationAlgorithm.PBKDF2);
+
+        byte[] readBack = await strategy.ReadEncryptedDataAsync(
+            encryptedData,
+            password,
+            KeyDerivationAlgorithm.PBKDF2);
+
+        Assert.That(readBack, Is.EqualTo(plaintext));
+    }
+
     [Test]
     public void DecryptFile_CorruptedFile_ThrowsEncryptionCorruptedFileException()
     {

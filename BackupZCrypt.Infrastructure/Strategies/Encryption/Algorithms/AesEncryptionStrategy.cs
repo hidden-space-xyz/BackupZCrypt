@@ -5,9 +5,7 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
-using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Crypto.Modes;
-using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
 
 internal class AesEncryptionStrategy(
     IEncryptionSessionFactory encryptionSessionFactory,
@@ -35,16 +33,29 @@ internal class AesEncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        AesEngine aesEngine = new();
-        GcmBlockCipher gcmCipher = new(aesEngine);
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
-        gcmCipher.Init(true, parameters);
+        byte[] plaintext = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        byte[] ciphertext = new byte[plaintext.Length];
+        byte[] tag = new byte[MacSizeBytes];
 
-        await ProcessFileWithCipherAsync(
-            sourceStream,
-            destinationStream,
-            gcmCipher,
-            cancellationToken);
+        try
+        {
+            using AesGcm aesGcm = new(key, MacSizeBytes);
+            aesGcm.Encrypt(
+                nonce,
+                plaintext,
+                ciphertext,
+                tag,
+                associatedData);
+
+            await destinationStream.WriteAsync(ciphertext, cancellationToken);
+            await destinationStream.WriteAsync(tag, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+            CryptographicOperations.ZeroMemory(ciphertext);
+            CryptographicOperations.ZeroMemory(tag);
+        }
     }
 
     protected override async Task DecryptStreamAsync(
@@ -55,15 +66,34 @@ internal class AesEncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        AesEngine aesEngine = new();
-        GcmBlockCipher gcmCipher = new(aesEngine);
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
-        gcmCipher.Init(false, parameters);
+        byte[] encryptedData = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        if (encryptedData.Length < MacSizeBytes)
+        {
+            throw new CryptographicException();
+        }
 
-        await ProcessFileWithCipherAsync(
-            sourceStream,
-            destinationStream,
-            gcmCipher,
-            cancellationToken);
+        byte[] plaintext = new byte[encryptedData.Length - MacSizeBytes];
+        byte[] tag = new byte[MacSizeBytes];
+
+        try
+        {
+            encryptedData.AsSpan(plaintext.Length, MacSizeBytes).CopyTo(tag);
+
+            using AesGcm aesGcm = new(key, MacSizeBytes);
+            aesGcm.Decrypt(
+                nonce,
+                encryptedData.AsSpan(0, plaintext.Length),
+                tag,
+                plaintext,
+                associatedData);
+
+            await destinationStream.WriteAsync(plaintext, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(encryptedData);
+            CryptographicOperations.ZeroMemory(plaintext);
+            CryptographicOperations.ZeroMemory(tag);
+        }
     }
 }

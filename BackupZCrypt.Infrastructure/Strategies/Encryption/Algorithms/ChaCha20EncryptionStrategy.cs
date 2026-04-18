@@ -5,8 +5,7 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
-using Org.BouncyCastle.Crypto.Modes;
-using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
 
 internal class ChaCha20EncryptionStrategy(
     IEncryptionSessionFactory encryptionSessionFactory,
@@ -34,15 +33,29 @@ internal class ChaCha20EncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        ChaCha20Poly1305 chacha20Poly1305 = new();
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
-        chacha20Poly1305.Init(true, parameters);
+        byte[] plaintext = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        byte[] ciphertext = new byte[plaintext.Length];
+        byte[] tag = new byte[MacSizeBytes];
 
-        await ProcessFileWithCipherAsync(
-            sourceStream,
-            destinationStream,
-            chacha20Poly1305,
-            cancellationToken);
+        try
+        {
+            using ChaCha20Poly1305 chaCha20Poly1305 = new(key);
+            chaCha20Poly1305.Encrypt(
+                nonce,
+                plaintext,
+                ciphertext,
+                tag,
+                associatedData);
+
+            await destinationStream.WriteAsync(ciphertext, cancellationToken);
+            await destinationStream.WriteAsync(tag, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+            CryptographicOperations.ZeroMemory(ciphertext);
+            CryptographicOperations.ZeroMemory(tag);
+        }
     }
 
     protected override async Task DecryptStreamAsync(
@@ -53,14 +66,34 @@ internal class ChaCha20EncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        ChaCha20Poly1305 chacha20Poly1305 = new();
-        AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
-        chacha20Poly1305.Init(false, parameters);
+        byte[] encryptedData = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        if (encryptedData.Length < MacSizeBytes)
+        {
+            throw new CryptographicException();
+        }
 
-        await ProcessFileWithCipherAsync(
-            sourceStream,
-            destinationStream,
-            chacha20Poly1305,
-            cancellationToken);
+        byte[] plaintext = new byte[encryptedData.Length - MacSizeBytes];
+        byte[] tag = new byte[MacSizeBytes];
+
+        try
+        {
+            encryptedData.AsSpan(plaintext.Length, MacSizeBytes).CopyTo(tag);
+
+            using ChaCha20Poly1305 chaCha20Poly1305 = new(key);
+            chaCha20Poly1305.Decrypt(
+                nonce,
+                encryptedData.AsSpan(0, plaintext.Length),
+                tag,
+                plaintext,
+                associatedData);
+
+            await destinationStream.WriteAsync(plaintext, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(encryptedData);
+            CryptographicOperations.ZeroMemory(plaintext);
+            CryptographicOperations.ZeroMemory(tag);
+        }
     }
 }

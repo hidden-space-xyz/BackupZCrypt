@@ -12,6 +12,7 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using System.Buffers;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
 internal abstract class EncryptionStrategyBase(
     IEncryptionSessionFactory encryptionSessionFactory,
@@ -19,6 +20,7 @@ internal abstract class EncryptionStrategyBase(
     IEncryptionFileService encryptionFileService)
 {
     protected const int MacSize = EncryptionConstants.MacSize;
+    protected const int MacSizeBytes = EncryptionConstants.MacSize / 8;
     protected const int BufferSize = EncryptionConstants.BufferSize;
 
     public async Task<EncryptionMetadata> EncryptFileAsync(
@@ -315,42 +317,16 @@ internal abstract class EncryptionStrategyBase(
 
         try
         {
-            using EncryptionSession session = encryptionSessionFactory.CreateEncryptionSession(
+            byte[] encryptedData = await CreateEncryptedDataAsync(
+                plaintextData,
                 password,
                 keyDerivationAlgorithm,
-                compression);
+                compression,
+                cancellationToken);
 
             await using Stream destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
-            await destinationFile.WriteAsync(session.AssociatedData, cancellationToken);
-
-            await using Stream source = new MemoryStream(plaintextData, writable: false);
-
-            if (compression != CompressionMode.None)
-            {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                    compression);
-                await using Stream compressedSource = await compressionStrategy.CompressAsync(
-                    source,
-                    cancellationToken);
-                await EncryptStreamAsync(
-                    compressedSource,
-                    destinationFile,
-                    session.Key,
-                    session.Nonce,
-                    session.AssociatedData,
-                    cancellationToken);
-            }
-            else
-            {
-                await EncryptStreamAsync(
-                    source,
-                    destinationFile,
-                    session.Key,
-                    session.Nonce,
-                    session.AssociatedData,
-                    cancellationToken);
-            }
+            await destinationFile.WriteAsync(encryptedData, cancellationToken);
         }
         catch (EncryptionException)
         {
@@ -379,6 +355,54 @@ internal abstract class EncryptionStrategyBase(
         }
 
         return true;
+    }
+
+    public virtual async Task<byte[]> CreateEncryptedDataAsync(
+        byte[] plaintextData,
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plaintextData);
+
+        using EncryptionSession session = encryptionSessionFactory.CreateEncryptionSession(
+            password,
+            keyDerivationAlgorithm,
+            compression);
+
+        await using MemoryStream destinationBuffer = new();
+        await destinationBuffer.WriteAsync(session.AssociatedData, cancellationToken);
+
+        await using Stream source = new MemoryStream(plaintextData, writable: false);
+
+        if (compression != CompressionMode.None)
+        {
+            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                compression);
+            await using Stream compressedSource = await compressionStrategy.CompressAsync(
+                source,
+                cancellationToken);
+            await EncryptStreamAsync(
+                compressedSource,
+                destinationBuffer,
+                session.Key,
+                session.Nonce,
+                session.AssociatedData,
+                cancellationToken);
+        }
+        else
+        {
+            await EncryptStreamAsync(
+                source,
+                destinationBuffer,
+                session.Key,
+                session.Nonce,
+                session.AssociatedData,
+                cancellationToken);
+        }
+
+        return destinationBuffer.ToArray();
     }
 
     public virtual async Task<byte[]> ReadEncryptedFileAsync(
@@ -425,6 +449,7 @@ internal abstract class EncryptionStrategyBase(
             {
                 await decryptedBuffer.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
             }
+
             return resultBuffer.ToArray();
         }
         catch (InvalidCipherTextException)
@@ -442,6 +467,65 @@ internal abstract class EncryptionStrategyBase(
         catch (EndOfStreamException)
         {
             throw new EncryptionCorruptedFileException(sourceFilePath);
+        }
+        catch (IOException ex)
+        {
+            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+        }
+    }
+
+    public virtual async Task<byte[]> ReadEncryptedDataAsync(
+        ReadOnlyMemory<byte> encryptedData,
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using MemoryStream source = CreateReadOnlyMemoryStream(encryptedData);
+
+            using EncryptionSession session =
+                await encryptionSessionFactory.CreateDecryptionSessionAsync(
+                    source,
+                    password,
+                    keyDerivationAlgorithm,
+                    cancellationToken);
+
+            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await DecryptStreamAsync(
+                source,
+                decryptedBuffer,
+                session.Key,
+                session.Nonce,
+                session.AssociatedData,
+                cancellationToken);
+            decryptedBuffer.Position = 0;
+
+            await using MemoryStream resultBuffer = new();
+
+            if (session.Compression != CompressionMode.None)
+            {
+                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                    session.Compression);
+                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                    decryptedBuffer,
+                    cancellationToken);
+                await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
+            }
+            else
+            {
+                await decryptedBuffer.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
+            }
+
+            return resultBuffer.ToArray();
+        }
+        catch (InvalidCipherTextException)
+        {
+            throw new EncryptionInvalidPasswordException();
+        }
+        catch (CryptographicException)
+        {
+            throw new EncryptionInvalidPasswordException();
         }
         catch (IOException ex)
         {
@@ -511,5 +595,69 @@ internal abstract class EncryptionStrategyBase(
             ArrayPool<byte>.Shared.Return(inputBuffer, clearArray: true);
             ArrayPool<byte>.Shared.Return(outputBuffer, clearArray: true);
         }
+    }
+
+    protected static async Task<byte[]> ReadAllBytesAsync(
+        Stream sourceStream,
+        CancellationToken cancellationToken)
+    {
+        if (sourceStream.CanSeek)
+        {
+            long remainingLength = sourceStream.Length - sourceStream.Position;
+            if (remainingLength == 0)
+            {
+                return [];
+            }
+
+            if (remainingLength > 0 && remainingLength <= int.MaxValue)
+            {
+                byte[] dataBuffer = new byte[(int)remainingLength];
+                int totalRead = 0;
+
+                while (totalRead < dataBuffer.Length)
+                {
+                    int bytesRead = await sourceStream.ReadAsync(
+                        dataBuffer.AsMemory(totalRead),
+                        cancellationToken);
+
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    totalRead += bytesRead;
+                }
+
+                if (totalRead == dataBuffer.Length)
+                {
+                    return dataBuffer;
+                }
+
+                byte[] trimmedBuffer = new byte[totalRead];
+                dataBuffer.AsSpan(0, totalRead).CopyTo(trimmedBuffer);
+                CryptographicOperations.ZeroMemory(dataBuffer);
+                return trimmedBuffer;
+            }
+        }
+
+        using MemoryStream bufferStream = new();
+        await sourceStream.CopyToAsync(bufferStream, BufferSize, cancellationToken);
+        return bufferStream.ToArray();
+    }
+
+    private static MemoryStream CreateReadOnlyMemoryStream(ReadOnlyMemory<byte> data)
+    {
+        if (MemoryMarshal.TryGetArray(data, out ArraySegment<byte> segment)
+            && segment.Array is not null)
+        {
+            return new MemoryStream(
+                segment.Array,
+                segment.Offset,
+                segment.Count,
+                writable: false,
+                publiclyVisible: false);
+        }
+
+        return new MemoryStream(data.ToArray(), writable: false);
     }
 }

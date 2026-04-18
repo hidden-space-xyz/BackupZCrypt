@@ -44,8 +44,21 @@ public interface IEncryptionAlgorithmStrategy
         CompressionMode compression = CompressionMode.None,
         CancellationToken cancellationToken = default);
 
+    Task<byte[]> CreateEncryptedDataAsync(
+        byte[] plaintextData,
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CompressionMode compression = CompressionMode.None,
+        CancellationToken cancellationToken = default);
+
     Task<byte[]> ReadEncryptedFileAsync(
         string sourceFilePath,
+        string password,
+        KeyDerivationAlgorithm keyDerivationAlgorithm,
+        CancellationToken cancellationToken = default);
+
+    Task<byte[]> ReadEncryptedDataAsync(
+        ReadOnlyMemory<byte> encryptedData,
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,
         CancellationToken cancellationToken = default);
