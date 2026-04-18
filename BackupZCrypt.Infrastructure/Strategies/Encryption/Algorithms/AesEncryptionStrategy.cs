@@ -7,7 +7,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 
-internal class AesEncryptionStrategy(
+internal sealed class AesEncryptionStrategy(
     IEncryptionSessionFactory encryptionSessionFactory,
     ICompressionServiceFactory compressionServiceFactory,
     IEncryptionFileService encryptionFileService)

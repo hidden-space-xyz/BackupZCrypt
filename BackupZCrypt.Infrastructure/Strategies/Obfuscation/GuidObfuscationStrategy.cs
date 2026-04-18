@@ -4,7 +4,7 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 
-internal class GuidObfuscationStrategy : INameObfuscationStrategy
+internal sealed class GuidObfuscationStrategy : INameObfuscationStrategy
 {
     public NameObfuscationMode Id => NameObfuscationMode.Guid;
 

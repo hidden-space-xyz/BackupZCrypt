@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-internal class PasswordService : IPasswordService
+internal sealed class PasswordService : IPasswordService
 {
     private const double MaxEntropyBits = 120.0;
     private const string UppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -160,14 +160,20 @@ internal class PasswordService : IPasswordService
         }
 
         StringBuilder password = new(length);
-        using RandomNumberGenerator rng = RandomNumberGenerator.Create();
 
-        var buffer = new byte[length];
-        rng.GetBytes(buffer);
+        int charCount = availableChars.Length;
+        int maxValidByte = 256 - (256 % charCount);
 
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < length;)
         {
-            password.Append(availableChars[buffer[i] % availableChars.Length]);
+            byte[] buffer = new byte[1];
+            RandomNumberGenerator.Fill(buffer);
+
+            if (buffer[0] < maxValidByte)
+            {
+                password.Append(availableChars[buffer[0] % charCount]);
+                i++;
+            }
         }
 
         return password.ToString();

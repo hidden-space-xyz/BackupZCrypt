@@ -5,7 +5,7 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-internal class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
+internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
 {
     private readonly Dictionary<CompressionMode, ICompressionStrategy> strategies =

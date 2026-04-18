@@ -408,7 +408,7 @@ internal sealed class SingleFileBackupService(
         var magic = new byte[BackupConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
-        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic))
+        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic.Span))
         {
             throw new InvalidOperationException(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));

@@ -7,7 +7,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 
-internal class ChaCha20EncryptionStrategy(
+internal sealed class ChaCha20EncryptionStrategy(
     IEncryptionSessionFactory encryptionSessionFactory,
     ICompressionServiceFactory compressionServiceFactory,
     IEncryptionFileService encryptionFileService)

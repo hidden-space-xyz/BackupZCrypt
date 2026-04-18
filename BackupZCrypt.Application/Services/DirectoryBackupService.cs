@@ -150,7 +150,7 @@ internal sealed class DirectoryBackupService(
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
             StringComparer.OrdinalIgnoreCase);
 
-        List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath)>
+        List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath, long FileSize)>
             filesWithDestination = [];
 
         if (request.Operation == EncryptOperation.Encrypt)
@@ -175,7 +175,7 @@ internal sealed class DirectoryBackupService(
                         continue;
                     }
 
-                    filesWithDestination.Add((file, destinationFilePath, relativePath));
+                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
                 }
             }
             else
@@ -191,7 +191,7 @@ internal sealed class DirectoryBackupService(
                         destinationPath,
                         destinationRelativePath);
 
-                    filesWithDestination.Add((file, destinationFilePath, relativePath));
+                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
                 }
             }
         }
@@ -217,13 +217,12 @@ internal sealed class DirectoryBackupService(
                         relativePath);
                 }
 
-                filesWithDestination.Add((file, destinationFilePath, relativePath));
+                filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
             }
         }
 
         int totalFilesToProcess = filesWithDestination.Count;
-        long totalBytes = filesWithDestination.Sum(
-            item => fileOperations.GetFileSize(item.SourceFilePath));
+        long totalBytes = filesWithDestination.Sum(item => item.FileSize);
         long processedBytes = 0;
         int processedFiles = 0;
 
@@ -409,15 +408,7 @@ internal sealed class DirectoryBackupService(
                             string.Format(Messages.CompressionErrorFormat, file, ex.Message));
                     }
 
-                    long fileSize = 0;
-                    try
-                    {
-                        fileSize = fileOperations.GetFileSize(file);
-                    }
-                    catch
-                    {
-                        // Ignore file size retrieval errors and proceed with a size of 0 for progress reporting
-                    }
+                    long fileSize = fileItem.FileSize;
 
                     long currentProcessedBytes = Interlocked.Add(ref processedBytes, fileSize);
                     int currentProcessedFiles = Volatile.Read(ref processedFiles);
@@ -592,7 +583,7 @@ internal sealed class DirectoryBackupService(
         var magic = new byte[BackupConstants.CompressedFileMagic.Length];
         await source.ReadExactlyAsync(magic, cancellationToken);
 
-        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic))
+        if (!magic.AsSpan().SequenceEqual(BackupConstants.CompressedFileMagic.Span))
         {
             throw new InvalidOperationException(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
@@ -732,7 +723,7 @@ internal sealed class DirectoryBackupService(
         }
 
         ConcurrentBag<ManifestEntry> updatedManifestEntries = [];
-        List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath)>
+        List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath, long FileSize)>
             filesToProcess = [];
         HashSet<string> sourceOriginalPaths = new(StringComparer.OrdinalIgnoreCase);
 
@@ -759,7 +750,7 @@ internal sealed class DirectoryBackupService(
                 {
                     string destFilePath = fileOperations.CombinePath(
                         destinationPath, existing.RelativePath);
-                    filesToProcess.Add((file, destFilePath, originalRelativePath));
+                    filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperations.GetFileSize(file)));
                 }
             }
             else
@@ -780,7 +771,7 @@ internal sealed class DirectoryBackupService(
                             : originalRelativePath + BackupConstants.AppFileExtension);
                 }
 
-                filesToProcess.Add((file, destFilePath, originalRelativePath));
+                filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperations.GetFileSize(file)));
             }
         }
 
@@ -805,8 +796,7 @@ internal sealed class DirectoryBackupService(
         }
 
         int totalFilesToProcess = filesToProcess.Count;
-        long totalBytes = filesToProcess.Sum(
-            item => fileOperations.GetFileSize(item.SourceFilePath));
+        long totalBytes = filesToProcess.Sum(item => item.FileSize);
         long processedBytes = 0;
         int processedFiles = 0;
 
@@ -962,15 +952,7 @@ internal sealed class DirectoryBackupService(
                                     Messages.CompressionErrorFormat, file, ex.Message));
                         }
 
-                        long fileSize = 0;
-                        try
-                        {
-                            fileSize = fileOperations.GetFileSize(file);
-                        }
-                        catch
-                        {
-                            // Ignore file size retrieval errors
-                        }
+                        long fileSize = fileItem.FileSize;
 
                         long currentProcessedBytes =
                             Interlocked.Add(ref processedBytes, fileSize);

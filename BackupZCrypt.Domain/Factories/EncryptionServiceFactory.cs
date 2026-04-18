@@ -5,7 +5,7 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-internal class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy> strategies)
+internal sealed class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy> strategies)
     : IEncryptionServiceFactory
 {
     private readonly Dictionary<

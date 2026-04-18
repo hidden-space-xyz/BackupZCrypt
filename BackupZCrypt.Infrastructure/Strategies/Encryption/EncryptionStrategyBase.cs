@@ -11,8 +11,8 @@ using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using System.Buffers;
-using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 internal abstract class EncryptionStrategyBase(
     IEncryptionSessionFactory encryptionSessionFactory,

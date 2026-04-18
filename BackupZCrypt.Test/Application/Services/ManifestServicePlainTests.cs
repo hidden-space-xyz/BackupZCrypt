@@ -4,6 +4,7 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Infrastructure.Services.FileSystem;
 using NSubstitute;
 using System.Text;
 using System.Text.Json;
@@ -16,7 +17,7 @@ internal sealed class ManifestServicePlainTests
     [SetUp]
     public void SetUp()
     {
-        this.service = new ManifestService();
+        this.service = new ManifestService(new FileOperationsService());
     }
 
     [Test]

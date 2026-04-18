@@ -39,4 +39,11 @@ public interface IFileOperationsService
     Stream CreateTempStream(int bufferSize);
 
     Task<string> ComputeFileHashAsync(string filePath, CancellationToken cancellationToken = default);
+
+    Task<byte[]> ReadAllBytesAsync(string filePath, CancellationToken cancellationToken = default);
+
+    Task WriteAllBytesAsync(
+        string filePath,
+        byte[] bytes,
+        CancellationToken cancellationToken = default);
 }

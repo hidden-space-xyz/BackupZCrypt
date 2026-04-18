@@ -4,11 +4,13 @@ using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using System.Text.Json;
 
-internal sealed class ManifestService : IManifestService
+internal sealed class ManifestService(
+    IFileOperationsService fileOperationsService) : IManifestService
 {
     private const int PreambleSize = 2;
 
@@ -25,12 +27,12 @@ internal sealed class ManifestService : IManifestService
         try
         {
             string encryptedManifestPath = Path.Combine(sourceRoot, ManifestFileName);
-            if (!File.Exists(encryptedManifestPath))
+            if (!fileOperationsService.FileExists(encryptedManifestPath))
             {
                 return null;
             }
 
-            byte[] rawFile = await File.ReadAllBytesAsync(
+            byte[] rawFile = await fileOperationsService.ReadAllBytesAsync(
                 encryptedManifestPath,
                 cancellationToken);
             if (rawFile.Length < PreambleSize)
@@ -98,7 +100,7 @@ internal sealed class ManifestService : IManifestService
             manifestPayload[1] = (byte)header.KeyDerivationAlgorithm;
             encryptedManifestBytes.CopyTo(manifestPayload, PreambleSize);
 
-            await File.WriteAllBytesAsync(
+            await fileOperationsService.WriteAllBytesAsync(
                 encryptedManifestPath,
                 manifestPayload,
                 cancellationToken);
@@ -134,7 +136,8 @@ internal sealed class ManifestService : IManifestService
 
             byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
             string manifestPath = Path.Combine(destinationRoot, ManifestFileName);
-            await File.WriteAllBytesAsync(manifestPath, manifestBytes, cancellationToken);
+            await fileOperationsService.WriteAllBytesAsync(
+                manifestPath, manifestBytes, cancellationToken);
         }
         catch (Exception ex)
         {

@@ -6,7 +6,7 @@ using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 using System.Text;
 
-internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
+internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
     private const int Iterations = 800000;
 
@@ -30,7 +30,7 @@ internal class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
                 passwordBytes,
                 salt,
                 Iterations,
-                HashAlgorithmName.SHA1,
+                HashAlgorithmName.SHA256,
                 keySize / 8);
 
             var result = new byte[key.Length];

@@ -115,21 +115,6 @@ internal sealed class BackupRequestValidator(
                         errors.Add(
                             string.Format(Messages.DestinationDriveNotAccessibleFormat, drive));
                     }
-
-                    try
-                    {
-                        await fileOperations.CreateDirectoryAsync(
-                            destinationDir!,
-                            cancellationToken);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        errors.Add(Messages.DestinationAccessDenied);
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add(string.Format(Messages.DestinationWriteErrorFormat, ex.Message));
-                    }
                 }
             }
             catch (Exception ex)

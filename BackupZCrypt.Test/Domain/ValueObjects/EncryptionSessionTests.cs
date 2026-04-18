@@ -60,14 +60,14 @@ internal sealed class EncryptionSessionTests
     }
 
     [Test]
-    public void Dispose_DoesNotZeroAssociatedData()
+    public void Dispose_ZerosAssociatedData()
     {
         byte[] associatedData = [0xFF, 0xAA];
         EncryptionSession session = new([1], [2], [3], CompressionMode.None, associatedData);
 
         session.Dispose();
 
-        Assert.That(associatedData, Has.Some.Not.EqualTo(0));
+        Assert.That(associatedData, Is.All.EqualTo(0));
     }
 
     [Test]

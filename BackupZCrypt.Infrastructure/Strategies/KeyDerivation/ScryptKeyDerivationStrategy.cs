@@ -7,7 +7,7 @@ using Org.BouncyCastle.Crypto.Generators;
 using System.Security.Cryptography;
 using System.Text;
 
-internal class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
+internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
     private const int CostParameter = 262144;
     private const int BlockSize = 8;

@@ -5,7 +5,7 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-internal class NameObfuscationServiceFactory(IEnumerable<INameObfuscationStrategy> strategies)
+internal sealed class NameObfuscationServiceFactory(IEnumerable<INameObfuscationStrategy> strategies)
     : INameObfuscationServiceFactory
 {
     private readonly Dictionary<NameObfuscationMode, INameObfuscationStrategy> strategies =

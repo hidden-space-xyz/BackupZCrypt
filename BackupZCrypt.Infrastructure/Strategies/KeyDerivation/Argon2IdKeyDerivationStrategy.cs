@@ -7,7 +7,7 @@ using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using System.Security.Cryptography;
 
-internal class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
+internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
     private const int MemoryCost = 262144;
     private const int Iterations = 4;

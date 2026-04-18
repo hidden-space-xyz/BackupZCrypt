@@ -133,4 +133,19 @@ internal sealed class FileOperationsService : IFileOperationsService
         byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken);
         return Convert.ToBase64String(hash);
     }
+
+    public async Task<byte[]> ReadAllBytesAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        return await File.ReadAllBytesAsync(filePath, cancellationToken);
+    }
+
+    public async Task WriteAllBytesAsync(
+        string filePath,
+        byte[] bytes,
+        CancellationToken cancellationToken = default)
+    {
+        await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
+    }
 }

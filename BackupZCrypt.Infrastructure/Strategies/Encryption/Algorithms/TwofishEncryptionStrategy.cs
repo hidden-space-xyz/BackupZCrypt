@@ -9,7 +9,7 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 
-internal class TwofishEncryptionStrategy(
+internal sealed class TwofishEncryptionStrategy(
     IEncryptionSessionFactory encryptionSessionFactory,
     ICompressionServiceFactory compressionServiceFactory,
     IEncryptionFileService encryptionFileService)

@@ -114,11 +114,11 @@ internal sealed class BackupResultTests
     }
 
     [Test]
-    public void SuccessRate_ZeroTotal_ReturnsZero()
+    public void SuccessRate_ZeroTotal_ReturnsOne()
     {
         BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
-        Assert.That(result.SuccessRate, Is.Zero);
+        Assert.That(result.SuccessRate, Is.EqualTo(1.0));
     }
 
     [Test]

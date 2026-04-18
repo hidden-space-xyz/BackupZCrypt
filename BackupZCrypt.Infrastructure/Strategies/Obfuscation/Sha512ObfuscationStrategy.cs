@@ -6,7 +6,7 @@ using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 using System.Text;
 
-internal class Sha512ObfuscationStrategy : INameObfuscationStrategy
+internal sealed class Sha512ObfuscationStrategy : INameObfuscationStrategy
 {
     public NameObfuscationMode Id => NameObfuscationMode.Sha512;
 

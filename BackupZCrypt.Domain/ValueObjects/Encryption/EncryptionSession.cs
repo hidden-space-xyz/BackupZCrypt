@@ -25,5 +25,6 @@ public sealed class EncryptionSession(
         CryptographicOperations.ZeroMemory(this.Key);
         CryptographicOperations.ZeroMemory(this.Salt);
         CryptographicOperations.ZeroMemory(this.Nonce);
+        CryptographicOperations.ZeroMemory(this.AssociatedData);
     }
 }
