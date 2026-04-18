@@ -351,9 +351,6 @@
   <data name="NoEncryptionDetected" xml:space="preserve">
     <value>No encryption detected, proceeding without password.</value>
   </data>
-  <data name="WeakPasswordConfirm" xml:space="preserve">
-    <value>Your password is weak. Would you like to change it?</value>
-  </data>
   <data name="ManifestNotFound" xml:space="preserve">
     <value>No manifest file found. Cannot restore a backup without a manifest file.</value>
   </data>

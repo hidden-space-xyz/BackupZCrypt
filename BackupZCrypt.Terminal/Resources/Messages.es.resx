@@ -351,9 +351,6 @@
   <data name="NoEncryptionDetected" xml:space="preserve">
     <value>No se detectó cifrado, continuando sin contraseña.</value>
   </data>
-  <data name="WeakPasswordConfirm" xml:space="preserve">
-    <value>Su contraseña es débil. ¿Desea cambiarla?</value>
-  </data>
   <data name="ManifestNotFound" xml:space="preserve">
     <value>No se encontró el archivo de manifiesto. No se puede restaurar una copia de seguridad sin manifiesto.</value>
   </data>

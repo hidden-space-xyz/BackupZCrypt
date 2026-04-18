@@ -772,15 +772,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Your password is weak. Would you like to change it?.
-        /// </summary>
-        internal static string WeakPasswordConfirm {
-            get {
-                return ResourceManager.GetString("WeakPasswordConfirm", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a 🔄 Update Backup.
         /// </summary>
         internal static string MenuUpdateBackup {

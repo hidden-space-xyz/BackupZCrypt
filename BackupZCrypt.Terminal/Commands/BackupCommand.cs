@@ -644,15 +644,6 @@ internal sealed class BackupCommand(
             AnsiConsole.MarkupLine(
                 $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]");
 
-            if (strength.Strength is PasswordStrength.VeryWeak or PasswordStrength.Weak
-                && AnsiConsole.Confirm(
-                    $"[yellow]{Messages.WeakPasswordConfirm}[/]",
-                    defaultValue: true))
-            {
-                AnsiConsole.WriteLine();
-                continue;
-            }
-
             string confirmPassword = AnsiConsole.Prompt(
                 new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret());
 
