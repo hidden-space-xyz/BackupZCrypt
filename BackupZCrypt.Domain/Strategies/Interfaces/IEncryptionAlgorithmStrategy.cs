@@ -36,25 +36,11 @@ public interface IEncryptionAlgorithmStrategy
         KeyDerivationAlgorithm keyDerivationAlgorithm,
         CancellationToken cancellationToken = default);
 
-    Task<bool> CreateEncryptedFileAsync(
-        byte[] plaintextData,
-        string destinationFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None,
-        CancellationToken cancellationToken = default);
-
     Task<byte[]> CreateEncryptedDataAsync(
         byte[] plaintextData,
         string password,
         KeyDerivationAlgorithm keyDerivationAlgorithm,
         CompressionMode compression = CompressionMode.None,
-        CancellationToken cancellationToken = default);
-
-    Task<byte[]> ReadEncryptedFileAsync(
-        string sourceFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
         CancellationToken cancellationToken = default);
 
     Task<byte[]> ReadEncryptedDataAsync(

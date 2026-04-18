@@ -303,60 +303,6 @@ internal abstract class EncryptionStrategyBase(
         }
     }
 
-    public virtual async Task<bool> CreateEncryptedFileAsync(
-        byte[] plaintextData,
-        string destinationFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(plaintextData);
-
-        encryptionFileService.EnsureDirectoryExists(destinationFilePath);
-
-        try
-        {
-            byte[] encryptedData = await CreateEncryptedDataAsync(
-                plaintextData,
-                password,
-                keyDerivationAlgorithm,
-                compression,
-                cancellationToken);
-
-            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
-                destinationFilePath);
-            await destinationFile.WriteAsync(encryptedData, cancellationToken);
-        }
-        catch (EncryptionException)
-        {
-            throw;
-        }
-        catch (IOException ex)
-        {
-            encryptionFileService.TryDeleteFile(destinationFilePath);
-
-            if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new EncryptionInsufficientSpaceException(destinationFilePath);
-            }
-
-            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            throw new EncryptionAccessDeniedException(destinationFilePath, ex);
-        }
-        catch (Exception ex)
-        {
-            encryptionFileService.TryDeleteFile(destinationFilePath);
-
-            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
-        }
-
-        return true;
-    }
-
     public virtual async Task<byte[]> CreateEncryptedDataAsync(
         byte[] plaintextData,
         string password,
@@ -403,75 +349,6 @@ internal abstract class EncryptionStrategyBase(
         }
 
         return destinationBuffer.ToArray();
-    }
-
-    public virtual async Task<byte[]> ReadEncryptedFileAsync(
-        string sourceFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await using Stream source = encryptionFileService.OpenSourceFile(
-                sourceFilePath,
-                validateHeader: true);
-
-            using EncryptionSession session =
-                await encryptionSessionFactory.CreateDecryptionSessionAsync(
-                    source,
-                    password,
-                    keyDerivationAlgorithm,
-                    cancellationToken);
-
-            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
-            await DecryptStreamAsync(
-                source,
-                decryptedBuffer,
-                session.Key,
-                session.Nonce,
-                session.AssociatedData,
-                cancellationToken);
-            decryptedBuffer.Position = 0;
-
-            await using MemoryStream resultBuffer = new();
-
-            if (session.Compression != CompressionMode.None)
-            {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
-                    session.Compression);
-                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
-                    decryptedBuffer,
-                    cancellationToken);
-                await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
-            }
-            else
-            {
-                await decryptedBuffer.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
-            }
-
-            return resultBuffer.ToArray();
-        }
-        catch (InvalidCipherTextException)
-        {
-            throw new EncryptionInvalidPasswordException();
-        }
-        catch (CryptographicException)
-        {
-            throw new EncryptionInvalidPasswordException();
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            throw new EncryptionAccessDeniedException(sourceFilePath, ex);
-        }
-        catch (EndOfStreamException)
-        {
-            throw new EncryptionCorruptedFileException(sourceFilePath);
-        }
-        catch (IOException ex)
-        {
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
-        }
     }
 
     public virtual async Task<byte[]> ReadEncryptedDataAsync(

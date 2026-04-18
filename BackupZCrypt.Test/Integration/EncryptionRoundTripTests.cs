@@ -19,31 +19,6 @@ internal sealed class EncryptionRoundTripTests
 
     [TestCase(EncryptionAlgorithm.Aes)]
     [TestCase(EncryptionAlgorithm.ChaCha20)]
-    public async Task CreateEncryptedFileAndReadBack_RoundTrip(EncryptionAlgorithm algorithm)
-    {
-        byte[] plaintext = Encoding.UTF8.GetBytes("In-memory plaintext data for testing");
-        string encryptedFile = Path.Combine(this.testDir, $"inmem-{algorithm}.bzc");
-        const string password = "TestP@ssw0rd!Str0ng";
-
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
-
-        bool result = await strategy.CreateEncryptedFileAsync(
-            plaintext,
-            encryptedFile,
-            password,
-            KeyDerivationAlgorithm.PBKDF2);
-        Assert.That(result, Is.True);
-
-        byte[] readBack = await strategy.ReadEncryptedFileAsync(
-            encryptedFile,
-            password,
-            KeyDerivationAlgorithm.PBKDF2);
-
-        Assert.That(readBack, Is.EqualTo(plaintext));
-    }
-
-    [TestCase(EncryptionAlgorithm.Aes)]
-    [TestCase(EncryptionAlgorithm.ChaCha20)]
     public async Task CreateEncryptedDataAndReadBack_RoundTrip(EncryptionAlgorithm algorithm)
     {
         byte[] plaintext = Encoding.UTF8.GetBytes("In-memory manifest payload for testing");
