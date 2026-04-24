@@ -4,6 +4,7 @@ using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal;
 using BackupZCrypt.Terminal.Commands;
+using BackupZCrypt.Terminal.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +20,7 @@ ServiceProvider provider = services.BuildServiceProvider();
 
 IBackupOrchestrator orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 IBackupCreationSettingsService backupCreationSettingsService = provider.GetRequiredService<IBackupCreationSettingsService>();
+IRecentPathSettingsService recentPathSettingsService = provider.GetRequiredService<IRecentPathSettingsService>();
 IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
 IManifestService manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
@@ -38,11 +40,14 @@ List<ICompressionStrategy> compressionStrategies =
     .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
 ];
 
+PathPromptService pathPromptService = new(recentPathSettingsService);
+
 BackupCommand backupCommand = new(
     orchestrator,
     backupCreationSettingsService,
     passwordService,
     manifestService,
+    pathPromptService,
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,

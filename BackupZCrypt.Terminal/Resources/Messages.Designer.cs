@@ -986,6 +986,54 @@ namespace BackupZCrypt.Terminal.Resources {
                 return ResourceManager.GetString("ValidationErrors", resourceCulture);
             }
         }
+
+        internal static string InvalidPath {
+            get {
+                return ResourceManager.GetString("InvalidPath", resourceCulture);
+            }
+        }
+
+        internal static string PathHistoryLoadWarningFormat {
+            get {
+                return ResourceManager.GetString("PathHistoryLoadWarningFormat", resourceCulture);
+            }
+        }
+
+        internal static string PathHistorySaveWarningFormat {
+            get {
+                return ResourceManager.GetString("PathHistorySaveWarningFormat", resourceCulture);
+            }
+        }
+
+        internal static string PathManualInputHelp {
+            get {
+                return ResourceManager.GetString("PathManualInputHelp", resourceCulture);
+            }
+        }
+
+        internal static string PathSelectionPromptFormat {
+            get {
+                return ResourceManager.GetString("PathSelectionPromptFormat", resourceCulture);
+            }
+        }
+
+        internal static string SavedPathUnavailableFormat {
+            get {
+                return ResourceManager.GetString("SavedPathUnavailableFormat", resourceCulture);
+            }
+        }
+
+        internal static string TypeOrPastePathOption {
+            get {
+                return ResourceManager.GetString("TypeOrPastePathOption", resourceCulture);
+            }
+        }
+
+        internal static string UseLastPathOptionFormat {
+            get {
+                return ResourceManager.GetString("UseLastPathOptionFormat", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Busca una cadena traducida similar a Value.

@@ -13,6 +13,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
+using BackupZCrypt.Terminal.Services;
 using Spectre.Console;
 using System.Diagnostics;
 
@@ -21,6 +22,7 @@ internal sealed class BackupCommand(
     IBackupCreationSettingsService backupCreationSettingsService,
     IPasswordService passwordService,
     IManifestService manifestService,
+    PathPromptService pathPromptService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
@@ -45,8 +47,8 @@ internal sealed class BackupCommand(
             return;
         }
 
-        string sourcePath = PromptSourcePath();
-        string destinationPath = PromptDestinationPath();
+        string sourcePath = await pathPromptService.PromptSourcePathAsync();
+        string destinationPath = await pathPromptService.PromptDestinationPathAsync();
 
         if (operation == EncryptOperation.Encrypt)
         {
@@ -113,6 +115,8 @@ internal sealed class BackupCommand(
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
         }
+
+        await pathPromptService.RememberPathsAsync(sourcePath, destinationPath);
 
         if (selectedEncryption is not null)
         {
@@ -185,6 +189,8 @@ internal sealed class BackupCommand(
             return;
         }
 
+        await pathPromptService.RememberPathsAsync(sourcePath, destinationPath);
+
         if (isEncrypted)
         {
             BackupRequest request = new(
@@ -220,24 +226,8 @@ internal sealed class BackupCommand(
 
     private async Task ExecuteUpdateBackupAsync(string operationName)
     {
-        string sourcePath = AnsiConsole.Prompt(
-            new TextPrompt<string>(
-                $"[green]{Messages.UpdateSourcePathPrompt}[/] {Messages.UpdateSourcePathHint}")
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error(
-                            $"[red]{Messages.UpdateSourceMustBeDirectory}[/]")));
-
-        string backupPath = AnsiConsole.Prompt(
-            new TextPrompt<string>(
-                $"[green]{Messages.UpdateBackupPathPrompt}[/] {Messages.UpdateBackupPathHint}")
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")));
+        string sourcePath = await pathPromptService.PromptUpdateSourcePathAsync();
+        string backupPath = await pathPromptService.PromptUpdateBackupPathAsync();
 
         if (!DetectManifest(backupPath))
         {
@@ -265,6 +255,8 @@ internal sealed class BackupCommand(
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
         }
+
+        await pathPromptService.RememberPathsAsync(sourcePath, backupPath);
 
         if (isEncrypted)
         {
@@ -581,15 +573,6 @@ internal sealed class BackupCommand(
         }
     }
 
-    private static string PromptDestinationPath() =>
-        AnsiConsole.Prompt(
-            new TextPrompt<string>($"[green]{Messages.DestinationPathPrompt}[/]:")
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p)
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PleaseEnterDestinationPath}[/]")));
-
     private static string PromptDecryptionPassword() =>
         AnsiConsole.Prompt(
             new TextPrompt<string>($"[green]{Messages.PasswordPrompt}[/]:")
@@ -644,16 +627,6 @@ internal sealed class BackupCommand(
             return (password, confirmPassword, false);
         }
     }
-
-    private static string PromptSourcePath() =>
-        AnsiConsole.Prompt(
-            new TextPrompt<string>(
-                $"[green]{Messages.SourcePathPrompt}[/] {Messages.SourcePathHint}")
-                .ValidationErrorMessage($"[red]{Messages.PathCannotBeEmpty}[/]")
-                .Validate(p =>
-                    !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p))
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PathDoesNotExist}[/]")));
 
     private ICompressionStrategy? ResolveCompressionStrategy(BackupCreationSettings settings)
     {

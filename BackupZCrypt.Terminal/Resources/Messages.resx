@@ -432,4 +432,28 @@
   <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
     <value>Update is only supported for directories. Please provide a directory path as source.</value>
   </data>
+  <data name="InvalidPath" xml:space="preserve">
+    <value>Path is invalid</value>
+  </data>
+  <data name="PathSelectionPromptFormat" xml:space="preserve">
+    <value>Choose how to provide {0}:</value>
+  </data>
+  <data name="TypeOrPastePathOption" xml:space="preserve">
+    <value>⌨️ Enter a path</value>
+  </data>
+  <data name="UseLastPathOptionFormat" xml:space="preserve">
+    <value>🕘 Last: {0}</value>
+  </data>
+  <data name="PathManualInputHelp" xml:space="preserve">
+    <value>Tip: press Tab to autocomplete files and folders. Relative paths are allowed. Press Esc to go back.</value>
+  </data>
+  <data name="SavedPathUnavailableFormat" xml:space="preserve">
+    <value>The saved {0} is no longer available.</value>
+  </data>
+  <data name="PathHistoryLoadWarningFormat" xml:space="preserve">
+    <value>⚠ Path history is unavailable: {0}</value>
+  </data>
+  <data name="PathHistorySaveWarningFormat" xml:space="preserve">
+    <value>⚠ The last used paths could not be saved: {0}</value>
+  </data>
 </root>

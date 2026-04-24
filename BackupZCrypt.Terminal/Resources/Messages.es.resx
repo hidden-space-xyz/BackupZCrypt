@@ -432,4 +432,28 @@
   <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
     <value>La actualización solo es compatible con directorios. Proporcione una ruta de directorio como origen.</value>
   </data>
+  <data name="InvalidPath" xml:space="preserve">
+    <value>La ruta no es válida</value>
+  </data>
+  <data name="PathSelectionPromptFormat" xml:space="preserve">
+    <value>Elija cómo proporcionar {0}:</value>
+  </data>
+  <data name="TypeOrPastePathOption" xml:space="preserve">
+    <value>⌨️ Introducir una ruta</value>
+  </data>
+  <data name="UseLastPathOptionFormat" xml:space="preserve">
+    <value>🕘 Último: {0}</value>
+  </data>
+  <data name="PathManualInputHelp" xml:space="preserve">
+    <value>Consejo: pulse Tab para autocompletar archivos y carpetas. Se permiten rutas relativas. Pulse Esc para volver.</value>
+  </data>
+  <data name="SavedPathUnavailableFormat" xml:space="preserve">
+    <value>La ruta guardada para {0} ya no está disponible.</value>
+  </data>
+  <data name="PathHistoryLoadWarningFormat" xml:space="preserve">
+    <value>⚠ El historial de rutas no está disponible: {0}</value>
+  </data>
+  <data name="PathHistorySaveWarningFormat" xml:space="preserve">
+    <value>⚠ No se pudieron guardar las últimas rutas usadas: {0}</value>
+  </data>
 </root>
