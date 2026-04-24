@@ -31,18 +31,18 @@ internal sealed class BackupCreationSettingsService(
     {
         if (!fileOperationsService.FileExists(this.SettingsFilePath))
         {
-            BackupCreationSettings defaults = BackupCreationSettings.Default;
+            var defaults = BackupCreationSettings.Default;
             await this.SaveAsync(defaults, cancellationToken);
             return defaults;
         }
 
-        byte[] rawSettings = await fileOperationsService.ReadAllBytesAsync(
+        var rawSettings = await fileOperationsService.ReadAllBytesAsync(
             this.SettingsFilePath,
             cancellationToken);
 
         try
         {
-            BackupCreationSettings? settings = JsonSerializer.Deserialize<BackupCreationSettings>(
+            var settings = JsonSerializer.Deserialize<BackupCreationSettings>(
                 rawSettings,
                 SerializerOptions);
 
@@ -64,7 +64,7 @@ internal sealed class BackupCreationSettingsService(
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        string? directoryPath = fileOperationsService.GetDirectoryName(this.SettingsFilePath);
+        var directoryPath = fileOperationsService.GetDirectoryName(this.SettingsFilePath);
         if (string.IsNullOrWhiteSpace(directoryPath))
         {
             throw new InvalidOperationException(
@@ -73,7 +73,7 @@ internal sealed class BackupCreationSettingsService(
 
         await fileOperationsService.CreateDirectoryAsync(directoryPath, cancellationToken);
 
-        byte[] rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
+        var rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
 
         await fileOperationsService.WriteAllBytesAsync(
             this.SettingsFilePath,

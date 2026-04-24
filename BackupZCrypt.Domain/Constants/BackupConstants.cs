@@ -5,5 +5,8 @@ public static class BackupConstants
     public const string AppFileExtension = ".bzc";
     public const string ManifestFileName = "manifest" + AppFileExtension;
     public static ReadOnlyMemory<byte> CompressedFileMagic { get; } = "BZC"u8.ToArray();
-    public const int CompressedFileHeaderSize = 4; // 3 magic + 1 compression mode
+    /// <summary>
+    /// 3 magic + 1 compression mode
+    /// </summary>
+    public const int CompressedFileHeaderSize = 4;
 }

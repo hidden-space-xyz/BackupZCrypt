@@ -26,18 +26,18 @@ internal sealed class RecentPathSettingsService(
     {
         if (!fileOperationsService.FileExists(this.SettingsFilePath))
         {
-            RecentPathSettings defaults = RecentPathSettings.Default;
+            var defaults = RecentPathSettings.Default;
             await this.SaveAsync(defaults, cancellationToken);
             return defaults;
         }
 
-        byte[] rawSettings = await fileOperationsService.ReadAllBytesAsync(
+        var rawSettings = await fileOperationsService.ReadAllBytesAsync(
             this.SettingsFilePath,
             cancellationToken);
 
         try
         {
-            RecentPathSettings? settings = JsonSerializer.Deserialize<RecentPathSettings>(
+            var settings = JsonSerializer.Deserialize<RecentPathSettings>(
                 rawSettings,
                 SerializerOptions);
 
@@ -59,7 +59,7 @@ internal sealed class RecentPathSettingsService(
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        string? directoryPath = fileOperationsService.GetDirectoryName(this.SettingsFilePath);
+        var directoryPath = fileOperationsService.GetDirectoryName(this.SettingsFilePath);
         if (string.IsNullOrWhiteSpace(directoryPath))
         {
             throw new InvalidOperationException(
@@ -68,7 +68,7 @@ internal sealed class RecentPathSettingsService(
 
         await fileOperationsService.CreateDirectoryAsync(directoryPath, cancellationToken);
 
-        byte[] rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
+        var rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
 
         await fileOperationsService.WriteAllBytesAsync(
             this.SettingsFilePath,
@@ -84,7 +84,7 @@ internal sealed class RecentPathSettingsService(
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
-        RecentPathSettings settings = await this.GetOrCreateAsync(cancellationToken);
+        var settings = await this.GetOrCreateAsync(cancellationToken);
 
         await this.SaveAsync(
             settings with

@@ -18,7 +18,7 @@ internal sealed class TerminalApplication(
             AnsiConsole.Clear();
             BannerRenderer.Print();
 
-            string choice = await AnsiConsole.PromptAsync(
+            var choice = await AnsiConsole.PromptAsync(
                 new SelectionPrompt<string>()
                     .HighlightStyle(Style.Parse("bold cyan"))
                     .AddChoices(

@@ -12,7 +12,7 @@ internal sealed class EncryptionFileService(
     {
         if (!fileOperationsService.FileExists(sourceFilePath))
         {
-            throw new EncryptionFileNotFoundException(sourceFilePath);
+            throw EncryptionFileNotFoundException.CreateForFilePath(sourceFilePath);
         }
 
         Stream stream;
@@ -24,13 +24,13 @@ internal sealed class EncryptionFileService(
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw new EncryptionAccessDeniedException(sourceFilePath, ex);
+            throw EncryptionAccessDeniedException.CreateForFilePath(sourceFilePath, ex);
         }
 
         if (validateHeader && stream.Length < EncryptionConstants.HeaderSize)
         {
             stream.Dispose();
-            throw new EncryptionCorruptedFileException(sourceFilePath);
+            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
         }
 
         return stream;
@@ -50,7 +50,7 @@ internal sealed class EncryptionFileService(
 
     public void EnsureDirectoryExists(string filePath)
     {
-        string? directory = fileOperationsService.GetDirectoryName(filePath);
+        var directory = fileOperationsService.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory))
         {
             try
@@ -59,7 +59,7 @@ internal sealed class EncryptionFileService(
             }
             catch (UnauthorizedAccessException ex)
             {
-                throw new EncryptionAccessDeniedException(filePath, ex);
+                throw EncryptionAccessDeniedException.CreateForFilePath(filePath, ex);
             }
         }
     }
@@ -68,21 +68,21 @@ internal sealed class EncryptionFileService(
     {
         try
         {
-            long sourceLength = fileOperationsService.GetFileSize(sourceFilePath);
-            string fullPath = fileOperationsService.GetFullPath(destinationFilePath);
-            string? destinationDrive = systemStorageService.GetPathRoot(fullPath);
+            var sourceLength = fileOperationsService.GetFileSize(sourceFilePath);
+            var fullPath = fileOperationsService.GetFullPath(destinationFilePath);
+            var destinationDrive = systemStorageService.GetPathRoot(fullPath);
 
             if (!string.IsNullOrEmpty(destinationDrive))
             {
-                long availableSpace = systemStorageService.GetAvailableFreeSpace(destinationDrive);
+                var availableSpace = systemStorageService.GetAvailableFreeSpace(destinationDrive);
 
                 if (availableSpace >= 0)
                 {
-                    long requiredSpace = (long)(sourceLength * 1.2) + 1024;
+                    var requiredSpace = (long)(sourceLength * 1.2) + 1024;
 
                     if (availableSpace < requiredSpace)
                     {
-                        throw new EncryptionInsufficientSpaceException(destinationFilePath);
+                        throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
                     }
                 }
             }

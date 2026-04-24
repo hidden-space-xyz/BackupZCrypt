@@ -23,7 +23,7 @@ internal sealed class CompressionServiceFactoryTests
     [Test]
     public void Create_RegisteredMode_ReturnsStrategy()
     {
-        ICompressionStrategy result = this.factory.Create(CompressionMode.Zstd);
+        var result = this.factory.Create(CompressionMode.Zstd);
 
         Assert.That(result, Is.SameAs(this.zstdStrategy));
     }

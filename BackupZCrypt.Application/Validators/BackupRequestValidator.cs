@@ -21,12 +21,12 @@ internal sealed class BackupRequestValidator(
     {
         List<string> errors = [];
 
-        string? sourcePath = PathNormalizationHelper.TryNormalize(
+        var sourcePath = PathNormalizationHelper.TryNormalize(
             request.SourcePath,
-            out string? sourceNormalizeError);
-        string? destinationPath = PathNormalizationHelper.TryNormalize(
+            out var sourceNormalizeError);
+        var destinationPath = PathNormalizationHelper.TryNormalize(
             request.DestinationPath,
-            out string? destinationNormalizeError);
+            out var destinationNormalizeError);
 
         if (sourceNormalizeError is not null)
         {
@@ -74,7 +74,7 @@ internal sealed class BackupRequestValidator(
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
                 {
-                    string[] files = await fileOperations.GetFilesAsync(
+                    var files = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
                         cancellationToken);
@@ -102,13 +102,13 @@ internal sealed class BackupRequestValidator(
         {
             try
             {
-                string? destinationDir = fileOperations.FileExists(sourcePath)
+                var destinationDir = fileOperations.FileExists(sourcePath)
                     ? fileOperations.GetDirectoryName(destinationPath)
                     : destinationPath;
 
                 if (!string.IsNullOrEmpty(destinationDir))
                 {
-                    string? drive = systemStorage.GetPathRoot(destinationDir);
+                    var drive = systemStorage.GetPathRoot(destinationDir);
 
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
@@ -213,8 +213,8 @@ internal sealed class BackupRequestValidator(
     {
         List<string> warnings = [];
 
-        string? sourcePath = PathNormalizationHelper.TryNormalize(request.SourcePath, out _);
-        string? destinationPath = PathNormalizationHelper.TryNormalize(
+        var sourcePath = PathNormalizationHelper.TryNormalize(request.SourcePath, out _);
+        var destinationPath = PathNormalizationHelper.TryNormalize(
             request.DestinationPath,
             out _);
         if (sourcePath is null || destinationPath is null)
@@ -226,16 +226,16 @@ internal sealed class BackupRequestValidator(
         {
             if (fileOperations.DirectoryExists(sourcePath))
             {
-                string? destinationDrive = systemStorage.GetPathRoot(destinationPath);
+                var destinationDrive = systemStorage.GetPathRoot(destinationPath);
                 if (
                     !string.IsNullOrEmpty(destinationDrive)
                     && systemStorage.IsDriveReady(destinationDrive))
                 {
-                    string[] sourceFiles = await fileOperations.GetFilesAsync(
+                    var sourceFiles = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
                         cancellationToken);
-                    long totalSize = sourceFiles.Sum(f =>
+                    var totalSize = sourceFiles.Sum(f =>
                     {
                         try
                         {
@@ -248,7 +248,7 @@ internal sealed class BackupRequestValidator(
                     });
 
                     var requiredSpace = (long)(totalSize * 1.2);
-                    long available = systemStorage.GetAvailableFreeSpace(destinationDrive);
+                    var available = systemStorage.GetAvailableFreeSpace(destinationDrive);
                     if (available >= 0 && available < requiredSpace)
                     {
                         warnings.Add(
@@ -262,11 +262,11 @@ internal sealed class BackupRequestValidator(
 
             if (fileOperations.DirectoryExists(sourcePath))
             {
-                string[] files = await fileOperations.GetFilesAsync(
+                var files = await fileOperations.GetFilesAsync(
                     sourcePath,
                     "*.*",
                     cancellationToken);
-                int fileCount = files.Length;
+                var fileCount = files.Length;
                 if (fileCount > 10000)
                 {
                     warnings.Add(
@@ -280,7 +280,7 @@ internal sealed class BackupRequestValidator(
             }
 
             var hasExistingFiles = false;
-            int existingFileCount = 0;
+            var existingFileCount = 0;
 
             if (fileOperations.FileExists(sourcePath) && fileOperations.FileExists(destinationPath))
             {
@@ -289,7 +289,7 @@ internal sealed class BackupRequestValidator(
             }
             else if (fileOperations.DirectoryExists(destinationPath))
             {
-                string[] existingFiles = await fileOperations.GetFilesAsync(
+                var existingFiles = await fileOperations.GetFilesAsync(
                     destinationPath,
                     "*.*",
                     cancellationToken);
@@ -311,7 +311,7 @@ internal sealed class BackupRequestValidator(
             if (request.UseEncryption
                 && request.Operation == EncryptOperation.Encrypt)
             {
-                PasswordStrengthAnalysis strength = passwordService.AnalyzePasswordStrength(
+                var strength = passwordService.AnalyzePasswordStrength(
                     request.Password);
                 if (strength.Score < 60)
                 {

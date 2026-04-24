@@ -21,7 +21,7 @@ internal sealed class BackupOrchestrator(
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken = default)
     {
-        Result<BackupResult>? validationResult = await ValidateRequestAsync(
+        var validationResult = await ValidateRequestAsync(
             request,
             cancellationToken);
         if (validationResult is not null)
@@ -29,10 +29,10 @@ internal sealed class BackupOrchestrator(
             return validationResult;
         }
 
-        (string sourcePath, string destinationPath) = NormalizePaths(request);
+        var (sourcePath, destinationPath) = NormalizePaths(request);
 
-        bool isDirectory = fileOperations.DirectoryExists(sourcePath);
-        bool isFile = fileOperations.FileExists(sourcePath);
+        var isDirectory = fileOperations.DirectoryExists(sourcePath);
+        var isFile = fileOperations.FileExists(sourcePath);
 
         if (!isDirectory && !isFile)
         {
@@ -103,10 +103,10 @@ internal sealed class BackupOrchestrator(
     private static (string SourcePath, string DestinationPath) NormalizePaths(
         BackupRequest request)
     {
-        string sourcePath =
+        var sourcePath =
             PathNormalizationHelper.TryNormalize(request.SourcePath, out _) ?? request.SourcePath;
 
-        string destinationPath =
+        var destinationPath =
             PathNormalizationHelper.TryNormalize(request.DestinationPath, out _)
             ?? request.DestinationPath;
 
@@ -132,7 +132,7 @@ internal sealed class BackupOrchestrator(
         }
         else
         {
-            string? destDir = fileOperations.GetDirectoryName(destinationPath);
+            var destDir = fileOperations.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(destDir))
             {
                 await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
@@ -144,7 +144,7 @@ internal sealed class BackupOrchestrator(
         BackupRequest request,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<string> errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
+        var errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
             request,
             cancellationToken);
         if (errors.Count > 0)
@@ -153,7 +153,7 @@ internal sealed class BackupOrchestrator(
                 new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
         }
 
-        IReadOnlyList<string> warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
+        var warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
             request,
             cancellationToken);
         if (warnings.Count > 0 && !request.ProceedOnWarnings)

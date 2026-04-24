@@ -10,15 +10,15 @@ internal sealed class RecentPathSettingsServiceTests
     [Test]
     public async Task GetOrCreateAsync_WhenFileDoesNotExist_CreatesDefaultSettingsFile()
     {
-        string tempDirectoryPath = Path.Combine(
+        var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        string settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
+        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
         RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);
 
         try
         {
-            RecentPathSettings settings = await service.GetOrCreateAsync();
+            var settings = await service.GetOrCreateAsync();
 
             using (Assert.EnterMultipleScope())
             {
@@ -38,19 +38,19 @@ internal sealed class RecentPathSettingsServiceTests
     [Test]
     public async Task RememberPathsAsync_WhenPathsChange_PersistsRoundTrip()
     {
-        string tempDirectoryPath = Path.Combine(
+        var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        string settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
+        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
         RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);
-        string expectedSourcePath = Path.Combine(tempDirectoryPath, "source");
-        string expectedDestinationPath = Path.Combine(tempDirectoryPath, "destination");
+        var expectedSourcePath = Path.Combine(tempDirectoryPath, "source");
+        var expectedDestinationPath = Path.Combine(tempDirectoryPath, "destination");
 
         try
         {
             await service.RememberPathsAsync(expectedSourcePath, expectedDestinationPath);
 
-            RecentPathSettings actualSettings = await service.GetOrCreateAsync();
+            var actualSettings = await service.GetOrCreateAsync();
 
             using (Assert.EnterMultipleScope())
             {
@@ -72,7 +72,7 @@ internal sealed class RecentPathSettingsServiceTests
     {
         RecentPathSettingsService service = new(new FileOperationsService());
 
-        string relativePath = Path.GetRelativePath(
+        var relativePath = Path.GetRelativePath(
             Path.GetFullPath(Path.GetTempPath()),
             service.SettingsFilePath);
 
@@ -82,10 +82,10 @@ internal sealed class RecentPathSettingsServiceTests
     [Test]
     public void GetOrCreateAsync_WhenJsonIsInvalid_ThrowsInvalidOperationException()
     {
-        string tempDirectoryPath = Path.Combine(
+        var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        string settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
+        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
         Directory.CreateDirectory(tempDirectoryPath);
         File.WriteAllText(settingsFilePath, "{ invalid json }");
         RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);

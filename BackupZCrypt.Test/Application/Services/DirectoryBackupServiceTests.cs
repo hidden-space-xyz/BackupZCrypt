@@ -60,7 +60,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns((ManifestData?)null);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -93,7 +93,7 @@ internal sealed class DirectoryBackupServiceTests
             CompressionMode.Zstd,
             UseEncryption: false);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             request,
@@ -125,7 +125,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(manifestData);
 
-        IEncryptionAlgorithmStrategy chacha = Substitute.For<IEncryptionAlgorithmStrategy>();
+        var chacha = Substitute.For<IEncryptionAlgorithmStrategy>();
         chacha.Id.Returns(EncryptionAlgorithm.ChaCha20);
         this.encryptionFactory.Create(EncryptionAlgorithm.ChaCha20).Returns(chacha);
         chacha.DecryptFileAsync(
@@ -142,8 +142,8 @@ internal sealed class DirectoryBackupServiceTests
         this.fileOps.GetRelativePath(Arg.Any<string>(), Arg.Any<string>())
             .Returns(callInfo =>
             {
-                string basePath = callInfo.ArgAt<string>(0);
-                string fullPath = callInfo.ArgAt<string>(1);
+                var basePath = callInfo.ArgAt<string>(0);
+                var fullPath = callInfo.ArgAt<string>(1);
                 return Path.GetRelativePath(basePath, fullPath);
             });
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -165,9 +165,9 @@ internal sealed class DirectoryBackupServiceTests
     public async Task Encrypt_EmptyDirectory_ReturnsNoFilesError()
     {
         this.fileOps.GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<string>());
+            .Returns([]);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Encrypt),
@@ -190,8 +190,8 @@ internal sealed class DirectoryBackupServiceTests
         this.fileOps.GetRelativePath(Arg.Any<string>(), Arg.Any<string>())
             .Returns(callInfo =>
             {
-                string basePath = callInfo.ArgAt<string>(0);
-                string fullPath = callInfo.ArgAt<string>(1);
+                var basePath = callInfo.ArgAt<string>(0);
+                var fullPath = callInfo.ArgAt<string>(1);
                 return Path.GetRelativePath(basePath, fullPath);
             });
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
@@ -217,7 +217,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<IEncryptionAlgorithmStrategy>(),
                 Arg.Any<BackupRequest>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         await service.ProcessAsync(
             @"C:\source",
@@ -276,7 +276,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(true);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
             CreateRequest(EncryptOperation.Decrypt),

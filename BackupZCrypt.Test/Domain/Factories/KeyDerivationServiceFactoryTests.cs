@@ -23,7 +23,7 @@ internal sealed class KeyDerivationServiceFactoryTests
     [Test]
     public void Create_RegisteredAlgorithm_ReturnsStrategy()
     {
-        IKeyDerivationAlgorithmStrategy result = this.factory.Create(KeyDerivationAlgorithm.Argon2id);
+        var result = this.factory.Create(KeyDerivationAlgorithm.Argon2id);
 
         Assert.That(result, Is.SameAs(this.argon2Strategy));
     }

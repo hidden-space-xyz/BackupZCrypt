@@ -92,10 +92,13 @@ roslynator_prefix_field_identifier_with_underscore = true
 # Prefer trailing commas in multi-line constructs to improve diffs.
 roslynator_trailing_comma_style = include
 
-# Prefer collection expressions where applicable, but do not force var everywhere.
+# Prefer collection expressions where applicable, and prefer var whenever possible.
 roslynator_use_collection_expression = true
-roslynator_use_var = when_type_is_obvious
+roslynator_use_var = always
 roslynator_use_var_instead_of_implicit_object_creation = false
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
 
 # Prefer implicit object/array creation only when obvious.
 roslynator_array_creation_type_style = implicit_when_type_is_obvious

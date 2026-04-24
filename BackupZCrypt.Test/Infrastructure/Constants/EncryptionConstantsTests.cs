@@ -44,7 +44,7 @@ internal sealed class EncryptionConstantsTests
     [Test]
     public void HeaderSize_IsSumOfSaltNonceAndCompressionHeader()
     {
-        int expected = EncryptionConstants.SaltSize
+        const int expected = EncryptionConstants.SaltSize
             + EncryptionConstants.NonceSize
             + EncryptionConstants.CompressionHeaderSize;
 

@@ -134,7 +134,7 @@ internal sealed class BackupSettingsCommand(
 
     private void PrintSummary(BackupCreationSettings settings)
     {
-        Table summaryTable = new Table()
+        var summaryTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .Title($"[bold cyan]{Messages.BackupSettings}[/]")
@@ -187,7 +187,7 @@ internal sealed class BackupSettingsCommand(
     {
         List<string> displayChoices = [noneLabel, .. strategies.Select(converter)];
 
-        string selected = AnsiConsole.Prompt(
+        var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title($"[green]{title}[/]")
                 .HighlightStyle(Style.Parse("bold cyan"))
@@ -198,7 +198,7 @@ internal sealed class BackupSettingsCommand(
             return null;
         }
 
-        int index = displayChoices.IndexOf(selected) - 1;
+        var index = displayChoices.IndexOf(selected) - 1;
         return strategies[index];
     }
 

@@ -57,7 +57,7 @@ internal static class ResultRenderer
             $"[{statusColor} bold]{statusIcon} {operationName}: {statusText}[/]");
         AnsiConsole.WriteLine();
 
-        Table resultTable = new Table()
+        var resultTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .Title($"[bold cyan]{Messages.Results}[/]")
@@ -86,7 +86,7 @@ internal static class ResultRenderer
         {
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[red]{Messages.Errors}[/]");
-            foreach (string error in response.Errors)
+            foreach (var error in response.Errors)
             {
                 AnsiConsole.MarkupLine($"  [red]• {Markup.Escape(error)}[/]");
             }
@@ -96,7 +96,7 @@ internal static class ResultRenderer
         {
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[yellow]{Messages.WarningsLabel}[/]");
-            foreach (string warning in response.Warnings)
+            foreach (var warning in response.Warnings)
             {
                 AnsiConsole.MarkupLine($"  [yellow]• {Markup.Escape(warning)}[/]");
             }

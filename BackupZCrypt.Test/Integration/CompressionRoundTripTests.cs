@@ -30,18 +30,18 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.ZstdBest)]
     public async Task AllCompressionStrategies_RoundTrip_PreservesData(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
+        var strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
-        ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
+        var strategy = strategies.First(s => s.Id == mode);
 
-        byte[] original = Encoding.UTF8.GetBytes(
+        var original = Encoding.UTF8.GetBytes(
             string.Concat(Enumerable.Repeat("Round trip compression test data! ", 30)));
         await using MemoryStream input = new(original);
 
-        Stream compressed = await strategy.CompressAsync(input);
-        Stream decompressed = await strategy.DecompressAsync(compressed);
+        var compressed = await strategy.CompressAsync(input);
+        var decompressed = await strategy.DecompressAsync(compressed);
 
         await using MemoryStream resultStream = new();
         await decompressed.CopyToAsync(resultStream);
@@ -54,17 +54,17 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.ZstdBest)]
     public async Task CompressionStrategies_ActuallyCompressData(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
+        var strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
-        ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
+        var strategy = strategies.First(s => s.Id == mode);
 
-        string repeatedText = string.Concat(Enumerable.Repeat("AAAAABBBBBCCCCC", 200));
-        byte[] original = Encoding.UTF8.GetBytes(repeatedText);
+        var repeatedText = string.Concat(Enumerable.Repeat("AAAAABBBBBCCCCC", 200));
+        var original = Encoding.UTF8.GetBytes(repeatedText);
         await using MemoryStream input = new(original);
 
-        Stream compressed = await strategy.CompressAsync(input);
+        var compressed = await strategy.CompressAsync(input);
 
         Assert.That(
             compressed.Length,
@@ -77,16 +77,16 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.ZstdBest)]
     public async Task AllStrategies_EmptyInput_RoundTrip(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
+        var strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
-        ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
+        var strategy = strategies.First(s => s.Id == mode);
 
         await using MemoryStream input = new([]);
 
-        Stream compressed = await strategy.CompressAsync(input);
-        Stream decompressed = await strategy.DecompressAsync(compressed);
+        var compressed = await strategy.CompressAsync(input);
+        var decompressed = await strategy.DecompressAsync(compressed);
 
         await using MemoryStream resultStream = new();
         await decompressed.CopyToAsync(resultStream);
@@ -99,11 +99,11 @@ internal sealed class CompressionRoundTripTests
     [TestCase(CompressionMode.ZstdBest)]
     public void AllStrategies_HaveMetadata(CompressionMode mode)
     {
-        IEnumerable<ICompressionStrategy> strategies = this.provider.GetRequiredService<
+        var strategies = this.provider.GetRequiredService<
             IEnumerable<ICompressionStrategy>
         >();
 
-        ICompressionStrategy strategy = strategies.First(s => s.Id == mode);
+        var strategy = strategies.First(s => s.Id == mode);
 
         using (Assert.EnterMultipleScope())
         {

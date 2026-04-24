@@ -50,7 +50,7 @@ internal sealed class KeyDerivationStrategyTests(
         var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
-        byte[] key = strategy.DeriveKey("testPassword123!", salt, 256);
+        var key = strategy.DeriveKey("testPassword123!", salt, 256);
 
         Assert.That(key, Has.Length.EqualTo(32));
     }
@@ -61,8 +61,8 @@ internal sealed class KeyDerivationStrategyTests(
         var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
-        byte[] key1 = strategy.DeriveKey("password", salt, 256);
-        byte[] key2 = strategy.DeriveKey("password", salt, 256);
+        var key1 = strategy.DeriveKey("password", salt, 256);
+        var key2 = strategy.DeriveKey("password", salt, 256);
 
         Assert.That(key1, Is.EqualTo(key2));
     }
@@ -73,8 +73,8 @@ internal sealed class KeyDerivationStrategyTests(
         var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
-        byte[] key1 = strategy.DeriveKey("password1", salt, 256);
-        byte[] key2 = strategy.DeriveKey("password2", salt, 256);
+        var key1 = strategy.DeriveKey("password1", salt, 256);
+        var key2 = strategy.DeriveKey("password2", salt, 256);
 
         Assert.That(key1, Is.Not.EqualTo(key2));
     }
@@ -87,8 +87,8 @@ internal sealed class KeyDerivationStrategyTests(
         RandomNumberGenerator.Fill(salt1);
         RandomNumberGenerator.Fill(salt2);
 
-        byte[] key1 = strategy.DeriveKey("password", salt1, 256);
-        byte[] key2 = strategy.DeriveKey("password", salt2, 256);
+        var key1 = strategy.DeriveKey("password", salt1, 256);
+        var key2 = strategy.DeriveKey("password", salt2, 256);
 
         Assert.That(key1, Is.Not.EqualTo(key2));
     }
@@ -99,7 +99,7 @@ internal sealed class KeyDerivationStrategyTests(
         var salt = new byte[32];
         RandomNumberGenerator.Fill(salt);
 
-        byte[] key = strategy.DeriveKey("password", salt, 256);
+        var key = strategy.DeriveKey("password", salt, 256);
 
         Assert.That(key.Any(b => b != 0), Is.True);
     }

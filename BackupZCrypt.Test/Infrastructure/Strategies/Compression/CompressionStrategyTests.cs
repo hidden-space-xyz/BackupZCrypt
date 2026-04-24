@@ -47,13 +47,13 @@ internal sealed class CompressionStrategyTests(
     [Test]
     public async Task CompressAndDecompress_RoundTrip_ReturnsOriginalData()
     {
-        byte[] original = Encoding.UTF8.GetBytes(
+        var original = Encoding.UTF8.GetBytes(
             "This is a test string that should be compressible. "
                 + "This is a test string that should be compressible.");
         await using MemoryStream input = new(original);
 
-        Stream compressed = await strategy.CompressAsync(input);
-        Stream decompressed = await strategy.DecompressAsync(compressed);
+        var compressed = await strategy.CompressAsync(input);
+        var decompressed = await strategy.DecompressAsync(compressed);
 
         var result = new byte[decompressed.Length];
         await decompressed.ReadExactlyAsync(result);
@@ -64,11 +64,11 @@ internal sealed class CompressionStrategyTests(
     [Test]
     public async Task CompressAsync_ReducesSize_ForCompressibleData()
     {
-        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 100));
-        byte[] data = Encoding.UTF8.GetBytes(text);
+        var text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 100));
+        var data = Encoding.UTF8.GetBytes(text);
         await using MemoryStream input = new(data);
 
-        Stream compressed = await strategy.CompressAsync(input);
+        var compressed = await strategy.CompressAsync(input);
 
         Assert.That(compressed.Length, Is.LessThan(data.Length));
     }
@@ -76,10 +76,10 @@ internal sealed class CompressionStrategyTests(
     [Test]
     public async Task CompressAsync_StreamPositionIsZero()
     {
-        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        var text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
         await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
 
-        Stream compressed = await strategy.CompressAsync(input);
+        var compressed = await strategy.CompressAsync(input);
 
         Assert.That(compressed.Position, Is.Zero);
     }
@@ -87,11 +87,11 @@ internal sealed class CompressionStrategyTests(
     [Test]
     public async Task DecompressAsync_StreamPositionIsZero()
     {
-        string text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
+        var text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
         await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
-        Stream compressed = await strategy.CompressAsync(input);
+        var compressed = await strategy.CompressAsync(input);
 
-        Stream decompressed = await strategy.DecompressAsync(compressed);
+        var decompressed = await strategy.DecompressAsync(compressed);
 
         Assert.That(decompressed.Position, Is.Zero);
     }

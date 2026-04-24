@@ -28,7 +28,7 @@ internal static class ProgressRunner
                 new SpinnerColumn())
             .StartAsync(async ctx =>
             {
-                ProgressTask task = ctx.AddTask(
+                var task = ctx.AddTask(
                     $"[cyan]{string.Format(Messages.OperationIngFormat, operationIngName)}[/]",
                     maxValue: 100);
 

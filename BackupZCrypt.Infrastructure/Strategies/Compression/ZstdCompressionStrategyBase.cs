@@ -21,7 +21,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
         Stream inputStream,
         CancellationToken cancellationToken = default)
     {
-        FileStream output = CreateTempStream();
+        var output = CreateTempStream();
         await using (
             CompressionStream zstd = new(
                 new NonClosingStreamWrapper(output),
@@ -38,7 +38,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
         Stream inputStream,
         CancellationToken cancellationToken = default)
     {
-        FileStream output = CreateTempStream();
+        var output = CreateTempStream();
         await using (DecompressionStream zstd = new(inputStream))
         {
             await zstd.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
@@ -50,7 +50,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
 
     private static FileStream CreateTempStream()
     {
-        string tempFilePath = Path.GetTempFileName();
+        var tempFilePath = Path.GetTempFileName();
         return new FileStream(
             tempFilePath,
             new FileStreamOptions

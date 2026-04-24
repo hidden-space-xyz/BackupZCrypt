@@ -20,8 +20,8 @@ public sealed record BackupResult
         this.TotalBytes = totalBytes;
         this.ProcessedFiles = processedFiles;
         this.TotalFiles = totalFiles;
-        this.Errors = errors?.ToArray() ?? Array.Empty<string>();
-        this.Warnings = warnings?.ToArray() ?? Array.Empty<string>();
+        this.Errors = errors?.ToArray() ?? (string[])[];
+        this.Warnings = warnings?.ToArray() ?? (string[])[];
     }
 
     public bool IsSuccess { get; }

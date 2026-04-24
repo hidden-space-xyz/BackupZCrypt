@@ -24,17 +24,17 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_DecryptionFails_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             byte[] preamble = [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.Argon2id];
             byte[] fakeEncryptedContent = [1, 2, 3];
             await File.WriteAllBytesAsync(manifestPath, [.. preamble, .. fakeEncryptedContent]);
 
-            IEncryptionAlgorithmStrategy encryptionService =
+            var encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
             encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
             encryptionService
@@ -44,7 +44,7 @@ internal sealed class ManifestServiceTests
                     Arg.Any<KeyDerivationAlgorithm>())
                 .ThrowsAsync(new InvalidOperationException("decryption failed"));
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -61,12 +61,12 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_EncryptedManifest_ParsesDecryptedPayload()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             await File.WriteAllBytesAsync(
                 manifestPath,
                 [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.PBKDF2, 9, 8, 7]);
@@ -78,7 +78,7 @@ internal sealed class ManifestServiceTests
                 CompressionMode.None,
                 [new ManifestEntry("file.bzc", "file.txt", "c2FsdA==", "bm9uY2U=", string.Empty)]);
 
-            IEncryptionAlgorithmStrategy encryptionService =
+            var encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
             encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
             encryptionService
@@ -89,7 +89,7 @@ internal sealed class ManifestServiceTests
                     Arg.Any<CancellationToken>())
                 .Returns(JsonSerializer.SerializeToUtf8Bytes(document));
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -112,14 +112,14 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_ManifestDoesNotExist_ReturnsNull()
     {
-        IEncryptionAlgorithmStrategy encryptionService =
+        var encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -136,18 +136,18 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_FileTooShortForPreamble_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             await File.WriteAllBytesAsync(manifestPath, [1]);
 
-            IEncryptionAlgorithmStrategy encryptionService =
+            var encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -164,20 +164,20 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TryReadManifestAsync_NoMatchingStrategy_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             byte[] preamble = [(byte)EncryptionAlgorithm.ChaCha20, (byte)KeyDerivationAlgorithm.Argon2id];
             await File.WriteAllBytesAsync(manifestPath, [.. preamble, 1, 2, 3]);
 
-            IEncryptionAlgorithmStrategy encryptionService =
+            var encryptionService =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
             encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [encryptionService],
                 "StrongP@ss1",
@@ -194,10 +194,10 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TrySaveManifestAsync_EmptyEntries_ReturnsNoErrors()
     {
-        IEncryptionAlgorithmStrategy encryptionService =
+        var encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
 
-        IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
+        var errors = await service.TrySaveManifestAsync(
             [],
             CreateHeader(),
             @"C:\dest",
@@ -211,7 +211,7 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TrySaveManifestAsync_EncryptionFails_ReturnsError()
     {
-        IEncryptionAlgorithmStrategy encryptionService =
+        var encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
         encryptionService
             .CreateEncryptedDataAsync(
@@ -221,14 +221,14 @@ internal sealed class ManifestServiceTests
                 Arg.Any<CompressionMode>())
             .ThrowsAsync(new InvalidOperationException("encryption failed"));
 
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
             List<ManifestEntry> entries = [new("obfuscated.bzc", "original.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
 
-            IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
+            var errors = await service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,
@@ -248,7 +248,7 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TrySaveManifestAsync_WritesPreambleAndEncryptedPayload()
     {
-        IEncryptionAlgorithmStrategy encryptionService =
+        var encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
         encryptionService
             .CreateEncryptedDataAsync(
@@ -259,14 +259,14 @@ internal sealed class ManifestServiceTests
                 Arg.Any<CancellationToken>())
             .Returns([3, 4, 5]);
 
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
             List<ManifestEntry> entries = [new("obfuscated.bzc", "original.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
 
-            IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
+            var errors = await service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,
@@ -274,7 +274,7 @@ internal sealed class ManifestServiceTests
                 CreateRequest(),
                 CancellationToken.None);
 
-            byte[] manifestBytes = await File.ReadAllBytesAsync(Path.Combine(tempDir, "manifest.bzc"));
+            var manifestBytes = await File.ReadAllBytesAsync(Path.Combine(tempDir, "manifest.bzc"));
 
             using (Assert.EnterMultipleScope())
             {
@@ -301,7 +301,7 @@ internal sealed class ManifestServiceTests
     [Test]
     public async Task TrySaveManifestAsync_ExceptionThrown_ReturnsError()
     {
-        IEncryptionAlgorithmStrategy encryptionService =
+        var encryptionService =
             Substitute.For<IEncryptionAlgorithmStrategy>();
         encryptionService
             .CreateEncryptedDataAsync(
@@ -311,14 +311,14 @@ internal sealed class ManifestServiceTests
                 Arg.Any<CompressionMode>())
                 .ThrowsAsync(new IOException("disk error"));
 
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
             List<ManifestEntry> entries = [new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
 
-            IReadOnlyList<string> errors = await service.TrySaveManifestAsync(
+            var errors = await service.TrySaveManifestAsync(
                 entries,
                 CreateHeader(),
                 tempDir,

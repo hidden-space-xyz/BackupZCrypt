@@ -28,7 +28,7 @@ internal sealed class SingleFileBackupService(
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken)
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -50,12 +50,12 @@ internal sealed class SingleFileBackupService(
                         errors: [Messages.ManifestIgnored]));
             }
 
-            string destFile = destinationPath;
+            var destFile = destinationPath;
 
             if (request.UseEncryption && request.Operation == EncryptOperation.Encrypt
                 && request.NameObfuscation != NameObfuscationMode.None)
             {
-                INameObfuscationStrategy obfuscationService = nameObfuscationServiceFactory.Create(
+                var obfuscationService = nameObfuscationServiceFactory.Create(
                     request.NameObfuscation);
                 destFile = this.ApplyObfuscationToDestination(
                     destFile,
@@ -78,12 +78,12 @@ internal sealed class SingleFileBackupService(
             bool result;
             if (request.UseEncryption)
             {
-                IEncryptionAlgorithmStrategy encryptionService =
+                var encryptionService =
                     encryptionServiceFactory.Create(request.EncryptionAlgorithm);
 
                 if (request.Operation == EncryptOperation.Encrypt)
                 {
-                    EncryptionMetadata metadata = await encryptionService.EncryptFileAsync(
+                    var metadata = await encryptionService.EncryptFileAsync(
                         sourcePath,
                         destFile,
                         request.Password,
@@ -91,14 +91,14 @@ internal sealed class SingleFileBackupService(
                         request.Compression,
                         cancellationToken);
 
-                    string? destDir = fileOperations.GetDirectoryName(destFile);
+                    var destDir = fileOperations.GetDirectoryName(destFile);
 
                     if (!string.IsNullOrEmpty(destDir))
                     {
-                        string destRelativePath = Path.GetFileName(destFile);
-                        string originalRelativePath = Path.GetFileName(sourcePath);
+                        var destRelativePath = Path.GetFileName(destFile);
+                        var originalRelativePath = Path.GetFileName(sourcePath);
 
-                        string sourceHash = await fileOperations.ComputeFileHashAsync(
+                        var sourceHash = await fileOperations.ComputeFileHashAsync(
                             sourcePath, cancellationToken);
 
                         ManifestEntry entry = new(
@@ -147,12 +147,12 @@ internal sealed class SingleFileBackupService(
 
                     if (result)
                     {
-                        string? destDir = fileOperations.GetDirectoryName(destFile);
+                        var destDir = fileOperations.GetDirectoryName(destFile);
 
                         if (!string.IsNullOrEmpty(destDir))
                         {
-                            string destRelativePath = Path.GetFileName(destFile);
-                            string originalRelativePath = Path.GetFileName(sourcePath);
+                            var destRelativePath = Path.GetFileName(destFile);
+                            var originalRelativePath = Path.GetFileName(sourcePath);
 
                             ManifestEntry entry = new(
                                 destRelativePath,
@@ -216,29 +216,29 @@ internal sealed class SingleFileBackupService(
         BackupRequest request,
         CancellationToken cancellationToken)
     {
-        string? sourceDir = Path.GetDirectoryName(sourcePath);
+        var sourceDir = Path.GetDirectoryName(sourcePath);
         if (string.IsNullOrEmpty(sourceDir))
         {
             throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
         }
 
-        ManifestData? manifest = await manifestService.TryReadManifestAsync(
+        var manifest = await manifestService.TryReadManifestAsync(
             sourceDir,
             [.. encryptionStrategies],
             request.Password,
             cancellationToken) ?? throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
 
-        string sourceFileName = Path.GetFileName(sourcePath);
-        if (manifest.FileMap.TryGetValue(sourceFileName, out ManifestFileInfo? fileInfo))
+        var sourceFileName = Path.GetFileName(sourcePath);
+        if (manifest.FileMap.TryGetValue(sourceFileName, out var fileInfo))
         {
             EncryptionMetadata metadata = new(
                 fileInfo.Salt,
                 fileInfo.Nonce,
                 manifest.Header.Compression);
 
-            string resolvedDestination = Path.Combine(
+            var resolvedDestination = Path.Combine(
                 Path.GetDirectoryName(destinationPath) ?? destinationPath,
                 fileInfo.OriginalRelativePath);
 
@@ -259,23 +259,23 @@ internal sealed class SingleFileBackupService(
         string destinationPath,
         CancellationToken cancellationToken)
     {
-        string? sourceDir = Path.GetDirectoryName(sourcePath);
+        var sourceDir = Path.GetDirectoryName(sourcePath);
         if (string.IsNullOrEmpty(sourceDir))
         {
             throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
         }
 
-        ManifestData? manifest = await manifestService.TryReadManifestAsync(
+        var manifest = await manifestService.TryReadManifestAsync(
             sourceDir,
             [.. encryptionStrategies],
             string.Empty,
             cancellationToken) ?? throw new InvalidOperationException(
                 Messages.ManifestRequiredForDecryption);
-        string sourceFileName = Path.GetFileName(sourcePath);
-        string resolvedDestination = destinationPath;
+        var sourceFileName = Path.GetFileName(sourcePath);
+        var resolvedDestination = destinationPath;
 
-        if (manifest.FileMap.TryGetValue(sourceFileName, out ManifestFileInfo? fileInfo))
+        if (manifest.FileMap.TryGetValue(sourceFileName, out var fileInfo))
         {
             resolvedDestination = Path.Combine(
                 Path.GetDirectoryName(destinationPath) ?? destinationPath,
@@ -298,7 +298,7 @@ internal sealed class SingleFileBackupService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        string? destDir = fileOperations.GetDirectoryName(destinationFile);
+        var destDir = fileOperations.GetDirectoryName(destinationFile);
         if (!string.IsNullOrEmpty(destDir))
         {
             await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
@@ -333,14 +333,14 @@ internal sealed class SingleFileBackupService(
     {
         const int bufferSize = 81920;
 
-        string? destDir = fileOperations.GetDirectoryName(destinationFile);
+        var destDir = fileOperations.GetDirectoryName(destinationFile);
         if (!string.IsNullOrEmpty(destDir))
         {
             await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
         }
 
-        await using Stream source = fileOperations.OpenReadStream(sourceFile, bufferSize);
-        await using Stream destination = fileOperations.CreateWriteStream(
+        await using var source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using var destination = fileOperations.CreateWriteStream(
             destinationFile,
             bufferSize);
 
@@ -360,7 +360,7 @@ internal sealed class SingleFileBackupService(
             return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
         }
 
-        ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
+        var strategy = compressionServiceFactory.Create(compression);
 
         await using FileStream source = new(
             sourceFile,
@@ -370,7 +370,7 @@ internal sealed class SingleFileBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        await using Stream compressedStream = await strategy.CompressAsync(
+        await using var compressedStream = await strategy.CompressAsync(
             source,
             cancellationToken);
 
@@ -414,7 +414,7 @@ internal sealed class SingleFileBackupService(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
         }
 
-        int compressionByte = source.ReadByte();
+        var compressionByte = source.ReadByte();
         if (compressionByte < 0)
         {
             throw new InvalidOperationException(
@@ -422,9 +422,9 @@ internal sealed class SingleFileBackupService(
         }
 
         var compression = (CompressionMode)compressionByte;
-        ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
+        var strategy = compressionServiceFactory.Create(compression);
 
-        await using Stream decompressedStream = await strategy.DecompressAsync(
+        await using var decompressedStream = await strategy.DecompressAsync(
             source,
             cancellationToken);
 
@@ -446,10 +446,10 @@ internal sealed class SingleFileBackupService(
         string sourceFile,
         INameObfuscationStrategy obfuscationService)
     {
-        string dir = fileOperations.GetDirectoryName(destinationFile)!;
+        var dir = fileOperations.GetDirectoryName(destinationFile)!;
 
-        string name = Path.GetFileName(destinationFile);
-        string obfuscated = obfuscationService.ObfuscateFileName(sourceFile, name);
+        var name = Path.GetFileName(destinationFile);
+        var obfuscated = obfuscationService.ObfuscateFileName(sourceFile, name);
 
         return fileOperations.CombinePath(dir, obfuscated);
     }

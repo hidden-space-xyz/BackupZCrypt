@@ -21,17 +21,17 @@ internal sealed class EncryptionRoundTripTests
     [TestCase(EncryptionAlgorithm.ChaCha20)]
     public async Task CreateEncryptedDataAndReadBack_RoundTrip(EncryptionAlgorithm algorithm)
     {
-        byte[] plaintext = Encoding.UTF8.GetBytes("In-memory manifest payload for testing");
+        var plaintext = Encoding.UTF8.GetBytes("In-memory manifest payload for testing");
         const string password = "TestP@ssw0rd!Str0ng";
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
+        var strategy = this.encryptionFactory.Create(algorithm);
 
-        byte[] encryptedData = await strategy.CreateEncryptedDataAsync(
+        var encryptedData = await strategy.CreateEncryptedDataAsync(
             plaintext,
             password,
             KeyDerivationAlgorithm.PBKDF2);
 
-        byte[] readBack = await strategy.ReadEncryptedDataAsync(
+        var readBack = await strategy.ReadEncryptedDataAsync(
             encryptedData,
             password,
             KeyDerivationAlgorithm.PBKDF2);
@@ -42,11 +42,11 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public void DecryptFile_CorruptedFile_ThrowsEncryptionCorruptedFileException()
     {
-        string corruptedFile = Path.Combine(this.testDir, "corrupted.bzc");
+        var corruptedFile = Path.Combine(this.testDir, "corrupted.bzc");
         File.WriteAllBytes(corruptedFile, [1, 2, 3]);
-        string dest = Path.Combine(this.testDir, "out.txt");
+        var dest = Path.Combine(this.testDir, "out.txt");
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
         Assert.ThrowsAsync<EncryptionCorruptedFileException>(
             async () =>
@@ -60,10 +60,10 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public void DecryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
     {
-        string nonExistent = Path.Combine(this.testDir, "nonexistent.bzc");
-        string dest = Path.Combine(this.testDir, "out.txt");
+        var nonExistent = Path.Combine(this.testDir, "nonexistent.bzc");
+        var dest = Path.Combine(this.testDir, "out.txt");
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
         Assert.ThrowsAsync<EncryptionFileNotFoundException>(
             async () =>
@@ -77,13 +77,13 @@ internal sealed class EncryptionRoundTripTests
     [Test]
     public async Task DecryptFile_WrongPassword_ThrowsEncryptionInvalidPasswordException()
     {
-        string sourceFile = this.CreateTestFile("wrong-pass.txt", "secret data");
-        string encryptedFile = Path.Combine(this.testDir, "wrong-pass.bzc");
-        string decryptedFile = Path.Combine(this.testDir, "wrong-pass-out.txt");
+        var sourceFile = this.CreateTestFile("wrong-pass.txt", "secret data");
+        var encryptedFile = Path.Combine(this.testDir, "wrong-pass.bzc");
+        var decryptedFile = Path.Combine(this.testDir, "wrong-pass-out.txt");
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
+        var metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             "CorrectPassword1!",
@@ -114,14 +114,14 @@ internal sealed class EncryptionRoundTripTests
         KeyDerivationAlgorithm kdf)
     {
         const string originalContent = "This is a test file for encryption round trip!";
-        string sourceFile = this.CreateTestFile("original.txt", originalContent);
-        string encryptedFile = Path.Combine(this.testDir, "encrypted.bzc");
-        string decryptedFile = Path.Combine(this.testDir, "decrypted.txt");
+        var sourceFile = this.CreateTestFile("original.txt", originalContent);
+        var encryptedFile = Path.Combine(this.testDir, "encrypted.bzc");
+        var decryptedFile = Path.Combine(this.testDir, "decrypted.txt");
         const string password = "TestP@ssw0rd!Str0ng";
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
+        var strategy = this.encryptionFactory.Create(algorithm);
 
-        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
+        var metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -132,11 +132,11 @@ internal sealed class EncryptionRoundTripTests
             Assert.That(File.Exists(encryptedFile), Is.True);
         }
 
-        byte[] encryptedBytes = await File.ReadAllBytesAsync(encryptedFile);
-        byte[] originalBytes = Encoding.UTF8.GetBytes(originalContent);
+        var encryptedBytes = await File.ReadAllBytesAsync(encryptedFile);
+        var originalBytes = Encoding.UTF8.GetBytes(originalContent);
         Assert.That(encryptedBytes, Is.Not.EqualTo(originalBytes));
 
-        bool decryptResult = await strategy.DecryptFileAsync(
+        var decryptResult = await strategy.DecryptFileAsync(
             encryptedFile,
             decryptedFile,
             password,
@@ -148,7 +148,7 @@ internal sealed class EncryptionRoundTripTests
             Assert.That(File.Exists(decryptedFile), Is.True);
         }
 
-        string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
+        var decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
     }
 
@@ -159,15 +159,15 @@ internal sealed class EncryptionRoundTripTests
         EncryptionAlgorithm algorithm,
         CompressionMode compression)
     {
-        string originalContent = string.Concat(Enumerable.Repeat("Compressible data block. ", 200));
-        string sourceFile = this.CreateTestFile($"compress-test-{compression}.txt", originalContent);
-        string encryptedFile = Path.Combine(this.testDir, $"encrypted-{compression}.bzc");
-        string decryptedFile = Path.Combine(this.testDir, $"decrypted-{compression}.txt");
+        var originalContent = string.Concat(Enumerable.Repeat("Compressible data block. ", 200));
+        var sourceFile = this.CreateTestFile($"compress-test-{compression}.txt", originalContent);
+        var encryptedFile = Path.Combine(this.testDir, $"encrypted-{compression}.bzc");
+        var decryptedFile = Path.Combine(this.testDir, $"decrypted-{compression}.txt");
         const string password = "TestP@ssw0rd!Str0ng";
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(algorithm);
+        var strategy = this.encryptionFactory.Create(algorithm);
 
-        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
+        var metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -175,7 +175,7 @@ internal sealed class EncryptionRoundTripTests
             compression);
         Assert.That(metadata, Is.Not.Null);
 
-        bool decryptResult = await strategy.DecryptFileAsync(
+        var decryptResult = await strategy.DecryptFileAsync(
             encryptedFile,
             decryptedFile,
             password,
@@ -183,7 +183,7 @@ internal sealed class EncryptionRoundTripTests
             metadata);
         Assert.That(decryptResult, Is.True);
 
-        string decryptedContent = await File.ReadAllTextAsync(decryptedFile);
+        var decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
     }
 
@@ -192,16 +192,16 @@ internal sealed class EncryptionRoundTripTests
     {
         var largeData = new byte[256 * 1024];
         RandomNumberGenerator.Fill(largeData);
-        string sourceFile = Path.Combine(this.testDir, "large.bin");
+        var sourceFile = Path.Combine(this.testDir, "large.bin");
         await File.WriteAllBytesAsync(sourceFile, largeData);
 
-        string encryptedFile = Path.Combine(this.testDir, "large.bzc");
-        string decryptedFile = Path.Combine(this.testDir, "large-decrypted.bin");
+        var encryptedFile = Path.Combine(this.testDir, "large.bzc");
+        var decryptedFile = Path.Combine(this.testDir, "large-decrypted.bin");
         const string password = "TestP@ssw0rd!Str0ng";
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        EncryptionMetadata metadata = await strategy.EncryptFileAsync(
+        var metadata = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -214,17 +214,17 @@ internal sealed class EncryptionRoundTripTests
             KeyDerivationAlgorithm.PBKDF2,
             metadata);
 
-        byte[] decryptedData = await File.ReadAllBytesAsync(decryptedFile);
+        var decryptedData = await File.ReadAllBytesAsync(decryptedFile);
         Assert.That(decryptedData, Is.EqualTo(largeData));
     }
 
     [Test]
     public void EncryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
     {
-        string nonExistent = Path.Combine(this.testDir, "nonexistent.txt");
-        string dest = Path.Combine(this.testDir, "out.bzc");
+        var nonExistent = Path.Combine(this.testDir, "nonexistent.txt");
+        var dest = Path.Combine(this.testDir, "out.bzc");
 
-        IEncryptionAlgorithmStrategy strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
         Assert.ThrowsAsync<EncryptionFileNotFoundException>(
             async () =>
@@ -259,7 +259,7 @@ internal sealed class EncryptionRoundTripTests
 
     private string CreateTestFile(string name, string content)
     {
-        string path = Path.Combine(this.testDir, name);
+        var path = Path.Combine(this.testDir, name);
         File.WriteAllText(path, content);
         return path;
     }

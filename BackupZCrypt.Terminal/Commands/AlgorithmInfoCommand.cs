@@ -40,7 +40,7 @@ internal sealed class AlgorithmInfoCommand(
         IReadOnlyList<T> strategies,
         Func<T, (string DisplayName, string Description)> selector)
     {
-        Table table = new Table()
+        var table = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
             .ShowRowSeparators()
@@ -48,9 +48,9 @@ internal sealed class AlgorithmInfoCommand(
             .AddColumn(new TableColumn($"[bold]{Messages.Name}[/]").LeftAligned())
             .AddColumn(new TableColumn($"[bold]{Messages.Description}[/]").LeftAligned());
 
-        foreach (T strategy in strategies)
+        foreach (var strategy in strategies)
         {
-            (string displayName, string description) = selector(strategy);
+            var (displayName, description) = selector(strategy);
             table.AddRow(Markup.Escape(displayName), Markup.Escape(description));
         }
 

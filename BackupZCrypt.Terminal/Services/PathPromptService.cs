@@ -2,18 +2,19 @@ namespace BackupZCrypt.Terminal.Services;
 
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Terminal.Services.Interfaces;
 using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
 using System.Security;
 using System.Text;
 
-internal sealed class PathPromptService(IRecentPathSettingsService recentPathSettingsService)
+internal sealed class PathPromptService(IRecentPathSettingsService recentPathSettingsService) : IPathPromptService
 {
     private const int MaxSuggestionCount = 12;
 
     public async Task<string> PromptSourcePathAsync()
     {
-        RecentPathSettings recentPaths = await this.GetRecentPathSettingsAsync();
+        var recentPaths = await this.GetRecentPathSettingsAsync();
 
         return PromptPath(
             new PathPromptDefinition(
@@ -28,7 +29,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     public async Task<string> PromptDestinationPathAsync()
     {
-        RecentPathSettings recentPaths = await this.GetRecentPathSettingsAsync();
+        var recentPaths = await this.GetRecentPathSettingsAsync();
 
         return PromptPath(
             new PathPromptDefinition(
@@ -43,7 +44,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     public async Task<string> PromptUpdateSourcePathAsync()
     {
-        RecentPathSettings recentPaths = await this.GetRecentPathSettingsAsync();
+        var recentPaths = await this.GetRecentPathSettingsAsync();
 
         return PromptPath(
             new PathPromptDefinition(
@@ -58,7 +59,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     public async Task<string> PromptUpdateBackupPathAsync()
     {
-        RecentPathSettings recentPaths = await this.GetRecentPathSettingsAsync();
+        var recentPaths = await this.GetRecentPathSettingsAsync();
 
         return PromptPath(
             new PathPromptDefinition(
@@ -99,8 +100,8 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
     {
         while (true)
         {
-            string manualChoice = Messages.TypeOrPastePathOption;
-            string? useLastChoice = string.IsNullOrWhiteSpace(definition.LastPath)
+            var manualChoice = Messages.TypeOrPastePathOption;
+            var useLastChoice = string.IsNullOrWhiteSpace(definition.LastPath)
                 ? null
                 : string.Format(
                     Messages.UseLastPathOptionFormat,
@@ -108,7 +109,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
             if (useLastChoice is null)
             {
-                string? path = PromptManualPath(definition);
+                var path = PromptManualPath(definition);
                 if (!string.IsNullOrWhiteSpace(path))
                 {
                     return path;
@@ -119,7 +120,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
             List<string> choices = [manualChoice, useLastChoice];
 
-            string selected = AnsiConsole.Prompt(
+            var selected = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title(
                         $"[green]{Markup.Escape(string.Format(Messages.PathSelectionPromptFormat, definition.Label))}[/]")
@@ -129,7 +130,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
             if (selected == manualChoice)
             {
-                string? path = PromptManualPath(definition);
+                var path = PromptManualPath(definition);
                 if (!string.IsNullOrWhiteSpace(path))
                 {
                     return path;
@@ -141,8 +142,8 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
             if (TryValidatePath(
                     definition.LastPath ?? string.Empty,
                     definition,
-                    out string normalizedLastPath,
-                    out string errorMessage))
+                    out var normalizedLastPath,
+                    out var errorMessage))
             {
                 return normalizedLastPath;
             }
@@ -160,14 +161,14 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
         {
             AnsiConsole.MarkupLine($"[dim]{Messages.PathManualInputHelp}[/]");
 
-            string prompt = BuildPrompt(definition);
+            var prompt = BuildPrompt(definition);
             Console.Write(prompt);
 
             StringBuilder inputBuilder = new();
 
             while (true)
             {
-                ConsoleKeyInfo key = Console.ReadKey(intercept: true);
+                var key = Console.ReadKey(intercept: true);
 
                 if (key.Key == ConsoleKey.Enter)
                 {
@@ -176,8 +177,8 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
                     if (TryValidatePath(
                             inputBuilder.ToString(),
                             definition,
-                            out string normalizedPath,
-                            out string errorMessage))
+                            out var normalizedPath,
+                            out var errorMessage))
                     {
                         return normalizedPath;
                     }
@@ -209,16 +210,16 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
                 if (key.Key == ConsoleKey.Tab)
                 {
-                    CompletionResult result = GetCompletionResult(
+                    var result = GetCompletionResult(
                         inputBuilder.ToString(),
                         definition.ValidationMode,
                         definition.AllowFileBrowsing);
 
                     if (result.Replacement.Length > inputBuilder.Length)
                     {
-                        string suffix = result.Replacement[inputBuilder.Length..];
-                        inputBuilder.Clear();
-                        inputBuilder.Append(result.Replacement);
+                        var suffix = result.Replacement[inputBuilder.Length..];
+                        inputBuilder.Clear()
+                            .Append(result.Replacement);
                         Console.Write(suffix);
                     }
 
@@ -247,7 +248,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
         PathValidationMode validationMode,
         bool allowFileBrowsing)
     {
-        if (!TryCreateCompletionContext(input, out CompletionContext context))
+        if (!TryCreateCompletionContext(input, out var context))
         {
             return CompletionResult.None(input);
         }
@@ -261,7 +262,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
         try
         {
-            candidates = Directory
+            candidates = [.. Directory
                 .EnumerateFileSystemEntries(context.SearchDirectory)
                 .Select(path => new CompletionCandidate(path, Directory.Exists(path)))
                 .Where(candidate =>
@@ -269,8 +270,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
                     && candidate.Name.StartsWith(context.PartialName, StringComparison.OrdinalIgnoreCase)
                     && (validationMode != PathValidationMode.ExistingDirectory || candidate.IsDirectory))
                 .OrderByDescending(candidate => candidate.IsDirectory)
-                .ThenBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .ThenBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)];
         }
         catch (Exception ex) when (
             ex is IOException
@@ -287,26 +287,25 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
         if (candidates.Count == 1)
         {
-            string completedPath = context.ReplacementPrefix
+            var completedPath = context.ReplacementPrefix
                 + candidates[0].Name
                 + (candidates[0].IsDirectory ? Path.DirectorySeparatorChar : string.Empty);
 
             return new CompletionResult(completedPath, [], false);
         }
 
-        string commonPrefix = GetLongestCommonPrefix(candidates.Select(candidate => candidate.Name));
+        var commonPrefix = GetLongestCommonPrefix(candidates.Select(candidate => candidate.Name));
         if (commonPrefix.Length > context.PartialName.Length)
         {
             return new CompletionResult(context.ReplacementPrefix + commonPrefix, [], false);
         }
 
-        List<string> suggestions = candidates
+        List<string> suggestions = [.. candidates
             .Take(MaxSuggestionCount)
             .Select(candidate =>
                 candidate.IsDirectory
                     ? $"[blue]{Markup.Escape(candidate.Name)}[/]"
-                    : $"[grey]{Markup.Escape(candidate.Name)}[/]")
-            .ToList();
+                    : $"[grey]{Markup.Escape(candidate.Name)}[/]")];
 
         if (candidates.Count > MaxSuggestionCount)
         {
@@ -318,8 +317,8 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     private static bool TryCreateCompletionContext(string input, out CompletionContext context)
     {
-        string trimmedInput = input.Trim();
-        int separatorIndex = trimmedInput.LastIndexOfAny(['\\', '/']);
+        var trimmedInput = input.Trim();
+        var separatorIndex = trimmedInput.LastIndexOfAny(['\\', '/']);
 
         if (separatorIndex < 0)
         {
@@ -330,10 +329,10 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
             return true;
         }
 
-        string replacementPrefix = trimmedInput[..(separatorIndex + 1)];
-        string partialName = trimmedInput[(separatorIndex + 1)..];
+        var replacementPrefix = trimmedInput[..(separatorIndex + 1)];
+        var partialName = trimmedInput[(separatorIndex + 1)..];
 
-        if (!TryNormalizePath(replacementPrefix, out string searchDirectory))
+        if (!TryNormalizePath(replacementPrefix, out var searchDirectory))
         {
             context = default;
             return false;
@@ -351,7 +350,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
     {
         normalizedPath = string.Empty;
 
-        string sanitizedInput = SanitizePath(rawInput);
+        var sanitizedInput = SanitizePath(rawInput);
         if (string.IsNullOrWhiteSpace(sanitizedInput))
         {
             errorMessage = definition.EmptyPathError;
@@ -364,7 +363,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
             return false;
         }
 
-        bool isValid = definition.ValidationMode switch
+        var isValid = definition.ValidationMode switch
         {
             PathValidationMode.AnyPath => true,
             PathValidationMode.ExistingDirectory => Directory.Exists(normalizedPath),
@@ -428,17 +427,17 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     private static string GetLongestCommonPrefix(IEnumerable<string> values)
     {
-        string[] candidates = values.ToArray();
+        string[] candidates = [.. values];
         if (candidates.Length == 0)
         {
             return string.Empty;
         }
 
-        string prefix = candidates[0];
+        var prefix = candidates[0];
 
-        foreach (string candidate in candidates.Skip(1))
+        foreach (var candidate in candidates.Skip(1))
         {
-            int maxLength = Math.Min(prefix.Length, candidate.Length);
+            var maxLength = Math.Min(prefix.Length, candidate.Length);
             var sharedLength = 0;
 
             while (sharedLength < maxLength
@@ -465,8 +464,8 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
             return value;
         }
 
-        int headLength = (maxLength - 3) / 2;
-        int tailLength = maxLength - headLength - 3;
+        var headLength = (maxLength - 3) / 2;
+        var tailLength = maxLength - headLength - 3;
 
         return string.Concat(
             value.AsSpan(0, headLength),
@@ -481,7 +480,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
     private static string SanitizePath(string rawInput)
     {
-        string sanitized = rawInput.Trim();
+        var sanitized = rawInput.Trim();
 
         if (sanitized.Length >= 2
             && sanitized[0] == '"'

@@ -15,7 +15,7 @@ internal sealed class KeyDerivationServiceFactory(IEnumerable<IKeyDerivationAlgo
 
     public IKeyDerivationAlgorithmStrategy Create(KeyDerivationAlgorithm algorithm)
     {
-        return !this.strategies.TryGetValue(algorithm, out IKeyDerivationAlgorithmStrategy? strategy)
+        return !this.strategies.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
                 string.Format(Messages.KeyDerivationAlgorithmNotRegisteredFormat, algorithm))

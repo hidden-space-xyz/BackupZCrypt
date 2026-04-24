@@ -12,7 +12,7 @@ public static class ByteSizeFormatter
         }
 
         double size = Math.Abs(bytes);
-        int suffixIndex = 0;
+        var suffixIndex = 0;
         while (size >= 1024 && suffixIndex < Suffixes.Length - 1)
         {
             size /= 1024;

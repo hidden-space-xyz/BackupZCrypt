@@ -23,7 +23,7 @@ internal sealed class NameObfuscationServiceFactoryTests
     [Test]
     public void Create_RegisteredMode_ReturnsStrategy()
     {
-        INameObfuscationStrategy result = this.factory.Create(NameObfuscationMode.Guid);
+        var result = this.factory.Create(NameObfuscationMode.Guid);
 
         Assert.That(result, Is.SameAs(this.guidStrategy));
     }

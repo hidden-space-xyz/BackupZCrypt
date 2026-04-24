@@ -9,7 +9,7 @@ internal sealed class BackupResultTests
     [Test]
     public void Constructor_WithValidInputs_SetsProperties()
     {
-        TimeSpan elapsed = TimeSpan.FromSeconds(5);
+        var elapsed = TimeSpan.FromSeconds(5);
         string[] errors = ["error1"];
         string[] warnings = ["warn1"];
 

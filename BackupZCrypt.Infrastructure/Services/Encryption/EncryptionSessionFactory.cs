@@ -26,8 +26,8 @@ internal sealed class EncryptionSessionFactory(
         {
             salt = await ReadSaltAsync(source, cancellationToken);
             nonce = await ReadNonceAsync(source, cancellationToken);
-            CompressionMode compression = ReadCompressionHeader(source);
-            byte[] associatedData = BuildAssociatedData(salt, nonce, compression);
+            var compression = ReadCompressionHeader(source);
+            var associatedData = BuildAssociatedData(salt, nonce, compression);
             key = this.DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
             return new EncryptionSession(salt, nonce, key, compression, associatedData);
@@ -52,9 +52,9 @@ internal sealed class EncryptionSessionFactory(
 
         try
         {
-            salt = metadata.Salt.ToArray();
-            nonce = metadata.Nonce.ToArray();
-            byte[] associatedData = BuildAssociatedData(salt, nonce, metadata.Compression);
+            salt = [.. metadata.Salt];
+            nonce = [.. metadata.Nonce];
+            var associatedData = BuildAssociatedData(salt, nonce, metadata.Compression);
             key = this.DeriveKeySafe(password, salt, keyDerivationAlgorithm);
 
             return new EncryptionSession(salt, nonce, key, metadata.Compression, associatedData);
@@ -82,7 +82,7 @@ internal sealed class EncryptionSessionFactory(
             salt = GenerateSalt();
             nonce = GenerateNonce();
             key = this.DeriveKeySafe(password, salt, keyDerivationAlgorithm);
-            byte[] associatedData = BuildAssociatedData(salt, nonce, compression);
+            var associatedData = BuildAssociatedData(salt, nonce, compression);
 
             return new EncryptionSession(salt, nonce, key, compression, associatedData);
         }
@@ -128,7 +128,7 @@ internal sealed class EncryptionSessionFactory(
 
     private static CompressionMode ReadCompressionHeader(Stream stream)
     {
-        int value = stream.ReadByte();
+        var value = stream.ReadByte();
         if (value < 0)
         {
             throw new EndOfStreamException();
@@ -161,7 +161,7 @@ internal sealed class EncryptionSessionFactory(
         int keySize,
         KeyDerivationAlgorithm algorithm)
     {
-        IKeyDerivationAlgorithmStrategy keyDerivationService = keyDerivationServiceFactory.Create(
+        var keyDerivationService = keyDerivationServiceFactory.Create(
             algorithm);
         return keyDerivationService.DeriveKey(password, salt, keySize);
     }

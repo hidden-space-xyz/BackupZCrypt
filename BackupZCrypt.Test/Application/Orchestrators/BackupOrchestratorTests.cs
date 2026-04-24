@@ -24,10 +24,10 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
@@ -51,10 +51,10 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
@@ -69,7 +69,7 @@ internal sealed class BackupOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<BackupResult>.Success(expected));
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -89,10 +89,10 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -108,7 +108,7 @@ internal sealed class BackupOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<BackupResult>.Success(expected));
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -128,15 +128,15 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -148,10 +148,10 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
@@ -166,7 +166,7 @@ internal sealed class BackupOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns<Result<BackupResult>>(_ => throw new InvalidOperationException("boom"));
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -182,9 +182,9 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string> { "error1" });
+            .Returns(["error1"]);
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -200,12 +200,12 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string> { "warning1" });
+            .Returns(["warning1"]);
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(
+        var result = await orchestrator.ExecuteAsync(
             CreateRequest(),
             progress);
 
@@ -215,14 +215,14 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_WithWarningsAndProceedOnWarnings_ProcessesFile()
     {
-        BackupRequest request = CreateRequest() with { ProceedOnWarnings = true };
+        var request = CreateRequest() with { ProceedOnWarnings = true };
 
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string> { "warning1" });
+            .Returns(["warning1"]);
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
@@ -238,7 +238,7 @@ internal sealed class BackupOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<BackupResult>.Success(expected));
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
+        var result = await orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
     }
@@ -246,19 +246,19 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_UpdateOperation_FileSource_ReturnsFailure()
     {
-        BackupRequest request = CreateRequest() with { Operation = EncryptOperation.Update };
+        var request = CreateRequest() with { Operation = EncryptOperation.Update };
 
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(false);
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
+        var result = await orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.IsSuccess, Is.False);
     }
@@ -266,14 +266,14 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_UpdateOperation_DirectorySource_DelegatesToDirectoryService()
     {
-        BackupRequest request = CreateRequest() with { Operation = EncryptOperation.Update };
+        var request = CreateRequest() with { Operation = EncryptOperation.Update };
 
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
         this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new List<string>());
+            .Returns([]);
 
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(false);
@@ -288,7 +288,7 @@ internal sealed class BackupOrchestratorTests
                 Arg.Any<CancellationToken>())
             .Returns(Result<BackupResult>.Success(expected));
 
-        Result<BackupResult> result = await orchestrator.ExecuteAsync(request, progress);
+        var result = await orchestrator.ExecuteAsync(request, progress);
 
         Assert.That(result.Value.IsSuccess, Is.True);
         await directoryService

@@ -22,9 +22,9 @@ internal sealed class BackupRequestValidatorTests
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
 
-        BackupRequest request = CreateRequest(dest: string.Empty);
+        var request = CreateRequest(dest: string.Empty);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("destination"));
     }
@@ -36,13 +36,13 @@ internal sealed class BackupRequestValidatorTests
         this.fileOps.DirectoryExists(Arg.Any<string>()).Returns(true);
         this.fileOps
             .GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<string>());
+            .Returns([]);
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
+        var request = CreateRequest(source: @"C:\source\dir", dest: @"C:\dest\dir");
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("empty"));
     }
@@ -56,9 +56,9 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest();
+        var request = CreateRequest();
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("empty"));
     }
@@ -66,9 +66,9 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_EmptyPassword_ReturnsError()
     {
-        BackupRequest request = CreateRequest(password: string.Empty, confirmPassword: string.Empty);
+        var request = CreateRequest(password: string.Empty, confirmPassword: string.Empty);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("password"));
     }
@@ -76,7 +76,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_PasswordMismatch_ReturnsError()
     {
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             password: "StrongP@ss1",
             confirmPassword: "DifferentPass1");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -85,7 +85,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("do not match"));
     }
@@ -94,7 +94,7 @@ internal sealed class BackupRequestValidatorTests
     public async Task AnalyzeErrors_PasswordTooLong_ReturnsError()
     {
         string longPassword = new('A', 1001);
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             password: longPassword,
             confirmPassword: longPassword);
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -103,7 +103,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("too long"));
     }
@@ -111,7 +111,7 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_PasswordWithLeadingSpaces_ReturnsError()
     {
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             password: " StrongP@ss1",
             confirmPassword: " StrongP@ss1");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
@@ -120,7 +120,7 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("spaces"));
     }
@@ -128,16 +128,16 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_SameSourceAndDestFile_ReturnsError()
     {
-        string path = Path.GetFullPath(@"C:\same\file.txt");
+        var path = Path.GetFullPath(@"C:\same\file.txt");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(Path.GetDirectoryName(path));
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest(source: path, dest: path);
+        var request = CreateRequest(source: path, dest: path);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("cannot be the same"));
     }
@@ -145,14 +145,14 @@ internal sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_ShortPassword_ReturnsError()
     {
-        BackupRequest request = CreateRequest(password: "short", confirmPassword: "short");
+        var request = CreateRequest(password: "short", confirmPassword: "short");
         this.fileOps.FileExists(Arg.Any<string>()).Returns(true);
         this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
         this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("at least 8 characters"));
     }
@@ -165,9 +165,9 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest();
+        var request = CreateRequest();
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("does not exist"));
     }
@@ -181,9 +181,9 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest();
+        var request = CreateRequest();
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Is.Empty);
     }
@@ -199,11 +199,11 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             source: @"C:\source",
             dest: @"C:\source\subfolder");
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.Some.Contains("inside"));
     }
@@ -217,11 +217,11 @@ internal sealed class BackupRequestValidatorTests
         this.storage.GetPathRoot(Arg.Any<string>()).Returns(@"C:\");
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
 
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             confirmPassword: string.Empty,
             operation: EncryptOperation.Decrypt);
 
-        IReadOnlyList<string> errors = await validator.AnalyzeErrorsAsync(request);
+        var errors = await validator.AnalyzeErrorsAsync(request);
 
         Assert.That(errors, Has.None.Contains("confirm"));
     }
@@ -239,9 +239,9 @@ internal sealed class BackupRequestValidatorTests
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
         this.storage.GetAvailableFreeSpace(Arg.Any<string>()).Returns(500L);
 
-        BackupRequest request = CreateRequest(source: @"C:\source", dest: @"C:\dest");
+        var request = CreateRequest(source: @"C:\source", dest: @"C:\dest");
 
-        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+        var warnings = await validator.AnalyzeWarningsAsync(request);
 
         Assert.That(warnings, Has.Some.Contains("space"));
     }
@@ -255,9 +255,9 @@ internal sealed class BackupRequestValidatorTests
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, "Weak", 30.0));
 
-        BackupRequest request = CreateRequest(password: "weakpass", confirmPassword: "weakpass");
+        var request = CreateRequest(password: "weakpass", confirmPassword: "weakpass");
 
-        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+        var warnings = await validator.AnalyzeWarningsAsync(request);
 
         Assert.That(warnings, Has.Some.Contains("password"));
     }
@@ -274,9 +274,9 @@ internal sealed class BackupRequestValidatorTests
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, "Strong", 90.0));
 
-        BackupRequest request = CreateRequest();
+        var request = CreateRequest();
 
-        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+        var warnings = await validator.AnalyzeWarningsAsync(request);
 
         Assert.That(warnings, Is.Empty);
     }
@@ -291,12 +291,12 @@ internal sealed class BackupRequestValidatorTests
         this.storage.IsDriveReady(Arg.Any<string>()).Returns(true);
         this.storage.GetAvailableFreeSpace(Arg.Any<string>()).Returns(long.MaxValue);
 
-        BackupRequest request = CreateRequest(
+        var request = CreateRequest(
             source: @"C:\source\file.bzc",
             dest: @"C:\dest\file.txt",
             operation: EncryptOperation.Decrypt);
 
-        IReadOnlyList<string> warnings = await validator.AnalyzeWarningsAsync(request);
+        var warnings = await validator.AnalyzeWarningsAsync(request);
 
         Assert.That(warnings, Has.Some.Contains("existing"));
     }

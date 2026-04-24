@@ -33,7 +33,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesKeyDerivationServiceFactory()
     {
-        IKeyDerivationServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<IKeyDerivationServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
@@ -42,7 +42,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesEncryptionServiceFactory()
     {
-        IEncryptionServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<IEncryptionServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
@@ -51,7 +51,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesCompressionServiceFactory()
     {
-        ICompressionServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<ICompressionServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
@@ -60,7 +60,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesNameObfuscationServiceFactory()
     {
-        INameObfuscationServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<INameObfuscationServiceFactory>();
 
         Assert.That(factory, Is.Not.Null);
@@ -69,7 +69,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesPasswordService()
     {
-        IPasswordService service = this.provider.GetRequiredService<IPasswordService>();
+        var service = this.provider.GetRequiredService<IPasswordService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -77,7 +77,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesFileOperationsService()
     {
-        IFileOperationsService service = this.provider.GetRequiredService<IFileOperationsService>();
+        var service = this.provider.GetRequiredService<IFileOperationsService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -85,7 +85,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddDomainServices_ResolvesSystemStorageService()
     {
-        ISystemStorageService service = this.provider.GetRequiredService<ISystemStorageService>();
+        var service = this.provider.GetRequiredService<ISystemStorageService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -93,7 +93,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesBackupOrchestrator()
     {
-        IBackupOrchestrator orchestrator =
+        var orchestrator =
             this.provider.GetRequiredService<IBackupOrchestrator>();
 
         Assert.That(orchestrator, Is.Not.Null);
@@ -102,7 +102,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesSingleFileBackupService()
     {
-        ISingleFileBackupService service =
+        var service =
             this.provider.GetRequiredService<ISingleFileBackupService>();
 
         Assert.That(service, Is.Not.Null);
@@ -111,7 +111,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesDirectoryBackupService()
     {
-        IDirectoryBackupService service =
+        var service =
             this.provider.GetRequiredService<IDirectoryBackupService>();
 
         Assert.That(service, Is.Not.Null);
@@ -120,7 +120,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesBackupRequestValidator()
     {
-        IBackupRequestValidator validator =
+        var validator =
             this.provider.GetRequiredService<IBackupRequestValidator>();
 
         Assert.That(validator, Is.Not.Null);
@@ -129,7 +129,7 @@ internal sealed class DependencyInjectionTests
     [Test]
     public void AddApplicationServices_ResolvesManifestService()
     {
-        IManifestService service = this.provider.GetRequiredService<IManifestService>();
+        var service = this.provider.GetRequiredService<IManifestService>();
 
         Assert.That(service, Is.Not.Null);
     }
@@ -141,10 +141,10 @@ internal sealed class DependencyInjectionTests
     [TestCase(EncryptionAlgorithm.Camellia)]
     public void EncryptionFactory_ResolvesAllAlgorithms(EncryptionAlgorithm algorithm)
     {
-        IEncryptionServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<IEncryptionServiceFactory>();
 
-        IEncryptionAlgorithmStrategy strategy = factory.Create(algorithm);
+        var strategy = factory.Create(algorithm);
 
         Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
@@ -155,10 +155,10 @@ internal sealed class DependencyInjectionTests
     [TestCase(KeyDerivationAlgorithm.Scrypt)]
     public void KeyDerivationFactory_ResolvesAllAlgorithms(KeyDerivationAlgorithm algorithm)
     {
-        IKeyDerivationServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<IKeyDerivationServiceFactory>();
 
-        IKeyDerivationAlgorithmStrategy strategy = factory.Create(algorithm);
+        var strategy = factory.Create(algorithm);
 
         Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
@@ -169,10 +169,10 @@ internal sealed class DependencyInjectionTests
     [TestCase(CompressionMode.ZstdBest)]
     public void CompressionFactory_ResolvesAllModes(CompressionMode mode)
     {
-        ICompressionServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<ICompressionServiceFactory>();
 
-        ICompressionStrategy strategy = factory.Create(mode);
+        var strategy = factory.Create(mode);
 
         Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(mode));
@@ -183,10 +183,10 @@ internal sealed class DependencyInjectionTests
     [TestCase(NameObfuscationMode.Sha512)]
     public void ObfuscationFactory_ResolvesAllModes(NameObfuscationMode mode)
     {
-        INameObfuscationServiceFactory factory =
+        var factory =
             this.provider.GetRequiredService<INameObfuscationServiceFactory>();
 
-        INameObfuscationStrategy strategy = factory.Create(mode);
+        var strategy = factory.Create(mode);
 
         Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(mode));

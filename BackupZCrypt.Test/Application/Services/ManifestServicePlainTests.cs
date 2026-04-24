@@ -23,7 +23,7 @@ internal sealed class ManifestServicePlainTests
     [Test]
     public async Task TrySavePlainManifestAsync_WritesJsonFile()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -40,13 +40,13 @@ internal sealed class ManifestServicePlainTests
                 NameObfuscationMode.None,
                 CompressionMode.Zstd);
 
-            IReadOnlyList<string> errors = await service.TrySavePlainManifestAsync(
+            var errors = await service.TrySavePlainManifestAsync(
                 entries,
                 header,
                 tempDir,
                 CancellationToken.None);
 
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
 
             using (Assert.EnterMultipleScope())
             {
@@ -54,8 +54,8 @@ internal sealed class ManifestServicePlainTests
                 Assert.That(File.Exists(manifestPath), Is.True);
             }
 
-            string json = await File.ReadAllTextAsync(manifestPath);
-            ManifestDocument? doc = JsonSerializer.Deserialize<ManifestDocument>(json);
+            var json = await File.ReadAllTextAsync(manifestPath);
+            var doc = JsonSerializer.Deserialize<ManifestDocument>(json);
 
             using (Assert.EnterMultipleScope())
             {
@@ -80,7 +80,7 @@ internal sealed class ManifestServicePlainTests
             NameObfuscationMode.None,
             CompressionMode.None);
 
-        IReadOnlyList<string> errors = await service.TrySavePlainManifestAsync(
+        var errors = await service.TrySavePlainManifestAsync(
             [],
             header,
             @"C:\nonexistent",
@@ -103,7 +103,7 @@ internal sealed class ManifestServicePlainTests
             NameObfuscationMode.None,
             CompressionMode.None);
 
-        IReadOnlyList<string> errors = await service.TrySavePlainManifestAsync(
+        var errors = await service.TrySavePlainManifestAsync(
             entries,
             header,
             Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid():N}", "sub"),
@@ -115,7 +115,7 @@ internal sealed class ManifestServicePlainTests
     [Test]
     public async Task TryReadManifestAsync_PlainJsonManifest_ParsesCorrectly()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -134,15 +134,15 @@ internal sealed class ManifestServicePlainTests
                         string.Empty),
                 ]);
 
-            byte[] jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             await File.WriteAllBytesAsync(manifestPath, jsonBytes);
 
-            IEncryptionAlgorithmStrategy mockStrategy =
+            var mockStrategy =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
             mockStrategy.Id.Returns(EncryptionAlgorithm.ChaCha20);
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [mockStrategy],
                 string.Empty,
@@ -170,18 +170,18 @@ internal sealed class ManifestServicePlainTests
     [Test]
     public async Task TryReadManifestAsync_InvalidJson_ReturnsNull()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
         {
-            string manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
             await File.WriteAllTextAsync(manifestPath, "{not valid json!!!");
 
-            IEncryptionAlgorithmStrategy mockStrategy =
+            var mockStrategy =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [mockStrategy],
                 string.Empty,
@@ -198,7 +198,7 @@ internal sealed class ManifestServicePlainTests
     [Test]
     public async Task TrySaveThenRead_PlainManifest_RoundTrip()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -215,7 +215,7 @@ internal sealed class ManifestServicePlainTests
                 NameObfuscationMode.None,
                 CompressionMode.ZstdBest);
 
-            IReadOnlyList<string> saveErrors = await service.TrySavePlainManifestAsync(
+            var saveErrors = await service.TrySavePlainManifestAsync(
                 entries,
                 header,
                 tempDir,
@@ -223,10 +223,10 @@ internal sealed class ManifestServicePlainTests
 
             Assert.That(saveErrors, Is.Empty);
 
-            IEncryptionAlgorithmStrategy mockStrategy =
+            var mockStrategy =
                 Substitute.For<IEncryptionAlgorithmStrategy>();
 
-            ManifestData? result = await service.TryReadManifestAsync(
+            var result = await service.TryReadManifestAsync(
                 tempDir,
                 [mockStrategy],
                 string.Empty,

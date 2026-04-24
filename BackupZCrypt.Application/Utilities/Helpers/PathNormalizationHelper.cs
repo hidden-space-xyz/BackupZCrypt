@@ -14,7 +14,7 @@ internal static class PathNormalizationHelper
                 return string.Empty;
             }
 
-            string expanded = Environment.ExpandEnvironmentVariables(rawPath.Trim());
+            var expanded = Environment.ExpandEnvironmentVariables(rawPath.Trim());
             return Path.GetFullPath(expanded);
         }
         catch (Exception ex)

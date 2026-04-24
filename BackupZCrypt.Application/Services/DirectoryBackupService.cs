@@ -29,7 +29,7 @@ internal sealed class DirectoryBackupService(
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken)
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         if (request.Operation == EncryptOperation.Update)
         {
@@ -47,7 +47,7 @@ internal sealed class DirectoryBackupService(
         {
             if (request.Operation == EncryptOperation.Decrypt)
             {
-                ManifestData? manifestData = await manifestService.TryReadManifestAsync(
+                var manifestData = await manifestService.TryReadManifestAsync(
                     sourcePath,
                     [.. encryptionStrategies],
                     request.Password,
@@ -89,7 +89,7 @@ internal sealed class DirectoryBackupService(
         }
         else if (request.Operation == EncryptOperation.Decrypt)
         {
-            ManifestData? manifestData = await manifestService.TryReadManifestAsync(
+            var manifestData = await manifestService.TryReadManifestAsync(
                 sourcePath,
                 [.. encryptionStrategies],
                 string.Empty,
@@ -108,7 +108,7 @@ internal sealed class DirectoryBackupService(
             };
         }
 
-        string[] files = await fileOperations.GetFilesAsync(sourcePath, "*.*", cancellationToken);
+        var files = await fileOperations.GetFilesAsync(sourcePath, "*.*", cancellationToken);
 
         if (files.Length == 0)
         {
@@ -123,23 +123,22 @@ internal sealed class DirectoryBackupService(
                     errors: [Messages.NoFilesInSourceDirectory]));
         }
 
-        string manifestEncryptedAbsolute = Path.Combine(
+        var manifestEncryptedAbsolute = Path.Combine(
             sourcePath,
             BackupConstants.ManifestFileName);
-        string manifestEncryptedRelative = fileOperations.GetRelativePath(
+        var manifestEncryptedRelative = fileOperations.GetRelativePath(
             sourcePath,
             manifestEncryptedAbsolute);
 
-        string[] filesToProcess = files;
+        var filesToProcess = files;
         if (request.Operation == EncryptOperation.Decrypt)
         {
-            filesToProcess = files
+            filesToProcess = [.. files
                 .Where(f =>
                     !string.Equals(
                         fileOperations.GetRelativePath(sourcePath, f),
                         manifestEncryptedRelative,
-                        StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+                        StringComparison.OrdinalIgnoreCase))];
         }
 
         if (request.Operation == EncryptOperation.Encrypt)
@@ -159,10 +158,10 @@ internal sealed class DirectoryBackupService(
             {
                 HashSet<string> uniqueDestinationPaths = new(StringComparer.OrdinalIgnoreCase);
 
-                foreach (string file in filesToProcess)
+                foreach (var file in filesToProcess)
                 {
-                    string relativePath = fileOperations.GetRelativePath(sourcePath, file);
-                    string destinationFilePath = ObfuscateFullPath(
+                    var relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                    var destinationFilePath = ObfuscateFullPath(
                         sourcePath,
                         file,
                         relativePath,
@@ -180,14 +179,14 @@ internal sealed class DirectoryBackupService(
             }
             else
             {
-                foreach (string file in filesToProcess)
+                foreach (var file in filesToProcess)
                 {
-                    string relativePath = fileOperations.GetRelativePath(sourcePath, file);
-                    string destinationRelativePath =
+                    var relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                    var destinationRelativePath =
                         !request.UseEncryption && request.Compression == CompressionMode.None
                             ? relativePath
                             : relativePath + BackupConstants.AppFileExtension;
-                    string destinationFilePath = fileOperations.CombinePath(
+                    var destinationFilePath = fileOperations.CombinePath(
                         destinationPath,
                         destinationRelativePath);
 
@@ -197,14 +196,14 @@ internal sealed class DirectoryBackupService(
         }
         else
         {
-            foreach (string file in filesToProcess)
+            foreach (var file in filesToProcess)
             {
-                string relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                var relativePath = fileOperations.GetRelativePath(sourcePath, file);
                 string destinationFilePath;
 
                 if (
                     manifestMap is not null
-                    && manifestMap.TryGetValue(relativePath, out ManifestFileInfo? fileInfo))
+                    && manifestMap.TryGetValue(relativePath, out var fileInfo))
                 {
                     destinationFilePath = fileOperations.CombinePath(
                         destinationPath,
@@ -221,10 +220,10 @@ internal sealed class DirectoryBackupService(
             }
         }
 
-        int totalFilesToProcess = filesWithDestination.Count;
-        long totalBytes = filesWithDestination.Sum(item => item.FileSize);
+        var totalFilesToProcess = filesWithDestination.Count;
+        var totalBytes = filesWithDestination.Sum(item => item.FileSize);
         long processedBytes = 0;
-        int processedFiles = 0;
+        var processedFiles = 0;
 
         progress?.Report(
             new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
@@ -232,10 +231,10 @@ internal sealed class DirectoryBackupService(
         ConcurrentBag<string> errors = [];
         string? fatalError = null;
 
-        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken);
 
-        int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+        var maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
         ParallelOptions parallelOptions = new()
         {
             MaxDegreeOfParallelism = maxDegreeOfParallelism,
@@ -249,10 +248,10 @@ internal sealed class DirectoryBackupService(
                 parallelOptions,
                 async (fileItem, token) =>
                 {
-                    string file = fileItem.SourceFilePath;
-                    string destinationFilePath = fileItem.DestinationFilePath;
+                    var file = fileItem.SourceFilePath;
+                    var destinationFilePath = fileItem.DestinationFilePath;
 
-                    string? destDir = fileOperations.GetDirectoryName(destinationFilePath);
+                    var destDir = fileOperations.GetDirectoryName(destinationFilePath);
                     if (!string.IsNullOrEmpty(destDir))
                     {
                         await fileOperations.CreateDirectoryAsync(destDir, token);
@@ -264,7 +263,7 @@ internal sealed class DirectoryBackupService(
                         {
                             if (request.Operation == EncryptOperation.Encrypt)
                             {
-                                EncryptionMetadata metadata =
+                                var metadata =
                                     await encryptionService!.EncryptFileAsync(
                                         file,
                                         destinationFilePath,
@@ -273,9 +272,9 @@ internal sealed class DirectoryBackupService(
                                         request.Compression,
                                         token);
 
-                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
 
-                                string destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperations.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
@@ -290,20 +289,20 @@ internal sealed class DirectoryBackupService(
                             }
                             else
                             {
-                                string relativePath = fileItem.OriginalRelativePath;
+                                var relativePath = fileItem.OriginalRelativePath;
 
                                 if (
                                     manifestMap is not null
                                     && manifestMap.TryGetValue(
                                         relativePath,
-                                        out ManifestFileInfo? fileInfo))
+                                        out var fileInfo))
                                 {
                                     EncryptionMetadata metadata = new(
                                         fileInfo.Salt,
                                         fileInfo.Nonce,
                                         request.Compression);
 
-                                    bool ok = await encryptionService!.DecryptFileAsync(
+                                    var ok = await encryptionService!.DecryptFileAsync(
                                         file,
                                         destinationFilePath,
                                         request.Password,
@@ -322,11 +321,11 @@ internal sealed class DirectoryBackupService(
                         {
                             if (request.Operation == EncryptOperation.Encrypt)
                             {
-                                string destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperations.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
-                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
 
                                 manifestEntries.Add(new ManifestEntry(
                                     destRelativePath,
@@ -336,7 +335,7 @@ internal sealed class DirectoryBackupService(
                                     sourceHash));
                             }
 
-                            bool operationResult = await ProcessCompressedFileAsync(
+                            var operationResult = await ProcessCompressedFileAsync(
                                 file,
                                 destinationFilePath,
                                 request,
@@ -408,10 +407,10 @@ internal sealed class DirectoryBackupService(
                             string.Format(Messages.CompressionErrorFormat, file, ex.Message));
                     }
 
-                    long fileSize = fileItem.FileSize;
+                    var fileSize = fileItem.FileSize;
 
-                    long currentProcessedBytes = Interlocked.Add(ref processedBytes, fileSize);
-                    int currentProcessedFiles = Volatile.Read(ref processedFiles);
+                    var currentProcessedBytes = Interlocked.Add(ref processedBytes, fileSize);
+                    var currentProcessedFiles = Volatile.Read(ref processedFiles);
                     progress?.Report(
                         new BackupStatus(
                             currentProcessedFiles,
@@ -464,7 +463,7 @@ internal sealed class DirectoryBackupService(
         }
 
         stopwatch.Stop();
-        bool isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
+        var isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
 
         return errorList.Count > 0 && processedFiles == 0
             ? Result<BackupResult>.Failure(
@@ -516,8 +515,8 @@ internal sealed class DirectoryBackupService(
     {
         const int bufferSize = 81920;
 
-        await using Stream source = fileOperations.OpenReadStream(sourceFile, bufferSize);
-        await using Stream destination = fileOperations.CreateWriteStream(
+        await using var source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using var destination = fileOperations.CreateWriteStream(
             destinationFile,
             bufferSize);
 
@@ -537,7 +536,7 @@ internal sealed class DirectoryBackupService(
             return await CopyFileAsync(sourceFile, destinationFile, cancellationToken);
         }
 
-        ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
+        var strategy = compressionServiceFactory.Create(compression);
 
         await using FileStream source = new(
             sourceFile,
@@ -547,7 +546,7 @@ internal sealed class DirectoryBackupService(
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        await using Stream compressedStream = await strategy.CompressAsync(
+        await using var compressedStream = await strategy.CompressAsync(
             source,
             cancellationToken);
 
@@ -589,7 +588,7 @@ internal sealed class DirectoryBackupService(
                 string.Format(Messages.InvalidCompressedFileFormat, sourceFile));
         }
 
-        int compressionByte = source.ReadByte();
+        var compressionByte = source.ReadByte();
         if (compressionByte < 0)
         {
             throw new InvalidOperationException(
@@ -597,9 +596,9 @@ internal sealed class DirectoryBackupService(
         }
 
         var compression = (CompressionMode)compressionByte;
-        ICompressionStrategy strategy = compressionServiceFactory.Create(compression);
+        var strategy = compressionServiceFactory.Create(compression);
 
-        await using Stream decompressedStream = await strategy.DecompressAsync(
+        await using var decompressedStream = await strategy.DecompressAsync(
             source,
             cancellationToken);
 
@@ -624,22 +623,22 @@ internal sealed class DirectoryBackupService(
         INameObfuscationStrategy obfuscationService,
         ConcurrentDictionary<string, string> directoryCache)
     {
-        string[] segments = relativePath.Split(
+        var segments = relativePath.Split(
             Path.DirectorySeparatorChar,
             Path.AltDirectorySeparatorChar);
 
         List<string> obfuscatedSegments = new(segments.Length);
-        string currentSourcePath = sourcePath;
+        var currentSourcePath = sourcePath;
 
-        for (int i = 0; i < segments.Length; i++)
+        for (var i = 0; i < segments.Length; i++)
         {
-            string segment = segments[i];
-            bool isLastSegment = i == segments.Length - 1;
+            var segment = segments[i];
+            var isLastSegment = i == segments.Length - 1;
 
             if (isLastSegment)
             {
-                string filenameWithExtension = segment + BackupConstants.AppFileExtension;
-                string obfuscatedFilename = obfuscationService.ObfuscateFileName(
+                var filenameWithExtension = segment + BackupConstants.AppFileExtension;
+                var obfuscatedFilename = obfuscationService.ObfuscateFileName(
                     sourceFilePath,
                     filenameWithExtension);
                 obfuscatedSegments.Add(obfuscatedFilename);
@@ -647,11 +646,11 @@ internal sealed class DirectoryBackupService(
             else
             {
                 currentSourcePath = Path.Combine(currentSourcePath, segment);
-                string directoryKey = fileOperations.GetRelativePath(sourcePath, currentSourcePath);
-                string capturedSourcePath = currentSourcePath;
-                string capturedSegment = segment;
+                var directoryKey = fileOperations.GetRelativePath(sourcePath, currentSourcePath);
+                var capturedSourcePath = currentSourcePath;
+                var capturedSegment = segment;
 
-                string obfuscatedDirName = directoryCache.GetOrAdd(
+                var obfuscatedDirName = directoryCache.GetOrAdd(
                     directoryKey,
                     _ => obfuscationService.ObfuscateFileName(capturedSourcePath, capturedSegment));
 
@@ -670,7 +669,7 @@ internal sealed class DirectoryBackupService(
         Stopwatch stopwatch,
         CancellationToken cancellationToken)
     {
-        ManifestData? manifestData = await manifestService.TryReadManifestAsync(
+        var manifestData = await manifestService.TryReadManifestAsync(
             destinationPath,
             [.. encryptionStrategies],
             request.UseEncryption ? request.Password : string.Empty,
@@ -712,7 +711,7 @@ internal sealed class DirectoryBackupService(
             }
         }
 
-        string[] sourceFiles = await fileOperations.GetFilesAsync(
+        var sourceFiles = await fileOperations.GetFilesAsync(
             sourcePath, "*.*", cancellationToken);
 
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
@@ -727,14 +726,16 @@ internal sealed class DirectoryBackupService(
             filesToProcess = [];
         HashSet<string> sourceOriginalPaths = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (string file in sourceFiles)
+        foreach (var file in sourceFiles)
         {
-            string originalRelativePath = fileOperations.GetRelativePath(sourcePath, file);
+            var originalRelativePath = fileOperations.GetRelativePath(sourcePath, file);
             sourceOriginalPaths.Add(originalRelativePath);
 
-            if (existingEntries.TryGetValue(originalRelativePath, out var existing))
+            if (existingEntries.TryGetValue(
+                    originalRelativePath,
+                    out var existing))
             {
-                string currentHash = await fileOperations.ComputeFileHashAsync(file, cancellationToken);
+                var currentHash = await fileOperations.ComputeFileHashAsync(file, cancellationToken);
 
                 if (string.Equals(
                         currentHash, existing.Info.SourceHash, StringComparison.Ordinal))
@@ -748,7 +749,7 @@ internal sealed class DirectoryBackupService(
                 }
                 else
                 {
-                    string destFilePath = fileOperations.CombinePath(
+                    var destFilePath = fileOperations.CombinePath(
                         destinationPath, existing.RelativePath);
                     filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperations.GetFileSize(file)));
                 }
@@ -779,7 +780,7 @@ internal sealed class DirectoryBackupService(
         {
             if (!sourceOriginalPaths.Contains(kvp.Key))
             {
-                string destFilePath = fileOperations.CombinePath(
+                var destFilePath = fileOperations.CombinePath(
                     destinationPath, kvp.Value.RelativePath);
                 try
                 {
@@ -795,10 +796,10 @@ internal sealed class DirectoryBackupService(
             }
         }
 
-        int totalFilesToProcess = filesToProcess.Count;
-        long totalBytes = filesToProcess.Sum(item => item.FileSize);
+        var totalFilesToProcess = filesToProcess.Count;
+        var totalBytes = filesToProcess.Sum(item => item.FileSize);
         long processedBytes = 0;
-        int processedFiles = 0;
+        var processedFiles = 0;
 
         progress?.Report(
             new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
@@ -808,10 +809,10 @@ internal sealed class DirectoryBackupService(
 
         if (totalFilesToProcess > 0)
         {
-            using CancellationTokenSource linkedCts =
+            using var linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            int maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+            var maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
             ParallelOptions parallelOptions = new()
             {
                 MaxDegreeOfParallelism = maxDegreeOfParallelism,
@@ -825,10 +826,10 @@ internal sealed class DirectoryBackupService(
                     parallelOptions,
                     async (fileItem, token) =>
                     {
-                        string file = fileItem.SourceFilePath;
-                        string destinationFilePath = fileItem.DestinationFilePath;
+                        var file = fileItem.SourceFilePath;
+                        var destinationFilePath = fileItem.DestinationFilePath;
 
-                        string? destDir = fileOperations.GetDirectoryName(destinationFilePath);
+                        var destDir = fileOperations.GetDirectoryName(destinationFilePath);
                         if (!string.IsNullOrEmpty(destDir))
                         {
                             await fileOperations.CreateDirectoryAsync(destDir, token);
@@ -838,7 +839,7 @@ internal sealed class DirectoryBackupService(
                         {
                             if (request.UseEncryption)
                             {
-                                EncryptionMetadata metadata =
+                                var metadata =
                                     await encryptionService!.EncryptFileAsync(
                                         file,
                                         destinationFilePath,
@@ -847,9 +848,9 @@ internal sealed class DirectoryBackupService(
                                         request.Compression,
                                         token);
 
-                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
 
-                                string destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperations.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
@@ -862,11 +863,11 @@ internal sealed class DirectoryBackupService(
                             }
                             else
                             {
-                                string destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperations.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
-                                string sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
 
                                 updatedManifestEntries.Add(new ManifestEntry(
                                     destRelativePath,
@@ -952,11 +953,11 @@ internal sealed class DirectoryBackupService(
                                     Messages.CompressionErrorFormat, file, ex.Message));
                         }
 
-                        long fileSize = fileItem.FileSize;
+                        var fileSize = fileItem.FileSize;
 
-                        long currentProcessedBytes =
+                        var currentProcessedBytes =
                             Interlocked.Add(ref processedBytes, fileSize);
-                        int currentProcessedFiles = Volatile.Read(ref processedFiles);
+                        var currentProcessedFiles = Volatile.Read(ref processedFiles);
                         progress?.Report(
                             new BackupStatus(
                                 currentProcessedFiles,
@@ -1007,7 +1008,7 @@ internal sealed class DirectoryBackupService(
         }
 
         stopwatch.Stop();
-        bool isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
+        var isSuccess = errorList.Count == 0 && processedFiles == totalFilesToProcess;
 
         return errorList.Count > 0 && processedFiles == 0 && updatedManifestEntries.IsEmpty
             ? Result<BackupResult>.Failure(
@@ -1028,17 +1029,17 @@ internal sealed class DirectoryBackupService(
     {
         foreach (var kvp in fileMap)
         {
-            string relPath = kvp.Key;
-            string origPath = kvp.Value.OriginalRelativePath;
+            var relPath = kvp.Key;
+            var origPath = kvp.Value.OriginalRelativePath;
 
-            string[] origSegments = origPath.Split(
+            var origSegments = origPath.Split(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            string[] relSegments = relPath.Split(
+            var relSegments = relPath.Split(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-            for (int i = 0; i < origSegments.Length - 1 && i < relSegments.Length - 1; i++)
+            for (var i = 0; i < origSegments.Length - 1 && i < relSegments.Length - 1; i++)
             {
-                string origDirKey = string.Join(
+                var origDirKey = string.Join(
                     Path.DirectorySeparatorChar.ToString(),
                     origSegments.Take(i + 1));
                 cache.TryAdd(origDirKey, relSegments[i]);

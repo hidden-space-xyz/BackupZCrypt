@@ -69,7 +69,7 @@ internal sealed class BackupRequestTests
             EncryptOperation.Encrypt,
             NameObfuscationMode.None);
 
-        BackupRequest modified = original with { Operation = EncryptOperation.Decrypt };
+        var modified = original with { Operation = EncryptOperation.Decrypt };
 
         using (Assert.EnterMultipleScope())
         {

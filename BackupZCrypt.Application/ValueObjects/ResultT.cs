@@ -22,5 +22,5 @@ public class Result<T> : Result
 
     public static new Result<T> Failure(params string[] errors) => new(default!, false, errors);
 
-    public static Result<T> Success(T value) => new(value, true, Array.Empty<string>());
+    public static Result<T> Success(T value) => new(value, true, []);
 }

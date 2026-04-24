@@ -16,8 +16,8 @@ internal sealed class GuidObfuscationStrategy : INameObfuscationStrategy
 
     public string ObfuscateFileName(string sourceFilePath, string originalFileName)
     {
-        string extension = Path.GetExtension(originalFileName);
-        string guidName = Guid.NewGuid().ToString();
+        var extension = Path.GetExtension(originalFileName);
+        var guidName = Guid.NewGuid().ToString();
         return guidName + extension;
     }
 }

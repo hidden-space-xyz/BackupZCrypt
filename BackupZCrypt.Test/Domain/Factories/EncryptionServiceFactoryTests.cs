@@ -23,7 +23,7 @@ internal sealed class EncryptionServiceFactoryTests
     [Test]
     public void Create_RegisteredAlgorithm_ReturnsStrategy()
     {
-        IEncryptionAlgorithmStrategy result = this.factory.Create(EncryptionAlgorithm.Aes);
+        var result = this.factory.Create(EncryptionAlgorithm.Aes);
 
         Assert.That(result, Is.SameAs(this.aesStrategy));
     }

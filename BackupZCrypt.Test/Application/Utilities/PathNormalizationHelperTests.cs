@@ -8,9 +8,9 @@ internal sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_ValidPath_ReturnsNormalized()
     {
-        string? result = PathNormalizationHelper.TryNormalize(
+        var result = PathNormalizationHelper.TryNormalize(
             @"C:\temp\file.txt",
-            out string? error);
+            out var error);
 
         using (Assert.EnterMultipleScope())
         {
@@ -23,7 +23,7 @@ internal sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_EmptyPath_ReturnsEmpty()
     {
-        string? result = PathNormalizationHelper.TryNormalize(string.Empty, out string? error);
+        var result = PathNormalizationHelper.TryNormalize(string.Empty, out var error);
 
         using (Assert.EnterMultipleScope())
         {
@@ -35,7 +35,7 @@ internal sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_WhitespacePath_ReturnsEmpty()
     {
-        string? result = PathNormalizationHelper.TryNormalize("   ", out string? error);
+        var result = PathNormalizationHelper.TryNormalize("   ", out var error);
 
         using (Assert.EnterMultipleScope())
         {
@@ -47,9 +47,9 @@ internal sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_InvalidPath_ReturnsNullAndError()
     {
-        string? result = PathNormalizationHelper.TryNormalize(
+        var result = PathNormalizationHelper.TryNormalize(
             new string('\0', 5),
-            out string? error);
+            out var error);
 
         using (Assert.EnterMultipleScope())
         {

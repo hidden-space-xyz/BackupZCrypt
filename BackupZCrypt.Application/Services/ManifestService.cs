@@ -26,13 +26,13 @@ internal sealed class ManifestService(
     {
         try
         {
-            string encryptedManifestPath = Path.Combine(sourceRoot, ManifestFileName);
+            var encryptedManifestPath = Path.Combine(sourceRoot, ManifestFileName);
             if (!fileOperationsService.FileExists(encryptedManifestPath))
             {
                 return null;
             }
 
-            byte[] rawFile = await fileOperationsService.ReadAllBytesAsync(
+            var rawFile = await fileOperationsService.ReadAllBytesAsync(
                 encryptedManifestPath,
                 cancellationToken);
             if (rawFile.Length < PreambleSize)
@@ -43,7 +43,7 @@ internal sealed class ManifestService(
             var algorithm = (EncryptionAlgorithm)rawFile[0];
             var kdf = (KeyDerivationAlgorithm)rawFile[1];
 
-            IEncryptionAlgorithmStrategy? strategy = encryptionStrategies
+            var strategy = encryptionStrategies
                 .FirstOrDefault(s => s.Id == algorithm);
 
             if (strategy is not null)
@@ -87,15 +87,15 @@ internal sealed class ManifestService(
                 header.Compression,
                 [.. entries]);
 
-            byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
-            string encryptedManifestPath = Path.Combine(destinationRoot, ManifestFileName);
-            byte[] encryptedManifestBytes = await encryptionService.CreateEncryptedDataAsync(
+            var manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
+            var encryptedManifestPath = Path.Combine(destinationRoot, ManifestFileName);
+            var encryptedManifestBytes = await encryptionService.CreateEncryptedDataAsync(
                 manifestBytes,
                 request.Password,
                 request.KeyDerivationAlgorithm,
                 cancellationToken: cancellationToken);
 
-            byte[] manifestPayload = new byte[PreambleSize + encryptedManifestBytes.Length];
+            var manifestPayload = new byte[PreambleSize + encryptedManifestBytes.Length];
             manifestPayload[0] = (byte)header.EncryptionAlgorithm;
             manifestPayload[1] = (byte)header.KeyDerivationAlgorithm;
             encryptedManifestBytes.CopyTo(manifestPayload, PreambleSize);
@@ -134,8 +134,8 @@ internal sealed class ManifestService(
                 header.Compression,
                 [.. entries]);
 
-            byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
-            string manifestPath = Path.Combine(destinationRoot, ManifestFileName);
+            var manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
+            var manifestPath = Path.Combine(destinationRoot, ManifestFileName);
             await fileOperationsService.WriteAllBytesAsync(
                 manifestPath, manifestBytes, cancellationToken);
         }
@@ -156,13 +156,13 @@ internal sealed class ManifestService(
     {
         try
         {
-            byte[] plaintext = await encryptionService.ReadEncryptedDataAsync(
+            var plaintext = await encryptionService.ReadEncryptedDataAsync(
                 encryptedContent,
                 password,
                 kdf,
                 cancellationToken);
 
-            ManifestDocument? doc = JsonSerializer.Deserialize<ManifestDocument>(plaintext);
+            var doc = JsonSerializer.Deserialize<ManifestDocument>(plaintext);
 
             if (doc is null)
             {
@@ -176,10 +176,10 @@ internal sealed class ManifestService(
                 doc.Compression);
 
             Dictionary<string, ManifestFileInfo> map = new(StringComparer.OrdinalIgnoreCase);
-            foreach (ManifestEntry e in doc.Entries)
+            foreach (var e in doc.Entries)
             {
-                byte[] salt = Convert.FromBase64String(e.Salt);
-                byte[] nonce = Convert.FromBase64String(e.Nonce);
+                var salt = Convert.FromBase64String(e.Salt);
+                var nonce = Convert.FromBase64String(e.Nonce);
                 map[e.RelativePath] = new ManifestFileInfo(
                     e.OriginalRelativePath,
                     salt,
@@ -199,7 +199,7 @@ internal sealed class ManifestService(
     {
         try
         {
-            ManifestDocument? doc = JsonSerializer.Deserialize<ManifestDocument>(rawFile);
+            var doc = JsonSerializer.Deserialize<ManifestDocument>(rawFile);
             if (doc is null)
             {
                 return null;
@@ -212,12 +212,12 @@ internal sealed class ManifestService(
                 doc.Compression);
 
             Dictionary<string, ManifestFileInfo> map = new(StringComparer.OrdinalIgnoreCase);
-            foreach (ManifestEntry e in doc.Entries)
+            foreach (var e in doc.Entries)
             {
-                byte[] salt = string.IsNullOrEmpty(e.Salt)
+                var salt = string.IsNullOrEmpty(e.Salt)
                     ? []
                     : Convert.FromBase64String(e.Salt);
-                byte[] nonce = string.IsNullOrEmpty(e.Nonce)
+                var nonce = string.IsNullOrEmpty(e.Nonce)
                     ? []
                     : Convert.FromBase64String(e.Nonce);
                 map[e.RelativePath] = new ManifestFileInfo(

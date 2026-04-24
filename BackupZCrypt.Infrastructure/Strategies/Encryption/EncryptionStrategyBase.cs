@@ -33,24 +33,24 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            await using Stream sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
+            await using var sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
 
             encryptionFileService.EnsureDirectoryExists(destinationFilePath);
             encryptionFileService.ValidateDiskSpace(sourceFilePath, destinationFilePath);
 
-            using EncryptionSession session = encryptionSessionFactory.CreateEncryptionSession(
+            using var session = encryptionSessionFactory.CreateEncryptionSession(
                 password,
                 keyDerivationAlgorithm,
                 compression);
 
-            await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+            await using var destinationFile = encryptionFileService.CreateWriteStream(
                 destinationFilePath);
 
             if (compression != CompressionMode.None)
             {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                var compressionStrategy = compressionServiceFactory.Create(
                     compression);
-                await using Stream compressedSource = await compressionStrategy.CompressAsync(
+                await using var compressedSource = await compressionStrategy.CompressAsync(
                     sourceFile,
                     cancellationToken);
                 await EncryptStreamAsync(
@@ -87,20 +87,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw new EncryptionInsufficientSpaceException(destinationFilePath);
+                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationEncryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw new EncryptionAccessDeniedException(destinationFilePath, ex);
+            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw new EncryptionCipherException(Messages.OperationEncryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationEncryption, ex);
         }
     }
 
@@ -114,16 +114,16 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            await using Stream sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
+            await using var sourceFile = encryptionFileService.OpenSourceFile(sourceFilePath);
 
             encryptionFileService.EnsureDirectoryExists(destinationFilePath);
 
-            using EncryptionSession session = encryptionSessionFactory.CreateDecryptionSession(
+            using var session = encryptionSessionFactory.CreateDecryptionSession(
                 password,
                 keyDerivationAlgorithm,
                 metadata);
 
-            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await using var decryptedBuffer = encryptionFileService.CreateTempStream();
             await DecryptStreamAsync(
                 sourceFile,
                 decryptedBuffer,
@@ -135,13 +135,13 @@ internal abstract class EncryptionStrategyBase(
 
             if (session.Compression != CompressionMode.None)
             {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                var compressionStrategy = compressionServiceFactory.Create(
                     session.Compression);
-                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                await using var decompressedStream = await compressionStrategy.DecompressAsync(
                     decryptedBuffer,
                     cancellationToken);
 
-                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                await using var destinationFile = encryptionFileService.CreateWriteStream(
                     destinationFilePath);
                 await decompressedStream.CopyToAsync(
                     destinationFile,
@@ -150,7 +150,7 @@ internal abstract class EncryptionStrategyBase(
             }
             else
             {
-                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                await using var destinationFile = encryptionFileService.CreateWriteStream(
                     destinationFilePath);
                 await decryptedBuffer.CopyToAsync(
                     destinationFile,
@@ -177,7 +177,7 @@ internal abstract class EncryptionStrategyBase(
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionCorruptedFileException(sourceFilePath);
+            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
         }
         catch (IOException ex)
         {
@@ -185,20 +185,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw new EncryptionInsufficientSpaceException(destinationFilePath);
+                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw new EncryptionAccessDeniedException(destinationFilePath, ex);
+            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 
@@ -211,20 +211,20 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            await using Stream sourceFile = encryptionFileService.OpenSourceFile(
+            await using var sourceFile = encryptionFileService.OpenSourceFile(
                 sourceFilePath,
                 validateHeader: true);
 
             encryptionFileService.EnsureDirectoryExists(destinationFilePath);
 
-            using EncryptionSession session =
+            using var session =
                 await encryptionSessionFactory.CreateDecryptionSessionAsync(
                     sourceFile,
                     password,
                     keyDerivationAlgorithm,
                     cancellationToken);
 
-            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await using var decryptedBuffer = encryptionFileService.CreateTempStream();
             await DecryptStreamAsync(
                 sourceFile,
                 decryptedBuffer,
@@ -236,13 +236,13 @@ internal abstract class EncryptionStrategyBase(
 
             if (session.Compression != CompressionMode.None)
             {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                var compressionStrategy = compressionServiceFactory.Create(
                     session.Compression);
-                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                await using var decompressedStream = await compressionStrategy.DecompressAsync(
                     decryptedBuffer,
                     cancellationToken);
 
-                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                await using var destinationFile = encryptionFileService.CreateWriteStream(
                     destinationFilePath);
                 await decompressedStream.CopyToAsync(
                     destinationFile,
@@ -251,7 +251,7 @@ internal abstract class EncryptionStrategyBase(
             }
             else
             {
-                await using Stream destinationFile = encryptionFileService.CreateWriteStream(
+                await using var destinationFile = encryptionFileService.CreateWriteStream(
                     destinationFilePath);
                 await decryptedBuffer.CopyToAsync(
                     destinationFile,
@@ -278,7 +278,7 @@ internal abstract class EncryptionStrategyBase(
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionCorruptedFileException(sourceFilePath);
+            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
         }
         catch (IOException ex)
         {
@@ -286,20 +286,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw new EncryptionInsufficientSpaceException(destinationFilePath);
+                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw new EncryptionAccessDeniedException(destinationFilePath, ex);
+            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 
@@ -312,7 +312,7 @@ internal abstract class EncryptionStrategyBase(
     {
         ArgumentNullException.ThrowIfNull(plaintextData);
 
-        using EncryptionSession session = encryptionSessionFactory.CreateEncryptionSession(
+        using var session = encryptionSessionFactory.CreateEncryptionSession(
             password,
             keyDerivationAlgorithm,
             compression);
@@ -324,9 +324,9 @@ internal abstract class EncryptionStrategyBase(
 
         if (compression != CompressionMode.None)
         {
-            ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+            var compressionStrategy = compressionServiceFactory.Create(
                 compression);
-            await using Stream compressedSource = await compressionStrategy.CompressAsync(
+            await using var compressedSource = await compressionStrategy.CompressAsync(
                 source,
                 cancellationToken);
             await EncryptStreamAsync(
@@ -359,16 +359,16 @@ internal abstract class EncryptionStrategyBase(
     {
         try
         {
-            await using MemoryStream source = CreateReadOnlyMemoryStream(encryptedData);
+            await using var source = CreateReadOnlyMemoryStream(encryptedData);
 
-            using EncryptionSession session =
+            using var session =
                 await encryptionSessionFactory.CreateDecryptionSessionAsync(
                     source,
                     password,
                     keyDerivationAlgorithm,
                     cancellationToken);
 
-            await using Stream decryptedBuffer = encryptionFileService.CreateTempStream();
+            await using var decryptedBuffer = encryptionFileService.CreateTempStream();
             await DecryptStreamAsync(
                 source,
                 decryptedBuffer,
@@ -382,9 +382,9 @@ internal abstract class EncryptionStrategyBase(
 
             if (session.Compression != CompressionMode.None)
             {
-                ICompressionStrategy compressionStrategy = compressionServiceFactory.Create(
+                var compressionStrategy = compressionServiceFactory.Create(
                     session.Compression);
-                await using Stream decompressedStream = await compressionStrategy.DecompressAsync(
+                await using var decompressedStream = await compressionStrategy.DecompressAsync(
                     decryptedBuffer,
                     cancellationToken);
                 await decompressedStream.CopyToAsync(resultBuffer, BufferSize, cancellationToken);
@@ -406,7 +406,7 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (IOException ex)
         {
-            throw new EncryptionCipherException(Messages.OperationDecryption, ex);
+            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 
@@ -441,8 +441,8 @@ internal abstract class EncryptionStrategyBase(
         IAeadCipher cipher,
         CancellationToken cancellationToken)
     {
-        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(EncryptionConstants.BufferSize);
-        byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(
+        var inputBuffer = ArrayPool<byte>.Shared.Rent(EncryptionConstants.BufferSize);
+        var outputBuffer = ArrayPool<byte>.Shared.Rent(
             EncryptionConstants.BufferSize + (EncryptionConstants.MacSize / 8));
 
         try
@@ -450,7 +450,7 @@ internal abstract class EncryptionStrategyBase(
             int bytesRead;
             while ((bytesRead = await sourceStream.ReadAsync(inputBuffer, cancellationToken)) > 0)
             {
-                int processed = cipher.ProcessBytes(inputBuffer, 0, bytesRead, outputBuffer, 0);
+                var processed = cipher.ProcessBytes(inputBuffer, 0, bytesRead, outputBuffer, 0);
                 if (processed > 0)
                 {
                     await destinationStream.WriteAsync(
@@ -459,7 +459,7 @@ internal abstract class EncryptionStrategyBase(
                 }
             }
 
-            int finalBytes = cipher.DoFinal(outputBuffer, 0);
+            var finalBytes = cipher.DoFinal(outputBuffer, 0);
             if (finalBytes > 0)
             {
                 await destinationStream.WriteAsync(
@@ -480,20 +480,20 @@ internal abstract class EncryptionStrategyBase(
     {
         if (sourceStream.CanSeek)
         {
-            long remainingLength = sourceStream.Length - sourceStream.Position;
+            var remainingLength = sourceStream.Length - sourceStream.Position;
             if (remainingLength == 0)
             {
-                return [];
+                return (byte[])[];
             }
 
             if (remainingLength > 0 && remainingLength <= int.MaxValue)
             {
-                byte[] dataBuffer = new byte[(int)remainingLength];
-                int totalRead = 0;
+                var dataBuffer = new byte[(int)remainingLength];
+                var totalRead = 0;
 
                 while (totalRead < dataBuffer.Length)
                 {
-                    int bytesRead = await sourceStream.ReadAsync(
+                    var bytesRead = await sourceStream.ReadAsync(
                         dataBuffer.AsMemory(totalRead),
                         cancellationToken);
 
@@ -510,21 +510,21 @@ internal abstract class EncryptionStrategyBase(
                     return dataBuffer;
                 }
 
-                byte[] trimmedBuffer = new byte[totalRead];
+                var trimmedBuffer = new byte[totalRead];
                 dataBuffer.AsSpan(0, totalRead).CopyTo(trimmedBuffer);
                 CryptographicOperations.ZeroMemory(dataBuffer);
                 return trimmedBuffer;
             }
         }
 
-        using MemoryStream bufferStream = new();
+        await using MemoryStream bufferStream = new();
         await sourceStream.CopyToAsync(bufferStream, BufferSize, cancellationToken);
         return bufferStream.ToArray();
     }
 
     private static MemoryStream CreateReadOnlyMemoryStream(ReadOnlyMemory<byte> data)
     {
-        if (MemoryMarshal.TryGetArray(data, out ArraySegment<byte> segment)
+        if (MemoryMarshal.TryGetArray(data, out var segment)
             && segment.Array is not null)
         {
             return new MemoryStream(

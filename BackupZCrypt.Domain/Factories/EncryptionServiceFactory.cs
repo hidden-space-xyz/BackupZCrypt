@@ -15,7 +15,7 @@ internal sealed class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmS
 
     public IEncryptionAlgorithmStrategy Create(EncryptionAlgorithm algorithm)
     {
-        return !this.strategies.TryGetValue(algorithm, out IEncryptionAlgorithmStrategy? strategy)
+        return !this.strategies.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
                 string.Format(Messages.EncryptionAlgorithmNotRegisteredFormat, algorithm))

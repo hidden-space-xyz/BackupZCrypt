@@ -5,6 +5,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal;
 using BackupZCrypt.Terminal.Commands;
 using BackupZCrypt.Terminal.Services;
+using BackupZCrypt.Terminal.Services.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,13 +17,13 @@ Console.InputEncoding = Encoding.UTF8;
 ServiceCollection services = [];
 services.AddDomainServices();
 services.AddApplicationServices();
-ServiceProvider provider = services.BuildServiceProvider();
+var provider = services.BuildServiceProvider();
 
-IBackupOrchestrator orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
-IBackupCreationSettingsService backupCreationSettingsService = provider.GetRequiredService<IBackupCreationSettingsService>();
-IRecentPathSettingsService recentPathSettingsService = provider.GetRequiredService<IRecentPathSettingsService>();
-IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
-IManifestService manifestService = provider.GetRequiredService<IManifestService>();
+var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+var backupCreationSettingsService = provider.GetRequiredService<IBackupCreationSettingsService>();
+var recentPathSettingsService = provider.GetRequiredService<IRecentPathSettingsService>();
+var passwordService = provider.GetRequiredService<IPasswordService>();
+var manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
 [
     .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.Id),
@@ -40,7 +41,7 @@ List<ICompressionStrategy> compressionStrategies =
     .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
 ];
 
-PathPromptService pathPromptService = new(recentPathSettingsService);
+IPathPromptService pathPromptService = new PathPromptService(recentPathSettingsService);
 
 BackupCommand backupCommand = new(
     orchestrator,

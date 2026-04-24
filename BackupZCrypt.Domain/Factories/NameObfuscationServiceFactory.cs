@@ -13,7 +13,7 @@ internal sealed class NameObfuscationServiceFactory(IEnumerable<INameObfuscation
 
     public INameObfuscationStrategy Create(NameObfuscationMode obfuscationMode)
     {
-        return !this.strategies.TryGetValue(obfuscationMode, out INameObfuscationStrategy? strategy)
+        return !this.strategies.TryGetValue(obfuscationMode, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(obfuscationMode),
                 string.Format(Messages.NameObfuscationModeNotRegisteredFormat, obfuscationMode))

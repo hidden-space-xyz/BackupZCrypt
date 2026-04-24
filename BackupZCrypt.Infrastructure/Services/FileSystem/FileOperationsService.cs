@@ -103,7 +103,7 @@ internal sealed class FileOperationsService : IFileOperationsService
 
     public Stream CreateTempStream(int bufferSize)
     {
-        string tempFilePath = Path.GetTempFileName();
+        var tempFilePath = Path.GetTempFileName();
         return new FileStream(
             tempFilePath,
             new FileStreamOptions
@@ -130,7 +130,7 @@ internal sealed class FileOperationsService : IFileOperationsService
             81920,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken);
+        var hash = await SHA256.HashDataAsync(stream, cancellationToken);
         return Convert.ToBase64String(hash);
     }
 

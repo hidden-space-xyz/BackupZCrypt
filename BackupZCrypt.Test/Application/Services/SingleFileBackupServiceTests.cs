@@ -30,9 +30,9 @@ internal sealed class SingleFileBackupServiceTests
     [Test]
     public async Task ProcessAsync_Decrypt_ManifestFile_IgnoresAndReturnsSuccess()
     {
-        string manifestPath = @$"C:\source\{BackupConstants.ManifestFileName}";
+        var manifestPath = @$"C:\source\{BackupConstants.ManifestFileName}";
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             manifestPath,
             @"C:\dest\manifest",
             CreateRequest(EncryptOperation.Decrypt),
@@ -80,7 +80,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(true);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source\file.bzc",
             @"C:\dest\file.txt",
             CreateRequest(EncryptOperation.Decrypt),
@@ -142,7 +142,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
             CreateRequest(),
@@ -177,7 +177,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .ThrowsAsync(new EncryptionInvalidPasswordException());
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.bzc",
             CreateRequest(),
@@ -240,7 +240,7 @@ internal sealed class SingleFileBackupServiceTests
             CompressionMode.None,
             UseEncryption: false);
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source\file.txt",
             @"C:\dest\file.txt",
             request,
@@ -302,7 +302,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<CancellationToken>())
             .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
 
-        Result<BackupResult> result = await service.ProcessAsync(
+        var result = await service.ProcessAsync(
             @"C:\source\file.bzc",
             @"C:\dest\file.bzc",
             CreateRequest(EncryptOperation.Update),
@@ -328,7 +328,7 @@ internal sealed class SingleFileBackupServiceTests
 
         this.progress = Substitute.For<IProgress<BackupStatus>>();
 
-        ICompressionServiceFactory compressionFactory = Substitute.For<ICompressionServiceFactory>();
+        var compressionFactory = Substitute.For<ICompressionServiceFactory>();
 
         this.service = new SingleFileBackupService(
             this.encryptionFactory,

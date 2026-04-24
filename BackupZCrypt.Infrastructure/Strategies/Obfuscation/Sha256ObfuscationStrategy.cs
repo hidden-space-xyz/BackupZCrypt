@@ -18,7 +18,7 @@ internal sealed class Sha256ObfuscationStrategy : INameObfuscationStrategy
 
     public string ObfuscateFileName(string sourceFilePath, string originalFileName)
     {
-        string extension = Path.GetExtension(originalFileName);
+        var extension = Path.GetExtension(originalFileName);
 
         string hashName;
         if (File.Exists(sourceFilePath))
@@ -27,7 +27,7 @@ internal sealed class Sha256ObfuscationStrategy : INameObfuscationStrategy
         }
         else
         {
-            string basis = string.IsNullOrEmpty(sourceFilePath) ? originalFileName : sourceFilePath;
+            var basis = string.IsNullOrEmpty(sourceFilePath) ? originalFileName : sourceFilePath;
             hashName = ComputeStringHash(basis);
         }
 
@@ -36,22 +36,22 @@ internal sealed class Sha256ObfuscationStrategy : INameObfuscationStrategy
 
     private static string ComputeFileHash(string filePath)
     {
-        using FileStream stream = File.OpenRead(filePath);
-        byte[] hash = SHA256.HashData(stream);
+        using var stream = File.OpenRead(filePath);
+        var hash = SHA256.HashData(stream);
         return ToHex(hash);
     }
 
     private static string ComputeStringHash(string input)
     {
-        byte[] data = Encoding.UTF8.GetBytes(input);
-        byte[] hash = SHA256.HashData(data);
+        var data = Encoding.UTF8.GetBytes(input);
+        var hash = SHA256.HashData(data);
         return ToHex(hash);
     }
 
     private static string ToHex(byte[] bytes)
     {
         StringBuilder sb = new(bytes.Length * 2);
-        foreach (byte b in bytes)
+        foreach (var b in bytes)
         {
             sb.Append(b.ToString("x2"));
         }

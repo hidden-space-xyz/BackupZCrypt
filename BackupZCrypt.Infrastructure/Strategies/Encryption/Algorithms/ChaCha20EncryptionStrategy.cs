@@ -33,9 +33,9 @@ internal sealed class ChaCha20EncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        byte[] plaintext = await ReadAllBytesAsync(sourceStream, cancellationToken);
-        byte[] ciphertext = new byte[plaintext.Length];
-        byte[] tag = new byte[MacSizeBytes];
+        var plaintext = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        var ciphertext = new byte[plaintext.Length];
+        var tag = new byte[MacSizeBytes];
 
         try
         {
@@ -66,14 +66,14 @@ internal sealed class ChaCha20EncryptionStrategy(
         byte[] associatedData,
         CancellationToken cancellationToken)
     {
-        byte[] encryptedData = await ReadAllBytesAsync(sourceStream, cancellationToken);
+        var encryptedData = await ReadAllBytesAsync(sourceStream, cancellationToken);
         if (encryptedData.Length < MacSizeBytes)
         {
             throw new CryptographicException();
         }
 
-        byte[] plaintext = new byte[encryptedData.Length - MacSizeBytes];
-        byte[] tag = new byte[MacSizeBytes];
+        var plaintext = new byte[encryptedData.Length - MacSizeBytes];
+        var tag = new byte[MacSizeBytes];
 
         try
         {

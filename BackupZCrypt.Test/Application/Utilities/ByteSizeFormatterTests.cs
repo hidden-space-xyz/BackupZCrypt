@@ -14,7 +14,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Bytes_EndsWith_B()
     {
-        string result = ByteSizeFormatter.Format(512);
+        var result = ByteSizeFormatter.Format(512);
 
         Assert.That(result, Does.EndWith(" B"));
         Assert.That(result, Does.Contain("512"));
@@ -23,7 +23,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Kilobytes_EndsWith_KB()
     {
-        string result = ByteSizeFormatter.Format(1024);
+        var result = ByteSizeFormatter.Format(1024);
 
         Assert.That(result, Does.EndWith(" KB"));
     }
@@ -31,7 +31,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Megabytes_EndsWith_MB()
     {
-        string result = ByteSizeFormatter.Format(1024 * 1024);
+        var result = ByteSizeFormatter.Format(1024 * 1024);
 
         Assert.That(result, Does.EndWith(" MB"));
     }
@@ -39,7 +39,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Gigabytes_EndsWith_GB()
     {
-        string result = ByteSizeFormatter.Format(1024L * 1024 * 1024);
+        var result = ByteSizeFormatter.Format(1024L * 1024 * 1024);
 
         Assert.That(result, Does.EndWith(" GB"));
     }
@@ -47,7 +47,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Terabytes_EndsWith_TB()
     {
-        string result = ByteSizeFormatter.Format(1024L * 1024 * 1024 * 1024);
+        var result = ByteSizeFormatter.Format(1024L * 1024 * 1024 * 1024);
 
         Assert.That(result, Does.EndWith(" TB"));
     }
@@ -55,7 +55,7 @@ internal sealed class ByteSizeFormatterTests
     [Test]
     public void Format_FractionalKilobytes_EndsWith_KB()
     {
-        string result = ByteSizeFormatter.Format(1536);
+        var result = ByteSizeFormatter.Format(1536);
 
         Assert.That(result, Does.EndWith(" KB"));
     }
