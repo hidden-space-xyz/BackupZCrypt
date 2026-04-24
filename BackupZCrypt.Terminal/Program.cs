@@ -18,6 +18,7 @@ services.AddApplicationServices();
 ServiceProvider provider = services.BuildServiceProvider();
 
 IBackupOrchestrator orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+IBackupCreationSettingsService backupCreationSettingsService = provider.GetRequiredService<IBackupCreationSettingsService>();
 IPasswordService passwordService = provider.GetRequiredService<IPasswordService>();
 IManifestService manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
@@ -39,8 +40,16 @@ List<ICompressionStrategy> compressionStrategies =
 
 BackupCommand backupCommand = new(
     orchestrator,
+    backupCreationSettingsService,
     passwordService,
     manifestService,
+    encryptionStrategies,
+    keyDerivationStrategies,
+    nameObfuscationStrategies,
+    compressionStrategies);
+
+BackupSettingsCommand backupSettingsCommand = new(
+    backupCreationSettingsService,
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
@@ -52,6 +61,6 @@ AlgorithmInfoCommand algorithmInfoCommand = new(
     nameObfuscationStrategies,
     compressionStrategies);
 
-TerminalApplication app = new(backupCommand, algorithmInfoCommand);
+TerminalApplication app = new(backupCommand, backupSettingsCommand, algorithmInfoCommand);
 
 await app.RunAsync();

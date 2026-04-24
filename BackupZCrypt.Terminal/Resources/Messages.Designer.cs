@@ -79,6 +79,114 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Backup Settings.
+        /// </summary>
+        internal static string BackupSettings {
+            get {
+                return ResourceManager.GetString("BackupSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Choose a setting to change:.
+        /// </summary>
+        internal static string BackupSettingsActionPrompt {
+            get {
+                return ResourceManager.GetString("BackupSettingsActionPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a ⬅ Back to Main Menu.
+        /// </summary>
+        internal static string BackupSettingsBack {
+            get {
+                return ResourceManager.GetString("BackupSettingsBack", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Compression.
+        /// </summary>
+        internal static string BackupSettingsCompressionOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsCompressionOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Encryption Algorithm.
+        /// </summary>
+        internal static string BackupSettingsEncryptionAlgorithmOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsEncryptionAlgorithmOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Encryption Mode.
+        /// </summary>
+        internal static string BackupSettingsEncryptionOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsEncryptionOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Key Derivation.
+        /// </summary>
+        internal static string BackupSettingsKeyDerivationOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsKeyDerivationOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Name Obfuscation.
+        /// </summary>
+        internal static string BackupSettingsNameObfuscationOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsNameObfuscationOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Changes are saved immediately to a JSON file in the system temporary directory..
+        /// </summary>
+        internal static string BackupSettingsPersistenceNotice {
+            get {
+                return ResourceManager.GetString("BackupSettingsPersistenceNotice", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Backup settings were reset to secure defaults..
+        /// </summary>
+        internal static string BackupSettingsReset {
+            get {
+                return ResourceManager.GetString("BackupSettingsReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Reset to Defaults.
+        /// </summary>
+        internal static string BackupSettingsResetOption {
+            get {
+                return ResourceManager.GetString("BackupSettingsResetOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Backup settings saved..
+        /// </summary>
+        internal static string BackupSettingsSaved {
+            get {
+                return ResourceManager.GetString("BackupSettingsSaved", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a A simple military-grade file backup tool.
         /// </summary>
         internal static string BannerSubtitle {
@@ -277,6 +385,15 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Encryption enabled.
+        /// </summary>
+        internal static string EncryptionEnabledLabel {
+            get {
+                return ResourceManager.GetString("EncryptionEnabledLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Encryption.
         /// </summary>
         internal static string EncryptionLabel {
@@ -403,6 +520,15 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a ⚙️ Backup Settings.
+        /// </summary>
+        internal static string MenuBackupSettings {
+            get {
+                return ResourceManager.GetString("MenuBackupSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a 💾 Create Backup.
         /// </summary>
         internal static string MenuCreateBackup {
@@ -426,6 +552,15 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string MenuRestoreBackup {
             get {
                 return ResourceManager.GetString("MenuRestoreBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🔄 Update Backup.
+        /// </summary>
+        internal static string MenuUpdateBackup {
+            get {
+                return ResourceManager.GetString("MenuUpdateBackup", resourceCulture);
             }
         }
         
@@ -673,6 +808,15 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Settings file.
+        /// </summary>
+        internal static string SettingsFileLabel {
+            get {
+                return ResourceManager.GetString("SettingsFileLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Source.
         /// </summary>
         internal static string Source {
@@ -696,6 +840,24 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string SourcePathPrompt {
             get {
                 return ResourceManager.GetString("SourcePathPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Disabled.
+        /// </summary>
+        internal static string StatusDisabled {
+            get {
+                return ResourceManager.GetString("StatusDisabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Enabled.
+        /// </summary>
+        internal static string StatusEnabled {
+            get {
+                return ResourceManager.GetString("StatusEnabled", resourceCulture);
             }
         }
         
@@ -736,6 +898,78 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Update Backup.
+        /// </summary>
+        internal static string UpdateBackup {
+            get {
+                return ResourceManager.GetString("UpdateBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a (directory with manifest.bzc):.
+        /// </summary>
+        internal static string UpdateBackupPathHint {
+            get {
+                return ResourceManager.GetString("UpdateBackupPathHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Existing backup path.
+        /// </summary>
+        internal static string UpdateBackupPathPrompt {
+            get {
+                return ResourceManager.GetString("UpdateBackupPathPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a No manifest file found in the backup directory. Cannot update without a manifest file..
+        /// </summary>
+        internal static string UpdateManifestNotFound {
+            get {
+                return ResourceManager.GetString("UpdateManifestNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Update is only supported for directories. Please provide a directory path as source..
+        /// </summary>
+        internal static string UpdateSourceMustBeDirectory {
+            get {
+                return ResourceManager.GetString("UpdateSourceMustBeDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a (directory with current files):.
+        /// </summary>
+        internal static string UpdateSourcePathHint {
+            get {
+                return ResourceManager.GetString("UpdateSourcePathHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Original source path.
+        /// </summary>
+        internal static string UpdateSourcePathPrompt {
+            get {
+                return ResourceManager.GetString("UpdateSourcePathPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Updating.
+        /// </summary>
+        internal static string Updating {
+            get {
+                return ResourceManager.GetString("Updating", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a ❌ Validation error: {0}.
         /// </summary>
         internal static string ValidationErrorFormat {
@@ -768,87 +1002,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string WarningsLabel {
             get {
                 return ResourceManager.GetString("WarningsLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 🔄 Update Backup.
-        /// </summary>
-        internal static string MenuUpdateBackup {
-            get {
-                return ResourceManager.GetString("MenuUpdateBackup", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Update Backup.
-        /// </summary>
-        internal static string UpdateBackup {
-            get {
-                return ResourceManager.GetString("UpdateBackup", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Updating.
-        /// </summary>
-        internal static string Updating {
-            get {
-                return ResourceManager.GetString("Updating", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Original source path.
-        /// </summary>
-        internal static string UpdateSourcePathPrompt {
-            get {
-                return ResourceManager.GetString("UpdateSourcePathPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a (directory with current files):.
-        /// </summary>
-        internal static string UpdateSourcePathHint {
-            get {
-                return ResourceManager.GetString("UpdateSourcePathHint", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Existing backup path.
-        /// </summary>
-        internal static string UpdateBackupPathPrompt {
-            get {
-                return ResourceManager.GetString("UpdateBackupPathPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a (directory with manifest.bzc):.
-        /// </summary>
-        internal static string UpdateBackupPathHint {
-            get {
-                return ResourceManager.GetString("UpdateBackupPathHint", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a No manifest file found in the backup directory. Cannot update without a manifest file..
-        /// </summary>
-        internal static string UpdateManifestNotFound {
-            get {
-                return ResourceManager.GetString("UpdateManifestNotFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Update is only supported for directories. Please provide a directory path as source..
-        /// </summary>
-        internal static string UpdateSourceMustBeDirectory {
-            get {
-                return ResourceManager.GetString("UpdateSourceMustBeDirectory", resourceCulture);
             }
         }
     }
