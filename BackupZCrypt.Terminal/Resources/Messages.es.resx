@@ -414,9 +414,6 @@
   <data name="Updating" xml:space="preserve">
     <value>Actualizando</value>
   </data>
-  <data name="UpdateSourcePathPrompt" xml:space="preserve">
-    <value>Ruta de origen original</value>
-  </data>
   <data name="UpdateSourcePathHint" xml:space="preserve">
     <value>(directorio con archivos actuales):</value>
   </data>

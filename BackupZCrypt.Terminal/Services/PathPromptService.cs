@@ -48,7 +48,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
 
         return PromptPath(
             new PathPromptDefinition(
-                Messages.UpdateSourcePathPrompt,
+                Messages.SourcePathPrompt,
                 Messages.UpdateSourcePathHint,
                 Messages.PathCannotBeEmpty,
                 Messages.UpdateSourceMustBeDirectory,

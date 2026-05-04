@@ -97,7 +97,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a ⬅ Back to Main Menu.
+        ///   Busca una cadena traducida similar a 💾 Save Changes and Return to Main Menu.
         /// </summary>
         internal static string BackupSettingsBack {
             get {
@@ -106,7 +106,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Configure Compression.
+        ///   Busca una cadena traducida similar a 🗜️ Configure Compression.
         /// </summary>
         internal static string BackupSettingsCompressionOption {
             get {
@@ -115,7 +115,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Configure Encryption Algorithm.
+        ///   Busca una cadena traducida similar a 🔐 Configure Encryption Algorithm.
         /// </summary>
         internal static string BackupSettingsEncryptionAlgorithmOption {
             get {
@@ -133,7 +133,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Configure Key Derivation.
+        ///   Busca una cadena traducida similar a 🧪 Configure Key Derivation.
         /// </summary>
         internal static string BackupSettingsKeyDerivationOption {
             get {
@@ -142,7 +142,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Configure Name Obfuscation.
+        ///   Busca una cadena traducida similar a 🕶️ Configure Name Obfuscation.
         /// </summary>
         internal static string BackupSettingsNameObfuscationOption {
             get {
@@ -169,7 +169,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Reset to Defaults.
+        ///   Busca una cadena traducida similar a ♻️ Reset to Defaults.
         /// </summary>
         internal static string BackupSettingsResetOption {
             get {
@@ -466,6 +466,15 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Path is invalid.
+        /// </summary>
+        internal static string InvalidPath {
+            get {
+                return ResourceManager.GetString("InvalidPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Key derivation algorithm:.
         /// </summary>
         internal static string KeyDerivationAlgorithmPrompt {
@@ -754,6 +763,42 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a ⚠ Path history is unavailable: {0}.
+        /// </summary>
+        internal static string PathHistoryLoadWarningFormat {
+            get {
+                return ResourceManager.GetString("PathHistoryLoadWarningFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a ⚠ The last used paths could not be saved: {0}.
+        /// </summary>
+        internal static string PathHistorySaveWarningFormat {
+            get {
+                return ResourceManager.GetString("PathHistorySaveWarningFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Tip: press Tab to autocomplete files and folders. Relative paths are allowed. Press Esc to go back..
+        /// </summary>
+        internal static string PathManualInputHelp {
+            get {
+                return ResourceManager.GetString("PathManualInputHelp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Choose how to provide {0}:.
+        /// </summary>
+        internal static string PathSelectionPromptFormat {
+            get {
+                return ResourceManager.GetString("PathSelectionPromptFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Please enter a destination path.
         /// </summary>
         internal static string PleaseEnterDestinationPath {
@@ -763,7 +808,7 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Press any key to return to the menu….
+        ///   Busca una cadena traducida similar a Press ESC to return to the menu….
         /// </summary>
         internal static string PressAnyKey {
             get {
@@ -795,6 +840,15 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string Results {
             get {
                 return ResourceManager.GetString("Results", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a The saved {0} is no longer available..
+        /// </summary>
+        internal static string SavedPathUnavailableFormat {
+            get {
+                return ResourceManager.GetString("SavedPathUnavailableFormat", resourceCulture);
             }
         }
         
@@ -889,6 +943,15 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a ⌨️ Enter a path.
+        /// </summary>
+        internal static string TypeOrPastePathOption {
+            get {
+                return ResourceManager.GetString("TypeOrPastePathOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a ❌ Unexpected error: {0}.
         /// </summary>
         internal static string UnexpectedErrorFormat {
@@ -952,20 +1015,20 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Original source path.
-        /// </summary>
-        internal static string UpdateSourcePathPrompt {
-            get {
-                return ResourceManager.GetString("UpdateSourcePathPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a Updating.
         /// </summary>
         internal static string Updating {
             get {
                 return ResourceManager.GetString("Updating", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🕘 Last: {0}.
+        /// </summary>
+        internal static string UseLastPathOptionFormat {
+            get {
+                return ResourceManager.GetString("UseLastPathOptionFormat", resourceCulture);
             }
         }
         
@@ -984,54 +1047,6 @@ namespace BackupZCrypt.Terminal.Resources {
         internal static string ValidationErrors {
             get {
                 return ResourceManager.GetString("ValidationErrors", resourceCulture);
-            }
-        }
-
-        internal static string InvalidPath {
-            get {
-                return ResourceManager.GetString("InvalidPath", resourceCulture);
-            }
-        }
-
-        internal static string PathHistoryLoadWarningFormat {
-            get {
-                return ResourceManager.GetString("PathHistoryLoadWarningFormat", resourceCulture);
-            }
-        }
-
-        internal static string PathHistorySaveWarningFormat {
-            get {
-                return ResourceManager.GetString("PathHistorySaveWarningFormat", resourceCulture);
-            }
-        }
-
-        internal static string PathManualInputHelp {
-            get {
-                return ResourceManager.GetString("PathManualInputHelp", resourceCulture);
-            }
-        }
-
-        internal static string PathSelectionPromptFormat {
-            get {
-                return ResourceManager.GetString("PathSelectionPromptFormat", resourceCulture);
-            }
-        }
-
-        internal static string SavedPathUnavailableFormat {
-            get {
-                return ResourceManager.GetString("SavedPathUnavailableFormat", resourceCulture);
-            }
-        }
-
-        internal static string TypeOrPastePathOption {
-            get {
-                return ResourceManager.GetString("TypeOrPastePathOption", resourceCulture);
-            }
-        }
-
-        internal static string UseLastPathOptionFormat {
-            get {
-                return ResourceManager.GetString("UseLastPathOptionFormat", resourceCulture);
             }
         }
         
