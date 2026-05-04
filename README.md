@@ -1,5 +1,6 @@
 <p align="center">
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+<img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
 <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
@@ -22,6 +23,7 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 ## ❓ Why Choose BackupZCrypt?
 
 - **🖱️ Simple Interface** - No cryptography knowledge needed - just select files, choose a password, and encrypt
+- **🐳 Automated Docker Worker** - Run unattended backups and restores in Docker containers with environment variable configuration
 - **🏦 Military-Grade Security** - Uses the same encryption standards trusted by financial institutions
 - **🔌 No Internet Required** - Works completely offline, keeping your sensitive data off the network
 - **🛠️ Multiple Security Options** - Choose from multiple proven encryption methods to match your needs
@@ -38,6 +40,41 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 * **💻 Local Processing Only** - Your files and passwords never leave your computer
 * **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
 
+
+## 🐳 Docker Worker
+
+BackupZCrypt includes a Docker-based worker service for **automated, unattended backups and restores**.
+
+### How It Works
+
+The worker uses **four volume bindings**:
+
+| Volume | Path in Container | Purpose |
+|---|---|---|
+| **BackupSource** | `/data/backup-source` | Place files here to create an encrypted backup |
+| **BackupDestination** | `/data/backup-destination` | Encrypted backup output is written here |
+| **RestoreSource** | `/data/restore-source` | Place an encrypted backup here to restore it |
+| **RestoreDestination** | `/data/restore-destination` | Restored files are written here |
+
+**On startup**, the worker:
+1. Checks `BackupSource` for files → if found, creates/updates an encrypted backup in `BackupDestination`
+2. Checks `RestoreSource` for a valid backup (manifest file) → if found, restores it to `RestoreDestination`
+3. Optionally deletes source files after each successful operation
+4. Stops automatically when there is nothing left to process
+
+### Environment Variables
+
+All CLI configuration options are available as environment variables:
+
+| Variable | Description | Default |
+|---|---|---|
+| `BACKUP_PASSWORD` | Password for encryption/decryption | *(empty)* |
+| `BACKUP_USE_ENCRYPTION` | Enable or disable encryption (`true`/`false`) | `true` |
+| `BACKUP_ENCRYPTION_ALGORITHM` | `Aes`, `Twofish`, `Serpent`, `ChaCha20`, `Camellia` | `Aes` |
+| `BACKUP_KEY_DERIVATION_ALGORITHM` | `Argon2id`, `PBKDF2`, `Scrypt` | `Argon2id` |
+| `BACKUP_NAME_OBFUSCATION` | `None`, `Guid`, `Sha256`, `Sha512` | `None` |
+| `BACKUP_COMPRESSION` | `None`, `ZstdFast`, `Zstd`, `ZstdBest` | `None` |
+| `BACKUP_DELETE_SOURCE_FILES` | Delete source files after operation (`true`/`false`) | `false` |
 
 ## 🚀 Roadmap
 

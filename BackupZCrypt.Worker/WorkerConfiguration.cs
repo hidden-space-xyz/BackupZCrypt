@@ -1,0 +1,28 @@
+namespace BackupZCrypt.Worker;
+
+using BackupZCrypt.Domain.Enums;
+
+internal sealed class WorkerConfiguration
+{
+    public string BackupSourcePath { get; set; } = "/data/backup-source";
+
+    public string BackupDestinationPath { get; set; } = "/data/backup-destination";
+
+    public string RestoreSourcePath { get; set; } = "/data/restore-source";
+
+    public string RestoreDestinationPath { get; set; } = "/data/restore-destination";
+
+    public string Password { get; set; } = string.Empty;
+
+    public bool UseEncryption { get; set; } = true;
+
+    public EncryptionAlgorithm EncryptionAlgorithm { get; set; } = EncryptionAlgorithm.Aes;
+
+    public KeyDerivationAlgorithm KeyDerivationAlgorithm { get; set; } = KeyDerivationAlgorithm.Argon2id;
+
+    public NameObfuscationMode NameObfuscation { get; set; } = NameObfuscationMode.None;
+
+    public CompressionMode Compression { get; set; } = CompressionMode.None;
+
+    public bool DeleteSourceFiles { get; set; }
+}

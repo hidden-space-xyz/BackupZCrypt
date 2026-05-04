@@ -1,0 +1,38 @@
+services:
+  backupzcrypt-worker:
+    build:
+      context: .
+      dockerfile: BackupZCrypt.Worker/Dockerfile
+    environment:
+      # Password used for encryption and decryption
+      - BACKUP_PASSWORD=change-this-password
+
+      # Enable or disable encryption (default: true)
+      - BACKUP_USE_ENCRYPTION=true
+
+      # Encryption algorithm: Aes, Twofish, Serpent, ChaCha20, Camellia (default: Aes)
+      - BACKUP_ENCRYPTION_ALGORITHM=Aes
+
+      # Key derivation algorithm: Argon2id, PBKDF2, Scrypt (default: Argon2id)
+      - BACKUP_KEY_DERIVATION_ALGORITHM=Argon2id
+
+      # Name obfuscation mode: None, Guid, Sha256, Sha512 (default: None)
+      - BACKUP_NAME_OBFUSCATION=Guid
+
+      # Compression mode: None, ZstdFast, Zstd, ZstdBest (default: None)
+      - BACKUP_COMPRESSION=Zstd
+
+      # Delete source files after successful operation (default: false)
+      - BACKUP_DELETE_SOURCE_FILES=false
+    volumes:
+      # Files/directories to back up
+      - ./backup-source:/data/backup-source
+
+      # Where encrypted backups are written
+      - ./backup-destination:/data/backup-destination
+
+      # Encrypted backups to restore
+      - ./restore-source:/data/restore-source
+
+      # Where restored files are written
+      - ./restore-destination:/data/restore-destination
