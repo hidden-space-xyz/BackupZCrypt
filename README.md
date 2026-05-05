@@ -23,7 +23,7 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 ## ❓ Why Choose BackupZCrypt?
 
 - **🖱️ Simple Interface** - No cryptography knowledge needed - just select files, choose a password, and encrypt
-- **🐳 Automated Docker Worker** - Run unattended backups and restores in Docker containers with environment variable configuration
+- **🤖 Automated Worker** - Run unattended backups and restores as a background service or Docker container
 - **🏦 Military-Grade Security** - Uses the same encryption standards trusted by financial institutions
 - **🔌 No Internet Required** - Works completely offline, keeping your sensitive data off the network
 - **🛠️ Multiple Security Options** - Choose from multiple proven encryption methods to match your needs
@@ -40,16 +40,23 @@ BackupZCrypt gives you privacy and security in a few simple clicks:
 * **💻 Local Processing Only** - Your files and passwords never leave your computer
 * **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
 
+## 🚀 Usage
 
-## 🐳 Docker Worker
+BackupZCrypt offers two execution modes depending on your needs:
 
-BackupZCrypt includes a Docker-based worker service for **automated, unattended backups and restores**.
+### 💻 Terminal (Interactive)
 
-### How It Works
+The Terminal mode provides an interactive command-line interface for manual backup and restore operations. Ideal for one-off tasks or when you want full control over each step.
 
-The worker uses **four volume bindings**:
+### 🤖 Worker (Automated)
 
-| Volume | Path in Container | Purpose |
+The Worker is a background service that performs **automated, unattended backups and restores**. It runs once, processes any pending operations, and stops automatically — perfect for scheduled tasks, CI/CD pipelines, or containerized environments.
+
+#### How It Works
+
+The worker uses **four directory bindings**:
+
+| Directory | Default Path | Purpose |
 |---|---|---|
 | **BackupSource** | `/data/backup-source` | Place files here to create an encrypted backup |
 | **BackupDestination** | `/data/backup-destination` | Encrypted backup output is written here |
@@ -62,9 +69,9 @@ The worker uses **four volume bindings**:
 3. Optionally deletes source files after each successful operation
 4. Stops automatically when there is nothing left to process
 
-### Environment Variables
+#### Environment Variables
 
-All CLI configuration options are available as environment variables:
+All configuration options are available as environment variables:
 
 | Variable | Description | Default |
 |---|---|---|

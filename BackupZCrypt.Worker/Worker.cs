@@ -1,15 +1,16 @@
 namespace BackupZCrypt.Worker;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Worker.Services;
 using Microsoft.Extensions.Options;
 
 internal sealed partial class Worker(
     ILogger<Worker> logger,
     IOptions<WorkerConfiguration> options,
     IBackupOrchestrator orchestrator,
+    IWorkerFileSystem fileSystem,
     IHostApplicationLifetime lifetime) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -17,7 +18,7 @@ internal sealed partial class Worker(
         var config = options.Value;
         var performed = false;
 
-        if (HasFilesToBackup(config.BackupSourcePath))
+        if (fileSystem.HasFilesToBackup(config.BackupSourcePath))
         {
             await RunBackupAsync(config, stoppingToken);
             performed = true;
@@ -27,7 +28,7 @@ internal sealed partial class Worker(
             LogNoBackupFiles(config.BackupSourcePath);
         }
 
-        if (HasFilesToRestore(config.RestoreSourcePath))
+        if (fileSystem.HasFilesToRestore(config.RestoreSourcePath))
         {
             await RunRestoreAsync(config, stoppingToken);
             performed = true;
@@ -49,7 +50,7 @@ internal sealed partial class Worker(
         WorkerConfiguration config,
         CancellationToken cancellationToken)
     {
-        LogStartingBackup(config.BackupSourcePath, config.BackupDestinationPath);
+        LogStartingOperation("Backup", config.BackupSourcePath, config.BackupDestinationPath);
 
         var password = config.UseEncryption ? config.Password : string.Empty;
 
@@ -66,36 +67,11 @@ internal sealed partial class Worker(
             ProceedOnWarnings: true,
             UseEncryption: config.UseEncryption);
 
-        var result = await orchestrator.ExecuteAsync(
-            request,
-            new Progress<BackupStatus>(status =>
-                LogBackupProgress(status.ProcessedFiles, status.TotalFiles, status.ProcessedBytes)),
-            cancellationToken);
+        var result = await ExecuteOperationAsync("Backup", request, cancellationToken);
 
-        if (!result.IsSuccess)
+        if (result is not null && config.DeleteSourceFiles)
         {
-            LogOperationFailed("Backup", string.Join("; ", result.Errors));
-            return;
-        }
-
-        var backup = result.Value;
-
-        if (backup.HasErrors)
-        {
-            LogOperationErrors("Backup", string.Join("; ", backup.Errors));
-            return;
-        }
-
-        LogOperationCompleted(
-            "Backup",
-            backup.ProcessedFiles,
-            backup.TotalFiles,
-            backup.TotalBytes,
-            backup.ElapsedTime);
-
-        if (config.DeleteSourceFiles)
-        {
-            DeleteDirectoryContents(config.BackupSourcePath);
+            fileSystem.DeleteDirectoryContents(config.BackupSourcePath);
         }
     }
 
@@ -103,136 +79,65 @@ internal sealed partial class Worker(
         WorkerConfiguration config,
         CancellationToken cancellationToken)
     {
-        LogStartingRestore(config.RestoreSourcePath, config.RestoreDestinationPath);
+        LogStartingOperation("Restore", config.RestoreSourcePath, config.RestoreDestinationPath);
 
-        var isEncrypted = DetectEncryptedManifest(config.RestoreSourcePath);
-
+        var isEncrypted = fileSystem.IsManifestEncrypted(config.RestoreSourcePath);
         var password = isEncrypted ? config.Password : string.Empty;
 
-        BackupRequest request;
+        BackupRequest request = new(
+            config.RestoreSourcePath,
+            config.RestoreDestinationPath,
+            password,
+            password,
+            config.EncryptionAlgorithm,
+            config.KeyDerivationAlgorithm,
+            EncryptOperation.Decrypt,
+            config.NameObfuscation,
+            config.Compression,
+            ProceedOnWarnings: true,
+            UseEncryption: isEncrypted);
 
-        if (isEncrypted)
-        {
-            request = new(
-                config.RestoreSourcePath,
-                config.RestoreDestinationPath,
-                password,
-                password,
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.Argon2id,
-                EncryptOperation.Decrypt,
-                NameObfuscationMode.None);
-        }
-        else
-        {
-            request = new(
-                config.RestoreSourcePath,
-                config.RestoreDestinationPath,
-                string.Empty,
-                string.Empty,
-                default,
-                default,
-                EncryptOperation.Decrypt,
-                NameObfuscationMode.None,
-                CompressionMode.None,
-                ProceedOnWarnings: true,
-                UseEncryption: false);
-        }
+        var result = await ExecuteOperationAsync("Restore", request, cancellationToken);
 
+        if (result is not null && config.DeleteSourceFiles)
+        {
+            fileSystem.DeleteDirectoryContents(config.RestoreSourcePath);
+        }
+    }
+
+    private async Task<BackupResult?> ExecuteOperationAsync(
+        string operationName,
+        BackupRequest request,
+        CancellationToken cancellationToken)
+    {
         var result = await orchestrator.ExecuteAsync(
             request,
             new Progress<BackupStatus>(status =>
-                LogRestoreProgress(status.ProcessedFiles, status.TotalFiles, status.ProcessedBytes)),
+                LogProgress(operationName, status.ProcessedFiles, status.TotalFiles, status.ProcessedBytes)),
             cancellationToken);
 
         if (!result.IsSuccess)
         {
-            LogOperationFailed("Restore", string.Join("; ", result.Errors));
-            return;
+            LogOperationFailed(operationName, string.Join("; ", result.Errors));
+            return null;
         }
 
-        var restore = result.Value;
+        var operation = result.Value;
 
-        if (restore.HasErrors)
+        if (operation.HasErrors)
         {
-            LogOperationErrors("Restore", string.Join("; ", restore.Errors));
-            return;
+            LogOperationErrors(operationName, string.Join("; ", operation.Errors));
+            return null;
         }
 
         LogOperationCompleted(
-            "Restore",
-            restore.ProcessedFiles,
-            restore.TotalFiles,
-            restore.TotalBytes,
-            restore.ElapsedTime);
+            operationName,
+            operation.ProcessedFiles,
+            operation.TotalFiles,
+            operation.TotalBytes,
+            operation.ElapsedTime);
 
-        if (config.DeleteSourceFiles)
-        {
-            DeleteDirectoryContents(config.RestoreSourcePath);
-        }
-    }
-
-    private static bool HasFilesToBackup(string path)
-    {
-        return Directory.Exists(path)
-            && Directory.EnumerateFileSystemEntries(path).Any();
-    }
-
-    private static bool HasFilesToRestore(string path)
-    {
-        if (!Directory.Exists(path))
-        {
-            return false;
-        }
-
-        var manifestPath = Path.Combine(path, BackupConstants.ManifestFileName);
-        return File.Exists(manifestPath);
-    }
-
-    private static bool DetectEncryptedManifest(string sourcePath)
-    {
-        var manifestPath = Path.Combine(sourcePath, BackupConstants.ManifestFileName);
-
-        if (!File.Exists(manifestPath))
-        {
-            return false;
-        }
-
-        try
-        {
-            using FileStream fs = new(
-                manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var firstByte = fs.ReadByte();
-            return firstByte >= 0 && firstByte != '{';
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private void DeleteDirectoryContents(string path)
-    {
-        try
-        {
-            var dir = new DirectoryInfo(path);
-
-            foreach (var file in dir.EnumerateFiles("*", SearchOption.AllDirectories))
-            {
-                file.Delete();
-            }
-
-            foreach (var subDir in dir.EnumerateDirectories())
-            {
-                subDir.Delete(recursive: true);
-            }
-
-            LogDeletedSourceFiles(path);
-        }
-        catch (Exception ex)
-        {
-            LogDeleteSourceFilesFailed(ex, path);
-        }
+        return operation;
     }
 
     [LoggerMessage(Level = LogLevel.Information,
@@ -248,20 +153,12 @@ internal sealed partial class Worker(
     private partial void LogNothingToProcess();
 
     [LoggerMessage(Level = LogLevel.Information,
-        Message = "Starting backup from '{Source}' to '{Destination}'.")]
-    private partial void LogStartingBackup(string source, string destination);
-
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Starting restore from '{Source}' to '{Destination}'.")]
-    private partial void LogStartingRestore(string source, string destination);
+        Message = "Starting {Operation} from '{Source}' to '{Destination}'.")]
+    private partial void LogStartingOperation(string operation, string source, string destination);
 
     [LoggerMessage(Level = LogLevel.Debug,
-        Message = "Backup progress: {Processed}/{Total} files, {Bytes} bytes.")]
-    private partial void LogBackupProgress(int processed, int total, long bytes);
-
-    [LoggerMessage(Level = LogLevel.Debug,
-        Message = "Restore progress: {Processed}/{Total} files, {Bytes} bytes.")]
-    private partial void LogRestoreProgress(int processed, int total, long bytes);
+        Message = "{Operation} progress: {Processed}/{Total} files, {Bytes} bytes.")]
+    private partial void LogProgress(string operation, int processed, int total, long bytes);
 
     [LoggerMessage(Level = LogLevel.Error,
         Message = "{Operation} failed: {Errors}")]
@@ -275,12 +172,4 @@ internal sealed partial class Worker(
         Message = "{Operation} completed: {Processed}/{Total} files, {Bytes} bytes in {Elapsed}.")]
     private partial void LogOperationCompleted(
         string operation, int processed, int total, long bytes, TimeSpan elapsed);
-
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Deleted source files in '{Path}'.")]
-    private partial void LogDeletedSourceFiles(string path);
-
-    [LoggerMessage(Level = LogLevel.Warning,
-        Message = "Failed to delete source files in '{Path}'.")]
-    private partial void LogDeleteSourceFilesFailed(Exception ex, string path);
 }
