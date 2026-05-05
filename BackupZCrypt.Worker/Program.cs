@@ -1,7 +1,6 @@
 using BackupZCrypt.Composition;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Worker;
-
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -22,25 +21,25 @@ builder.Services.Configure<WorkerConfiguration>(config =>
         config.UseEncryption = useEnc;
     }
 
-    if (Enum.TryParse<BackupZCrypt.Domain.Enums.EncryptionAlgorithm>(
+    if (Enum.TryParse<EncryptionAlgorithm>(
         env["BACKUP_ENCRYPTION_ALGORITHM"], ignoreCase: true, out var encAlg))
     {
         config.EncryptionAlgorithm = encAlg;
     }
 
-    if (Enum.TryParse<BackupZCrypt.Domain.Enums.KeyDerivationAlgorithm>(
+    if (Enum.TryParse<KeyDerivationAlgorithm>(
         env["BACKUP_KEY_DERIVATION_ALGORITHM"], ignoreCase: true, out var kdf))
     {
         config.KeyDerivationAlgorithm = kdf;
     }
 
-    if (Enum.TryParse<BackupZCrypt.Domain.Enums.NameObfuscationMode>(
+    if (Enum.TryParse<NameObfuscationMode>(
         env["BACKUP_NAME_OBFUSCATION"], ignoreCase: true, out var obf))
     {
         config.NameObfuscation = obf;
     }
 
-    if (Enum.TryParse<BackupZCrypt.Domain.Enums.CompressionMode>(
+    if (Enum.TryParse<CompressionMode>(
         env["BACKUP_COMPRESSION"], ignoreCase: true, out var comp))
     {
         config.Compression = comp;
@@ -55,4 +54,4 @@ builder.Services.Configure<WorkerConfiguration>(config =>
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
-host.Run();
+await host.RunAsync();

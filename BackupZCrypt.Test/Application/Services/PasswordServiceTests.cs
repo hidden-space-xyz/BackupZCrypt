@@ -1,7 +1,6 @@
 namespace BackupZCrypt.Test.Application.Services;
 
 using BackupZCrypt.Application.Services;
-using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 

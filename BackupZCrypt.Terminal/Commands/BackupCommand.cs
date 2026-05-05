@@ -2,10 +2,8 @@ namespace BackupZCrypt.Terminal.Commands;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
-using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
@@ -13,7 +11,6 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
-using BackupZCrypt.Terminal.Services;
 using BackupZCrypt.Terminal.Services.Interfaces;
 using Spectre.Console;
 using System.Diagnostics;

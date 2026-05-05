@@ -5,8 +5,7 @@
     <DockerTargetOS>Linux</DockerTargetOS>
     <DockerPublishLocally>False</DockerPublishLocally>
     <ProjectGuid>{E4B1AD09-5F1A-4F5E-B3A0-7D2C5E3F8A1B}</ProjectGuid>
-    <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
+    <DockerLaunchAction>None</DockerLaunchAction>
     <DockerServiceName>backupzcrypt-worker</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>

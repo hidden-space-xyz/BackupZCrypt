@@ -4,7 +4,6 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Infrastructure.Constants;
 using BackupZCrypt.Infrastructure.Resources;
@@ -429,7 +428,7 @@ internal abstract class EncryptionStrategyBase(
     protected static Task ProcessFileWithCipherAsync(
         Stream sourceStream,
         Stream destinationStream,
-        Org.BouncyCastle.Crypto.Modes.IAeadCipher cipher,
+        IAeadCipher cipher,
         CancellationToken cancellationToken)
     {
         return ProcessAsync(sourceStream, destinationStream, cipher, cancellationToken);

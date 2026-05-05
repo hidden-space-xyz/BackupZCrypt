@@ -7,7 +7,6 @@ using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]

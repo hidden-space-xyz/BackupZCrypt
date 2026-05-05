@@ -5,7 +5,6 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;

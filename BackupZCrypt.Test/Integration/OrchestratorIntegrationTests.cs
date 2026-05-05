@@ -1,7 +1,6 @@
 namespace BackupZCrypt.Test.Integration;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
