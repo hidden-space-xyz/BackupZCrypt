@@ -22,6 +22,10 @@ public interface IFileOperationsService
         bool recursive,
         CancellationToken cancellationToken = default);
 
+    Task CleanDirectoryAsync(
+        string directoryPath,
+        CancellationToken cancellationToken = default);
+
     long GetFileSize(string filePath);
 
     string GetFullPath(string filePath);

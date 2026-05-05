@@ -117,8 +117,7 @@ internal sealed class BackupOrchestrator(
         string destinationPath,
         CancellationToken cancellationToken)
     {
-        await fileOperations.DeleteDirectoryAsync(destinationPath, recursive: true, cancellationToken);
-        await fileOperations.CreateDirectoryAsync(destinationPath, cancellationToken);
+        await fileOperations.CleanDirectoryAsync(destinationPath, cancellationToken);
     }
 
     private async Task EnsureDestinationDirectoryAsync(

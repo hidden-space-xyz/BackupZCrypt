@@ -50,6 +50,28 @@ internal sealed class FileOperationsService : IFileOperationsService
         await Task.Run(() => Directory.Delete(directoryPath, recursive), cancellationToken);
     }
 
+    public async Task CleanDirectoryAsync(
+        string directoryPath,
+        CancellationToken cancellationToken = default)
+    {
+        await Task.Run(
+            () =>
+            {
+                var directory = new DirectoryInfo(directoryPath);
+
+                foreach (var file in directory.GetFiles())
+                {
+                    file.Delete();
+                }
+
+                foreach (var subDirectory in directory.GetDirectories())
+                {
+                    subDirectory.Delete(recursive: true);
+                }
+            },
+            cancellationToken);
+    }
+
     public long GetFileSize(string filePath)
     {
         return new FileInfo(filePath).Length;

@@ -4,35 +4,15 @@ services:
       context: .
       dockerfile: BackupZCrypt.Worker/Dockerfile
     environment:
-      # Password used for encryption and decryption
-      - BACKUP_PASSWORD=change-this-password
-
-      # Enable or disable encryption (default: true)
-      - BACKUP_USE_ENCRYPTION=true
-
-      # Encryption algorithm: Aes, Twofish, Serpent, ChaCha20, Camellia (default: Aes)
-      - BACKUP_ENCRYPTION_ALGORITHM=Aes
-
-      # Key derivation algorithm: Argon2id, PBKDF2, Scrypt (default: Argon2id)
-      - BACKUP_KEY_DERIVATION_ALGORITHM=Argon2id
-
-      # Name obfuscation mode: None, Guid, Sha256, Sha512 (default: None)
-      - BACKUP_NAME_OBFUSCATION=Guid
-
-      # Compression mode: None, ZstdFast, Zstd, ZstdBest (default: None)
-      - BACKUP_COMPRESSION=Zstd
-
-      # Delete source files after successful operation (default: false)
-      - BACKUP_DELETE_SOURCE_FILES=false
+      - BACKUP_PASSWORD=change-this-password # Password used for encryption and decryption
+      - BACKUP_USE_ENCRYPTION=true # Enable or disable encryption (default: true)
+      - BACKUP_ENCRYPTION_ALGORITHM=Aes # Encryption algorithm: Aes, Twofish, Serpent, ChaCha20, Camellia (default: Aes)
+      - BACKUP_KEY_DERIVATION_ALGORITHM=Argon2id # Key derivation algorithm: Argon2id, PBKDF2, Scrypt (default: Argon2id)
+      - BACKUP_NAME_OBFUSCATION=Guid # Name obfuscation mode: None, Guid, Sha256, Sha512 (default: None)
+      - BACKUP_COMPRESSION=Zstd # Compression mode: None, ZstdFast, Zstd, ZstdBest (default: None)
+      - BACKUP_DELETE_SOURCE_FILES=false # Delete source files after successful operation (default: false)
     volumes:
-      # Files/directories to back up
-      - ./backup-source:/data/backup-source
-
-      # Where encrypted backups are written
-      - ./backup-destination:/data/backup-destination
-
-      # Encrypted backups to restore
-      - ./restore-source:/data/restore-source
-
-      # Where restored files are written
-      - ./restore-destination:/data/restore-destination
+      - ./example/backup-source:/data/backup-source # Files/directories to back up
+      - ./example/backup-destination:/data/backup-destination # Where encrypted backups are written
+      - ./example/restore-source:/data/restore-source # Encrypted backups to restore
+      - ./example/restore-destination:/data/restore-destination # Where restored files are written
