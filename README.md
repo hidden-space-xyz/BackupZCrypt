@@ -96,7 +96,7 @@ We're committed to continuously improving BackupZCrypt based on user feedback an
 ## 📸 Screenshots
 
 <p align="center">
-<img width="886" height="578" alt="image" src="https://github.com/user-attachments/assets/e8c9a10d-3ad7-4cf0-bd83-9cd4fa5292c3" />
+<img width="995" height="598" alt="image" src="https://github.com/user-attachments/assets/690b7637-0aac-4605-9a12-132c26e12158" />
 </p>
 
 ## 🔍 Security Notes
