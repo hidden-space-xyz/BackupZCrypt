@@ -122,11 +122,11 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (request.UseEncryption && string.IsNullOrWhiteSpace(request.Password))
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && string.IsNullOrWhiteSpace(request.Password))
         {
             errors.Add(Messages.PasswordRequired);
         }
-        else if (request.UseEncryption)
+        else if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             if (request.Password.Length < 8)
             {
@@ -144,7 +144,7 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (request.UseEncryption && request.Operation == EncryptOperation.Encrypt)
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == EncryptOperation.Encrypt)
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
@@ -307,7 +307,7 @@ internal sealed class BackupRequestValidator(
                         existingFileCount.ToString("N0")));
             }
 
-            if (request.UseEncryption
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None
                 && request.Operation == EncryptOperation.Encrypt)
             {
                 var strength = passwordService.AnalyzePasswordStrength(

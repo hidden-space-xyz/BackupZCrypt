@@ -85,12 +85,11 @@ internal sealed class DirectoryBackupServiceTests
             @"C:\dest",
             string.Empty,
             string.Empty,
-            EncryptionAlgorithm.Aes,
+            EncryptionAlgorithm.None,
             KeyDerivationAlgorithm.Argon2id,
             EncryptOperation.Decrypt,
             NameObfuscationMode.None,
-            CompressionMode.Zstd,
-            UseEncryption: false);
+            CompressionMode.Zstd);
 
         var result = await service.ProcessAsync(
             @"C:\source",

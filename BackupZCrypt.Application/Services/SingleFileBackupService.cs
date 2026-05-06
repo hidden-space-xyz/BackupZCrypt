@@ -1,5 +1,6 @@
 namespace BackupZCrypt.Application.Services;
 
+using BackupZCrypt.Application.Constants;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
@@ -52,7 +53,7 @@ internal sealed class SingleFileBackupService(
 
             var destFile = destinationPath;
 
-            if (request.UseEncryption && request.Operation == EncryptOperation.Encrypt
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == EncryptOperation.Encrypt
                 && request.NameObfuscation != NameObfuscationMode.None)
             {
                 var obfuscationService = nameObfuscationServiceFactory.Create(
@@ -76,7 +77,7 @@ internal sealed class SingleFileBackupService(
             progress?.Report(new BackupStatus(0, 1, 0, fileSize, TimeSpan.Zero));
 
             bool result;
-            if (request.UseEncryption)
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
             {
                 var encryptionService =
                     encryptionServiceFactory.Create(request.EncryptionAlgorithm);
@@ -201,7 +202,7 @@ internal sealed class SingleFileBackupService(
             stopwatch.Stop();
             return Result<BackupResult>.Failure(ex.Message);
         }
-        catch (Exception ex) when (!request.UseEncryption && ex is not OperationCanceledException)
+        catch (Exception ex) when (request.EncryptionAlgorithm == EncryptionAlgorithm.None && ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             return Result<BackupResult>.Failure(
@@ -331,18 +332,16 @@ internal sealed class SingleFileBackupService(
         string destinationFile,
         CancellationToken cancellationToken)
     {
-        const int bufferSize = 81920;
-
         var destDir = fileOperations.GetDirectoryName(destinationFile);
         if (!string.IsNullOrEmpty(destDir))
         {
             await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
         }
 
-        await using var source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using var source = fileOperations.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
         await using var destination = fileOperations.CreateWriteStream(
             destinationFile,
-            bufferSize);
+            BackupIOConstants.CopyBufferSize);
 
         await source.CopyToAsync(destination, cancellationToken);
 
@@ -367,7 +366,7 @@ internal sealed class SingleFileBackupService(
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         await using var compressedStream = await strategy.CompressAsync(
@@ -379,7 +378,7 @@ internal sealed class SingleFileBackupService(
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Write BZC header: magic bytes + compression mode
@@ -401,7 +400,7 @@ internal sealed class SingleFileBackupService(
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         // Read and validate BZC header
@@ -433,7 +432,7 @@ internal sealed class SingleFileBackupService(
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         await decompressedStream.CopyToAsync(destination, cancellationToken);

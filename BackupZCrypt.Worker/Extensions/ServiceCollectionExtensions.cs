@@ -16,7 +16,6 @@ internal static class ServiceCollectionExtensions
             config.RestoreDestinationPath = configuration["RESTORE_DESTINATION_PATH"] ?? config.RestoreDestinationPath;
             config.Password = configuration["BACKUP_PASSWORD"] ?? config.Password;
 
-            BindBool(configuration, "BACKUP_USE_ENCRYPTION", v => config.UseEncryption = v);
             BindBool(configuration, "BACKUP_DELETE_SOURCE_FILES", v => config.DeleteSourceFiles = v);
 
             BindEnum<EncryptionAlgorithm>(configuration, "BACKUP_ENCRYPTION_ALGORITHM", v => config.EncryptionAlgorithm = v);

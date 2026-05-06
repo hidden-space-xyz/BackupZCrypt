@@ -5,8 +5,7 @@ services:
       dockerfile: BackupZCrypt.Worker/Dockerfile
     environment:
       - BACKUP_PASSWORD=change-this-password # Password used for encryption and decryption
-      - BACKUP_USE_ENCRYPTION=true # Enable or disable encryption (default: true)
-      - BACKUP_ENCRYPTION_ALGORITHM=Aes # Encryption algorithm: Aes, Twofish, Serpent, ChaCha20, Camellia (default: Aes)
+      - BACKUP_ENCRYPTION_ALGORITHM=Aes # Encryption algorithm: None, Aes, Twofish, Serpent, ChaCha20, Camellia (default: Aes)
       - BACKUP_KEY_DERIVATION_ALGORITHM=Argon2id # Key derivation algorithm: Argon2id, PBKDF2, Scrypt (default: Argon2id)
       - BACKUP_NAME_OBFUSCATION=Guid # Name obfuscation mode: None, Guid, Sha256, Sha512 (default: None)
       - BACKUP_COMPRESSION=Zstd # Compression mode: None, ZstdFast, Zstd, ZstdBest (default: None)

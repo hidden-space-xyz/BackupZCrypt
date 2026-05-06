@@ -232,12 +232,11 @@ internal sealed class SingleFileBackupServiceTests
             @"C:\dest\file.txt",
             string.Empty,
             string.Empty,
-            EncryptionAlgorithm.Aes,
+            EncryptionAlgorithm.None,
             KeyDerivationAlgorithm.Argon2id,
             EncryptOperation.Encrypt,
             NameObfuscationMode.None,
-            CompressionMode.None,
-            UseEncryption: false);
+            CompressionMode.None);
 
         var result = await service.ProcessAsync(
             @"C:\source\file.txt",

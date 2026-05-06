@@ -14,8 +14,6 @@ internal sealed class WorkerConfiguration
 
     public string Password { get; set; } = string.Empty;
 
-    public bool UseEncryption { get; set; } = true;
-
     public EncryptionAlgorithm EncryptionAlgorithm { get; set; } = EncryptionAlgorithm.Aes;
 
     public KeyDerivationAlgorithm KeyDerivationAlgorithm { get; set; } = KeyDerivationAlgorithm.Argon2id;

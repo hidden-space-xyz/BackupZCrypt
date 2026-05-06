@@ -1,5 +1,6 @@
 namespace BackupZCrypt.Application.Services;
 
+using BackupZCrypt.Application.Constants;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
@@ -43,7 +44,7 @@ internal sealed class DirectoryBackupService(
         ConcurrentBag<ManifestEntry> manifestEntries = [];
         Dictionary<string, ManifestFileInfo>? manifestMap = null;
 
-        if (request.UseEncryption)
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             if (request.Operation == EncryptOperation.Decrypt)
             {
@@ -154,7 +155,7 @@ internal sealed class DirectoryBackupService(
 
         if (request.Operation == EncryptOperation.Encrypt)
         {
-            if (request.UseEncryption && obfuscationService is not null)
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && obfuscationService is not null)
             {
                 HashSet<string> uniqueDestinationPaths = new(StringComparer.OrdinalIgnoreCase);
 
@@ -183,7 +184,7 @@ internal sealed class DirectoryBackupService(
                 {
                     var relativePath = fileOperations.GetRelativePath(sourcePath, file);
                     var destinationRelativePath =
-                        !request.UseEncryption && request.Compression == CompressionMode.None
+                        request.EncryptionAlgorithm == EncryptionAlgorithm.None && request.Compression == CompressionMode.None
                             ? relativePath
                             : relativePath + BackupConstants.AppFileExtension;
                     var destinationFilePath = fileOperations.CombinePath(
@@ -259,7 +260,7 @@ internal sealed class DirectoryBackupService(
 
                     try
                     {
-                        if (request.UseEncryption)
+                        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
                         {
                             if (request.Operation == EncryptOperation.Encrypt)
                             {
@@ -401,7 +402,7 @@ internal sealed class DirectoryBackupService(
                     {
                         errors.Add(string.Format(Messages.EncryptionErrorFormat, file, ex.Message));
                     }
-                    catch (Exception ex) when (!request.UseEncryption)
+                    catch (Exception ex) when (request.EncryptionAlgorithm == EncryptionAlgorithm.None)
                     {
                         errors.Add(
                             string.Format(Messages.CompressionErrorFormat, file, ex.Message));
@@ -437,7 +438,7 @@ internal sealed class DirectoryBackupService(
                 request.Compression);
 
             IReadOnlyList<string> manifestErrors;
-            if (request.UseEncryption)
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
             {
                 manifestErrors = await manifestService.TrySaveManifestAsync(
                     [.. manifestEntries],
@@ -513,12 +514,10 @@ internal sealed class DirectoryBackupService(
         string destinationFile,
         CancellationToken cancellationToken)
     {
-        const int bufferSize = 81920;
-
-        await using var source = fileOperations.OpenReadStream(sourceFile, bufferSize);
+        await using var source = fileOperations.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
         await using var destination = fileOperations.CreateWriteStream(
             destinationFile,
-            bufferSize);
+            BackupIOConstants.CopyBufferSize);
 
         await source.CopyToAsync(destination, cancellationToken);
 
@@ -543,7 +542,7 @@ internal sealed class DirectoryBackupService(
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         await using var compressedStream = await strategy.CompressAsync(
@@ -555,7 +554,7 @@ internal sealed class DirectoryBackupService(
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         await destination.WriteAsync(BackupConstants.CompressedFileMagic, cancellationToken);
@@ -576,7 +575,7 @@ internal sealed class DirectoryBackupService(
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         var magic = new byte[BackupConstants.CompressedFileMagic.Length];
@@ -607,7 +606,7 @@ internal sealed class DirectoryBackupService(
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            81920,
+            BackupIOConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         await decompressedStream.CopyToAsync(destination, cancellationToken);
@@ -672,7 +671,7 @@ internal sealed class DirectoryBackupService(
         var manifestData = await manifestService.TryReadManifestAsync(
             destinationPath,
             [.. encryptionStrategies],
-            request.UseEncryption ? request.Password : string.Empty,
+            request.EncryptionAlgorithm != EncryptionAlgorithm.None ? request.Password : string.Empty,
             cancellationToken);
 
         if (manifestData is null)
@@ -691,7 +690,7 @@ internal sealed class DirectoryBackupService(
         IEncryptionAlgorithmStrategy? encryptionService = null;
         INameObfuscationStrategy? obfuscationService = null;
 
-        if (request.UseEncryption)
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             encryptionService = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
         }
@@ -757,7 +756,7 @@ internal sealed class DirectoryBackupService(
             else
             {
                 string destFilePath;
-                if (request.UseEncryption && obfuscationService is not null)
+                if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && obfuscationService is not null)
                 {
                     destFilePath = ObfuscateFullPath(
                         sourcePath, file, originalRelativePath, destinationPath,
@@ -837,7 +836,7 @@ internal sealed class DirectoryBackupService(
 
                         try
                         {
-                            if (request.UseEncryption)
+                            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
                             {
                                 var metadata =
                                     await encryptionService!.EncryptFileAsync(
@@ -946,7 +945,7 @@ internal sealed class DirectoryBackupService(
                             errors.Add(
                                 string.Format(Messages.EncryptionErrorFormat, file, ex.Message));
                         }
-                        catch (Exception ex) when (!request.UseEncryption)
+                        catch (Exception ex) when (request.EncryptionAlgorithm == EncryptionAlgorithm.None)
                         {
                             errors.Add(
                                 string.Format(
@@ -983,7 +982,7 @@ internal sealed class DirectoryBackupService(
             request.Compression);
 
         IReadOnlyList<string> manifestErrors;
-        if (request.UseEncryption)
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             manifestErrors = await manifestService.TrySaveManifestAsync(
                 [.. updatedManifestEntries],

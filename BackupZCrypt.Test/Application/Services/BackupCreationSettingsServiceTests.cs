@@ -44,7 +44,6 @@ internal sealed class BackupCreationSettingsServiceTests
             $"bzc-settings-{Guid.NewGuid():N}");
         SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
         BackupCreationSettings expectedSettings = new(
-            false,
             EncryptionAlgorithm.Serpent,
             KeyDerivationAlgorithm.Scrypt,
             NameObfuscationMode.Sha512,

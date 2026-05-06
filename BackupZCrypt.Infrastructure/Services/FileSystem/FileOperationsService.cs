@@ -1,6 +1,7 @@
 namespace BackupZCrypt.Infrastructure.Services.FileSystem;
 
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Infrastructure.Constants;
 using System.Security.Cryptography;
 
 internal sealed class FileOperationsService : IFileOperationsService
@@ -149,7 +150,7 @@ internal sealed class FileOperationsService : IFileOperationsService
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
+            StreamConstants.CopyBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         var hash = await SHA256.HashDataAsync(stream, cancellationToken);

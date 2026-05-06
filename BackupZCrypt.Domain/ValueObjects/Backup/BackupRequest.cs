@@ -12,5 +12,4 @@ public sealed record BackupRequest(
     EncryptOperation Operation,
     NameObfuscationMode NameObfuscation,
     CompressionMode Compression = CompressionMode.None,
-    bool ProceedOnWarnings = false,
-    bool UseEncryption = true);
+    bool ProceedOnWarnings = false);

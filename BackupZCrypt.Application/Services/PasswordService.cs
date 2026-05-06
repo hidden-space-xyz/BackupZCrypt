@@ -12,6 +12,19 @@ using System.Text.RegularExpressions;
 internal sealed partial class PasswordService : IPasswordService
 {
     private const double MaxEntropyBits = 120.0;
+    private const double MaxScore = 100.0;
+    private const int MinCategoriesForBonus = 4;
+    private const int MinLengthForBonus = 16;
+    private const double MinEntropyForBonus = 90.0;
+    private const double BonusPoints = 5.0;
+    private const int LetterPoolSize = 26;
+    private const int DigitPoolSize = 10;
+    private const int SpecialCharPoolSize = 32;
+    private const int UnicodePoolSize = 50;
+    private const double StrongThreshold = 85.0;
+    private const double GoodThreshold = 65.0;
+    private const double FairThreshold = 45.0;
+    private const double WeakThreshold = 25.0;
     private const string UppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private const string LowercaseChars = "abcdefghijklmnopqrstuvwxyz";
     private const string NumberChars = "0123456789";
@@ -85,16 +98,16 @@ internal sealed partial class PasswordService : IPasswordService
         penaltyBits += HomogeneousClassPenalty(compositionFlags, trimmed);
 
         var entropy = Math.Max(0, baseEntropy - penaltyBits);
-        var rawScore = entropy / MaxEntropyBits * 100.0;
-        var score = Math.Max(0, Math.Min(100, rawScore));
+        var rawScore = entropy / MaxEntropyBits * MaxScore;
+        var score = Math.Max(0, Math.Min(MaxScore, rawScore));
 
         if (
-            score < 100
-            && compositionFlags.CategoryCount >= 4
-            && trimmed.Length >= 16
-            && entropy >= 90)
+            score < MaxScore
+            && compositionFlags.CategoryCount >= MinCategoriesForBonus
+            && trimmed.Length >= MinLengthForBonus
+            && entropy >= MinEntropyForBonus)
         {
-            score = Math.Min(100, score + 5);
+            score = Math.Min(MaxScore, score + BonusPoints);
         }
 
         var strength = GetStrengthFromScore(score);
@@ -190,27 +203,27 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (hasLower)
         {
-            size += 26;
+            size += LetterPoolSize;
         }
 
         if (hasUpper)
         {
-            size += 26;
+            size += LetterPoolSize;
         }
 
         if (hasDigit)
         {
-            size += 10;
+            size += DigitPoolSize;
         }
 
         if (hasSpecial)
         {
-            size += 32;
+            size += SpecialCharPoolSize;
         }
 
         if (hasOther)
         {
-            size += 50;
+            size += UnicodePoolSize;
         }
 
         flags = new PasswordComposition(hasUpper, hasLower, hasDigit, hasSpecial, hasOther);
@@ -349,10 +362,10 @@ internal sealed partial class PasswordService : IPasswordService
     {
         return score switch
         {
-            >= 85 => PasswordStrength.Strong,
-            >= 65 => PasswordStrength.Good,
-            >= 45 => PasswordStrength.Fair,
-            >= 25 => PasswordStrength.Weak,
+            >= StrongThreshold => PasswordStrength.Strong,
+            >= GoodThreshold => PasswordStrength.Good,
+            >= FairThreshold => PasswordStrength.Fair,
+            >= WeakThreshold => PasswordStrength.Weak,
             _ => PasswordStrength.VeryWeak,
         };
     }

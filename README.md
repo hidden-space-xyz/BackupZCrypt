@@ -76,8 +76,7 @@ All configuration options are available as environment variables:
 | Variable | Description | Default |
 |---|---|---|
 | `BACKUP_PASSWORD` | Password for encryption/decryption | *(empty)* |
-| `BACKUP_USE_ENCRYPTION` | Enable or disable encryption (`true`/`false`) | `true` |
-| `BACKUP_ENCRYPTION_ALGORITHM` | `Aes`, `Twofish`, `Serpent`, `ChaCha20`, `Camellia` | `Aes` |
+| `BACKUP_ENCRYPTION_ALGORITHM` | `None`, `Aes`, `Twofish`, `Serpent`, `ChaCha20`, `Camellia` | `Aes` |
 | `BACKUP_KEY_DERIVATION_ALGORITHM` | `Argon2id`, `PBKDF2`, `Scrypt` | `Argon2id` |
 | `BACKUP_NAME_OBFUSCATION` | `None`, `Guid`, `Sha256`, `Sha512` | `None` |
 | `BACKUP_COMPRESSION` | `None`, `ZstdFast`, `Zstd`, `ZstdBest` | `None` |

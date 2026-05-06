@@ -143,8 +143,7 @@ internal sealed class BackupCommand(
                 EncryptOperation.Encrypt,
                 NameObfuscationMode.None,
                 selectedCompression.Id,
-                ProceedOnWarnings: false,
-                UseEncryption: false);
+                ProceedOnWarnings: false);
 
             await RunOperationAsync(request, operationName, Messages.Compressing);
         }
@@ -214,8 +213,7 @@ internal sealed class BackupCommand(
                 EncryptOperation.Decrypt,
                 NameObfuscationMode.None,
                 compressionStrategies[0].Id,
-                ProceedOnWarnings: false,
-                UseEncryption: false);
+                ProceedOnWarnings: false);
 
             await RunOperationAsync(request, operationName, Messages.Decompressing);
         }
@@ -281,8 +279,7 @@ internal sealed class BackupCommand(
                 EncryptOperation.Update,
                 NameObfuscationMode.None,
                 compressionStrategies[0].Id,
-                ProceedOnWarnings: false,
-                UseEncryption: false);
+                ProceedOnWarnings: false);
 
             await RunOperationAsync(request, operationName, Messages.Updating);
         }
@@ -639,7 +636,7 @@ internal sealed class BackupCommand(
 
     private IEncryptionAlgorithmStrategy? ResolveEncryptionStrategy(BackupCreationSettings settings)
     {
-        if (!settings.UseEncryption)
+        if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None)
         {
             return null;
         }
@@ -653,7 +650,7 @@ internal sealed class BackupCommand(
     private IKeyDerivationAlgorithmStrategy? ResolveKeyDerivationStrategy(
         BackupCreationSettings settings)
     {
-        if (!settings.UseEncryption)
+        if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None)
         {
             return null;
         }
@@ -667,7 +664,7 @@ internal sealed class BackupCommand(
     private INameObfuscationStrategy? ResolveNameObfuscationStrategy(
         BackupCreationSettings settings)
     {
-        if (!settings.UseEncryption || settings.NameObfuscationMode == NameObfuscationMode.None)
+        if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None || settings.NameObfuscationMode == NameObfuscationMode.None)
         {
             return null;
         }

@@ -52,7 +52,7 @@ internal sealed partial class Worker(
     {
         LogStartingOperation("Backup", config.BackupSourcePath, config.BackupDestinationPath);
 
-        var password = config.UseEncryption ? config.Password : string.Empty;
+        var password = config.EncryptionAlgorithm != EncryptionAlgorithm.None ? config.Password : string.Empty;
 
         BackupRequest request = new(
             config.BackupSourcePath,
@@ -64,8 +64,7 @@ internal sealed partial class Worker(
             EncryptOperation.Encrypt,
             config.NameObfuscation,
             config.Compression,
-            ProceedOnWarnings: true,
-            UseEncryption: config.UseEncryption);
+            ProceedOnWarnings: true);
 
         var result = await ExecuteOperationAsync("Backup", request, cancellationToken);
 
@@ -83,19 +82,19 @@ internal sealed partial class Worker(
 
         var isEncrypted = fileSystem.IsManifestEncrypted(config.RestoreSourcePath);
         var password = isEncrypted ? config.Password : string.Empty;
+        var encryptionAlgorithm = isEncrypted ? config.EncryptionAlgorithm : EncryptionAlgorithm.None;
 
         BackupRequest request = new(
             config.RestoreSourcePath,
             config.RestoreDestinationPath,
             password,
             password,
-            config.EncryptionAlgorithm,
+            encryptionAlgorithm,
             config.KeyDerivationAlgorithm,
             EncryptOperation.Decrypt,
             config.NameObfuscation,
             config.Compression,
-            ProceedOnWarnings: true,
-            UseEncryption: isEncrypted);
+            ProceedOnWarnings: true);
 
         var result = await ExecuteOperationAsync("Restore", request, cancellationToken);
 

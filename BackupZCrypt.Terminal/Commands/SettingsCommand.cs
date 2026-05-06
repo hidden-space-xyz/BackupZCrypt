@@ -99,12 +99,11 @@ internal sealed class SettingsCommand(
                             Messages.NoneNoEncryption) is { } encryptionStrategy
                         ? settings with
                         {
-                            UseEncryption = true,
                             EncryptionAlgorithm = encryptionStrategy.Id,
                         }
                         : settings with
                         {
-                            UseEncryption = false,
+                            EncryptionAlgorithm = EncryptionAlgorithm.None,
                             NameObfuscationMode = NameObfuscationMode.None,
                         },
                 var value when value == Messages.SettingsKeyDerivationOption
@@ -223,7 +222,7 @@ internal sealed class SettingsCommand(
             Messages.EncryptionLabel,
             Markup.Escape(this.ResolveEncryptionDisplayName(settings)));
 
-        if (settings.UseEncryption)
+        if (settings.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             summaryTable.AddRow(
                 Messages.KeyDerivationLabel,
@@ -282,7 +281,7 @@ internal sealed class SettingsCommand(
 
     private string ResolveEncryptionDisplayName(BackupCreationSettings settings)
     {
-        if (!settings.UseEncryption)
+        if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None)
         {
             return Messages.NoneNoEncryption;
         }

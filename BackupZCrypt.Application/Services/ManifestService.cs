@@ -3,6 +3,7 @@ namespace BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -14,10 +15,6 @@ internal sealed class ManifestService(
 {
     private const int PreambleSize = 2;
 
-    private static string AppFileExtension => ".bzc";
-
-    private static string ManifestFileName => "manifest" + AppFileExtension;
-
     public async Task<ManifestData?> TryReadManifestAsync(
         string sourceRoot,
         IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
@@ -26,7 +23,7 @@ internal sealed class ManifestService(
     {
         try
         {
-            var encryptedManifestPath = Path.Combine(sourceRoot, ManifestFileName);
+            var encryptedManifestPath = Path.Combine(sourceRoot, BackupConstants.ManifestFileName);
             if (!fileOperationsService.FileExists(encryptedManifestPath))
             {
                 return null;
@@ -88,7 +85,7 @@ internal sealed class ManifestService(
                 [.. entries]);
 
             var manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
-            var encryptedManifestPath = Path.Combine(destinationRoot, ManifestFileName);
+            var encryptedManifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
             var encryptedManifestBytes = await encryptionService.CreateEncryptedDataAsync(
                 manifestBytes,
                 request.Password,
@@ -135,7 +132,7 @@ internal sealed class ManifestService(
                 [.. entries]);
 
             var manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
-            var manifestPath = Path.Combine(destinationRoot, ManifestFileName);
+            var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
             await fileOperationsService.WriteAllBytesAsync(
                 manifestPath, manifestBytes, cancellationToken);
         }
