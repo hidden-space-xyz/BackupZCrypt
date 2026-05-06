@@ -79,114 +79,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a Backup Settings.
-        /// </summary>
-        internal static string BackupSettings {
-            get {
-                return ResourceManager.GetString("BackupSettings", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Choose a setting to change:.
-        /// </summary>
-        internal static string BackupSettingsActionPrompt {
-            get {
-                return ResourceManager.GetString("BackupSettingsActionPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 💾 Save Changes and Return to Main Menu.
-        /// </summary>
-        internal static string BackupSettingsBack {
-            get {
-                return ResourceManager.GetString("BackupSettingsBack", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 🗜️ Configure Compression.
-        /// </summary>
-        internal static string BackupSettingsCompressionOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsCompressionOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 🔐 Configure Encryption Algorithm.
-        /// </summary>
-        internal static string BackupSettingsEncryptionAlgorithmOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsEncryptionAlgorithmOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Configure Encryption Mode.
-        /// </summary>
-        internal static string BackupSettingsEncryptionOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsEncryptionOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 🧪 Configure Key Derivation.
-        /// </summary>
-        internal static string BackupSettingsKeyDerivationOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsKeyDerivationOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a 🕶️ Configure Name Obfuscation.
-        /// </summary>
-        internal static string BackupSettingsNameObfuscationOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsNameObfuscationOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Changes are saved immediately to a JSON file in the system temporary directory..
-        /// </summary>
-        internal static string BackupSettingsPersistenceNotice {
-            get {
-                return ResourceManager.GetString("BackupSettingsPersistenceNotice", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Backup settings were reset to secure defaults..
-        /// </summary>
-        internal static string BackupSettingsReset {
-            get {
-                return ResourceManager.GetString("BackupSettingsReset", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a ♻️ Reset to Defaults.
-        /// </summary>
-        internal static string BackupSettingsResetOption {
-            get {
-                return ResourceManager.GetString("BackupSettingsResetOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Busca una cadena traducida similar a Backup settings saved..
-        /// </summary>
-        internal static string BackupSettingsSaved {
-            get {
-                return ResourceManager.GetString("BackupSettingsSaved", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a A simple military-grade file backup tool.
         /// </summary>
         internal static string BannerSubtitle {
@@ -502,6 +394,60 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Language changed. Restart the application for the change to take effect..
+        /// </summary>
+        internal static string LanguageChanged {
+            get {
+                return ResourceManager.GetString("LanguageChanged", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Current language: {0}.
+        /// </summary>
+        internal static string LanguageCurrentFormat {
+            get {
+                return ResourceManager.GetString("LanguageCurrentFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Language.
+        /// </summary>
+        internal static string LanguageLabel {
+            get {
+                return ResourceManager.GetString("LanguageLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Select your preferred language:.
+        /// </summary>
+        internal static string LanguagePrompt {
+            get {
+                return ResourceManager.GetString("LanguagePrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Language Settings.
+        /// </summary>
+        internal static string LanguageSettings {
+            get {
+                return ResourceManager.GetString("LanguageSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a System Default.
+        /// </summary>
+        internal static string LanguageSystemDefault {
+            get {
+                return ResourceManager.GetString("LanguageSystemDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Length:.
         /// </summary>
         internal static string LengthLabel {
@@ -529,15 +475,6 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a ⚙️ Backup Settings.
-        /// </summary>
-        internal static string MenuBackupSettings {
-            get {
-                return ResourceManager.GetString("MenuBackupSettings", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Busca una cadena traducida similar a 💾 Create Backup.
         /// </summary>
         internal static string MenuCreateBackup {
@@ -556,11 +493,29 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a 🌐 Language.
+        /// </summary>
+        internal static string MenuLanguage {
+            get {
+                return ResourceManager.GetString("MenuLanguage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a 📂 Restore Backup.
         /// </summary>
         internal static string MenuRestoreBackup {
             get {
                 return ResourceManager.GetString("MenuRestoreBackup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a ⚙️ Settings.
+        /// </summary>
+        internal static string MenuSettings {
+            get {
+                return ResourceManager.GetString("MenuSettings", resourceCulture);
             }
         }
         
@@ -862,11 +817,119 @@ namespace BackupZCrypt.Terminal.Resources {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Backup Settings.
+        /// </summary>
+        internal static string Settings {
+            get {
+                return ResourceManager.GetString("Settings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Choose a setting to change:.
+        /// </summary>
+        internal static string SettingsActionPrompt {
+            get {
+                return ResourceManager.GetString("SettingsActionPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 💾 Save Changes and Return to Main Menu.
+        /// </summary>
+        internal static string SettingsBack {
+            get {
+                return ResourceManager.GetString("SettingsBack", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🗜️ Configure Compression.
+        /// </summary>
+        internal static string SettingsCompressionOption {
+            get {
+                return ResourceManager.GetString("SettingsCompressionOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🔐 Configure Encryption Algorithm.
+        /// </summary>
+        internal static string SettingsEncryptionAlgorithmOption {
+            get {
+                return ResourceManager.GetString("SettingsEncryptionAlgorithmOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Configure Encryption Mode.
+        /// </summary>
+        internal static string SettingsEncryptionOption {
+            get {
+                return ResourceManager.GetString("SettingsEncryptionOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Settings file.
         /// </summary>
         internal static string SettingsFileLabel {
             get {
                 return ResourceManager.GetString("SettingsFileLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🧪 Configure Key Derivation.
+        /// </summary>
+        internal static string SettingsKeyDerivationOption {
+            get {
+                return ResourceManager.GetString("SettingsKeyDerivationOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🌐 Change Language.
+        /// </summary>
+        internal static string SettingsLanguageOption {
+            get {
+                return ResourceManager.GetString("SettingsLanguageOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a 🕶️ Configure Name Obfuscation.
+        /// </summary>
+        internal static string SettingsNameObfuscationOption {
+            get {
+                return ResourceManager.GetString("SettingsNameObfuscationOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Backup settings were reset to secure defaults..
+        /// </summary>
+        internal static string SettingsReset {
+            get {
+                return ResourceManager.GetString("SettingsReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a ♻️ Reset to Defaults.
+        /// </summary>
+        internal static string SettingsResetOption {
+            get {
+                return ResourceManager.GetString("SettingsResetOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a Backup settings saved..
+        /// </summary>
+        internal static string SettingsSaved {
+            get {
+                return ResourceManager.GetString("SettingsSaved", resourceCulture);
             }
         }
         

@@ -6,21 +6,30 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal.Resources;
 using Spectre.Console;
+using System.Globalization;
 
-internal sealed class BackupSettingsCommand(
-    IBackupCreationSettingsService backupCreationSettingsService,
+internal sealed class SettingsCommand(
+    ISettingsService settingsService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
     IReadOnlyList<ICompressionStrategy> compressionStrategies)
 {
+    private static readonly (string DisplayName, string? Code)[] SupportedLanguages =
+    [
+        ("English", "en"),
+        ("Español", "es"),
+    ];
+
     public async Task ExecuteAsync()
     {
         BackupCreationSettings settings;
+        LanguageSettings languageSettings;
 
         try
         {
-            settings = await backupCreationSettingsService.GetOrCreateAsync();
+            settings = await settingsService.GetOrCreateAsync<BackupCreationSettings>();
+            languageSettings = await settingsService.GetOrCreateAsync<LanguageSettings>();
         }
         catch (Exception ex)
         {
@@ -29,15 +38,11 @@ internal sealed class BackupSettingsCommand(
             return;
         }
 
-        AnsiConsole.Write(
-            new Rule($"[bold cyan]{Messages.BackupSettings}[/]").RuleStyle(Style.Parse("grey")));
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[dim]{Messages.BackupSettingsPersistenceNotice}[/]");
-        AnsiConsole.WriteLine();
+        PrintHeader();
 
         while (true)
         {
-            this.PrintSummary(settings);
+            this.PrintSummary(settings, languageSettings);
 
             string action;
 
@@ -45,26 +50,27 @@ internal sealed class BackupSettingsCommand(
             {
                 action = await AnsiConsole.PromptAsync(
                     new SelectionPrompt<string>()
-                        .Title($"[green]{Messages.BackupSettingsActionPrompt}[/]")
+                        .Title($"[green]{Messages.SettingsActionPrompt}[/]")
                         .HighlightStyle(Style.Parse("bold cyan"))
                         .AddChoices(
-                            Messages.BackupSettingsEncryptionAlgorithmOption,
-                            Messages.BackupSettingsKeyDerivationOption,
-                            Messages.BackupSettingsNameObfuscationOption,
-                            Messages.BackupSettingsCompressionOption,
-                            Messages.BackupSettingsResetOption,
-                            Messages.BackupSettingsBack));
+                            Messages.SettingsEncryptionAlgorithmOption,
+                            Messages.SettingsKeyDerivationOption,
+                            Messages.SettingsNameObfuscationOption,
+                            Messages.SettingsCompressionOption,
+                            Messages.SettingsLanguageOption,
+                            Messages.SettingsResetOption,
+                            Messages.SettingsBack));
             }
             catch (OperationCanceledException)
             {
                 return;
             }
 
-            if (action == Messages.BackupSettingsBack)
+            if (action == Messages.SettingsBack)
             {
                 try
                 {
-                    await backupCreationSettingsService.SaveAsync(settings);
+                    await settingsService.SaveAsync(settings);
                     return;
                 }
                 catch (Exception ex)
@@ -75,9 +81,16 @@ internal sealed class BackupSettingsCommand(
                 }
             }
 
+            if (action == Messages.SettingsLanguageOption)
+            {
+                languageSettings = await this.PromptLanguageAsync(languageSettings);
+                AnsiConsole.WriteLine();
+                continue;
+            }
+
             settings = action switch
             {
-                var value when value == Messages.BackupSettingsEncryptionAlgorithmOption
+                var value when value == Messages.SettingsEncryptionAlgorithmOption
                     =>
                 PromptOptionalStrategy(
                             Messages.EncryptionAlgorithmPrompt,
@@ -94,7 +107,7 @@ internal sealed class BackupSettingsCommand(
                             UseEncryption = false,
                             NameObfuscationMode = NameObfuscationMode.None,
                         },
-                var value when value == Messages.BackupSettingsKeyDerivationOption
+                var value when value == Messages.SettingsKeyDerivationOption
                     => settings with
                     {
                         KeyDerivationAlgorithm = PromptStrategy(
@@ -102,7 +115,7 @@ internal sealed class BackupSettingsCommand(
                             keyDerivationStrategies,
                             strategy => $"{strategy.DisplayName} — {strategy.Summary}").Id,
                     },
-                var value when value == Messages.BackupSettingsNameObfuscationOption
+                var value when value == Messages.SettingsNameObfuscationOption
                     => settings with
                     {
                         NameObfuscationMode = PromptOptionalStrategy(
@@ -111,7 +124,7 @@ internal sealed class BackupSettingsCommand(
                             strategy => $"{strategy.DisplayName} — {strategy.Summary}",
                             Messages.NoneNoObfuscation)?.Id ?? NameObfuscationMode.None,
                     },
-                var value when value == Messages.BackupSettingsCompressionOption
+                var value when value == Messages.SettingsCompressionOption
                     => settings with
                     {
                         CompressionMode = PromptOptionalStrategy(
@@ -120,30 +133,92 @@ internal sealed class BackupSettingsCommand(
                             strategy => $"{strategy.DisplayName} — {strategy.Summary}",
                             Messages.NoneNoCompression)?.Id ?? CompressionMode.None,
                     },
-                _ => BackupCreationSettings.Default,
+                _ => BackupCreationSettings.DefaultValue,
             };
 
-            if (action == Messages.BackupSettingsResetOption)
+            if (action == Messages.SettingsResetOption)
             {
-                AnsiConsole.MarkupLine($"[green]{Messages.BackupSettingsReset}[/]");
+                AnsiConsole.MarkupLine($"[green]{Messages.SettingsReset}[/]");
             }
 
             AnsiConsole.WriteLine();
         }
     }
 
-    private void PrintSummary(BackupCreationSettings settings)
+    public static void ApplyLanguage(string? languageCode)
+    {
+        var culture = string.IsNullOrWhiteSpace(languageCode)
+            ? CultureInfo.InstalledUICulture
+            : new CultureInfo(languageCode);
+
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+
+    private static void PrintHeader()
+    {
+        AnsiConsole.Write(new Rule($"[bold cyan]{Messages.Settings}[/]").RuleStyle(Style.Parse("grey")));
+        AnsiConsole.WriteLine();
+    }
+
+    private async Task<LanguageSettings> PromptLanguageAsync(LanguageSettings current)
+    {
+        var choices = new List<string> { Messages.LanguageSystemDefault };
+        choices.AddRange(SupportedLanguages.Select(l => l.DisplayName));
+
+        string selected;
+
+        try
+        {
+            selected = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[green]{Messages.LanguagePrompt}[/]")
+                    .HighlightStyle(Style.Parse("bold cyan"))
+                    .AddChoices(choices));
+        }
+        catch (OperationCanceledException)
+        {
+            return current;
+        }
+
+        string? selectedCode = null;
+
+        if (selected != Messages.LanguageSystemDefault)
+        {
+            selectedCode = SupportedLanguages
+                .First(l => l.DisplayName == selected).Code;
+        }
+
+        var newSettings = new LanguageSettings(selectedCode);
+
+        try
+        {
+            await settingsService.SaveAsync(newSettings);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
+            return current;
+        }
+
+        AnsiConsole.MarkupLine($"[yellow]{Messages.LanguageChanged}[/]");
+
+        return newSettings;
+    }
+
+    private void PrintSummary(BackupCreationSettings settings, LanguageSettings languageSettings)
     {
         var summaryTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
-            .Title($"[bold cyan]{Messages.BackupSettings}[/]")
+            .Title($"[bold cyan]{Messages.Settings}[/]")
             .AddColumn(new TableColumn($"[bold]{Messages.Setting}[/]").LeftAligned())
             .AddColumn(new TableColumn($"[bold]{Messages.Value}[/]").LeftAligned());
 
         summaryTable.AddRow(
             Messages.SettingsFileLabel,
-            Markup.Escape(backupCreationSettingsService.SettingsFilePath));
+            Markup.Escape(settingsService.GetFilePath<BackupCreationSettings>()));
         summaryTable.AddRow(
             Messages.EncryptionLabel,
             Markup.Escape(this.ResolveEncryptionDisplayName(settings)));
@@ -161,6 +236,9 @@ internal sealed class BackupSettingsCommand(
         summaryTable.AddRow(
             Messages.CompressionLabel,
             Markup.Escape(this.ResolveCompressionDisplayName(settings.CompressionMode)));
+        summaryTable.AddRow(
+            Messages.LanguageLabel,
+            Markup.Escape(ResolveLanguageDisplayName(languageSettings.LanguageCode)));
 
         AnsiConsole.Write(summaryTable);
         AnsiConsole.WriteLine();
@@ -242,5 +320,18 @@ internal sealed class BackupSettingsCommand(
         return compressionStrategies.FirstOrDefault(strategy => strategy.Id == mode)?.DisplayName
             ?? throw new InvalidOperationException(
                 $"No compression strategy is registered for '{mode}'.");
+    }
+
+    private static string ResolveLanguageDisplayName(string? languageCode)
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
+        {
+            return Messages.LanguageSystemDefault;
+        }
+
+        var match = SupportedLanguages
+            .FirstOrDefault(l => string.Equals(l.Code, languageCode, StringComparison.OrdinalIgnoreCase));
+
+        return match.DisplayName ?? languageCode;
     }
 }

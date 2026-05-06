@@ -67,8 +67,7 @@ public static class DependencyInjection
         services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
         services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         services.AddSingleton<IManifestService, ManifestService>();
-        services.AddSingleton<IBackupCreationSettingsService, BackupCreationSettingsService>();
-        services.AddSingleton<IRecentPathSettingsService, RecentPathSettingsService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
 
         return services;
     }

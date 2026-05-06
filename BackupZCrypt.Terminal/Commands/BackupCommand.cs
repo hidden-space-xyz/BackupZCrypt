@@ -17,7 +17,7 @@ using System.Diagnostics;
 
 internal sealed class BackupCommand(
     IBackupOrchestrator orchestrator,
-    IBackupCreationSettingsService backupCreationSettingsService,
+    ISettingsService settingsService,
     IPasswordService passwordService,
     IManifestService manifestService,
     IPathPromptService pathPromptService,
@@ -67,7 +67,7 @@ internal sealed class BackupCommand(
 
         try
         {
-            settings = await backupCreationSettingsService.GetOrCreateAsync();
+            settings = await settingsService.GetOrCreateAsync<BackupCreationSettings>();
         }
         catch (Exception ex)
         {

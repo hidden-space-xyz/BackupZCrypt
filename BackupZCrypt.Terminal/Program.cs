@@ -1,5 +1,6 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal;
@@ -19,9 +20,12 @@ services.AddDomainServices();
 services.AddApplicationServices();
 var provider = services.BuildServiceProvider();
 
+// Apply saved language preference before rendering any UI
+var settingsService = provider.GetRequiredService<ISettingsService>();
+var languageSettings = await settingsService.GetOrCreateAsync<LanguageSettings>();
+SettingsCommand.ApplyLanguage(languageSettings.LanguageCode);
+
 var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
-var backupCreationSettingsService = provider.GetRequiredService<IBackupCreationSettingsService>();
-var recentPathSettingsService = provider.GetRequiredService<IRecentPathSettingsService>();
 var passwordService = provider.GetRequiredService<IPasswordService>();
 var manifestService = provider.GetRequiredService<IManifestService>();
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
@@ -41,11 +45,11 @@ List<ICompressionStrategy> compressionStrategies =
     .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
 ];
 
-IPathPromptService pathPromptService = new PathPromptService(recentPathSettingsService);
+IPathPromptService pathPromptService = new PathPromptService(settingsService);
 
 BackupCommand backupCommand = new(
     orchestrator,
-    backupCreationSettingsService,
+    settingsService,
     passwordService,
     manifestService,
     pathPromptService,
@@ -54,8 +58,8 @@ BackupCommand backupCommand = new(
     nameObfuscationStrategies,
     compressionStrategies);
 
-BackupSettingsCommand backupSettingsCommand = new(
-    backupCreationSettingsService,
+SettingsCommand settingsCommand = new(
+    settingsService,
     encryptionStrategies,
     keyDerivationStrategies,
     nameObfuscationStrategies,
@@ -67,6 +71,6 @@ AlgorithmInfoCommand algorithmInfoCommand = new(
     nameObfuscationStrategies,
     compressionStrategies);
 
-TerminalApplication app = new(backupCommand, backupSettingsCommand, algorithmInfoCommand);
+TerminalApplication app = new(backupCommand, settingsCommand, algorithmInfoCommand);
 
 await app.RunAsync();

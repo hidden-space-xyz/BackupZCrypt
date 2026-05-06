@@ -8,7 +8,7 @@ using Spectre.Console;
 using System.Security;
 using System.Text;
 
-internal sealed class PathPromptService(IRecentPathSettingsService recentPathSettingsService) : IPathPromptService
+internal sealed class PathPromptService(ISettingsService settingsService) : IPathPromptService
 {
     private const int MaxSuggestionCount = 12;
 
@@ -79,9 +79,14 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
     {
         try
         {
-            await recentPathSettingsService.RememberPathsAsync(
-                sourcePath,
-                destinationPath,
+            var settings = await settingsService.GetOrCreateAsync<RecentPathSettings>(cancellationToken);
+
+            await settingsService.SaveAsync(
+                settings with
+                {
+                    LastSourcePath = Path.GetFullPath(sourcePath),
+                    LastDestinationPath = Path.GetFullPath(destinationPath),
+                },
                 cancellationToken);
         }
         catch (Exception ex) when (
@@ -385,7 +390,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
     {
         try
         {
-            return await recentPathSettingsService.GetOrCreateAsync();
+            return await settingsService.GetOrCreateAsync<RecentPathSettings>();
         }
         catch (Exception ex) when (
             ex is InvalidOperationException
@@ -395,7 +400,7 @@ internal sealed class PathPromptService(IRecentPathSettingsService recentPathSet
             or UnauthorizedAccessException)
         {
             PrintWarning(Messages.PathHistoryLoadWarningFormat, ex.Message);
-            return RecentPathSettings.Default;
+            return RecentPathSettings.DefaultValue;
         }
     }
 

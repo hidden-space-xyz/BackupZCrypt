@@ -14,16 +14,16 @@ internal sealed class BackupCreationSettingsServiceTests
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-settings-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
-        BackupCreationSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        var settingsFilePath = Path.Combine(tempDirectoryPath, BackupCreationSettings.FileName);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
 
         try
         {
-            var settings = await service.GetOrCreateAsync();
+            var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(settings, Is.EqualTo(BackupCreationSettings.Default));
+                Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
                 Assert.That(File.Exists(settingsFilePath), Is.True);
             }
         }
@@ -42,8 +42,7 @@ internal sealed class BackupCreationSettingsServiceTests
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-settings-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
-        BackupCreationSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
         BackupCreationSettings expectedSettings = new(
             false,
             EncryptionAlgorithm.Serpent,
@@ -55,7 +54,7 @@ internal sealed class BackupCreationSettingsServiceTests
         {
             await service.SaveAsync(expectedSettings);
 
-            var actualSettings = await service.GetOrCreateAsync();
+            var actualSettings = await service.GetOrCreateAsync<BackupCreationSettings>();
 
             Assert.That(actualSettings, Is.EqualTo(expectedSettings));
         }
@@ -71,11 +70,11 @@ internal sealed class BackupCreationSettingsServiceTests
     [Test]
     public void Constructor_WithoutCustomPath_UsesSystemTemporaryDirectory()
     {
-        BackupCreationSettingsService service = new(new FileOperationsService());
+        SettingsService service = new(new FileOperationsService());
 
         var relativePath = Path.GetRelativePath(
             Path.GetFullPath(Path.GetTempPath()),
-            service.SettingsFilePath);
+            service.GetFilePath<BackupCreationSettings>());
 
         Assert.That(relativePath.StartsWith("..", StringComparison.Ordinal), Is.False);
     }
@@ -86,15 +85,15 @@ internal sealed class BackupCreationSettingsServiceTests
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-settings-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
+        var settingsFilePath = Path.Combine(tempDirectoryPath, BackupCreationSettings.FileName);
         Directory.CreateDirectory(tempDirectoryPath);
         File.WriteAllText(settingsFilePath, "{ invalid json }");
-        BackupCreationSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
 
         try
         {
             Assert.That(
-                async () => await service.GetOrCreateAsync(),
+                async () => await service.GetOrCreateAsync<BackupCreationSettings>(),
                 Throws.TypeOf<InvalidOperationException>());
         }
         finally

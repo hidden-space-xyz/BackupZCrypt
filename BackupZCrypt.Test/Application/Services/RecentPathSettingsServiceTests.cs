@@ -13,16 +13,16 @@ internal sealed class RecentPathSettingsServiceTests
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
-        RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        var settingsFilePath = Path.Combine(tempDirectoryPath, RecentPathSettings.FileName);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
 
         try
         {
-            var settings = await service.GetOrCreateAsync();
+            var settings = await service.GetOrCreateAsync<RecentPathSettings>();
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(settings, Is.EqualTo(RecentPathSettings.Default));
+                Assert.That(settings, Is.EqualTo(RecentPathSettings.DefaultValue));
                 Assert.That(File.Exists(settingsFilePath), Is.True);
             }
         }
@@ -36,21 +36,26 @@ internal sealed class RecentPathSettingsServiceTests
     }
 
     [Test]
-    public async Task RememberPathsAsync_WhenPathsChange_PersistsRoundTrip()
+    public async Task SaveAsync_WhenPathsChange_PersistsRoundTrip()
     {
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
-        RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
         var expectedSourcePath = Path.Combine(tempDirectoryPath, "source");
         var expectedDestinationPath = Path.Combine(tempDirectoryPath, "destination");
 
         try
         {
-            await service.RememberPathsAsync(expectedSourcePath, expectedDestinationPath);
+            var settings = await service.GetOrCreateAsync<RecentPathSettings>();
 
-            var actualSettings = await service.GetOrCreateAsync();
+            await service.SaveAsync(settings with
+            {
+                LastSourcePath = Path.GetFullPath(expectedSourcePath),
+                LastDestinationPath = Path.GetFullPath(expectedDestinationPath),
+            });
+
+            var actualSettings = await service.GetOrCreateAsync<RecentPathSettings>();
 
             using (Assert.EnterMultipleScope())
             {
@@ -70,11 +75,11 @@ internal sealed class RecentPathSettingsServiceTests
     [Test]
     public void Constructor_WithoutCustomPath_UsesSystemTemporaryDirectory()
     {
-        RecentPathSettingsService service = new(new FileOperationsService());
+        SettingsService service = new(new FileOperationsService());
 
         var relativePath = Path.GetRelativePath(
             Path.GetFullPath(Path.GetTempPath()),
-            service.SettingsFilePath);
+            service.GetFilePath<RecentPathSettings>());
 
         Assert.That(relativePath.StartsWith("..", StringComparison.Ordinal), Is.False);
     }
@@ -85,15 +90,15 @@ internal sealed class RecentPathSettingsServiceTests
         var tempDirectoryPath = Path.Combine(
             Path.GetTempPath(),
             $"bzc-recent-paths-{Guid.NewGuid():N}");
-        var settingsFilePath = Path.Combine(tempDirectoryPath, "settings.json");
+        var settingsFilePath = Path.Combine(tempDirectoryPath, RecentPathSettings.FileName);
         Directory.CreateDirectory(tempDirectoryPath);
         File.WriteAllText(settingsFilePath, "{ invalid json }");
-        RecentPathSettingsService service = new(new FileOperationsService(), settingsFilePath);
+        SettingsService service = new(new FileOperationsService(), tempDirectoryPath);
 
         try
         {
             Assert.That(
-                async () => await service.GetOrCreateAsync(),
+                async () => await service.GetOrCreateAsync<RecentPathSettings>(),
                 Throws.TypeOf<InvalidOperationException>());
         }
         finally

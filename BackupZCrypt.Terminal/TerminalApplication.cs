@@ -8,7 +8,7 @@ using Spectre.Console;
 
 internal sealed class TerminalApplication(
     BackupCommand backupCommand,
-    BackupSettingsCommand backupSettingsCommand,
+    SettingsCommand settingsCommand,
     AlgorithmInfoCommand algorithmInfoCommand)
 {
     public async Task RunAsync()
@@ -25,7 +25,7 @@ internal sealed class TerminalApplication(
                         Messages.MenuCreateBackup,
                         Messages.MenuUpdateBackup,
                         Messages.MenuRestoreBackup,
-                        Messages.MenuBackupSettings,
+                        Messages.MenuSettings,
                         Messages.MenuAlgorithmInfo,
                         Messages.MenuExit));
 
@@ -41,9 +41,9 @@ internal sealed class TerminalApplication(
             {
                 await backupCommand.ExecuteAsync(EncryptOperation.Decrypt);
             }
-            else if (choice == Messages.MenuBackupSettings)
+            else if (choice == Messages.MenuSettings)
             {
-                await backupSettingsCommand.ExecuteAsync();
+                await settingsCommand.ExecuteAsync();
                 continue;
             }
             else if (choice == Messages.MenuAlgorithmInfo)
