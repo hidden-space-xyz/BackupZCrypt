@@ -16,7 +16,7 @@ internal sealed class BackupOrchestratorTests
     private IFileOperationsService fileOps = null!;
     private BackupOrchestrator orchestrator = null!;
     private IProgress<BackupStatus> progress = null!;
-    private ISingleFileBackupService singleFileService = null!;
+    private IFileBackupService singleFileService = null!;
     private IBackupRequestValidator validator = null!;
 
     [Test]
@@ -306,7 +306,7 @@ internal sealed class BackupOrchestratorTests
     {
         this.validator = Substitute.For<IBackupRequestValidator>();
         this.fileOps = Substitute.For<IFileOperationsService>();
-        this.singleFileService = Substitute.For<ISingleFileBackupService>();
+        this.singleFileService = Substitute.For<IFileBackupService>();
         this.directoryService = Substitute.For<IDirectoryBackupService>();
         this.progress = Substitute.For<IProgress<BackupStatus>>();
 

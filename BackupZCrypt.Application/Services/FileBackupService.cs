@@ -14,13 +14,13 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using System.Diagnostics;
 
-internal sealed class SingleFileBackupService(
+internal sealed class FileBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
-    IFileOperationsService fileOperations,
+    IFileOperationsService fileOperationsService,
     IManifestService manifestService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : ISingleFileBackupService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IFileBackupService
 {
     public async Task<Result<BackupResult>> ProcessAsync(
         string sourcePath,
@@ -67,7 +67,7 @@ internal sealed class SingleFileBackupService(
             long fileSize = 0;
             try
             {
-                fileSize = fileOperations.GetFileSize(sourcePath);
+                fileSize = fileOperationsService.GetFileSize(sourcePath);
             }
             catch
             {
@@ -92,14 +92,14 @@ internal sealed class SingleFileBackupService(
                         request.Compression,
                         cancellationToken);
 
-                    var destDir = fileOperations.GetDirectoryName(destFile);
+                    var destDir = fileOperationsService.GetDirectoryName(destFile);
 
                     if (!string.IsNullOrEmpty(destDir))
                     {
                         var destRelativePath = Path.GetFileName(destFile);
                         var originalRelativePath = Path.GetFileName(sourcePath);
 
-                        var sourceHash = await fileOperations.ComputeFileHashAsync(
+                        var sourceHash = await fileOperationsService.ComputeFileHashAsync(
                             sourcePath, cancellationToken);
 
                         ManifestEntry entry = new(
@@ -148,7 +148,7 @@ internal sealed class SingleFileBackupService(
 
                     if (result)
                     {
-                        var destDir = fileOperations.GetDirectoryName(destFile);
+                        var destDir = fileOperationsService.GetDirectoryName(destFile);
 
                         if (!string.IsNullOrEmpty(destDir))
                         {
@@ -299,10 +299,10 @@ internal sealed class SingleFileBackupService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var destDir = fileOperations.GetDirectoryName(destinationFile);
+        var destDir = fileOperationsService.GetDirectoryName(destinationFile);
         if (!string.IsNullOrEmpty(destDir))
         {
-            await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
+            await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
         }
 
         if (request.Operation == EncryptOperation.Encrypt)
@@ -332,14 +332,14 @@ internal sealed class SingleFileBackupService(
         string destinationFile,
         CancellationToken cancellationToken)
     {
-        var destDir = fileOperations.GetDirectoryName(destinationFile);
+        var destDir = fileOperationsService.GetDirectoryName(destinationFile);
         if (!string.IsNullOrEmpty(destDir))
         {
-            await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
+            await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
         }
 
-        await using var source = fileOperations.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
-        await using var destination = fileOperations.CreateWriteStream(
+        await using var source = fileOperationsService.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
+        await using var destination = fileOperationsService.CreateWriteStream(
             destinationFile,
             BackupIOConstants.CopyBufferSize);
 
@@ -445,11 +445,11 @@ internal sealed class SingleFileBackupService(
         string sourceFile,
         INameObfuscationStrategy obfuscationService)
     {
-        var dir = fileOperations.GetDirectoryName(destinationFile)!;
+        var dir = fileOperationsService.GetDirectoryName(destinationFile)!;
 
         var name = Path.GetFileName(destinationFile);
         var obfuscated = obfuscationService.ObfuscateFileName(sourceFile, name);
 
-        return fileOperations.CombinePath(dir, obfuscated);
+        return fileOperationsService.CombinePath(dir, obfuscated);
     }
 }

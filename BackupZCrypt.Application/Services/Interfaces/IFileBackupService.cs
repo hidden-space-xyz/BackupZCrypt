@@ -3,7 +3,7 @@ namespace BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
-public interface ISingleFileBackupService
+public interface IFileBackupService
 {
     Task<Result<BackupResult>> ProcessAsync(
         string sourcePath,

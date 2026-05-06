@@ -24,7 +24,7 @@ internal sealed class SingleFileBackupServiceTests
     private INameObfuscationServiceFactory obfuscationFactory = null!;
     private INameObfuscationStrategy obfuscationStrategy = null!;
     private IProgress<BackupStatus> progress = null!;
-    private SingleFileBackupService service = null!;
+    private FileBackupService service = null!;
 
     [Test]
     public async Task ProcessAsync_Decrypt_ManifestFile_IgnoresAndReturnsSuccess()
@@ -328,7 +328,7 @@ internal sealed class SingleFileBackupServiceTests
 
         var compressionFactory = Substitute.For<ICompressionServiceFactory>();
 
-        this.service = new SingleFileBackupService(
+        this.service = new FileBackupService(
             this.encryptionFactory,
             compressionFactory,
             this.obfuscationFactory,

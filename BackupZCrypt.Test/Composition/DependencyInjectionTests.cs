@@ -102,7 +102,7 @@ internal sealed class DependencyInjectionTests
     public void AddApplicationServices_ResolvesSingleFileBackupService()
     {
         var service =
-            this.provider.GetRequiredService<ISingleFileBackupService>();
+            this.provider.GetRequiredService<IFileBackupService>();
 
         Assert.That(service, Is.Not.Null);
     }

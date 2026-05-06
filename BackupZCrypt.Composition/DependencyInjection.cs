@@ -63,7 +63,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
-        services.AddSingleton<ISingleFileBackupService, SingleFileBackupService>();
+        services.AddSingleton<IFileBackupService, FileBackupService>();
         services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
         services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         services.AddSingleton<IManifestService, ManifestService>();

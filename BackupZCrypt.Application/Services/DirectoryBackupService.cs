@@ -19,7 +19,7 @@ internal sealed class DirectoryBackupService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     INameObfuscationServiceFactory nameObfuscationServiceFactory,
-    IFileOperationsService fileOperations,
+    IFileOperationsService fileOperationsService,
     IManifestService manifestService,
     IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IDirectoryBackupService
 {
@@ -109,7 +109,7 @@ internal sealed class DirectoryBackupService(
             };
         }
 
-        var files = await fileOperations.GetFilesAsync(sourcePath, "*.*", cancellationToken);
+        var files = await fileOperationsService.GetFilesAsync(sourcePath, "*.*", cancellationToken);
 
         if (files.Length == 0)
         {
@@ -127,7 +127,7 @@ internal sealed class DirectoryBackupService(
         var manifestEncryptedAbsolute = Path.Combine(
             sourcePath,
             BackupConstants.ManifestFileName);
-        var manifestEncryptedRelative = fileOperations.GetRelativePath(
+        var manifestEncryptedRelative = fileOperationsService.GetRelativePath(
             sourcePath,
             manifestEncryptedAbsolute);
 
@@ -137,14 +137,14 @@ internal sealed class DirectoryBackupService(
             filesToProcess = [.. files
                 .Where(f =>
                     !string.Equals(
-                        fileOperations.GetRelativePath(sourcePath, f),
+                        fileOperationsService.GetRelativePath(sourcePath, f),
                         manifestEncryptedRelative,
                         StringComparison.OrdinalIgnoreCase))];
         }
 
         if (request.Operation == EncryptOperation.Encrypt)
         {
-            await fileOperations.CreateDirectoryAsync(destinationPath, cancellationToken);
+            await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
         }
 
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
@@ -161,7 +161,7 @@ internal sealed class DirectoryBackupService(
 
                 foreach (var file in filesToProcess)
                 {
-                    var relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                    var relativePath = fileOperationsService.GetRelativePath(sourcePath, file);
                     var destinationFilePath = ObfuscateFullPath(
                         sourcePath,
                         file,
@@ -175,23 +175,23 @@ internal sealed class DirectoryBackupService(
                         continue;
                     }
 
-                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
+                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperationsService.GetFileSize(file)));
                 }
             }
             else
             {
                 foreach (var file in filesToProcess)
                 {
-                    var relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                    var relativePath = fileOperationsService.GetRelativePath(sourcePath, file);
                     var destinationRelativePath =
                         request.EncryptionAlgorithm == EncryptionAlgorithm.None && request.Compression == CompressionMode.None
                             ? relativePath
                             : relativePath + BackupConstants.AppFileExtension;
-                    var destinationFilePath = fileOperations.CombinePath(
+                    var destinationFilePath = fileOperationsService.CombinePath(
                         destinationPath,
                         destinationRelativePath);
 
-                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
+                    filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperationsService.GetFileSize(file)));
                 }
             }
         }
@@ -199,25 +199,25 @@ internal sealed class DirectoryBackupService(
         {
             foreach (var file in filesToProcess)
             {
-                var relativePath = fileOperations.GetRelativePath(sourcePath, file);
+                var relativePath = fileOperationsService.GetRelativePath(sourcePath, file);
                 string destinationFilePath;
 
                 if (
                     manifestMap is not null
                     && manifestMap.TryGetValue(relativePath, out var fileInfo))
                 {
-                    destinationFilePath = fileOperations.CombinePath(
+                    destinationFilePath = fileOperationsService.CombinePath(
                         destinationPath,
                         fileInfo.OriginalRelativePath);
                 }
                 else
                 {
-                    destinationFilePath = fileOperations.CombinePath(
+                    destinationFilePath = fileOperationsService.CombinePath(
                         destinationPath,
                         relativePath);
                 }
 
-                filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperations.GetFileSize(file)));
+                filesWithDestination.Add((file, destinationFilePath, relativePath, fileOperationsService.GetFileSize(file)));
             }
         }
 
@@ -252,10 +252,10 @@ internal sealed class DirectoryBackupService(
                     var file = fileItem.SourceFilePath;
                     var destinationFilePath = fileItem.DestinationFilePath;
 
-                    var destDir = fileOperations.GetDirectoryName(destinationFilePath);
+                    var destDir = fileOperationsService.GetDirectoryName(destinationFilePath);
                     if (!string.IsNullOrEmpty(destDir))
                     {
-                        await fileOperations.CreateDirectoryAsync(destDir, token);
+                        await fileOperationsService.CreateDirectoryAsync(destDir, token);
                     }
 
                     try
@@ -273,9 +273,9 @@ internal sealed class DirectoryBackupService(
                                         request.Compression,
                                         token);
 
-                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperationsService.ComputeFileHashAsync(file, token);
 
-                                var destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperationsService.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
@@ -322,11 +322,11 @@ internal sealed class DirectoryBackupService(
                         {
                             if (request.Operation == EncryptOperation.Encrypt)
                             {
-                                var destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperationsService.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
-                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperationsService.ComputeFileHashAsync(file, token);
 
                                 manifestEntries.Add(new ManifestEntry(
                                     destRelativePath,
@@ -514,8 +514,8 @@ internal sealed class DirectoryBackupService(
         string destinationFile,
         CancellationToken cancellationToken)
     {
-        await using var source = fileOperations.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
-        await using var destination = fileOperations.CreateWriteStream(
+        await using var source = fileOperationsService.OpenReadStream(sourceFile, BackupIOConstants.CopyBufferSize);
+        await using var destination = fileOperationsService.CreateWriteStream(
             destinationFile,
             BackupIOConstants.CopyBufferSize);
 
@@ -645,7 +645,7 @@ internal sealed class DirectoryBackupService(
             else
             {
                 currentSourcePath = Path.Combine(currentSourcePath, segment);
-                var directoryKey = fileOperations.GetRelativePath(sourcePath, currentSourcePath);
+                var directoryKey = fileOperationsService.GetRelativePath(sourcePath, currentSourcePath);
                 var capturedSourcePath = currentSourcePath;
                 var capturedSegment = segment;
 
@@ -657,7 +657,7 @@ internal sealed class DirectoryBackupService(
             }
         }
 
-        return fileOperations.CombinePath([destinationRoot, .. obfuscatedSegments]);
+        return fileOperationsService.CombinePath([destinationRoot, .. obfuscatedSegments]);
     }
 
     private async Task<Result<BackupResult>> ProcessUpdateAsync(
@@ -710,7 +710,7 @@ internal sealed class DirectoryBackupService(
             }
         }
 
-        var sourceFiles = await fileOperations.GetFilesAsync(
+        var sourceFiles = await fileOperationsService.GetFilesAsync(
             sourcePath, "*.*", cancellationToken);
 
         ConcurrentDictionary<string, string> directoryObfuscationCache = new(
@@ -727,14 +727,14 @@ internal sealed class DirectoryBackupService(
 
         foreach (var file in sourceFiles)
         {
-            var originalRelativePath = fileOperations.GetRelativePath(sourcePath, file);
+            var originalRelativePath = fileOperationsService.GetRelativePath(sourcePath, file);
             sourceOriginalPaths.Add(originalRelativePath);
 
             if (existingEntries.TryGetValue(
                     originalRelativePath,
                     out var existing))
             {
-                var currentHash = await fileOperations.ComputeFileHashAsync(file, cancellationToken);
+                var currentHash = await fileOperationsService.ComputeFileHashAsync(file, cancellationToken);
 
                 if (string.Equals(
                         currentHash, existing.Info.SourceHash, StringComparison.Ordinal))
@@ -748,9 +748,9 @@ internal sealed class DirectoryBackupService(
                 }
                 else
                 {
-                    var destFilePath = fileOperations.CombinePath(
+                    var destFilePath = fileOperationsService.CombinePath(
                         destinationPath, existing.RelativePath);
-                    filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperations.GetFileSize(file)));
+                    filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperationsService.GetFileSize(file)));
                 }
             }
             else
@@ -764,14 +764,14 @@ internal sealed class DirectoryBackupService(
                 }
                 else
                 {
-                    destFilePath = fileOperations.CombinePath(
+                    destFilePath = fileOperationsService.CombinePath(
                         destinationPath,
                         request.Compression == CompressionMode.None
                             ? originalRelativePath
                             : originalRelativePath + BackupConstants.AppFileExtension);
                 }
 
-                filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperations.GetFileSize(file)));
+                filesToProcess.Add((file, destFilePath, originalRelativePath, fileOperationsService.GetFileSize(file)));
             }
         }
 
@@ -779,11 +779,11 @@ internal sealed class DirectoryBackupService(
         {
             if (!sourceOriginalPaths.Contains(kvp.Key))
             {
-                var destFilePath = fileOperations.CombinePath(
+                var destFilePath = fileOperationsService.CombinePath(
                     destinationPath, kvp.Value.RelativePath);
                 try
                 {
-                    if (fileOperations.FileExists(destFilePath))
+                    if (fileOperationsService.FileExists(destFilePath))
                     {
                         File.Delete(destFilePath);
                     }
@@ -828,10 +828,10 @@ internal sealed class DirectoryBackupService(
                         var file = fileItem.SourceFilePath;
                         var destinationFilePath = fileItem.DestinationFilePath;
 
-                        var destDir = fileOperations.GetDirectoryName(destinationFilePath);
+                        var destDir = fileOperationsService.GetDirectoryName(destinationFilePath);
                         if (!string.IsNullOrEmpty(destDir))
                         {
-                            await fileOperations.CreateDirectoryAsync(destDir, token);
+                            await fileOperationsService.CreateDirectoryAsync(destDir, token);
                         }
 
                         try
@@ -847,9 +847,9 @@ internal sealed class DirectoryBackupService(
                                         request.Compression,
                                         token);
 
-                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperationsService.ComputeFileHashAsync(file, token);
 
-                                var destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperationsService.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
@@ -862,11 +862,11 @@ internal sealed class DirectoryBackupService(
                             }
                             else
                             {
-                                var destRelativePath = fileOperations.GetRelativePath(
+                                var destRelativePath = fileOperationsService.GetRelativePath(
                                     destinationPath,
                                     destinationFilePath);
 
-                                var sourceHash = await fileOperations.ComputeFileHashAsync(file, token);
+                                var sourceHash = await fileOperationsService.ComputeFileHashAsync(file, token);
 
                                 updatedManifestEntries.Add(new ManifestEntry(
                                     destRelativePath,

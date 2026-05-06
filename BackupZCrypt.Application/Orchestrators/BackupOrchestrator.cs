@@ -11,10 +11,10 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 internal sealed class BackupOrchestrator(
-    IBackupRequestValidator fileProcessingRequestValidator,
-    IFileOperationsService fileOperations,
-    ISingleFileBackupService singleFileProcessor,
-    IDirectoryBackupService directoryProcessor) : IBackupOrchestrator
+    IBackupRequestValidator backupRequestValidator,
+    IFileOperationsService fileOperationsService,
+    IFileBackupService fileBackupService,
+    IDirectoryBackupService directoryBackupService) : IBackupOrchestrator
 {
     public async Task<Result<BackupResult>> ExecuteAsync(
         BackupRequest request,
@@ -31,8 +31,8 @@ internal sealed class BackupOrchestrator(
 
         var (sourcePath, destinationPath) = NormalizePaths(request);
 
-        var isDirectory = fileOperations.DirectoryExists(sourcePath);
-        var isFile = fileOperations.FileExists(sourcePath);
+        var isDirectory = fileOperationsService.DirectoryExists(sourcePath);
+        var isFile = fileOperationsService.FileExists(sourcePath);
 
         if (!isDirectory && !isFile)
         {
@@ -46,14 +46,14 @@ internal sealed class BackupOrchestrator(
                 return Result<BackupResult>.Failure(Messages.UpdateSourceMustBeDirectory);
             }
 
-            if (!fileOperations.DirectoryExists(destinationPath))
+            if (!fileOperationsService.DirectoryExists(destinationPath))
             {
                 return Result<BackupResult>.Failure(Messages.BackupDestinationMustExist);
             }
         }
 
         if (request.Operation == EncryptOperation.Encrypt && isDirectory
-            && fileOperations.DirectoryExists(destinationPath))
+            && fileOperationsService.DirectoryExists(destinationPath))
         {
             await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
         }
@@ -64,7 +64,7 @@ internal sealed class BackupOrchestrator(
         {
             if (request.Operation == EncryptOperation.Update)
             {
-                return await directoryProcessor.ProcessAsync(
+                return await directoryBackupService.ProcessAsync(
                     sourcePath,
                     destinationPath,
                     request,
@@ -74,7 +74,7 @@ internal sealed class BackupOrchestrator(
 
             if (isFile)
             {
-                return await singleFileProcessor.ProcessAsync(
+                return await fileBackupService.ProcessAsync(
                     sourcePath,
                     destinationPath,
                     request,
@@ -82,7 +82,7 @@ internal sealed class BackupOrchestrator(
                     cancellationToken);
             }
 
-            return await directoryProcessor.ProcessAsync(
+            return await directoryBackupService.ProcessAsync(
                 sourcePath,
                 destinationPath,
                 request,
@@ -117,7 +117,7 @@ internal sealed class BackupOrchestrator(
         string destinationPath,
         CancellationToken cancellationToken)
     {
-        await fileOperations.CleanDirectoryAsync(destinationPath, cancellationToken);
+        await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
     }
 
     private async Task EnsureDestinationDirectoryAsync(
@@ -125,16 +125,16 @@ internal sealed class BackupOrchestrator(
         string destinationPath,
         CancellationToken cancellationToken)
     {
-        if (fileOperations.DirectoryExists(sourcePath))
+        if (fileOperationsService.DirectoryExists(sourcePath))
         {
-            await fileOperations.CreateDirectoryAsync(destinationPath, cancellationToken);
+            await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
         }
         else
         {
-            var destDir = fileOperations.GetDirectoryName(destinationPath);
+            var destDir = fileOperationsService.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(destDir))
             {
-                await fileOperations.CreateDirectoryAsync(destDir, cancellationToken);
+                await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
             }
         }
     }
@@ -143,7 +143,7 @@ internal sealed class BackupOrchestrator(
         BackupRequest request,
         CancellationToken cancellationToken)
     {
-        var errors = await fileProcessingRequestValidator.AnalyzeErrorsAsync(
+        var errors = await backupRequestValidator.AnalyzeErrorsAsync(
             request,
             cancellationToken);
         if (errors.Count > 0)
@@ -152,7 +152,7 @@ internal sealed class BackupOrchestrator(
                 new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
         }
 
-        var warnings = await fileProcessingRequestValidator.AnalyzeWarningsAsync(
+        var warnings = await backupRequestValidator.AnalyzeWarningsAsync(
             request,
             cancellationToken);
         if (warnings.Count > 0 && !request.ProceedOnWarnings)
