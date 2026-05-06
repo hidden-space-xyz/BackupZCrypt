@@ -107,7 +107,12 @@ internal sealed class EncryptionRoundTripTests
     [TestCase(EncryptionAlgorithm.Serpent, KeyDerivationAlgorithm.Scrypt)]
     [TestCase(EncryptionAlgorithm.ChaCha20, KeyDerivationAlgorithm.Scrypt)]
     [TestCase(EncryptionAlgorithm.Camellia, KeyDerivationAlgorithm.Scrypt)]
-    public async Task EncryptAndDecryptFile_AllAlgorithms_PBKDF2_RoundTrip(
+    [TestCase(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.Argon2id)]
+    [TestCase(EncryptionAlgorithm.Twofish, KeyDerivationAlgorithm.Argon2id)]
+    [TestCase(EncryptionAlgorithm.Serpent, KeyDerivationAlgorithm.Argon2id)]
+    [TestCase(EncryptionAlgorithm.ChaCha20, KeyDerivationAlgorithm.Argon2id)]
+    [TestCase(EncryptionAlgorithm.Camellia, KeyDerivationAlgorithm.Argon2id)]
+    public async Task EncryptAndDecryptFile_AllAlgorithmsAndKDFs_RoundTrip(
         EncryptionAlgorithm algorithm,
         KeyDerivationAlgorithm kdf)
     {
@@ -183,6 +188,35 @@ internal sealed class EncryptionRoundTripTests
 
         var decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
+    }
+
+    [Test]
+    public async Task EncryptAndDecryptFile_EmptyFile_RoundTrip()
+    {
+        var sourceFile = Path.Combine(this.testDir, "empty.txt");
+        await File.WriteAllBytesAsync(sourceFile, []);
+
+        var encryptedFile = Path.Combine(this.testDir, "empty.bzc");
+        var decryptedFile = Path.Combine(this.testDir, "empty-decrypted.txt");
+        const string password = "TestP@ssw0rd!Str0ng";
+
+        var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
+
+        var metadata = await strategy.EncryptFileAsync(
+            sourceFile,
+            encryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2);
+
+        await strategy.DecryptFileAsync(
+            encryptedFile,
+            decryptedFile,
+            password,
+            KeyDerivationAlgorithm.PBKDF2,
+            metadata);
+
+        var decryptedData = await File.ReadAllBytesAsync(decryptedFile);
+        Assert.That(decryptedData, Is.Empty);
     }
 
     [Test]

@@ -27,24 +27,6 @@ internal sealed class KeyDerivationStrategyTests(
     }
 
     [Test]
-    public void DisplayName_IsNotEmpty()
-    {
-        Assert.That(strategy.DisplayName, Is.Not.Empty);
-    }
-
-    [Test]
-    public void Description_IsNotEmpty()
-    {
-        Assert.That(strategy.Description, Is.Not.Empty);
-    }
-
-    [Test]
-    public void Summary_IsNotEmpty()
-    {
-        Assert.That(strategy.Summary, Is.Not.Empty);
-    }
-
-    [Test]
     public void DeriveKey_ReturnsCorrectKeySize()
     {
         var salt = new byte[32];

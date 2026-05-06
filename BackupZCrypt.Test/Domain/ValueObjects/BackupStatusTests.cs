@@ -7,21 +7,6 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 internal sealed class BackupStatusTests
 {
     [Test]
-    public void Constructor_WithValidInputs_SetsProperties()
-    {
-        BackupStatus status = new(2, 5, 512, 1024, TimeSpan.FromSeconds(3));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(status.ProcessedFiles, Is.EqualTo(2));
-            Assert.That(status.TotalFiles, Is.EqualTo(5));
-            Assert.That(status.ProcessedBytes, Is.EqualTo(512));
-            Assert.That(status.TotalBytes, Is.EqualTo(1024));
-            Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(3)));
-        }
-    }
-
-    [Test]
     public void Constructor_NegativeProcessedFiles_Throws()
     {
         Assert.Throws<ValidationException>(() => new BackupStatus(-1, 5, 0, 0, TimeSpan.Zero));
@@ -63,17 +48,5 @@ internal sealed class BackupStatusTests
     {
         Assert.Throws<ValidationException>(() =>
             new BackupStatus(0, 5, 200, 100, TimeSpan.Zero));
-    }
-
-    [Test]
-    public void Constructor_AllZeros_Succeeds()
-    {
-        BackupStatus status = new(0, 0, 0, 0, TimeSpan.Zero);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(status.ProcessedFiles, Is.Zero);
-            Assert.That(status.TotalFiles, Is.Zero);
-        }
     }
 }

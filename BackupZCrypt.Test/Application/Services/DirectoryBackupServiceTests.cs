@@ -4,6 +4,7 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -286,6 +287,154 @@ internal sealed class DirectoryBackupServiceTests
             Assert.That(result.IsSuccess, Is.True);
             Assert.That(result.Value.TotalFiles, Is.EqualTo(1));
         }
+    }
+
+    [Test]
+    public async Task Encrypt_FileThrowsCorruptedException_ContinuesWithOtherFiles()
+    {
+        SetupFileOpsForMultipleFiles(@"C:\source\file1.txt", @"C:\source\file2.txt");
+
+        var callCount = 0;
+        this.encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                if (Interlocked.Increment(ref callCount) == 1)
+                {
+                    throw new CorruptedFileException("Corrupted");
+                }
+
+                return new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None);
+            });
+
+        this.manifestService
+            .TrySaveManifestAsync(
+                Arg.Any<IReadOnlyList<ManifestEntry>>(),
+                Arg.Any<ManifestHeader>(),
+                Arg.Any<string>(),
+                Arg.Any<IEncryptionAlgorithmStrategy>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var result = await service.ProcessAsync(
+            @"C:\source",
+            @"C:\dest",
+            CreateRequest(BackupOperation.Create),
+            progress,
+            CancellationToken.None);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(1));
+            Assert.That(result.Value.TotalFiles, Is.EqualTo(2));
+            Assert.That(result.Value.HasErrors, Is.True);
+        }
+    }
+
+    [Test]
+    public async Task Encrypt_InvalidPasswordException_StopsAllProcessing()
+    {
+        SetupFileOpsForMultipleFiles(
+            @"C:\source\file1.txt", @"C:\source\file2.txt", @"C:\source\file3.txt");
+
+        this.encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>(),
+                Arg.Any<CancellationToken>())
+            .Returns<EncryptionMetadata>(_ =>
+                throw new InvalidPasswordException("Bad password"));
+
+        var result = await service.ProcessAsync(
+            @"C:\source",
+            @"C:\dest",
+            CreateRequest(BackupOperation.Create),
+            progress,
+            CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
+
+    [Test]
+    public async Task Encrypt_AccessDeniedException_StopsAllProcessing()
+    {
+        SetupFileOpsForMultipleFiles(@"C:\source\file1.txt", @"C:\source\file2.txt");
+
+        this.encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>(),
+                Arg.Any<CancellationToken>())
+            .Returns<EncryptionMetadata>(_ =>
+                throw new AccessDeniedException("Access denied"));
+
+        var result = await service.ProcessAsync(
+            @"C:\source",
+            @"C:\dest",
+            CreateRequest(BackupOperation.Create),
+            progress,
+            CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
+
+    [Test]
+    public async Task Encrypt_AllFilesFail_ReturnsFailure()
+    {
+        SetupFileOpsForMultipleFiles(@"C:\source\file1.txt", @"C:\source\file2.txt");
+
+        this.encryptionStrategy
+            .EncryptFileAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<KeyDerivationAlgorithm>(),
+                Arg.Any<CompressionMode>(),
+                Arg.Any<CancellationToken>())
+            .Returns<EncryptionMetadata>(_ =>
+                throw new CipherException("Enc error"));
+
+        var result = await service.ProcessAsync(
+            @"C:\source",
+            @"C:\dest",
+            CreateRequest(BackupOperation.Create),
+            progress,
+            CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+    }
+
+    private void SetupFileOpsForMultipleFiles(params string[] filePaths)
+    {
+        this.fileOps.GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(filePaths);
+        this.fileOps.GetRelativePath(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(callInfo =>
+            {
+                var basePath = callInfo.ArgAt<string>(0);
+                var fullPath = callInfo.ArgAt<string>(1);
+                return Path.GetRelativePath(basePath, fullPath);
+            });
+        this.fileOps.GetDirectoryName(Arg.Any<string>()).Returns(@"C:\dest");
+        this.fileOps.CombinePath(Arg.Any<string[]>())
+            .Returns(callInfo => Path.Combine(callInfo.ArgAt<string[]>(0)));
+        this.fileOps.GetFileSize(Arg.Any<string>()).Returns(100L);
+        this.fileOps.ComputeFileHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("abc123hash");
     }
 
     private static BackupRequest CreateRequest(

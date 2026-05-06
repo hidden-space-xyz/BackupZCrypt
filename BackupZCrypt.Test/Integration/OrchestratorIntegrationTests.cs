@@ -600,4 +600,70 @@ internal sealed class OrchestratorIntegrationTests
                 Is.EqualTo("New obfuscated file three"));
         }
     }
+
+    [Test]
+    public async Task ExecuteAsync_Directory_ChaCha20Argon2id_RoundTrip()
+    {
+        var content1 = "ChaCha20+Argon2id test content one";
+        var content2 = "ChaCha20+Argon2id test content two";
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "a.txt"), content1);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "b.txt"), content2);
+
+        var encryptedDir = Path.Combine(this.testDir, "encrypted-chacha");
+        var decryptedDir = Path.Combine(this.testDir, "decrypted-chacha");
+        const string password = "IntegrationP@ss1";
+
+        BackupRequest encryptRequest = new(
+            this.sourceDir,
+            encryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.ChaCha20,
+            KeyDerivationAlgorithm.Argon2id,
+            BackupOperation.Create,
+            NameObfuscationMode.Sha256,
+            CompressionMode.ZstdBest,
+            ProceedOnWarnings: true);
+
+        Progress<BackupStatus> progress = new();
+        var encryptResult = await orchestrator.ExecuteAsync(
+            encryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(encryptResult.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.IsSuccess, Is.True);
+            Assert.That(encryptResult.Value.ProcessedFiles, Is.EqualTo(2));
+        }
+
+        BackupRequest decryptRequest = new(
+            encryptedDir,
+            decryptedDir,
+            password,
+            password,
+            EncryptionAlgorithm.ChaCha20,
+            KeyDerivationAlgorithm.Argon2id,
+            BackupOperation.Restore,
+            NameObfuscationMode.None,
+            ProceedOnWarnings: true);
+
+        var decryptResult = await orchestrator.ExecuteAsync(
+            decryptRequest, progress);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.IsSuccess, Is.True);
+            Assert.That(decryptResult.Value.ProcessedFiles, Is.EqualTo(2));
+        }
+
+        var decrypted1 = await File.ReadAllTextAsync(Path.Combine(decryptedDir, "a.txt"));
+        var decrypted2 = await File.ReadAllTextAsync(Path.Combine(decryptedDir, "b.txt"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decrypted1, Is.EqualTo(content1));
+            Assert.That(decrypted2, Is.EqualTo(content2));
+        }
+    }
 }

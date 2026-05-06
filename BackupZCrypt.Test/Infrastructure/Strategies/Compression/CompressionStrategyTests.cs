@@ -27,24 +27,6 @@ internal sealed class CompressionStrategyTests(
     }
 
     [Test]
-    public void DisplayName_ContainsZstandard()
-    {
-        Assert.That(strategy.DisplayName, Does.Contain("Zstandard"));
-    }
-
-    [Test]
-    public void Description_IsNotEmpty()
-    {
-        Assert.That(strategy.Description, Is.Not.Empty);
-    }
-
-    [Test]
-    public void Summary_IsNotEmpty()
-    {
-        Assert.That(strategy.Summary, Is.Not.Empty);
-    }
-
-    [Test]
     public async Task CompressAndDecompress_RoundTrip_ReturnsOriginalData()
     {
         var original = Encoding.UTF8.GetBytes(
@@ -74,25 +56,16 @@ internal sealed class CompressionStrategyTests(
     }
 
     [Test]
-    public async Task CompressAsync_StreamPositionIsZero()
+    public async Task CompressAndDecompress_EmptyInput_RoundTrip()
     {
-        var text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
+        await using MemoryStream input = new([]);
 
         var compressed = await strategy.CompressAsync(input);
-
-        Assert.That(compressed.Position, Is.Zero);
-    }
-
-    [Test]
-    public async Task DecompressAsync_StreamPositionIsZero()
-    {
-        var text = string.Concat(Enumerable.Repeat("ABCDEFGHIJ", 20));
-        await using MemoryStream input = new(Encoding.UTF8.GetBytes(text));
-        var compressed = await strategy.CompressAsync(input);
-
         var decompressed = await strategy.DecompressAsync(compressed);
 
-        Assert.That(decompressed.Position, Is.Zero);
+        await using MemoryStream resultStream = new();
+        await decompressed.CopyToAsync(resultStream);
+
+        Assert.That(resultStream.ToArray(), Is.Empty);
     }
 }

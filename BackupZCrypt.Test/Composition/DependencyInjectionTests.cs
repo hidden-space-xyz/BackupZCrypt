@@ -7,6 +7,7 @@ using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
@@ -29,106 +30,21 @@ internal sealed class DependencyInjectionTests
         this.provider.Dispose();
     }
 
-    [Test]
-    public void AddDomainServices_ResolvesKeyDerivationServiceFactory()
+    [TestCase(typeof(IKeyDerivationServiceFactory))]
+    [TestCase(typeof(IEncryptionServiceFactory))]
+    [TestCase(typeof(ICompressionServiceFactory))]
+    [TestCase(typeof(INameObfuscationServiceFactory))]
+    [TestCase(typeof(IPasswordService))]
+    [TestCase(typeof(IFileOperationsService))]
+    [TestCase(typeof(ISystemStorageService))]
+    [TestCase(typeof(IBackupOrchestrator))]
+    [TestCase(typeof(IFileBackupService))]
+    [TestCase(typeof(IDirectoryBackupService))]
+    [TestCase(typeof(IBackupRequestValidator))]
+    [TestCase(typeof(IManifestService))]
+    public void AllServices_Resolve(Type serviceType)
     {
-        var factory =
-            this.provider.GetRequiredService<IKeyDerivationServiceFactory>();
-
-        Assert.That(factory, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesEncryptionServiceFactory()
-    {
-        var factory =
-            this.provider.GetRequiredService<IEncryptionServiceFactory>();
-
-        Assert.That(factory, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesCompressionServiceFactory()
-    {
-        var factory =
-            this.provider.GetRequiredService<ICompressionServiceFactory>();
-
-        Assert.That(factory, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesNameObfuscationServiceFactory()
-    {
-        var factory =
-            this.provider.GetRequiredService<INameObfuscationServiceFactory>();
-
-        Assert.That(factory, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesPasswordService()
-    {
-        var service = this.provider.GetRequiredService<IPasswordService>();
-
-        Assert.That(service, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesFileOperationsService()
-    {
-        var service = this.provider.GetRequiredService<IFileOperationsService>();
-
-        Assert.That(service, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddDomainServices_ResolvesSystemStorageService()
-    {
-        var service = this.provider.GetRequiredService<ISystemStorageService>();
-
-        Assert.That(service, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddApplicationServices_ResolvesBackupOrchestrator()
-    {
-        var orchestrator =
-            this.provider.GetRequiredService<IBackupOrchestrator>();
-
-        Assert.That(orchestrator, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddApplicationServices_ResolvesSingleFileBackupService()
-    {
-        var service =
-            this.provider.GetRequiredService<IFileBackupService>();
-
-        Assert.That(service, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddApplicationServices_ResolvesDirectoryBackupService()
-    {
-        var service =
-            this.provider.GetRequiredService<IDirectoryBackupService>();
-
-        Assert.That(service, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddApplicationServices_ResolvesBackupRequestValidator()
-    {
-        var validator =
-            this.provider.GetRequiredService<IBackupRequestValidator>();
-
-        Assert.That(validator, Is.Not.Null);
-    }
-
-    [Test]
-    public void AddApplicationServices_ResolvesManifestService()
-    {
-        var service = this.provider.GetRequiredService<IManifestService>();
+        var service = this.provider.GetRequiredService(serviceType);
 
         Assert.That(service, Is.Not.Null);
     }
@@ -145,7 +61,6 @@ internal sealed class DependencyInjectionTests
 
         var strategy = factory.Create(algorithm);
 
-        Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
     }
 
@@ -159,7 +74,6 @@ internal sealed class DependencyInjectionTests
 
         var strategy = factory.Create(algorithm);
 
-        Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(algorithm));
     }
 
@@ -173,7 +87,6 @@ internal sealed class DependencyInjectionTests
 
         var strategy = factory.Create(mode);
 
-        Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(mode));
     }
 
@@ -187,7 +100,21 @@ internal sealed class DependencyInjectionTests
 
         var strategy = factory.Create(mode);
 
-        Assert.That(strategy, Is.Not.Null);
         Assert.That(strategy.Id, Is.EqualTo(mode));
+    }
+
+    [Test]
+    public void AllEncryptionStrategies_HaveUniqueIds()
+    {
+        var strategies = this.provider.GetRequiredService<
+            IEnumerable<IEncryptionAlgorithmStrategy>>();
+
+        EncryptionAlgorithm[] ids = [.. strategies.Select(s => s.Id)];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ids, Is.Unique);
+            Assert.That(ids, Has.Length.EqualTo(5));
+        }
     }
 }

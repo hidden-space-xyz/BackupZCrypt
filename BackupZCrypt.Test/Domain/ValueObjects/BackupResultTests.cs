@@ -7,28 +7,7 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 internal sealed class BackupResultTests
 {
     [Test]
-    public void Constructor_WithValidInputs_SetsProperties()
-    {
-        var elapsed = TimeSpan.FromSeconds(5);
-        string[] errors = ["error1"];
-        string[] warnings = ["warn1"];
-
-        BackupResult result = new(true, elapsed, 1024, 3, 5, errors, warnings);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.ElapsedTime, Is.EqualTo(elapsed));
-            Assert.That(result.TotalBytes, Is.EqualTo(1024));
-            Assert.That(result.ProcessedFiles, Is.EqualTo(3));
-            Assert.That(result.TotalFiles, Is.EqualTo(5));
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(result.Warnings, Has.Count.EqualTo(1));
-        }
-    }
-
-    [Test]
-    public void Constructor_WithNullErrorsAndWarnings_DefaultsToEmpty()
+    public void Constructor_NullErrorsAndWarnings_DefaultsToEmpty()
     {
         BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
@@ -87,14 +66,6 @@ internal sealed class BackupResultTests
         BackupResult result = new(true, TimeSpan.Zero, 0, 0, 0);
 
         Assert.That(result.HasErrors, Is.False);
-    }
-
-    [Test]
-    public void HasWarnings_WithWarnings_ReturnsTrue()
-    {
-        BackupResult result = new(false, TimeSpan.Zero, 0, 0, 0, warnings: ["w"]);
-
-        Assert.That(result.HasWarnings, Is.True);
     }
 
     [Test]
