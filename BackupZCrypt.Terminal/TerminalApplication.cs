@@ -31,15 +31,15 @@ internal sealed class TerminalApplication(
 
             if (choice == Messages.MenuCreateBackup)
             {
-                await backupCommand.ExecuteAsync(EncryptOperation.Encrypt);
+                await backupCommand.ExecuteAsync(BackupOperation.Create);
             }
             else if (choice == Messages.MenuUpdateBackup)
             {
-                await backupCommand.ExecuteAsync(EncryptOperation.Update);
+                await backupCommand.ExecuteAsync(BackupOperation.Update);
             }
             else if (choice == Messages.MenuRestoreBackup)
             {
-                await backupCommand.ExecuteAsync(EncryptOperation.Decrypt);
+                await backupCommand.ExecuteAsync(BackupOperation.Restore);
             }
             else if (choice == Messages.MenuSettings)
             {

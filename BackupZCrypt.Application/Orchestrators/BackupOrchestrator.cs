@@ -39,7 +39,7 @@ internal sealed class BackupOrchestrator(
             return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
         }
 
-        if (request.Operation == EncryptOperation.Update)
+        if (request.Operation == BackupOperation.Update)
         {
             if (!isDirectory)
             {
@@ -52,7 +52,7 @@ internal sealed class BackupOrchestrator(
             }
         }
 
-        if (request.Operation == EncryptOperation.Encrypt && isDirectory
+        if (request.Operation == BackupOperation.Create && isDirectory
             && fileOperationsService.DirectoryExists(destinationPath))
         {
             await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
@@ -62,7 +62,7 @@ internal sealed class BackupOrchestrator(
 
         try
         {
-            if (request.Operation == EncryptOperation.Update)
+            if (request.Operation == BackupOperation.Update)
             {
                 return await directoryBackupService.ProcessAsync(
                     sourcePath,

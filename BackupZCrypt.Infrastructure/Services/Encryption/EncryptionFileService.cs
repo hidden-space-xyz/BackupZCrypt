@@ -12,7 +12,7 @@ internal sealed class EncryptionFileService(
     {
         if (!fileOperationsService.FileExists(sourceFilePath))
         {
-            throw EncryptionFileNotFoundException.CreateForFilePath(sourceFilePath);
+            throw FileNotFoundException.CreateForFilePath(sourceFilePath);
         }
 
         Stream stream;
@@ -24,13 +24,13 @@ internal sealed class EncryptionFileService(
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw EncryptionAccessDeniedException.CreateForFilePath(sourceFilePath, ex);
+            throw AccessDeniedException.CreateForFilePath(sourceFilePath, ex);
         }
 
         if (validateHeader && stream.Length < EncryptionConstants.HeaderSize)
         {
             stream.Dispose();
-            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
+            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
         }
 
         return stream;
@@ -59,7 +59,7 @@ internal sealed class EncryptionFileService(
             }
             catch (UnauthorizedAccessException ex)
             {
-                throw EncryptionAccessDeniedException.CreateForFilePath(filePath, ex);
+                throw AccessDeniedException.CreateForFilePath(filePath, ex);
             }
         }
     }
@@ -82,7 +82,7 @@ internal sealed class EncryptionFileService(
 
                     if (availableSpace < requiredSpace)
                     {
-                        throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
+                        throw InsufficientSpaceException.CreateForPath(destinationFilePath);
                     }
                 }
             }

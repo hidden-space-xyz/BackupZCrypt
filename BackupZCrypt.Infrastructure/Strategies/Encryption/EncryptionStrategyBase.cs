@@ -86,20 +86,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
+                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationEncryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationEncryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationEncryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationEncryption, ex);
         }
     }
 
@@ -166,17 +166,17 @@ internal abstract class EncryptionStrategyBase(
         catch (InvalidCipherTextException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (CryptographicException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
+            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
         }
         catch (IOException ex)
         {
@@ -184,20 +184,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
+                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 
@@ -267,17 +267,17 @@ internal abstract class EncryptionStrategyBase(
         catch (InvalidCipherTextException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (CryptographicException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw EncryptionCorruptedFileException.CreateForFilePath(sourceFilePath);
+            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
         }
         catch (IOException ex)
         {
@@ -285,20 +285,20 @@ internal abstract class EncryptionStrategyBase(
 
             if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
             {
-                throw EncryptionInsufficientSpaceException.CreateForPath(destinationFilePath);
+                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
             }
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            throw EncryptionAccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
         }
         catch (Exception ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 
@@ -397,15 +397,15 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (InvalidCipherTextException)
         {
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (CryptographicException)
         {
-            throw new EncryptionInvalidPasswordException();
+            throw new InvalidPasswordException();
         }
         catch (IOException ex)
         {
-            throw EncryptionCipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
         }
     }
 

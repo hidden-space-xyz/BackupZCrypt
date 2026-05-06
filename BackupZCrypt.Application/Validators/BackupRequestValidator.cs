@@ -144,7 +144,7 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == EncryptOperation.Encrypt)
+        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == BackupOperation.Create)
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
@@ -299,7 +299,7 @@ internal sealed class BackupRequestValidator(
                 }
             }
 
-            if (hasExistingFiles && request.Operation == EncryptOperation.Decrypt)
+            if (hasExistingFiles && request.Operation == BackupOperation.Restore)
             {
                 warnings.Add(
                     string.Format(
@@ -308,7 +308,7 @@ internal sealed class BackupRequestValidator(
             }
 
             if (request.EncryptionAlgorithm != EncryptionAlgorithm.None
-                && request.Operation == EncryptOperation.Encrypt)
+                && request.Operation == BackupOperation.Create)
             {
                 var strength = passwordService.AnalyzePasswordStrength(
                     request.Password);

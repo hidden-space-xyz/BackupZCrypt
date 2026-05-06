@@ -15,7 +15,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
 [TestFixture]
-internal sealed class SingleFileBackupServiceTests
+internal sealed class FileBackupServiceTests
 {
     private IEncryptionServiceFactory encryptionFactory = null!;
     private IEncryptionAlgorithmStrategy encryptionStrategy = null!;
@@ -34,7 +34,7 @@ internal sealed class SingleFileBackupServiceTests
         var result = await service.ProcessAsync(
             manifestPath,
             @"C:\dest\manifest",
-            CreateRequest(EncryptOperation.Decrypt),
+            CreateRequest(BackupOperation.Restore),
             progress,
             CancellationToken.None);
 
@@ -82,7 +82,7 @@ internal sealed class SingleFileBackupServiceTests
         var result = await service.ProcessAsync(
             @"C:\source\file.bzc",
             @"C:\dest\file.txt",
-            CreateRequest(EncryptOperation.Decrypt),
+            CreateRequest(BackupOperation.Restore),
             progress,
             CancellationToken.None);
 
@@ -174,7 +174,7 @@ internal sealed class SingleFileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .ThrowsAsync(new EncryptionInvalidPasswordException());
+            .ThrowsAsync(new InvalidPasswordException());
 
         var result = await service.ProcessAsync(
             @"C:\source\file.txt",
@@ -234,7 +234,7 @@ internal sealed class SingleFileBackupServiceTests
             string.Empty,
             EncryptionAlgorithm.None,
             KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             CompressionMode.None);
 
@@ -303,7 +303,7 @@ internal sealed class SingleFileBackupServiceTests
         var result = await service.ProcessAsync(
             @"C:\source\file.bzc",
             @"C:\dest\file.bzc",
-            CreateRequest(EncryptOperation.Update),
+            CreateRequest(BackupOperation.Update),
             progress,
             CancellationToken.None);
 
@@ -338,7 +338,7 @@ internal sealed class SingleFileBackupServiceTests
     }
 
     private static BackupRequest CreateRequest(
-        EncryptOperation operation = EncryptOperation.Encrypt,
+        BackupOperation operation = BackupOperation.Create,
         NameObfuscationMode NameObfuscation = NameObfuscationMode.None) =>
         new(
             @"C:\source\file.txt",

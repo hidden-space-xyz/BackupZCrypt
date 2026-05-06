@@ -34,7 +34,7 @@ internal sealed class FileBackupService(
         try
         {
             if (
-                request.Operation == EncryptOperation.Decrypt
+                request.Operation == BackupOperation.Restore
                 && string.Equals(
                     Path.GetFileName(sourcePath),
                     BackupConstants.ManifestFileName,
@@ -53,7 +53,7 @@ internal sealed class FileBackupService(
 
             var destFile = destinationPath;
 
-            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == EncryptOperation.Encrypt
+            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == BackupOperation.Create
                 && request.NameObfuscation != NameObfuscationMode.None)
             {
                 var obfuscationService = nameObfuscationServiceFactory.Create(
@@ -82,7 +82,7 @@ internal sealed class FileBackupService(
                 var encryptionService =
                     encryptionServiceFactory.Create(request.EncryptionAlgorithm);
 
-                if (request.Operation == EncryptOperation.Encrypt)
+                if (request.Operation == BackupOperation.Create)
                 {
                     var metadata = await encryptionService.EncryptFileAsync(
                         sourcePath,
@@ -138,7 +138,7 @@ internal sealed class FileBackupService(
             }
             else
             {
-                if (request.Operation == EncryptOperation.Encrypt)
+                if (request.Operation == BackupOperation.Create)
                 {
                     result = await ProcessCompressedFileAsync(
                         sourcePath,
@@ -305,7 +305,7 @@ internal sealed class FileBackupService(
             await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
         }
 
-        if (request.Operation == EncryptOperation.Encrypt)
+        if (request.Operation == BackupOperation.Create)
         {
             if (request.Compression == CompressionMode.None)
             {

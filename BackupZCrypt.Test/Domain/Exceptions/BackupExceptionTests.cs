@@ -4,16 +4,16 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Exceptions;
 
 [TestFixture]
-internal sealed class EncryptionExceptionTests
+internal sealed class BackupExceptionTests
 {
     [Test]
     public void EncryptionFileNotFoundException_SetsCodeAndMessage()
     {
-        EncryptionFileNotFoundException ex = new("test.txt");
+        FileNotFoundException ex = new("test.txt");
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileNotFound));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.FileNotFound));
             Assert.That(ex.Message, Does.Contain("test.txt"));
         }
     }
@@ -22,11 +22,11 @@ internal sealed class EncryptionExceptionTests
     public void EncryptionAccessDeniedException_SetsCodeAndInnerException()
     {
         Exception inner = new("denied");
-        EncryptionAccessDeniedException ex = new("secret.dat", inner);
+        AccessDeniedException ex = new("secret.dat", inner);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.AccessDenied));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.AccessDenied));
             Assert.That(ex.Message, Does.Contain("secret.dat"));
             Assert.That(ex.InnerException, Is.SameAs(inner));
         }
@@ -35,11 +35,11 @@ internal sealed class EncryptionExceptionTests
     [Test]
     public void EncryptionInsufficientSpaceException_SetsCode()
     {
-        EncryptionInsufficientSpaceException ex = new(@"D:\");
+        InsufficientSpaceException ex = new(@"D:\");
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.InsufficientDiskSpace));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.InsufficientDiskSpace));
             Assert.That(ex.Message, Does.Contain(@"D:\"));
         }
     }
@@ -47,19 +47,19 @@ internal sealed class EncryptionExceptionTests
     [Test]
     public void EncryptionInvalidPasswordException_SetsCode()
     {
-        EncryptionInvalidPasswordException ex = new();
+        InvalidPasswordException ex = new();
 
-        Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.InvalidPassword));
+        Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.InvalidPassword));
     }
 
     [Test]
     public void EncryptionCorruptedFileException_SetsCode()
     {
-        EncryptionCorruptedFileException ex = new("corrupted.bzc");
+        CorruptedFileException ex = new("corrupted.bzc");
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.FileCorruption));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.FileCorruption));
             Assert.That(ex.Message, Does.Contain("corrupted.bzc"));
         }
     }
@@ -68,11 +68,11 @@ internal sealed class EncryptionExceptionTests
     public void EncryptionKeyDerivationException_SetsCodeAndInnerException()
     {
         Exception inner = new("key error");
-        EncryptionKeyDerivationException ex = new(inner);
+        KeyDerivationException ex = new(inner);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.KeyDerivationFailed));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.KeyDerivationFailed));
             Assert.That(ex.InnerException, Is.SameAs(inner));
         }
     }
@@ -81,11 +81,11 @@ internal sealed class EncryptionExceptionTests
     public void EncryptionCipherException_SetsCodeAndMessage()
     {
         Exception inner = new("cipher error");
-        EncryptionCipherException ex = new("encryption", inner);
+        CipherException ex = new("encryption", inner);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(ex.Code, Is.EqualTo(EncryptionErrorCode.CipherOperationFailed));
+            Assert.That(ex.Code, Is.EqualTo(BackupErrorCode.CipherOperationFailed));
             Assert.That(ex.Message, Does.Contain("encryption"));
             Assert.That(ex.InnerException, Is.SameAs(inner));
         }

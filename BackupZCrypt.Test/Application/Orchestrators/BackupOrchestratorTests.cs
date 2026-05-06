@@ -246,7 +246,7 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_UpdateOperation_FileSource_ReturnsFailure()
     {
-        var request = CreateRequest() with { Operation = EncryptOperation.Update };
+        var request = CreateRequest() with { Operation = BackupOperation.Update };
 
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
@@ -266,7 +266,7 @@ internal sealed class BackupOrchestratorTests
     [Test]
     public async Task Execute_UpdateOperation_DirectorySource_DelegatesToDirectoryService()
     {
-        var request = CreateRequest() with { Operation = EncryptOperation.Update };
+        var request = CreateRequest() with { Operation = BackupOperation.Update };
 
         this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
@@ -296,7 +296,7 @@ internal sealed class BackupOrchestratorTests
             .ProcessAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Is<BackupRequest>(r => r.Operation == EncryptOperation.Update),
+                Arg.Is<BackupRequest>(r => r.Operation == BackupOperation.Update),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>());
     }
@@ -325,6 +325,6 @@ internal sealed class BackupOrchestratorTests
             "StrongP@ss1",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 }

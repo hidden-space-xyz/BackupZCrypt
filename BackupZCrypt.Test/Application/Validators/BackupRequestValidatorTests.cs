@@ -219,7 +219,7 @@ internal sealed class BackupRequestValidatorTests
 
         var request = CreateRequest(
             confirmPassword: string.Empty,
-            operation: EncryptOperation.Decrypt);
+            operation: BackupOperation.Restore);
 
         var errors = await validator.AnalyzeErrorsAsync(request);
 
@@ -294,7 +294,7 @@ internal sealed class BackupRequestValidatorTests
         var request = CreateRequest(
             source: @"C:\source\file.bzc",
             dest: @"C:\dest\file.txt",
-            operation: EncryptOperation.Decrypt);
+            operation: BackupOperation.Restore);
 
         var warnings = await validator.AnalyzeWarningsAsync(request);
 
@@ -315,7 +315,7 @@ internal sealed class BackupRequestValidatorTests
         string dest = @"C:\dest\file.bzc",
         string password = "StrongP@ss1",
         string confirmPassword = "StrongP@ss1",
-        EncryptOperation operation = EncryptOperation.Encrypt) =>
+        BackupOperation operation = BackupOperation.Create) =>
         new(
             source,
             dest,

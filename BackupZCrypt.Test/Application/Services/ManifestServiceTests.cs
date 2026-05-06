@@ -350,6 +350,6 @@ internal sealed class ManifestServiceTests
             "StrongP@ss1",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 }

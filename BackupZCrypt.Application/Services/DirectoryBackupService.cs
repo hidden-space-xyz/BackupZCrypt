@@ -32,7 +32,7 @@ internal sealed class DirectoryBackupService(
     {
         var stopwatch = Stopwatch.StartNew();
 
-        if (request.Operation == EncryptOperation.Update)
+        if (request.Operation == BackupOperation.Update)
         {
             return await ProcessUpdateAsync(
                 sourcePath, destinationPath, request, progress, stopwatch, cancellationToken);
@@ -46,7 +46,7 @@ internal sealed class DirectoryBackupService(
 
         if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
-            if (request.Operation == EncryptOperation.Decrypt)
+            if (request.Operation == BackupOperation.Restore)
             {
                 var manifestData = await manifestService.TryReadManifestAsync(
                     sourcePath,
@@ -88,7 +88,7 @@ internal sealed class DirectoryBackupService(
                 }
             }
         }
-        else if (request.Operation == EncryptOperation.Decrypt)
+        else if (request.Operation == BackupOperation.Restore)
         {
             var manifestData = await manifestService.TryReadManifestAsync(
                 sourcePath,
@@ -132,7 +132,7 @@ internal sealed class DirectoryBackupService(
             manifestEncryptedAbsolute);
 
         var filesToProcess = files;
-        if (request.Operation == EncryptOperation.Decrypt)
+        if (request.Operation == BackupOperation.Restore)
         {
             filesToProcess = [.. files
                 .Where(f =>
@@ -142,7 +142,7 @@ internal sealed class DirectoryBackupService(
                         StringComparison.OrdinalIgnoreCase))];
         }
 
-        if (request.Operation == EncryptOperation.Encrypt)
+        if (request.Operation == BackupOperation.Create)
         {
             await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
         }
@@ -153,7 +153,7 @@ internal sealed class DirectoryBackupService(
         List<(string SourceFilePath, string DestinationFilePath, string OriginalRelativePath, long FileSize)>
             filesWithDestination = [];
 
-        if (request.Operation == EncryptOperation.Encrypt)
+        if (request.Operation == BackupOperation.Create)
         {
             if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && obfuscationService is not null)
             {
@@ -262,7 +262,7 @@ internal sealed class DirectoryBackupService(
                     {
                         if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
                         {
-                            if (request.Operation == EncryptOperation.Encrypt)
+                            if (request.Operation == BackupOperation.Create)
                             {
                                 var metadata =
                                     await encryptionService!.EncryptFileAsync(
@@ -320,7 +320,7 @@ internal sealed class DirectoryBackupService(
                         }
                         else
                         {
-                            if (request.Operation == EncryptOperation.Encrypt)
+                            if (request.Operation == BackupOperation.Create)
                             {
                                 var destRelativePath = fileOperationsService.GetRelativePath(
                                     destinationPath,
@@ -348,7 +348,7 @@ internal sealed class DirectoryBackupService(
                             }
                         }
                     }
-                    catch (Domain.Exceptions.EncryptionAccessDeniedException ex)
+                    catch (Domain.Exceptions.AccessDeniedException ex)
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
@@ -357,7 +357,7 @@ internal sealed class DirectoryBackupService(
                         await linkedCts.CancelAsync();
                         return;
                     }
-                    catch (Domain.Exceptions.EncryptionInsufficientSpaceException ex)
+                    catch (Domain.Exceptions.InsufficientSpaceException ex)
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
@@ -366,7 +366,7 @@ internal sealed class DirectoryBackupService(
                         await linkedCts.CancelAsync();
                         return;
                     }
-                    catch (Domain.Exceptions.EncryptionInvalidPasswordException ex)
+                    catch (Domain.Exceptions.InvalidPasswordException ex)
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
@@ -375,7 +375,7 @@ internal sealed class DirectoryBackupService(
                         await linkedCts.CancelAsync();
                         return;
                     }
-                    catch (Domain.Exceptions.EncryptionKeyDerivationException ex)
+                    catch (Domain.Exceptions.KeyDerivationException ex)
                     {
                         Interlocked.CompareExchange(
                             ref fatalError,
@@ -384,17 +384,17 @@ internal sealed class DirectoryBackupService(
                         await linkedCts.CancelAsync();
                         return;
                     }
-                    catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
+                    catch (Domain.Exceptions.FileNotFoundException ex)
                     {
                         errors.Add(
                             string.Format(Messages.FileNotFoundSkippedFormat, file, ex.Message));
                     }
-                    catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
+                    catch (Domain.Exceptions.CorruptedFileException ex)
                     {
                         errors.Add(
                             string.Format(Messages.CorruptedFileSkippedFormat, file, ex.Message));
                     }
-                    catch (Domain.Exceptions.EncryptionCipherException ex)
+                    catch (Domain.Exceptions.CipherException ex)
                     {
                         errors.Add(string.Format(Messages.CipherErrorFormat, file, ex.Message));
                     }
@@ -429,7 +429,7 @@ internal sealed class DirectoryBackupService(
 
         List<string> errorList = [.. errors];
 
-        if (request.Operation == EncryptOperation.Encrypt && !manifestEntries.IsEmpty)
+        if (request.Operation == BackupOperation.Create && !manifestEntries.IsEmpty)
         {
             ManifestHeader header = new(
                 request.EncryptionAlgorithm,
@@ -487,7 +487,7 @@ internal sealed class DirectoryBackupService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (request.Operation == EncryptOperation.Encrypt)
+        if (request.Operation == BackupOperation.Create)
         {
             if (request.Compression == CompressionMode.None)
             {
@@ -884,7 +884,7 @@ internal sealed class DirectoryBackupService(
 
                             Interlocked.Increment(ref processedFiles);
                         }
-                        catch (Domain.Exceptions.EncryptionAccessDeniedException ex)
+                        catch (Domain.Exceptions.AccessDeniedException ex)
                         {
                             Interlocked.CompareExchange(
                                 ref fatalError,
@@ -893,7 +893,7 @@ internal sealed class DirectoryBackupService(
                             await linkedCts.CancelAsync();
                             return;
                         }
-                        catch (Domain.Exceptions.EncryptionInsufficientSpaceException ex)
+                        catch (Domain.Exceptions.InsufficientSpaceException ex)
                         {
                             Interlocked.CompareExchange(
                                 ref fatalError,
@@ -903,7 +903,7 @@ internal sealed class DirectoryBackupService(
                             await linkedCts.CancelAsync();
                             return;
                         }
-                        catch (Domain.Exceptions.EncryptionInvalidPasswordException ex)
+                        catch (Domain.Exceptions.InvalidPasswordException ex)
                         {
                             Interlocked.CompareExchange(
                                 ref fatalError,
@@ -913,7 +913,7 @@ internal sealed class DirectoryBackupService(
                             await linkedCts.CancelAsync();
                             return;
                         }
-                        catch (Domain.Exceptions.EncryptionKeyDerivationException ex)
+                        catch (Domain.Exceptions.KeyDerivationException ex)
                         {
                             Interlocked.CompareExchange(
                                 ref fatalError,
@@ -923,19 +923,19 @@ internal sealed class DirectoryBackupService(
                             await linkedCts.CancelAsync();
                             return;
                         }
-                        catch (Domain.Exceptions.EncryptionFileNotFoundException ex)
+                        catch (Domain.Exceptions.FileNotFoundException ex)
                         {
                             errors.Add(
                                 string.Format(
                                     Messages.FileNotFoundSkippedFormat, file, ex.Message));
                         }
-                        catch (Domain.Exceptions.EncryptionCorruptedFileException ex)
+                        catch (Domain.Exceptions.CorruptedFileException ex)
                         {
                             errors.Add(
                                 string.Format(
                                     Messages.CorruptedFileSkippedFormat, file, ex.Message));
                         }
-                        catch (Domain.Exceptions.EncryptionCipherException ex)
+                        catch (Domain.Exceptions.CipherException ex)
                         {
                             errors.Add(
                                 string.Format(Messages.CipherErrorFormat, file, ex.Message));

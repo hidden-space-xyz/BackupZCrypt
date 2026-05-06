@@ -26,12 +26,12 @@ internal sealed class BackupCommand(
     IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
     IReadOnlyList<ICompressionStrategy> compressionStrategies)
 {
-    public async Task ExecuteAsync(EncryptOperation operation)
+    public async Task ExecuteAsync(BackupOperation operation)
     {
         var operationName = operation switch
         {
-            EncryptOperation.Encrypt => Messages.CreateBackup,
-            EncryptOperation.Update => Messages.UpdateBackup,
+            BackupOperation.Create => Messages.CreateBackup,
+            BackupOperation.Update => Messages.UpdateBackup,
             _ => Messages.RestoreBackup,
         };
 
@@ -39,7 +39,7 @@ internal sealed class BackupCommand(
             new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey")));
         AnsiConsole.WriteLine();
 
-        if (operation == EncryptOperation.Update)
+        if (operation == BackupOperation.Update)
         {
             await ExecuteUpdateBackupAsync(operationName);
             return;
@@ -48,7 +48,7 @@ internal sealed class BackupCommand(
         var sourcePath = await pathPromptService.PromptSourcePathAsync();
         var destinationPath = await pathPromptService.PromptDestinationPathAsync();
 
-        if (operation == EncryptOperation.Encrypt)
+        if (operation == BackupOperation.Create)
         {
             await ExecuteCreateBackupAsync(operationName, sourcePath, destinationPath);
         }
@@ -124,7 +124,7 @@ internal sealed class BackupCommand(
                 confirmPassword,
                 selectedEncryption.Id,
                 selectedKdf!.Id,
-                EncryptOperation.Encrypt,
+                BackupOperation.Create,
                 selectedObfuscation?.Id ?? NameObfuscationMode.None,
                 selectedCompression?.Id ?? CompressionMode.None,
                 ProceedOnWarnings: false);
@@ -140,7 +140,7 @@ internal sealed class BackupCommand(
                 string.Empty,
                 default,
                 default,
-                EncryptOperation.Encrypt,
+                BackupOperation.Create,
                 NameObfuscationMode.None,
                 selectedCompression.Id,
                 ProceedOnWarnings: false);
@@ -196,7 +196,7 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                EncryptOperation.Decrypt,
+                BackupOperation.Restore,
                 NameObfuscationMode.None);
 
             await RunOperationAsync(request, operationName, Messages.Decrypting);
@@ -210,7 +210,7 @@ internal sealed class BackupCommand(
                 string.Empty,
                 default,
                 default,
-                EncryptOperation.Decrypt,
+                BackupOperation.Restore,
                 NameObfuscationMode.None,
                 compressionStrategies[0].Id,
                 ProceedOnWarnings: false);
@@ -262,7 +262,7 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                EncryptOperation.Update,
+                BackupOperation.Update,
                 NameObfuscationMode.None);
 
             await RunOperationAsync(request, operationName, Messages.Updating);
@@ -276,7 +276,7 @@ internal sealed class BackupCommand(
                 string.Empty,
                 default,
                 default,
-                EncryptOperation.Update,
+                BackupOperation.Update,
                 NameObfuscationMode.None,
                 compressionStrategies[0].Id,
                 ProceedOnWarnings: false);

@@ -62,7 +62,7 @@ internal sealed class DirectoryBackupServiceTests
         var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
-            CreateRequest(EncryptOperation.Decrypt),
+            CreateRequest(BackupOperation.Restore),
             progress,
             CancellationToken.None);
 
@@ -87,7 +87,7 @@ internal sealed class DirectoryBackupServiceTests
             string.Empty,
             EncryptionAlgorithm.None,
             KeyDerivationAlgorithm.Argon2id,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             CompressionMode.Zstd);
 
@@ -152,7 +152,7 @@ internal sealed class DirectoryBackupServiceTests
         await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
-            CreateRequest(EncryptOperation.Decrypt),
+            CreateRequest(BackupOperation.Restore),
             progress,
             CancellationToken.None);
 
@@ -168,7 +168,7 @@ internal sealed class DirectoryBackupServiceTests
         var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
-            CreateRequest(EncryptOperation.Encrypt),
+            CreateRequest(BackupOperation.Create),
             progress,
             CancellationToken.None);
 
@@ -220,7 +220,7 @@ internal sealed class DirectoryBackupServiceTests
         await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
-            CreateRequest(EncryptOperation.Encrypt),
+            CreateRequest(BackupOperation.Create),
             progress,
             CancellationToken.None);
 
@@ -277,7 +277,7 @@ internal sealed class DirectoryBackupServiceTests
         var result = await service.ProcessAsync(
             @"C:\source",
             @"C:\dest",
-            CreateRequest(EncryptOperation.Decrypt),
+            CreateRequest(BackupOperation.Restore),
             progress,
             CancellationToken.None);
 
@@ -289,7 +289,7 @@ internal sealed class DirectoryBackupServiceTests
     }
 
     private static BackupRequest CreateRequest(
-        EncryptOperation operation = EncryptOperation.Encrypt) =>
+        BackupOperation operation = BackupOperation.Create) =>
         new(
             @"C:\source",
             @"C:\dest",

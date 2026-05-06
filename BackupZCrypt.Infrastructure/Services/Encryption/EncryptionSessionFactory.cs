@@ -177,7 +177,7 @@ internal sealed class EncryptionSessionFactory(
         }
         catch (Exception ex)
         {
-            throw new EncryptionKeyDerivationException(ex);
+            throw new KeyDerivationException(ex);
         }
     }
 }

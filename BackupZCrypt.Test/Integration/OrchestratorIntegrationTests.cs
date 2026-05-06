@@ -58,7 +58,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -85,7 +85,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -117,7 +117,7 @@ internal sealed class OrchestratorIntegrationTests
             string.Empty,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 
         Progress<BackupStatus> progress = new();
@@ -144,7 +144,7 @@ internal sealed class OrchestratorIntegrationTests
             "DifferentPass1!",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 
         Progress<BackupStatus> progress = new();
@@ -170,7 +170,7 @@ internal sealed class OrchestratorIntegrationTests
             "Password1!",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 
         Progress<BackupStatus> progress = new();
@@ -199,7 +199,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -233,7 +233,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
@@ -256,7 +256,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -296,7 +296,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.Guid,
             ProceedOnWarnings: true);
 
@@ -319,7 +319,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -351,7 +351,7 @@ internal sealed class OrchestratorIntegrationTests
             "IntegrationP@ss1",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -382,7 +382,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
@@ -410,7 +410,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Update,
+            BackupOperation.Update,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -438,7 +438,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -482,7 +482,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -496,7 +496,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Update,
+            BackupOperation.Update,
             NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
@@ -530,7 +530,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.Guid,
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
@@ -551,7 +551,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Update,
+            BackupOperation.Update,
             NameObfuscationMode.Guid,
             ProceedOnWarnings: true);
 
@@ -574,7 +574,7 @@ internal sealed class OrchestratorIntegrationTests
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Decrypt,
+            BackupOperation.Restore,
             NameObfuscationMode.Guid,
             ProceedOnWarnings: true);
 

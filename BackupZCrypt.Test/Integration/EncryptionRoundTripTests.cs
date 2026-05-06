@@ -46,7 +46,7 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<EncryptionCorruptedFileException>(
+        Assert.ThrowsAsync<CorruptedFileException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     corruptedFile,
@@ -63,7 +63,7 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<EncryptionFileNotFoundException>(
+        Assert.ThrowsAsync<FileNotFoundException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     nonExistent,
@@ -87,7 +87,7 @@ internal sealed class EncryptionRoundTripTests
             "CorrectPassword1!",
             KeyDerivationAlgorithm.PBKDF2);
 
-        Assert.ThrowsAsync<EncryptionInvalidPasswordException>(
+        Assert.ThrowsAsync<InvalidPasswordException>(
             async () =>
                 await strategy.DecryptFileAsync(
                     encryptedFile,
@@ -224,7 +224,7 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<EncryptionFileNotFoundException>(
+        Assert.ThrowsAsync<FileNotFoundException>(
             async () =>
                 await strategy.EncryptFileAsync(
                     nonExistent,

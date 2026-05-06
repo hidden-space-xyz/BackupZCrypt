@@ -1,6 +1,6 @@
 namespace BackupZCrypt.Domain.Enums;
 
-public enum EncryptionErrorCode
+public enum BackupErrorCode
 {
     AccessDenied = 0,
     FileNotFound = 1,

@@ -4,14 +4,14 @@ using BackupZCrypt.Domain.Enums;
 
 public abstract class EncryptionException : Exception
 {
-    protected EncryptionException(EncryptionErrorCode code, string? message = null)
+    protected EncryptionException(BackupErrorCode code, string? message = null)
         : base(message ?? code.ToString())
     {
         this.Code = code;
     }
 
     protected EncryptionException(
-        EncryptionErrorCode code,
+        BackupErrorCode code,
         string? message,
         Exception innerException)
         : base(message ?? code.ToString(), innerException)
@@ -31,5 +31,5 @@ public abstract class EncryptionException : Exception
     {
     }
 
-    public EncryptionErrorCode Code { get; }
+    public BackupErrorCode Code { get; }
 }

@@ -9,7 +9,7 @@ public sealed record BackupRequest(
     string ConfirmPassword,
     EncryptionAlgorithm EncryptionAlgorithm,
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
-    EncryptOperation Operation,
+    BackupOperation Operation,
     NameObfuscationMode NameObfuscation,
     CompressionMode Compression = CompressionMode.None,
     bool ProceedOnWarnings = false);

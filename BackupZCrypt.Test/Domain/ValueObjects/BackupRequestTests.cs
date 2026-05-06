@@ -16,7 +16,7 @@ internal sealed class BackupRequestTests
             ConfirmPassword: "password123",
             EncryptionAlgorithm: EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm: KeyDerivationAlgorithm.Argon2id,
-            Operation: EncryptOperation.Encrypt,
+            Operation: BackupOperation.Create,
             NameObfuscation: NameObfuscationMode.None,
             Compression: CompressionMode.Zstd,
             ProceedOnWarnings: true);
@@ -29,7 +29,7 @@ internal sealed class BackupRequestTests
             Assert.That(request.ConfirmPassword, Is.EqualTo("password123"));
             Assert.That(request.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
             Assert.That(request.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Argon2id));
-            Assert.That(request.Operation, Is.EqualTo(EncryptOperation.Encrypt));
+            Assert.That(request.Operation, Is.EqualTo(BackupOperation.Create));
             Assert.That(request.NameObfuscation, Is.EqualTo(NameObfuscationMode.None));
             Assert.That(request.Compression, Is.EqualTo(CompressionMode.Zstd));
             Assert.That(request.ProceedOnWarnings, Is.True);
@@ -46,7 +46,7 @@ internal sealed class BackupRequestTests
             "pass",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 
         using (Assert.EnterMultipleScope())
@@ -66,14 +66,14 @@ internal sealed class BackupRequestTests
             "pass",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            EncryptOperation.Encrypt,
+            BackupOperation.Create,
             NameObfuscationMode.None);
 
-        var modified = original with { Operation = EncryptOperation.Decrypt };
+        var modified = original with { Operation = BackupOperation.Restore };
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(modified.Operation, Is.EqualTo(EncryptOperation.Decrypt));
+            Assert.That(modified.Operation, Is.EqualTo(BackupOperation.Restore));
             Assert.That(modified.SourcePath, Is.EqualTo(original.SourcePath));
         }
     }
