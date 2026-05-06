@@ -1,8 +1,8 @@
 namespace BackupZCrypt.Infrastructure.Services.Encryption;
 
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Infrastructure.Constants;
@@ -171,13 +171,9 @@ internal sealed class EncryptionSessionFactory(
         {
             return this.DeriveKey(password, salt, EncryptionConstants.KeySize, algorithm);
         }
-        catch (EncryptionException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new KeyDerivationException(ex);
+            throw new CryptographicException(Messages.KeyDerivationFailed, ex);
         }
     }
 }

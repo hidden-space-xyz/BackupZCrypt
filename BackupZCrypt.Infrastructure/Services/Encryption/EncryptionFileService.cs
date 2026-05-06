@@ -1,6 +1,6 @@
 namespace BackupZCrypt.Infrastructure.Services.Encryption;
 
-using BackupZCrypt.Domain.Exceptions;
+using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
 
@@ -12,25 +12,19 @@ internal sealed class EncryptionFileService(
     {
         if (!fileOperationsService.FileExists(sourceFilePath))
         {
-            throw FileNotFoundException.CreateForFilePath(sourceFilePath);
+            throw new FileNotFoundException(
+                string.Format(Messages.FileNotFoundFormat, sourceFilePath), sourceFilePath);
         }
 
-        Stream stream;
-        try
-        {
-            stream = fileOperationsService.OpenReadStream(
-                sourceFilePath,
-                EncryptionConstants.BufferSize);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            throw AccessDeniedException.CreateForFilePath(sourceFilePath, ex);
-        }
+        var stream = fileOperationsService.OpenReadStream(
+            sourceFilePath,
+            EncryptionConstants.BufferSize);
 
         if (validateHeader && stream.Length < EncryptionConstants.HeaderSize)
         {
             stream.Dispose();
-            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
+            throw new InvalidDataException(
+                string.Format(Messages.CorruptedFileFormat, sourceFilePath));
         }
 
         return stream;
@@ -53,14 +47,7 @@ internal sealed class EncryptionFileService(
         var directory = fileOperationsService.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory))
         {
-            try
-            {
-                fileOperationsService.CreateDirectory(directory);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                throw AccessDeniedException.CreateForFilePath(filePath, ex);
-            }
+            fileOperationsService.CreateDirectory(directory);
         }
     }
 
@@ -82,12 +69,13 @@ internal sealed class EncryptionFileService(
 
                     if (availableSpace < requiredSpace)
                     {
-                        throw InsufficientSpaceException.CreateForPath(destinationFilePath);
+                        throw new IOException(
+                            string.Format(Messages.InsufficientDiskSpaceFormat, destinationFilePath));
                     }
                 }
             }
         }
-        catch (EncryptionException)
+        catch (IOException)
         {
             throw;
         }

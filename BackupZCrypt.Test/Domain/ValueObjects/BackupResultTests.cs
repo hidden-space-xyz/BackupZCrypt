@@ -1,6 +1,5 @@
 namespace BackupZCrypt.Test.Domain.ValueObjects;
 
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 [TestFixture]
@@ -19,37 +18,37 @@ internal sealed class BackupResultTests
     }
 
     [Test]
-    public void Constructor_NegativeElapsedTime_ThrowsValidationException()
+    public void Constructor_NegativeElapsedTime_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new BackupResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0));
     }
 
     [Test]
-    public void Constructor_NegativeTotalBytes_ThrowsValidationException()
+    public void Constructor_NegativeTotalBytes_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new BackupResult(true, TimeSpan.Zero, -1, 0, 0));
     }
 
     [Test]
-    public void Constructor_NegativeProcessedFiles_ThrowsValidationException()
+    public void Constructor_NegativeProcessedFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new BackupResult(true, TimeSpan.Zero, 0, -1, 0));
     }
 
     [Test]
-    public void Constructor_NegativeTotalFiles_ThrowsValidationException()
+    public void Constructor_NegativeTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new BackupResult(true, TimeSpan.Zero, 0, 0, -1));
     }
 
     [Test]
-    public void Constructor_ProcessedFilesExceedTotalFiles_ThrowsValidationException()
+    public void Constructor_ProcessedFilesExceedTotalFiles_Throws()
     {
-        Assert.Throws<ValidationException>(() => new BackupResult(true, TimeSpan.Zero, 0, 5, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BackupResult(true, TimeSpan.Zero, 0, 5, 3));
     }
 
     [Test]

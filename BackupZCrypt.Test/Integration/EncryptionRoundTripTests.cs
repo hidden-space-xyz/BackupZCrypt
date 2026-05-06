@@ -2,7 +2,6 @@ namespace BackupZCrypt.Test.Integration;
 
 using BackupZCrypt.Composition;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Cryptography;
@@ -46,34 +45,36 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<CorruptedFileException>(
-            async () =>
-                await strategy.DecryptFileAsync(
-                    corruptedFile,
-                    dest,
-                    "Password1234!",
-                    KeyDerivationAlgorithm.PBKDF2));
+        Assert.That(async () =>
+        {
+            var result = await strategy.DecryptFileAsync(
+                corruptedFile,
+                dest,
+                "Password1234!",
+                KeyDerivationAlgorithm.PBKDF2);
+            Assert.That(result.IsFailure, Is.True);
+        }, Throws.Nothing);
     }
 
     [Test]
-    public void DecryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
+    public async Task DecryptFile_SourceNotFound_ReturnsFileNotFoundFailure()
     {
         var nonExistent = Path.Combine(this.testDir, "nonexistent.bzc");
         var dest = Path.Combine(this.testDir, "out.txt");
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<FileNotFoundException>(
-            async () =>
-                await strategy.DecryptFileAsync(
-                    nonExistent,
-                    dest,
-                    "Password1234!",
-                    KeyDerivationAlgorithm.PBKDF2));
+        var result = await strategy.DecryptFileAsync(
+            nonExistent,
+            dest,
+            "Password1234!",
+            KeyDerivationAlgorithm.PBKDF2);
+
+        Assert.That(result.IsFailure, Is.True);
     }
 
     [Test]
-    public async Task DecryptFile_WrongPassword_ThrowsEncryptionInvalidPasswordException()
+    public async Task DecryptFile_WrongPassword_ReturnsInvalidPasswordFailure()
     {
         var sourceFile = this.CreateTestFile("wrong-pass.txt", "secret data");
         var encryptedFile = Path.Combine(this.testDir, "wrong-pass.bzc");
@@ -81,20 +82,24 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        var metadata = await strategy.EncryptFileAsync(
+        var encryptResult = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             "CorrectPassword1!",
             KeyDerivationAlgorithm.PBKDF2);
 
-        Assert.ThrowsAsync<InvalidPasswordException>(
-            async () =>
-                await strategy.DecryptFileAsync(
-                    encryptedFile,
-                    decryptedFile,
-                    "WrongPassword1!!",
-                    KeyDerivationAlgorithm.PBKDF2,
-                    metadata));
+        var decryptResult = await strategy.DecryptFileAsync(
+            encryptedFile,
+            decryptedFile,
+            "WrongPassword1!!",
+            KeyDerivationAlgorithm.PBKDF2,
+            encryptResult.Value);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decryptResult.IsFailure, Is.True);
+            Assert.That(decryptResult.ErrorCode, Is.EqualTo(BackupErrorCode.InvalidPassword));
+        }
     }
 
     [TestCase(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2)]
@@ -124,14 +129,14 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(algorithm);
 
-        var metadata = await strategy.EncryptFileAsync(
+        var encryptResult = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
             kdf);
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(encryptResult.IsSuccess, Is.True);
             Assert.That(File.Exists(encryptedFile), Is.True);
         }
 
@@ -144,10 +149,10 @@ internal sealed class EncryptionRoundTripTests
             decryptedFile,
             password,
             kdf,
-            metadata);
+            encryptResult.Value);
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(decryptResult, Is.True);
+            Assert.That(decryptResult.IsSuccess, Is.True);
             Assert.That(File.Exists(decryptedFile), Is.True);
         }
 
@@ -170,21 +175,21 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(algorithm);
 
-        var metadata = await strategy.EncryptFileAsync(
+        var encryptResult = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
             KeyDerivationAlgorithm.PBKDF2,
             compression);
-        Assert.That(metadata, Is.Not.Null);
+        Assert.That(encryptResult.IsSuccess, Is.True);
 
         var decryptResult = await strategy.DecryptFileAsync(
             encryptedFile,
             decryptedFile,
             password,
             KeyDerivationAlgorithm.PBKDF2,
-            metadata);
-        Assert.That(decryptResult, Is.True);
+            encryptResult.Value);
+        Assert.That(decryptResult.IsSuccess, Is.True);
 
         var decryptedContent = await File.ReadAllTextAsync(decryptedFile);
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
@@ -202,7 +207,7 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        var metadata = await strategy.EncryptFileAsync(
+        var encryptResult = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -213,7 +218,7 @@ internal sealed class EncryptionRoundTripTests
             decryptedFile,
             password,
             KeyDerivationAlgorithm.PBKDF2,
-            metadata);
+            encryptResult.Value);
 
         var decryptedData = await File.ReadAllBytesAsync(decryptedFile);
         Assert.That(decryptedData, Is.Empty);
@@ -233,7 +238,7 @@ internal sealed class EncryptionRoundTripTests
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        var metadata = await strategy.EncryptFileAsync(
+        var encryptResult = await strategy.EncryptFileAsync(
             sourceFile,
             encryptedFile,
             password,
@@ -244,27 +249,27 @@ internal sealed class EncryptionRoundTripTests
             decryptedFile,
             password,
             KeyDerivationAlgorithm.PBKDF2,
-            metadata);
+            encryptResult.Value);
 
         var decryptedData = await File.ReadAllBytesAsync(decryptedFile);
         Assert.That(decryptedData, Is.EqualTo(largeData));
     }
 
     [Test]
-    public void EncryptFile_SourceNotFound_ThrowsEncryptionFileNotFoundException()
+    public async Task EncryptFile_SourceNotFound_ReturnsFailure()
     {
         var nonExistent = Path.Combine(this.testDir, "nonexistent.txt");
         var dest = Path.Combine(this.testDir, "out.bzc");
 
         var strategy = this.encryptionFactory.Create(EncryptionAlgorithm.Aes);
 
-        Assert.ThrowsAsync<FileNotFoundException>(
-            async () =>
-                await strategy.EncryptFileAsync(
-                    nonExistent,
-                    dest,
-                    "Password1234!",
-                    KeyDerivationAlgorithm.PBKDF2));
+        var result = await strategy.EncryptFileAsync(
+            nonExistent,
+            dest,
+            "Password1234!",
+            KeyDerivationAlgorithm.PBKDF2);
+
+        Assert.That(result.IsFailure, Is.True);
     }
 
     [SetUp]

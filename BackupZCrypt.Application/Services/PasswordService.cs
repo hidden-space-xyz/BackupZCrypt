@@ -4,7 +4,6 @@ using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -118,20 +117,11 @@ internal sealed partial class PasswordService : IPasswordService
 
     public string GeneratePassword(int length, PasswordGenerationOptions options)
     {
-        if (length <= 0)
-        {
-            throw new ValidationException(
-                ValidationErrorCode.PasswordLengthNonPositive,
-                Messages.PasswordLengthNonPositive,
-                nameof(length));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
         if (options == PasswordGenerationOptions.None)
         {
-            throw new ValidationException(
-                ValidationErrorCode.PasswordOptionsNone,
-                Messages.PasswordOptionsNone,
-                nameof(options));
+            throw new ArgumentException(Messages.PasswordOptionsNone, nameof(options));
         }
 
         StringBuilder charSet = new();
@@ -166,9 +156,7 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (string.IsNullOrEmpty(availableChars))
         {
-            throw new ValidationException(
-                ValidationErrorCode.NoCharactersAvailableForGeneration,
-                Messages.NoCharactersAvailable);
+            throw new ArgumentException(Messages.NoCharactersAvailable, nameof(options));
         }
 
         StringBuilder password = new(length);

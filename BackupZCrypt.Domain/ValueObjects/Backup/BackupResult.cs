@@ -1,7 +1,5 @@
 namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
-using BackupZCrypt.Domain.Enums;
-
 public sealed record BackupResult
 {
     public BackupResult(
@@ -60,44 +58,10 @@ public sealed record BackupResult
         int processedFiles,
         int totalFiles)
     {
-        if (elapsedTime < TimeSpan.Zero)
-        {
-            throw new Exceptions.ValidationException(
-                ValidationErrorCode.ElapsedTimeNegative,
-                "Elapsed time cannot be negative",
-                nameof(elapsedTime));
-        }
-
-        if (totalBytes < 0)
-        {
-            throw new Exceptions.ValidationException(
-                ValidationErrorCode.TotalBytesNegative,
-                "Total bytes cannot be negative",
-                nameof(totalBytes));
-        }
-
-        if (processedFiles < 0)
-        {
-            throw new Exceptions.ValidationException(
-                ValidationErrorCode.ProcessedFilesNegative,
-                "Processed files cannot be negative",
-                nameof(processedFiles));
-        }
-
-        if (totalFiles < 0)
-        {
-            throw new Exceptions.ValidationException(
-                ValidationErrorCode.TotalFilesNegative,
-                "Total files cannot be negative",
-                nameof(totalFiles));
-        }
-
-        if (processedFiles > totalFiles)
-        {
-            throw new Exceptions.ValidationException(
-                ValidationErrorCode.ProcessedFilesExceedTotalFiles,
-                "Processed files cannot exceed total files",
-                nameof(processedFiles));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThan(elapsedTime, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfNegative(totalBytes);
+        ArgumentOutOfRangeException.ThrowIfNegative(processedFiles);
+        ArgumentOutOfRangeException.ThrowIfNegative(totalFiles);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(processedFiles, totalFiles);
     }
 }

@@ -6,7 +6,6 @@ using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
@@ -838,16 +837,6 @@ internal sealed class BackupCommand(
         catch (OperationCanceledException)
         {
             AnsiConsole.MarkupLine($"[yellow]{Messages.OperationCancelledByUser}[/]");
-        }
-        catch (EncryptionException ex)
-        {
-            AnsiConsole.MarkupLine(
-                $"[red]❌ {Markup.Escape(ex.Code.ToString())}: {Markup.Escape(ex.Message)}[/]");
-        }
-        catch (ValidationException ex)
-        {
-            AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.ValidationErrorFormat, Markup.Escape(ex.Message))}[/]");
         }
         catch (Exception ex)
         {

@@ -84,7 +84,7 @@ internal sealed class FileBackupService(
 
                 if (request.Operation == BackupOperation.Create)
                 {
-                    var metadata = await encryptionService.EncryptFileAsync(
+                    var encryptResult = await encryptionService.EncryptFileAsync(
                         sourcePath,
                         destFile,
                         request.Password,
@@ -92,6 +92,13 @@ internal sealed class FileBackupService(
                         request.Compression,
                         cancellationToken);
 
+                    if (encryptResult.IsFailure)
+                    {
+                        stopwatch.Stop();
+                        return Result<BackupResult>.Failure(encryptResult.ErrorMessage!);
+                    }
+
+                    var metadata = encryptResult.Value;
                     var destDir = fileOperationsService.GetDirectoryName(destFile);
 
                     if (!string.IsNullOrEmpty(destDir))
@@ -128,12 +135,20 @@ internal sealed class FileBackupService(
                 }
                 else
                 {
-                    result = await DecryptWithManifestAsync(
+                    var decryptResult = await DecryptWithManifestAsync(
                         encryptionService,
                         sourcePath,
                         destFile,
                         request,
                         cancellationToken);
+
+                    if (decryptResult.IsFailure)
+                    {
+                        stopwatch.Stop();
+                        return Result<BackupResult>.Failure(decryptResult.ErrorMessage!);
+                    }
+
+                    result = decryptResult.Value;
                 }
             }
             else
@@ -197,11 +212,6 @@ internal sealed class FileBackupService(
                     1,
                     errors: []));
         }
-        catch (Domain.Exceptions.EncryptionException ex)
-        {
-            stopwatch.Stop();
-            return Result<BackupResult>.Failure(ex.Message);
-        }
         catch (Exception ex) when (request.EncryptionAlgorithm == EncryptionAlgorithm.None && ex is not OperationCanceledException)
         {
             stopwatch.Stop();
@@ -210,7 +220,7 @@ internal sealed class FileBackupService(
         }
     }
 
-    private async Task<bool> DecryptWithManifestAsync(
+    private async Task<EncryptionResult<bool>> DecryptWithManifestAsync(
         IEncryptionAlgorithmStrategy encryptionService,
         string sourcePath,
         string destinationPath,
@@ -220,7 +230,8 @@ internal sealed class FileBackupService(
         var sourceDir = Path.GetDirectoryName(sourcePath);
         if (string.IsNullOrEmpty(sourceDir))
         {
-            throw new InvalidOperationException(
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.Unknown,
                 Messages.ManifestRequiredForDecryption);
         }
 
@@ -228,8 +239,14 @@ internal sealed class FileBackupService(
             sourceDir,
             [.. encryptionStrategies],
             request.Password,
-            cancellationToken) ?? throw new InvalidOperationException(
+            cancellationToken);
+
+        if (manifest is null)
+        {
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.Unknown,
                 Messages.ManifestRequiredForDecryption);
+        }
 
         var sourceFileName = Path.GetFileName(sourcePath);
         if (manifest.FileMap.TryGetValue(sourceFileName, out var fileInfo))
@@ -252,7 +269,7 @@ internal sealed class FileBackupService(
                 cancellationToken);
         }
 
-        return false;
+        return EncryptionResult<bool>.Success(false);
     }
 
     private async Task<bool> DecryptCompressedWithManifestAsync(
@@ -263,16 +280,20 @@ internal sealed class FileBackupService(
         var sourceDir = Path.GetDirectoryName(sourcePath);
         if (string.IsNullOrEmpty(sourceDir))
         {
-            throw new InvalidOperationException(
-                Messages.ManifestRequiredForDecryption);
+            return false;
         }
 
         var manifest = await manifestService.TryReadManifestAsync(
             sourceDir,
             [.. encryptionStrategies],
             string.Empty,
-            cancellationToken) ?? throw new InvalidOperationException(
-                Messages.ManifestRequiredForDecryption);
+            cancellationToken);
+
+        if (manifest is null)
+        {
+            return false;
+        }
+
         var sourceFileName = Path.GetFileName(sourcePath);
         var resolvedDestination = destinationPath;
 

@@ -13,7 +13,7 @@ public interface IEncryptionAlgorithmStrategy
 
     string Summary { get; }
 
-    Task<EncryptionMetadata> EncryptFileAsync(
+    Task<EncryptionResult<EncryptionMetadata>> EncryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -21,7 +21,7 @@ public interface IEncryptionAlgorithmStrategy
         CompressionMode compression = CompressionMode.None,
         CancellationToken cancellationToken = default);
 
-    Task<bool> DecryptFileAsync(
+    Task<EncryptionResult<bool>> DecryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -29,7 +29,7 @@ public interface IEncryptionAlgorithmStrategy
         EncryptionMetadata metadata,
         CancellationToken cancellationToken = default);
 
-    Task<bool> DecryptFileAsync(
+    Task<EncryptionResult<bool>> DecryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,

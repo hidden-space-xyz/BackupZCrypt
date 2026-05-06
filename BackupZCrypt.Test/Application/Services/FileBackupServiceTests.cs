@@ -5,14 +5,12 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 
 [TestFixture]
 internal sealed class FileBackupServiceTests
@@ -77,7 +75,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<EncryptionMetadata>(),
                 Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(EncryptionResult<bool>.Success(true));
 
         var result = await service.ProcessAsync(
             @"C:\source\file.bzc",
@@ -110,7 +108,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+            .Returns(EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None)));
 
         await service.ProcessAsync(
             @"C:\source\file.txt",
@@ -139,7 +137,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+            .Returns(EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None)));
 
         var result = await service.ProcessAsync(
             @"C:\source\file.txt",
@@ -174,7 +172,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .ThrowsAsync(new InvalidPasswordException());
+            .Returns(EncryptionResult<EncryptionMetadata>.Failure(BackupErrorCode.InvalidPassword, "Bad password"));
 
         var result = await service.ProcessAsync(
             @"C:\source\file.txt",
@@ -203,7 +201,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+            .Returns(EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None)));
 
         await service.ProcessAsync(
             @"C:\source\file.txt",
@@ -288,7 +286,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<EncryptionMetadata>(),
                 Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(EncryptionResult<bool>.Success(true));
 
         this.encryptionStrategy
             .EncryptFileAsync(
@@ -298,7 +296,7 @@ internal sealed class FileBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+            .Returns(EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None)));
 
         var result = await service.ProcessAsync(
             @"C:\source\file.bzc",

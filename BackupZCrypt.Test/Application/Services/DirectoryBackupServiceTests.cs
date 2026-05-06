@@ -4,7 +4,6 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -134,7 +133,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<EncryptionMetadata>(),
                 Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(EncryptionResult<bool>.Success(true));
 
         this.fileOps.GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([@"C:\source\file.bzc"]);
@@ -206,7 +205,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
+            .Returns(EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None)));
 
         this.manifestService
             .TrySaveManifestAsync(
@@ -273,7 +272,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<EncryptionMetadata>(),
                 Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(EncryptionResult<bool>.Success(true));
 
         var result = await service.ProcessAsync(
             @"C:\source",
@@ -307,10 +306,10 @@ internal sealed class DirectoryBackupServiceTests
             {
                 if (Interlocked.Increment(ref callCount) == 1)
                 {
-                    throw new CorruptedFileException("Corrupted");
+                    return EncryptionResult<EncryptionMetadata>.Failure(BackupErrorCode.FileCorruption, "Corrupted");
                 }
 
-                return new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None);
+                return EncryptionResult<EncryptionMetadata>.Success(new EncryptionMetadata(new byte[32], new byte[12], CompressionMode.None));
             });
 
         this.manifestService
@@ -353,8 +352,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns<EncryptionMetadata>(_ =>
-                throw new InvalidPasswordException("Bad password"));
+            .Returns(EncryptionResult<EncryptionMetadata>.Failure(BackupErrorCode.InvalidPassword, "Bad password"));
 
         var result = await service.ProcessAsync(
             @"C:\source",
@@ -379,8 +377,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns<EncryptionMetadata>(_ =>
-                throw new AccessDeniedException("Access denied"));
+            .Returns(EncryptionResult<EncryptionMetadata>.Failure(BackupErrorCode.AccessDenied, "Access denied"));
 
         var result = await service.ProcessAsync(
             @"C:\source",
@@ -405,8 +402,7 @@ internal sealed class DirectoryBackupServiceTests
                 Arg.Any<KeyDerivationAlgorithm>(),
                 Arg.Any<CompressionMode>(),
                 Arg.Any<CancellationToken>())
-            .Returns<EncryptionMetadata>(_ =>
-                throw new CipherException("Enc error"));
+            .Returns(EncryptionResult<EncryptionMetadata>.Failure(BackupErrorCode.CipherOperationFailed, "Enc error"));
 
         var result = await service.ProcessAsync(
             @"C:\source",

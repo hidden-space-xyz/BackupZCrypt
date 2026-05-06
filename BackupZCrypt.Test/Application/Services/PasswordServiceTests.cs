@@ -2,7 +2,6 @@ namespace BackupZCrypt.Test.Application.Services;
 
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 
 [TestFixture]
 internal sealed class PasswordServiceTests
@@ -172,23 +171,23 @@ internal sealed class PasswordServiceTests
     }
 
     [Test]
-    public void GeneratePassword_ZeroLength_ThrowsValidationException()
+    public void GeneratePassword_ZeroLength_ThrowsArgumentOutOfRangeException()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             this.service.GeneratePassword(0, PasswordGenerationOptions.IncludeLowercase));
     }
 
     [Test]
-    public void GeneratePassword_NegativeLength_ThrowsValidationException()
+    public void GeneratePassword_NegativeLength_ThrowsArgumentOutOfRangeException()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             this.service.GeneratePassword(-5, PasswordGenerationOptions.IncludeLowercase));
     }
 
     [Test]
-    public void GeneratePassword_NoOptions_ThrowsValidationException()
+    public void GeneratePassword_NoOptions_ThrowsArgumentException()
     {
-        Assert.Throws<ValidationException>(() =>
+        Assert.Throws<ArgumentException>(() =>
             this.service.GeneratePassword(10, PasswordGenerationOptions.None));
     }
 

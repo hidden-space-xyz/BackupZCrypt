@@ -1,12 +1,12 @@
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Exceptions;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Encryption;
 using BackupZCrypt.Infrastructure.Constants;
 using BackupZCrypt.Infrastructure.Resources;
+using DomainMessages = BackupZCrypt.Domain.Resources.Messages;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using System.Buffers;
@@ -22,7 +22,7 @@ internal abstract class EncryptionStrategyBase(
     protected const int MacSizeBytes = EncryptionConstants.MacSize / 8;
     protected const int BufferSize = EncryptionConstants.BufferSize;
 
-    public async Task<EncryptionMetadata> EncryptFileAsync(
+    public async Task<EncryptionResult<EncryptionMetadata>> EncryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -71,39 +71,49 @@ internal abstract class EncryptionStrategyBase(
                     cancellationToken);
             }
 
-            return new EncryptionMetadata(
-                (byte[])session.Salt.Clone(),
-                (byte[])session.Nonce.Clone(),
-                compression);
+            return EncryptionResult<EncryptionMetadata>.Success(
+                new EncryptionMetadata(
+                    (byte[])session.Salt.Clone(),
+                    (byte[])session.Nonce.Clone(),
+                    compression));
         }
-        catch (EncryptionException)
+        catch (InvalidDataException)
         {
-            throw;
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+
+            return EncryptionResult<EncryptionMetadata>.Failure(
+                BackupErrorCode.FileCorruption,
+                string.Format(DomainMessages.CorruptedFileFormat, sourceFilePath));
         }
         catch (IOException ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
-            {
-                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
-            }
-
-            throw CipherException.CreateForOperation(Messages.OperationEncryption, ex);
+            return ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase)
+                ? EncryptionResult<EncryptionMetadata>.Failure(
+                    BackupErrorCode.InsufficientDiskSpace,
+                    string.Format(DomainMessages.InsufficientDiskSpaceFormat, destinationFilePath))
+                : EncryptionResult<EncryptionMetadata>.Failure(
+                    BackupErrorCode.CipherOperationFailed,
+                    string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationEncryption));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            return EncryptionResult<EncryptionMetadata>.Failure(
+                BackupErrorCode.AccessDenied,
+                string.Format(DomainMessages.AccessDeniedFormat, destinationFilePath));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw CipherException.CreateForOperation(Messages.OperationEncryption, ex);
+            return EncryptionResult<EncryptionMetadata>.Failure(
+                BackupErrorCode.CipherOperationFailed,
+                string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationEncryption));
         }
     }
 
-    public async Task<bool> DecryptFileAsync(
+    public async Task<EncryptionResult<bool>> DecryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -157,51 +167,65 @@ internal abstract class EncryptionStrategyBase(
                     cancellationToken);
             }
 
-            return true;
-        }
-        catch (EncryptionException)
-        {
-            throw;
+            return EncryptionResult<bool>.Success(true);
         }
         catch (InvalidCipherTextException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new InvalidPasswordException();
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.InvalidPassword,
+                DomainMessages.InvalidPassword);
         }
         catch (CryptographicException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new InvalidPasswordException();
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.InvalidPassword,
+                DomainMessages.InvalidPassword);
         }
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.FileCorruption,
+                string.Format(DomainMessages.CorruptedFileFormat, sourceFilePath));
+        }
+        catch (InvalidDataException)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.FileCorruption,
+                string.Format(DomainMessages.CorruptedFileFormat, sourceFilePath));
         }
         catch (IOException ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
-            {
-                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
-            }
-
-            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            return ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase)
+                ? EncryptionResult<bool>.Failure(
+                    BackupErrorCode.InsufficientDiskSpace,
+                    string.Format(DomainMessages.InsufficientDiskSpaceFormat, destinationFilePath))
+                : EncryptionResult<bool>.Failure(
+                    BackupErrorCode.CipherOperationFailed,
+                    string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationDecryption));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.AccessDenied,
+                string.Format(DomainMessages.AccessDeniedFormat, destinationFilePath));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.CipherOperationFailed,
+                string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationDecryption));
         }
     }
 
-    public async Task<bool> DecryptFileAsync(
+    public async Task<EncryptionResult<bool>> DecryptFileAsync(
         string sourceFilePath,
         string destinationFilePath,
         string password,
@@ -258,47 +282,61 @@ internal abstract class EncryptionStrategyBase(
                     cancellationToken);
             }
 
-            return true;
-        }
-        catch (EncryptionException)
-        {
-            throw;
+            return EncryptionResult<bool>.Success(true);
         }
         catch (InvalidCipherTextException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new InvalidPasswordException();
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.InvalidPassword,
+                DomainMessages.InvalidPassword);
         }
         catch (CryptographicException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw new InvalidPasswordException();
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.InvalidPassword,
+                DomainMessages.InvalidPassword);
         }
         catch (EndOfStreamException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
-            throw CorruptedFileException.CreateForFilePath(sourceFilePath);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.FileCorruption,
+                string.Format(DomainMessages.CorruptedFileFormat, sourceFilePath));
+        }
+        catch (InvalidDataException)
+        {
+            encryptionFileService.TryDeleteFile(destinationFilePath);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.FileCorruption,
+                string.Format(DomainMessages.CorruptedFileFormat, sourceFilePath));
         }
         catch (IOException ex)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            if (ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase))
-            {
-                throw InsufficientSpaceException.CreateForPath(destinationFilePath);
-            }
-
-            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            return ex.Message.Contains("space", StringComparison.OrdinalIgnoreCase)
+                ? EncryptionResult<bool>.Failure(
+                    BackupErrorCode.InsufficientDiskSpace,
+                    string.Format(DomainMessages.InsufficientDiskSpaceFormat, destinationFilePath))
+                : EncryptionResult<bool>.Failure(
+                    BackupErrorCode.CipherOperationFailed,
+                    string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationDecryption));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            throw AccessDeniedException.CreateForFilePath(destinationFilePath, ex);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.AccessDenied,
+                string.Format(DomainMessages.AccessDeniedFormat, destinationFilePath));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             encryptionFileService.TryDeleteFile(destinationFilePath);
 
-            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            return EncryptionResult<bool>.Failure(
+                BackupErrorCode.CipherOperationFailed,
+                string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationDecryption));
         }
     }
 
@@ -397,15 +435,16 @@ internal abstract class EncryptionStrategyBase(
         }
         catch (InvalidCipherTextException)
         {
-            throw new InvalidPasswordException();
+            throw new CryptographicException(DomainMessages.InvalidPassword);
         }
         catch (CryptographicException)
         {
-            throw new InvalidPasswordException();
+            throw new CryptographicException(DomainMessages.InvalidPassword);
         }
         catch (IOException ex)
         {
-            throw CipherException.CreateForOperation(Messages.OperationDecryption, ex);
+            throw new IOException(
+                string.Format(DomainMessages.CipherOperationFailedFormat, Messages.OperationDecryption), ex);
         }
     }
 
