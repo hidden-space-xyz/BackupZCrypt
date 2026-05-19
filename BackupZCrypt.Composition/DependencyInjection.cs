@@ -11,10 +11,9 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Services.FileSystem;
-using BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
 using BackupZCrypt.Infrastructure.Strategies.Chunking;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
-using BackupZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
+using BackupZCrypt.Infrastructure.Strategies.Encryption;
 using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,7 +24,6 @@ public static class DependencyInjection
         // Factories
         services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
         services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
-        services.AddSingleton<IChunkCryptoProviderFactory, ChunkCryptoProviderFactory>();
 
         // Key Derivation Strategies
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
@@ -39,20 +37,13 @@ public static class DependencyInjection
         services.AddSingleton<IEncryptionAlgorithmStrategy, ChaCha20EncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
 
-        // Chunk Crypto Providers
-        services.AddSingleton<IChunkCryptoProvider, AesChunkCryptoProvider>();
-        services.AddSingleton<IChunkCryptoProvider, ChaCha20ChunkCryptoProvider>();
-        services.AddSingleton<IChunkCryptoProvider, TwofishChunkCryptoProvider>();
-        services.AddSingleton<IChunkCryptoProvider, SerpentChunkCryptoProvider>();
-        services.AddSingleton<IChunkCryptoProvider, CamelliaChunkCryptoProvider>();
-
         // Compression Strategies
         services.AddSingleton<ICompressionStrategy, ZstdFastCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
 
-        // Content Chunking
-        services.AddSingleton<IContentChunker, FastCdcChunker>();
+        // Chunking Strategies
+        services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
 
         // Services
         services.AddSingleton<IPasswordService, PasswordService>();

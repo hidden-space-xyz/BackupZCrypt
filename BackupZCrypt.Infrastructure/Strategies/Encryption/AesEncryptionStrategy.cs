@@ -1,13 +1,20 @@
-namespace BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
+namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
+using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 
-internal sealed class AesChunkCryptoProvider : IChunkCryptoProvider
+internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;
+
+    public string DisplayName => Messages.AesDisplayName;
+
+    public string Description => Messages.AesDescription;
+
+    public string Summary => Messages.AesSummary;
 
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,

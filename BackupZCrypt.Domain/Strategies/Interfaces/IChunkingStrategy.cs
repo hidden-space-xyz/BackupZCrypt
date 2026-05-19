@@ -1,6 +1,6 @@
 namespace BackupZCrypt.Domain.Strategies.Interfaces;
 
-public interface IContentChunker
+public interface IChunkingStrategy
 {
     IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
         Stream source,

@@ -5,18 +5,20 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using System.Security.Cryptography;
 using System.Text.Json;
 
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,
-    IChunkCryptoProviderFactory chunkCryptoProviderFactory) : IManifestService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IManifestService
 {
     private const int ChunkPreambleHeaderSize = 34;
     private const int NonceSize = 12;
     private const int MinChunkManifestSize = ChunkPreambleHeaderSize + NonceSize + 1;
+    private readonly Dictionary<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategiesById =
+        encryptionStrategies.ToDictionary(static strategy => strategy.Id, static strategy => strategy);
 
     public async Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
@@ -92,12 +94,12 @@ internal sealed class ManifestService(
 
         try
         {
-            var chunkCrypto = chunkCryptoProviderFactory.Create(preamble.Algorithm);
+            var encryptionStrategy = ResolveEncryptionStrategy(preamble.Algorithm);
             var associatedData = BuildChunkPreambleHeader(
                 preamble.Algorithm,
                 preamble.KeyDerivation,
                 preamble.MasterSalt);
-            plaintext = chunkCrypto.DecryptChunk(
+            plaintext = encryptionStrategy.DecryptChunk(
                 preamble.EncryptedPayload,
                 encryptionKey,
                 preamble.Nonce,
@@ -168,8 +170,8 @@ internal sealed class ManifestService(
                 algorithm,
                 manifestData.Header.KeyDerivationAlgorithm,
                 masterSalt);
-            var chunkCrypto = chunkCryptoProviderFactory.Create(algorithm);
-            var encryptedBytes = chunkCrypto.EncryptChunk(
+            var encryptionStrategy = ResolveEncryptionStrategy(algorithm);
+            var encryptedBytes = encryptionStrategy.EncryptChunk(
                 manifestBytes,
                 encryptionKey,
                 nonce,
@@ -229,5 +231,17 @@ internal sealed class ManifestService(
             .ToList();
 
         return new ChunkManifestData(header, document.MasterSalt, files);
+    }
+
+    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(
+        EncryptionAlgorithm algorithm)
+    {
+        return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
+            ? throw new ArgumentOutOfRangeException(
+                nameof(algorithm),
+                string.Format(
+                    BackupZCrypt.Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
+                    algorithm))
+            : strategy;
     }
 }

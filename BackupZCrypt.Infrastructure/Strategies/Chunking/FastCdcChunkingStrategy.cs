@@ -5,7 +5,7 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
-internal sealed class FastCdcChunker : IContentChunker
+internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 {
     private const int GearTableSize = 256;
     private const int MaskBits = 20;

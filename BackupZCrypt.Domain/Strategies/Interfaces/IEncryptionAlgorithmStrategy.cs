@@ -11,4 +11,16 @@ public interface IEncryptionAlgorithmStrategy
     string Description { get; }
 
     string Summary { get; }
+
+    byte[] EncryptChunk(
+        ReadOnlySpan<byte> plaintext,
+        byte[] key,
+        byte[] nonce,
+        byte[] associatedData);
+
+    byte[] DecryptChunk(
+        ReadOnlySpan<byte> ciphertext,
+        byte[] key,
+        byte[] nonce,
+        byte[] associatedData);
 }

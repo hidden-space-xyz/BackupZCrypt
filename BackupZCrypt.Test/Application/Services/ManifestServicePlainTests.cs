@@ -3,10 +3,8 @@ namespace BackupZCrypt.Test.Application.Services;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Services.FileSystem;
-using BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
 using System.Text.Json;
 
 [TestFixture]
@@ -19,7 +17,7 @@ internal sealed class ManifestServicePlainTests
     {
         this.service = new ManifestService(
             new FileOperationsService(),
-            CreateChunkCryptoProviderFactory());
+            Array.Empty<IEncryptionAlgorithmStrategy>());
     }
 
     [Test]
@@ -113,9 +111,6 @@ internal sealed class ManifestServicePlainTests
 
         Assert.That(errors, Has.Count.EqualTo(1));
     }
-
-    private static ChunkCryptoProviderFactory CreateChunkCryptoProviderFactory() =>
-        new([new AesChunkCryptoProvider()]);
 
     private static string CreateTestDirectory()
     {

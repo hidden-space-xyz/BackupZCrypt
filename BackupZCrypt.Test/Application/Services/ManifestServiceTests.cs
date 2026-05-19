@@ -4,11 +4,10 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Services.FileSystem;
-using BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
+using BackupZCrypt.Infrastructure.Strategies.Encryption.Algorithms;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -16,15 +15,13 @@ using NSubstitute.ExceptionExtensions;
 internal sealed class ManifestServiceTests
 {
     private ManifestService service = null!;
-    private IChunkCryptoProviderFactory chunkCryptoProviderFactory = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.chunkCryptoProviderFactory = CreateChunkCryptoProviderFactory();
         this.service = new ManifestService(
             new FileOperationsService(),
-            this.chunkCryptoProviderFactory);
+            CreateEncryptionStrategies());
     }
 
     [Test]
@@ -203,7 +200,7 @@ internal sealed class ManifestServiceTests
 
         var manifestService = new ManifestService(
             fileOperationsService,
-            this.chunkCryptoProviderFactory);
+            CreateEncryptionStrategies());
 
         var errors = await manifestService.SaveChunkManifestAsync(
             CreateManifestData(),
@@ -241,8 +238,8 @@ internal sealed class ManifestServiceTests
                     ]),
             ]);
 
-    private static ChunkCryptoProviderFactory CreateChunkCryptoProviderFactory() =>
-        new([new AesChunkCryptoProvider()]);
+    private static IEncryptionAlgorithmStrategy[] CreateEncryptionStrategies() =>
+        [new AesEncryptionStrategy()];
 
     private static string CreateTestDirectory()
     {

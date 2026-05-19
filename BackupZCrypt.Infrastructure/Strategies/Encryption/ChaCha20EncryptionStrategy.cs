@@ -1,13 +1,20 @@
-namespace BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
+namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
+using BackupZCrypt.Infrastructure.Resources;
 using System.Security.Cryptography;
 
-internal sealed class ChaCha20ChunkCryptoProvider : IChunkCryptoProvider
+internal sealed class ChaCha20EncryptionStrategy : IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.ChaCha20;
+
+    public string DisplayName => Messages.ChaCha20DisplayName;
+
+    public string Description => Messages.ChaCha20Description;
+
+    public string Summary => Messages.ChaCha20Summary;
 
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,

@@ -17,15 +17,17 @@ using System.Security.Cryptography;
 
 internal sealed class ChunkedBackupService(
     ICompressionServiceFactory compressionServiceFactory,
-    IChunkCryptoProviderFactory chunkCryptoProviderFactory,
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IFileOperationsService fileOperationsService,
     IManifestService manifestService,
-    IContentChunker contentChunker,
+    IChunkingStrategy chunkingStrategy,
     IKeyDerivationServiceFactory keyDerivationServiceFactory) : IChunkedBackupService
 {
     private const int KeySizeBytes = 32;
     private const int NonceSizeBytes = 12;
     private const int SaltSizeBytes = 32;
+    private readonly Dictionary<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategiesById =
+        encryptionStrategies.ToDictionary(static strategy => strategy.Id, static strategy => strategy);
 
     public async Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
@@ -78,7 +80,7 @@ internal sealed class ChunkedBackupService(
 
         try
         {
-            var chunkCrypto = chunkCryptoProviderFactory.Create(request.EncryptionAlgorithm);
+            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
             ICompressionStrategy? compressionStrategy = null;
             if (request.Compression != CompressionMode.None)
             {
@@ -130,7 +132,7 @@ internal sealed class ChunkedBackupService(
                                 chunksDir,
                                 encryptionKey,
                                 namingKey,
-                                chunkCrypto,
+                                encryptionStrategy,
                                 compressionStrategy,
                                 storedChunks,
                                 token);
@@ -247,7 +249,7 @@ internal sealed class ChunkedBackupService(
 
         try
         {
-            var chunkCrypto = chunkCryptoProviderFactory.Create(request.EncryptionAlgorithm);
+            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
             ICompressionStrategy? compressionStrategy = null;
             if (request.Compression != CompressionMode.None)
             {
@@ -350,7 +352,7 @@ internal sealed class ChunkedBackupService(
                                     chunksDir,
                                     encryptionKey,
                                     namingKey,
-                                    chunkCrypto,
+                                    encryptionStrategy,
                                     compressionStrategy,
                                     storedChunks,
                                     token);
@@ -463,7 +465,7 @@ internal sealed class ChunkedBackupService(
 
         try
         {
-            var chunkCrypto = chunkCryptoProviderFactory.Create(
+            var encryptionStrategy = ResolveEncryptionStrategy(
                 manifest.Header.EncryptionAlgorithm);
             ICompressionStrategy? compressionStrategy = null;
             if (manifest.Header.Compression != CompressionMode.None)
@@ -509,7 +511,7 @@ internal sealed class ChunkedBackupService(
                                 destinationPath,
                                 encryptionKey,
                                 namingKey,
-                                chunkCrypto,
+                                encryptionStrategy,
                                 compressionStrategy,
                                 token);
 
@@ -581,7 +583,7 @@ internal sealed class ChunkedBackupService(
         string chunksDir,
         byte[] encryptionKey,
         byte[] namingKey,
-        IChunkCryptoProvider chunkCrypto,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
         ICompressionStrategy? compressionStrategy,
         ConcurrentDictionary<string, bool> storedChunks,
         CancellationToken cancellationToken)
@@ -593,7 +595,7 @@ internal sealed class ChunkedBackupService(
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
-        await foreach (var chunkData in contentChunker.ChunkAsync(fileStream, cancellationToken))
+        await foreach (var chunkData in chunkingStrategy.ChunkAsync(fileStream, cancellationToken))
         {
             fileHasher.AppendData(chunkData.Span);
 
@@ -627,7 +629,7 @@ internal sealed class ChunkedBackupService(
                 try
                 {
                     var associatedData = BuildChunkAssociatedData(chunkHash, nonce);
-                    var encrypted = chunkCrypto.EncryptChunk(
+                    var encrypted = encryptionStrategy.EncryptChunk(
                         dataToEncrypt, encryptionKey, nonce, associatedData);
 
                     await fileOperationsService.WriteAllBytesAsync(
@@ -654,7 +656,7 @@ internal sealed class ChunkedBackupService(
         string destinationPath,
         byte[] encryptionKey,
         byte[] namingKey,
-        IChunkCryptoProvider chunkCrypto,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
         ICompressionStrategy? compressionStrategy,
         CancellationToken cancellationToken)
     {
@@ -682,7 +684,7 @@ internal sealed class ChunkedBackupService(
                 chunkFilePath, cancellationToken);
 
             var associatedData = BuildChunkAssociatedData(chunkHash, nonce);
-            var decryptedData = chunkCrypto.DecryptChunk(
+            var decryptedData = encryptionStrategy.DecryptChunk(
                 encryptedData, encryptionKey, nonce, associatedData);
 
             try
@@ -706,6 +708,18 @@ internal sealed class ChunkedBackupService(
                 CryptographicOperations.ZeroMemory(decryptedData);
             }
         }
+    }
+
+    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(
+        EncryptionAlgorithm algorithm)
+    {
+        return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
+            ? throw new ArgumentOutOfRangeException(
+                nameof(algorithm),
+                string.Format(
+                    BackupZCrypt.Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
+                    algorithm))
+            : strategy;
     }
 
     private async Task DeleteOrphanedChunksAsync(
