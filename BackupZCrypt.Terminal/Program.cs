@@ -36,10 +36,6 @@ List<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies =
 [
     .. provider.GetServices<IKeyDerivationAlgorithmStrategy>().OrderBy(s => s.Id),
 ];
-List<INameObfuscationStrategy> nameObfuscationStrategies =
-[
-    .. provider.GetServices<INameObfuscationStrategy>().OrderBy(s => s.Id),
-];
 List<ICompressionStrategy> compressionStrategies =
 [
     .. provider.GetServices<ICompressionStrategy>().OrderBy(s => s.Id),
@@ -55,20 +51,17 @@ BackupCommand backupCommand = new(
     pathPromptService,
     encryptionStrategies,
     keyDerivationStrategies,
-    nameObfuscationStrategies,
     compressionStrategies);
 
 SettingsCommand settingsCommand = new(
     settingsService,
     encryptionStrategies,
     keyDerivationStrategies,
-    nameObfuscationStrategies,
     compressionStrategies);
 
 AlgorithmInfoCommand algorithmInfoCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
-    nameObfuscationStrategies,
     compressionStrategies);
 
 TerminalApplication app = new(backupCommand, settingsCommand, algorithmInfoCommand);

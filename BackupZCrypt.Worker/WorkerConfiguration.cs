@@ -18,8 +18,6 @@ internal sealed class WorkerConfiguration
 
     public KeyDerivationAlgorithm KeyDerivationAlgorithm { get; set; } = KeyDerivationAlgorithm.Argon2id;
 
-    public NameObfuscationMode NameObfuscation { get; set; } = NameObfuscationMode.None;
-
     public CompressionMode Compression { get; set; } = CompressionMode.None;
 
     public bool DeleteSourceFiles { get; set; }

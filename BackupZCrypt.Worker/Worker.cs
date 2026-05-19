@@ -62,7 +62,6 @@ internal sealed partial class Worker(
             config.EncryptionAlgorithm,
             config.KeyDerivationAlgorithm,
             BackupOperation.Create,
-            config.NameObfuscation,
             config.Compression,
             ProceedOnWarnings: true);
 
@@ -92,7 +91,6 @@ internal sealed partial class Worker(
             encryptionAlgorithm,
             config.KeyDerivationAlgorithm,
             BackupOperation.Restore,
-            config.NameObfuscation,
             config.Compression,
             ProceedOnWarnings: true);
 

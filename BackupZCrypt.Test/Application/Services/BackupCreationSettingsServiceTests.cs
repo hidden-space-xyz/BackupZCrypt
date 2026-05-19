@@ -46,7 +46,6 @@ internal sealed class BackupCreationSettingsServiceTests
         BackupCreationSettings expectedSettings = new(
             EncryptionAlgorithm.Serpent,
             KeyDerivationAlgorithm.Scrypt,
-            NameObfuscationMode.Sha512,
             CompressionMode.ZstdBest);
 
         try

@@ -144,9 +144,6 @@
   <data name="KeyDerivationAlgorithmNotRegisteredFormat" xml:space="preserve">
     <value>Key derivation algorithm '{0}' is not registered.</value>
   </data>
-  <data name="NameObfuscationModeNotRegisteredFormat" xml:space="preserve">
-    <value>Name obfuscation mode '{0}' is not registered.</value>
-  </data>
   <data name="CompressionModeNotRegisteredFormat" xml:space="preserve">
     <value>Compression mode '{0}' is not registered.</value>
   </data>

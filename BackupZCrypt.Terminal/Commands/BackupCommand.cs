@@ -22,7 +22,6 @@ internal sealed class BackupCommand(
     IPathPromptService pathPromptService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-    IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
     IReadOnlyList<ICompressionStrategy> compressionStrategies)
 {
     public async Task ExecuteAsync(BackupOperation operation)
@@ -93,7 +92,6 @@ internal sealed class BackupCommand(
         }
 
         var selectedCompression = this.ResolveCompressionStrategy(settings);
-        var selectedObfuscation = this.ResolveNameObfuscationStrategy(settings);
 
         PrintSummary(
             operationName,
@@ -101,7 +99,6 @@ internal sealed class BackupCommand(
             destinationPath,
             selectedEncryption,
             selectedKdf,
-            selectedObfuscation,
             selectedCompression);
 
         if (
@@ -124,7 +121,6 @@ internal sealed class BackupCommand(
                 selectedEncryption.Id,
                 selectedKdf!.Id,
                 BackupOperation.Create,
-                selectedObfuscation?.Id ?? NameObfuscationMode.None,
                 selectedCompression?.Id ?? CompressionMode.None,
                 ProceedOnWarnings: false);
 
@@ -140,7 +136,6 @@ internal sealed class BackupCommand(
                 default,
                 default,
                 BackupOperation.Create,
-                NameObfuscationMode.None,
                 selectedCompression.Id,
                 ProceedOnWarnings: false);
 
@@ -195,8 +190,7 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Restore,
-                NameObfuscationMode.None);
+                BackupOperation.Restore);
 
             await RunOperationAsync(request, operationName, Messages.Decrypting);
         }
@@ -210,7 +204,6 @@ internal sealed class BackupCommand(
                 default,
                 default,
                 BackupOperation.Restore,
-                NameObfuscationMode.None,
                 compressionStrategies[0].Id,
                 ProceedOnWarnings: false);
 
@@ -261,8 +254,7 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Update,
-                NameObfuscationMode.None);
+                BackupOperation.Update);
 
             await RunOperationAsync(request, operationName, Messages.Updating);
         }
@@ -276,7 +268,6 @@ internal sealed class BackupCommand(
                 default,
                 default,
                 BackupOperation.Update,
-                NameObfuscationMode.None,
                 compressionStrategies[0].Id,
                 ProceedOnWarnings: false);
 
@@ -477,7 +468,6 @@ internal sealed class BackupCommand(
                 ManifestHeader header = new(
                     default,
                     default,
-                    NameObfuscationMode.None,
                     CompressionMode.None);
 
                 await manifestService.TrySavePlainManifestAsync(
@@ -519,7 +509,6 @@ internal sealed class BackupCommand(
         string destinationPath,
         IEncryptionAlgorithmStrategy? encryption,
         IKeyDerivationAlgorithmStrategy? kdf,
-        INameObfuscationStrategy? obfuscation,
         ICompressionStrategy? compression)
     {
         AnsiConsole.WriteLine();
@@ -541,11 +530,6 @@ internal sealed class BackupCommand(
         if (kdf is not null)
         {
             summaryTable.AddRow(Messages.KeyDerivationLabel, Markup.Escape(kdf.DisplayName));
-        }
-
-        if (obfuscation is not null)
-        {
-            summaryTable.AddRow(Messages.NameObfuscationLabel, Markup.Escape(obfuscation.DisplayName));
         }
 
         if (compression is not null)
@@ -658,20 +642,6 @@ internal sealed class BackupCommand(
                 strategy => strategy.Id == settings.KeyDerivationAlgorithm)
             ?? throw new InvalidOperationException(
                 $"No key derivation strategy is registered for '{settings.KeyDerivationAlgorithm}'.");
-    }
-
-    private INameObfuscationStrategy? ResolveNameObfuscationStrategy(
-        BackupCreationSettings settings)
-    {
-        if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None || settings.NameObfuscationMode == NameObfuscationMode.None)
-        {
-            return null;
-        }
-
-        return nameObfuscationStrategies.FirstOrDefault(
-                strategy => strategy.Id == settings.NameObfuscationMode)
-            ?? throw new InvalidOperationException(
-                $"No name obfuscation strategy is registered for '{settings.NameObfuscationMode}'.");
     }
 
     private static bool DetectManifest(string sourcePath)

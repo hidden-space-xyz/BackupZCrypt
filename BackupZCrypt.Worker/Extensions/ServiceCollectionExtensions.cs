@@ -20,7 +20,6 @@ internal static class ServiceCollectionExtensions
 
             BindEnum<EncryptionAlgorithm>(configuration, "BACKUP_ENCRYPTION_ALGORITHM", v => config.EncryptionAlgorithm = v);
             BindEnum<KeyDerivationAlgorithm>(configuration, "BACKUP_KEY_DERIVATION_ALGORITHM", v => config.KeyDerivationAlgorithm = v);
-            BindEnum<NameObfuscationMode>(configuration, "BACKUP_NAME_OBFUSCATION", v => config.NameObfuscation = v);
             BindEnum<CompressionMode>(configuration, "BACKUP_COMPRESSION", v => config.Compression = v);
         });
 

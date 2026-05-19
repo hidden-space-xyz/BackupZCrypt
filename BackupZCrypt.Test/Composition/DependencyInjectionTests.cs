@@ -31,9 +31,7 @@ internal sealed class DependencyInjectionTests
     }
 
     [TestCase(typeof(IKeyDerivationServiceFactory))]
-    [TestCase(typeof(IEncryptionServiceFactory))]
     [TestCase(typeof(ICompressionServiceFactory))]
-    [TestCase(typeof(INameObfuscationServiceFactory))]
     [TestCase(typeof(IPasswordService))]
     [TestCase(typeof(IFileOperationsService))]
     [TestCase(typeof(ISystemStorageService))]
@@ -47,21 +45,6 @@ internal sealed class DependencyInjectionTests
         var service = this.provider.GetRequiredService(serviceType);
 
         Assert.That(service, Is.Not.Null);
-    }
-
-    [TestCase(EncryptionAlgorithm.Aes)]
-    [TestCase(EncryptionAlgorithm.Twofish)]
-    [TestCase(EncryptionAlgorithm.Serpent)]
-    [TestCase(EncryptionAlgorithm.ChaCha20)]
-    [TestCase(EncryptionAlgorithm.Camellia)]
-    public void EncryptionFactory_ResolvesAllAlgorithms(EncryptionAlgorithm algorithm)
-    {
-        var factory =
-            this.provider.GetRequiredService<IEncryptionServiceFactory>();
-
-        var strategy = factory.Create(algorithm);
-
-        Assert.That(strategy.Id, Is.EqualTo(algorithm));
     }
 
     [TestCase(KeyDerivationAlgorithm.Argon2id)]
@@ -84,19 +67,6 @@ internal sealed class DependencyInjectionTests
     {
         var factory =
             this.provider.GetRequiredService<ICompressionServiceFactory>();
-
-        var strategy = factory.Create(mode);
-
-        Assert.That(strategy.Id, Is.EqualTo(mode));
-    }
-
-    [TestCase(NameObfuscationMode.Guid)]
-    [TestCase(NameObfuscationMode.Sha256)]
-    [TestCase(NameObfuscationMode.Sha512)]
-    public void ObfuscationFactory_ResolvesAllModes(NameObfuscationMode mode)
-    {
-        var factory =
-            this.provider.GetRequiredService<INameObfuscationServiceFactory>();
 
         var strategy = factory.Create(mode);
 

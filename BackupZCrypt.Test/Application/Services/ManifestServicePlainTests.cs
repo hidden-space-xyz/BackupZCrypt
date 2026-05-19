@@ -3,10 +3,10 @@ namespace BackupZCrypt.Test.Application.Services;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Factories;
+using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Infrastructure.Services.FileSystem;
-using NSubstitute;
-using System.Text;
+using BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
 using System.Text.Json;
 
 [TestFixture]
@@ -17,14 +17,15 @@ internal sealed class ManifestServicePlainTests
     [SetUp]
     public void SetUp()
     {
-        this.service = new ManifestService(new FileOperationsService());
+        this.service = new ManifestService(
+            new FileOperationsService(),
+            CreateChunkCryptoProviderFactory());
     }
 
     [Test]
     public async Task TrySavePlainManifestAsync_WritesJsonFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var testDir = CreateTestDirectory();
 
         try
         {
@@ -37,16 +38,15 @@ internal sealed class ManifestServicePlainTests
             ManifestHeader header = new(
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                NameObfuscationMode.None,
                 CompressionMode.Zstd);
 
-            var errors = await service.TrySavePlainManifestAsync(
+            var errors = await this.service.TrySavePlainManifestAsync(
                 entries,
                 header,
-                tempDir,
+                testDir,
                 CancellationToken.None);
 
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
+            var manifestPath = Path.Combine(testDir, "manifest.bzc");
 
             using (Assert.EnterMultipleScope())
             {
@@ -67,7 +67,7 @@ internal sealed class ManifestServicePlainTests
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            DeleteTestDirectory(testDir);
         }
     }
 
@@ -77,10 +77,9 @@ internal sealed class ManifestServicePlainTests
         ManifestHeader header = new(
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            NameObfuscationMode.None,
             CompressionMode.None);
 
-        var errors = await service.TrySavePlainManifestAsync(
+        var errors = await this.service.TrySavePlainManifestAsync(
             [],
             header,
             @"C:\nonexistent",
@@ -100,157 +99,39 @@ internal sealed class ManifestServicePlainTests
         ManifestHeader header = new(
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            NameObfuscationMode.None,
             CompressionMode.None);
 
-        var errors = await service.TrySavePlainManifestAsync(
+        var errors = await this.service.TrySavePlainManifestAsync(
             entries,
             header,
-            Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid():N}", "sub"),
+            Path.Combine(
+                TestContext.CurrentContext.WorkDirectory,
+                "missing-parent",
+                Guid.NewGuid().ToString("N"),
+                "sub"),
             CancellationToken.None);
 
         Assert.That(errors, Has.Count.EqualTo(1));
     }
 
-    [Test]
-    public async Task TryReadManifestAsync_PlainJsonManifest_ParsesCorrectly()
+    private static ChunkCryptoProviderFactory CreateChunkCryptoProviderFactory() =>
+        new([new AesChunkCryptoProvider()]);
+
+    private static string CreateTestDirectory()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            ManifestDocument document = new(
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.Argon2id,
-                NameObfuscationMode.Guid,
-                CompressionMode.ZstdFast,
-                [
-                    new ManifestEntry(
-                        "abc123.bzc",
-                        "original.txt",
-                        string.Empty,
-                        string.Empty,
-                        string.Empty),
-                ]);
-
-            var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(document));
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            await File.WriteAllBytesAsync(manifestPath, jsonBytes);
-
-            var mockStrategy =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-            mockStrategy.Id.Returns(EncryptionAlgorithm.ChaCha20);
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [mockStrategy],
-                string.Empty,
-                CancellationToken.None);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.Not.Null);
-                Assert.That(result!.Header.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
-                Assert.That(result.Header.Compression, Is.EqualTo(CompressionMode.ZstdFast));
-                Assert.That(result.Header.NameObfuscation, Is.EqualTo(NameObfuscationMode.Guid));
-                Assert.That(result.FileMap, Has.Count.EqualTo(1));
-                Assert.That(result.FileMap.ContainsKey("abc123.bzc"), Is.True);
-                Assert.That(
-                    result.FileMap["abc123.bzc"].OriginalRelativePath,
-                    Is.EqualTo("original.txt"));
-            }
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        var path = Path.Combine(
+            TestContext.CurrentContext.WorkDirectory,
+            "manifest-plain-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
     }
 
-    [Test]
-    public async Task TryReadManifestAsync_InvalidJson_ReturnsNull()
+    private static void DeleteTestDirectory(string path)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
+        if (Directory.Exists(path))
         {
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            await File.WriteAllTextAsync(manifestPath, "{not valid json!!!");
-
-            var mockStrategy =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [mockStrategy],
-                string.Empty,
-                CancellationToken.None);
-
-            Assert.That(result, Is.Null);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Test]
-    public async Task TrySaveThenRead_PlainManifest_RoundTrip()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            List<ManifestEntry> entries =
-            [
-                new("compressed1.bzc", "document.pdf", string.Empty, string.Empty, string.Empty),
-                new("compressed2.bzc", "photo.jpg", string.Empty, string.Empty, string.Empty),
-            ];
-
-            ManifestHeader header = new(
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.PBKDF2,
-                NameObfuscationMode.None,
-                CompressionMode.ZstdBest);
-
-            var saveErrors = await service.TrySavePlainManifestAsync(
-                entries,
-                header,
-                tempDir,
-                CancellationToken.None);
-
-            Assert.That(saveErrors, Is.Empty);
-
-            var mockStrategy =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [mockStrategy],
-                string.Empty,
-                CancellationToken.None);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.Not.Null);
-                Assert.That(result!.Header.Compression, Is.EqualTo(CompressionMode.ZstdBest));
-                Assert.That(
-                    result.Header.KeyDerivationAlgorithm,
-                    Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
-                Assert.That(result.FileMap, Has.Count.EqualTo(2));
-                Assert.That(
-                    result.FileMap["compressed1.bzc"].OriginalRelativePath,
-                    Is.EqualTo("document.pdf"));
-                Assert.That(
-                    result.FileMap["compressed2.bzc"].OriginalRelativePath,
-                    Is.EqualTo("photo.jpg"));
-            }
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
+            Directory.Delete(path, true);
         }
     }
 }

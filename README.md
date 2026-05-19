@@ -9,36 +9,40 @@
 
  # 🔐 BackupZCrypt
 
-**BackupZCrypt is a simple, powerful tool that helps you protect your sensitive files with military-grade encryption.**
+**BackupZCrypt is a chunk-based encrypted backup tool that protects your files with military-grade encryption. When a file changes, only the affected chunks are re-encrypted — not the entire file.**
 
 ## 📋 What BackupZCrypt Does For You
 
-BackupZCrypt gives you privacy and security in a few simple clicks:
+BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
-- **🛡️ Protect Sensitive Documents** - Encrypt financial records, personal photos, medical information, and more
-- **☁️ Secure Cloud Storage** - Safely store encrypted files on any cloud like Dropbox, Google Drive, or OneDrive
-- **🔒 Control Your Privacy** - Keep your data private, even when sharing devices or storage
-- **✅ Peace of Mind** - Industry-standard encryption means your files stay private until you decide otherwise
+- **🛡️ Protect Sensitive Documents** — Encrypt financial records, personal photos, medical information, and more
+- **☁️ Secure Cloud Storage** — Safely store encrypted backups on any cloud like Dropbox, Google Drive, or OneDrive
+- **⚡ Efficient Updates** — Only changed chunks are re-encrypted and synced, saving time and bandwidth
+- **🔒 Control Your Privacy** — Keep your data private, even when sharing devices or storage
+- **✅ Peace of Mind** — Industry-standard authenticated encryption means your files stay private and tamper-proof
 
 ## ❓ Why Choose BackupZCrypt?
 
-- **🖱️ Simple Interface** - No cryptography knowledge needed - just select files, choose a password, and encrypt
-- **🤖 Automated Worker** - Run unattended backups and restores as a background service or Docker container
-- **🏦 Military-Grade Security** - Uses the same encryption standards trusted by financial institutions
-- **🔌 No Internet Required** - Works completely offline, keeping your sensitive data off the network
-- **🛠️ Multiple Security Options** - Choose from multiple proven encryption methods to match your needs
-- **💯 Completely Free** - Open-source and free to use, forever
+- **🧩 Chunk-Based Architecture** — Files are split into variable-size chunks using content-defined chunking (FastCDC), so small edits don't require re-encrypting entire files
+- **🖱️ Simple Interface** — No cryptography knowledge needed — just select files, choose a password, and encrypt
+- **🤖 Automated Worker** — Run unattended backups and restores as a background service or Docker container
+- **🏦 Military-Grade Security** — Uses the same encryption standards trusted by financial institutions
+- **🔌 No Internet Required** — Works completely offline, keeping your sensitive data off the network
+- **🛠️ Multiple Security Options** — Choose from multiple proven encryption and key derivation methods
+- **💯 Completely Free** — Open-source and free to use, forever
 
-## ⭐ Features for Privacy Enthusiasts
+## ⭐ Features
 
-* **🔄 Multiple Encryption Algorithms** - AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM
-* **🔑 Multiple Key Derivation Algorithms** - Argon2id, Scrypt, and PBKDF2
-* **🗜️ Zstandard Compression** - Three compression presets: Fast (speed-optimized), Normal (balanced, default), and Best (maximum compression)
-* **🕵️ Filename Obfuscation** - Hide original file and folder names using GUID, SHA-256, or SHA-512 obfuscation
-* **📄 Manifest-Based Architecture** - Encrypted manifest files store all metadata needed for restoration, eliminating per-file headers and simplifying the restore process
-* **📊 Password Strength Guidance** - Built-in analyzer evaluates your password and warns you before using a weak one
-* **💻 Local Processing Only** - Your files and passwords never leave your computer
-* **👁️ Zero Data Collection** - We don't track, collect, or transmit any of your information
+- **🧩 Content-Defined Chunking** — Files are split into variable-size chunks using a gear-hash algorithm (FastCDC)
+- **🔄 Multiple Encryption Algorithms** — AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM — all in authenticated encryption (AEAD) mode
+- **🔑 Multiple Key Derivation Algorithms** — Argon2id (default), Scrypt, and PBKDF2
+- **🗜️ Optional Zstandard Compression** — Three compression presets (Fast, Normal, Best) applied per-chunk before encryption. Disabled by default
+- **📄 Encrypted Manifest** — A single encrypted manifest file stores all metadata (file paths, chunk references, hashes) needed for restoration
+- **🔐 Single KDF Per Session** — One expensive key derivation produces a master key; sub-keys for encryption and chunk naming are derived via HKDF, eliminating per-file KDF overhead
+- **🕵️ HMAC-Based Chunk Naming** — Chunk filenames are HMAC-SHA256 of the plaintext hash, keyed with a naming sub-key, preventing content confirmation attacks
+- **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
+- **💻 Local Processing Only** — Your files and passwords never leave your computer
+- **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
 
 ## 🚀 Usage
 
@@ -78,7 +82,6 @@ All configuration options are available as environment variables:
 | `BACKUP_PASSWORD` | Password for encryption/decryption | *(empty)* |
 | `BACKUP_ENCRYPTION_ALGORITHM` | `None`, `Aes`, `Twofish`, `Serpent`, `ChaCha20`, `Camellia` | `Aes` |
 | `BACKUP_KEY_DERIVATION_ALGORITHM` | `Argon2id`, `PBKDF2`, `Scrypt` | `Argon2id` |
-| `BACKUP_NAME_OBFUSCATION` | `None`, `Guid`, `Sha256`, `Sha512` | `None` |
 | `BACKUP_COMPRESSION` | `None`, `ZstdFast`, `Zstd`, `ZstdBest` | `None` |
 | `BACKUP_DELETE_SOURCE_FILES` | Delete source files after operation (`true`/`false`) | `false` |
 
@@ -86,9 +89,9 @@ All configuration options are available as environment variables:
 
 BackupZCrypt is constantly evolving. Here's what we're planning for future releases:
 
-- **🎨 Enhanced User Interface** - Upcoming UI improvements for better usability and aesthetics
-- **⚙️ Advanced Parameter Configuration** - Expert mode allowing customization of encryption parameters for advanced users
-- **👥 Community-Driven Development** - We highly value community suggestions and contributions to guide the project's future
+- **🎨 Enhanced User Interface** — Upcoming UI improvements for better usability and aesthetics
+- **⚙️ Advanced Parameter Configuration** — Expert mode allowing customization of encryption parameters for advanced users
+- **👥 Community-Driven Development** — We highly value community suggestions and contributions to guide the project's future
 
 We're committed to continuously improving BackupZCrypt based on user feedback and security best practices. Your suggestions are always welcome and will help shape the application's future.
 
@@ -100,11 +103,11 @@ We're committed to continuously improving BackupZCrypt based on user feedback an
 
 ## 🔍 Security Notes
 
-- 🔑 Your security depends on your password strength - use long, complex passwords
+- 🔑 Your security depends on your password strength — use long, complex passwords
 - 🔄 Keep your operating system and BackupZCrypt updated
-- ⚠️ There is no password recovery. If you forget your password, your encrypted files cannot be decrypted.
+- ⚠️ There is no password recovery. If you forget your password, your encrypted files cannot be decrypted
 
-## 💡How to Contribute
+## 💡 How to Contribute
 
 - We welcome contributions from everyone, regardless of your technical background!
 - Every contribution matters and helps make this project better for everyone!

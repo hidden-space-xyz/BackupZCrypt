@@ -183,9 +183,6 @@
   <data name="KeyDerivationAlgorithmPrompt" xml:space="preserve">
     <value>Key derivation algorithm:</value>
   </data>
-  <data name="NameObfuscationModePrompt" xml:space="preserve">
-    <value>Name obfuscation mode:</value>
-  </data>
   <data name="CompressionModePrompt" xml:space="preserve">
     <value>Compression mode:</value>
   </data>
@@ -245,9 +242,6 @@
   </data>
   <data name="KeyDerivationLabel" xml:space="preserve">
     <value>Key Derivation</value>
-  </data>
-  <data name="NameObfuscationLabel" xml:space="preserve">
-    <value>Name Obfuscation</value>
   </data>
   <data name="CompressionLabel" xml:space="preserve">
     <value>Compression</value>
@@ -309,9 +303,6 @@
   <data name="KeyDerivationAlgorithms" xml:space="preserve">
     <value>Key Derivation Algorithms</value>
   </data>
-  <data name="NameObfuscationModes" xml:space="preserve">
-    <value>Name Obfuscation Modes</value>
-  </data>
   <data name="CompressionModes" xml:space="preserve">
     <value>Compression Modes</value>
   </data>
@@ -363,9 +354,6 @@
   <data name="SettingsLanguageOption" xml:space="preserve">
     <value>🌐 Change Language</value>
   </data>
-  <data name="SettingsNameObfuscationOption" xml:space="preserve">
-    <value>🕶️ Configure Name Obfuscation</value>
-  </data>
   <data name="SettingsReset" xml:space="preserve">
     <value>Backup settings were reset to secure defaults.</value>
   </data>
@@ -395,9 +383,6 @@
   </data>
   <data name="NoneNoCompression" xml:space="preserve">
     <value>None (no compression)</value>
-  </data>
-  <data name="NoneNoObfuscation" xml:space="preserve">
-    <value>None (no obfuscation)</value>
   </data>
   <data name="EncryptedBackupDetected" xml:space="preserve">
     <value>Encrypted backup detected.</value>

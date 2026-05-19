@@ -10,6 +10,5 @@ public sealed record BackupRequest(
     EncryptionAlgorithm EncryptionAlgorithm,
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     BackupOperation Operation,
-    NameObfuscationMode NameObfuscation,
     CompressionMode Compression = CompressionMode.None,
     bool ProceedOnWarnings = false);

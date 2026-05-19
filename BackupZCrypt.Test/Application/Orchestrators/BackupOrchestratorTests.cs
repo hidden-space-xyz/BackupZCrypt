@@ -325,6 +325,5 @@ internal sealed class BackupOrchestratorTests
             "StrongP@ss1",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+            BackupOperation.Create);
 }

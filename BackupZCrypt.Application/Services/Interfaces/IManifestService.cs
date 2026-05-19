@@ -1,28 +1,28 @@
 namespace BackupZCrypt.Application.Services.Interfaces;
 
 using BackupZCrypt.Application.ValueObjects.Manifest;
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.Enums;
 
 public interface IManifestService
 {
-    Task<ManifestData?> TryReadManifestAsync(
-        string sourceRoot,
-        IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
-        string password,
-        CancellationToken cancellationToken);
-
-    Task<IReadOnlyList<string>> TrySaveManifestAsync(
-        IReadOnlyList<ManifestEntry> entries,
-        ManifestHeader header,
-        string destinationRoot,
-        IEncryptionAlgorithmStrategy encryptionService,
-        BackupRequest request,
-        CancellationToken cancellationToken);
-
     Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
         string destinationRoot,
+        CancellationToken cancellationToken);
+
+    Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
+        string sourceRoot,
+        CancellationToken cancellationToken);
+
+    ChunkManifestData? DecryptChunkManifest(
+        ManifestPreamble preamble,
+        byte[] encryptionKey);
+
+    Task<IReadOnlyList<string>> SaveChunkManifestAsync(
+        ChunkManifestData manifestData,
+        string destinationRoot,
+        byte[] encryptionKey,
+        EncryptionAlgorithm algorithm,
         CancellationToken cancellationToken);
 }

@@ -12,7 +12,6 @@ internal sealed class SettingsCommand(
     ISettingsService settingsService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-    IReadOnlyList<INameObfuscationStrategy> nameObfuscationStrategies,
     IReadOnlyList<ICompressionStrategy> compressionStrategies)
 {
     private static readonly (string DisplayName, string? Code)[] SupportedLanguages =
@@ -55,7 +54,6 @@ internal sealed class SettingsCommand(
                         .AddChoices(
                             Messages.SettingsEncryptionAlgorithmOption,
                             Messages.SettingsKeyDerivationOption,
-                            Messages.SettingsNameObfuscationOption,
                             Messages.SettingsCompressionOption,
                             Messages.SettingsLanguageOption,
                             Messages.SettingsResetOption,
@@ -104,7 +102,6 @@ internal sealed class SettingsCommand(
                         : settings with
                         {
                             EncryptionAlgorithm = EncryptionAlgorithm.None,
-                            NameObfuscationMode = NameObfuscationMode.None,
                         },
                 var value when value == Messages.SettingsKeyDerivationOption
                     => settings with
@@ -113,15 +110,6 @@ internal sealed class SettingsCommand(
                             Messages.KeyDerivationAlgorithmPrompt,
                             keyDerivationStrategies,
                             strategy => $"{strategy.DisplayName} — {strategy.Summary}").Id,
-                    },
-                var value when value == Messages.SettingsNameObfuscationOption
-                    => settings with
-                    {
-                        NameObfuscationMode = PromptOptionalStrategy(
-                            Messages.NameObfuscationModePrompt,
-                            nameObfuscationStrategies,
-                            strategy => $"{strategy.DisplayName} — {strategy.Summary}",
-                            Messages.NoneNoObfuscation)?.Id ?? NameObfuscationMode.None,
                     },
                 var value when value == Messages.SettingsCompressionOption
                     => settings with
@@ -227,9 +215,6 @@ internal sealed class SettingsCommand(
             summaryTable.AddRow(
                 Messages.KeyDerivationLabel,
                 Markup.Escape(this.ResolveKeyDerivationStrategy(settings.KeyDerivationAlgorithm).DisplayName));
-            summaryTable.AddRow(
-                Messages.NameObfuscationLabel,
-                Markup.Escape(this.ResolveNameObfuscationDisplayName(settings.NameObfuscationMode)));
         }
 
         summaryTable.AddRow(
@@ -296,18 +281,6 @@ internal sealed class SettingsCommand(
         keyDerivationStrategies.FirstOrDefault(strategy => strategy.Id == algorithm)
         ?? throw new InvalidOperationException(
             $"No key derivation strategy is registered for '{algorithm}'.");
-
-    private string ResolveNameObfuscationDisplayName(NameObfuscationMode mode)
-    {
-        if (mode == NameObfuscationMode.None)
-        {
-            return Messages.NoneNoObfuscation;
-        }
-
-        return nameObfuscationStrategies.FirstOrDefault(strategy => strategy.Id == mode)?.DisplayName
-            ?? throw new InvalidOperationException(
-                $"No name obfuscation strategy is registered for '{mode}'.");
-    }
 
     private string ResolveCompressionDisplayName(CompressionMode mode)
     {

@@ -66,9 +66,6 @@
   <data name="KeyDerivationAlgorithmNotRegisteredFormat" xml:space="preserve">
     <value>El algoritmo de derivación de clave '{0}' no está registrado.</value>
   </data>
-  <data name="NameObfuscationModeNotRegisteredFormat" xml:space="preserve">
-    <value>El modo de ofuscación de nombre '{0}' no está registrado.</value>
-  </data>
   <data name="CompressionModeNotRegisteredFormat" xml:space="preserve">
     <value>El modo de compresión '{0}' no está registrado.</value>
   </data>

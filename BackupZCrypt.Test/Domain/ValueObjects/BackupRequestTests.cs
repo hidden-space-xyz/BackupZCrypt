@@ -16,8 +16,7 @@ internal sealed class BackupRequestTests
             "pass",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+            BackupOperation.Create);
 
         using (Assert.EnterMultipleScope())
         {

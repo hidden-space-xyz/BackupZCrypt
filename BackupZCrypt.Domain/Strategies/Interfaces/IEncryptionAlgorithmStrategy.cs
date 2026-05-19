@@ -1,7 +1,6 @@
 namespace BackupZCrypt.Domain.Strategies.Interfaces;
 
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Encryption;
 
 public interface IEncryptionAlgorithmStrategy
 {
@@ -12,40 +11,4 @@ public interface IEncryptionAlgorithmStrategy
     string Description { get; }
 
     string Summary { get; }
-
-    Task<EncryptionResult<EncryptionMetadata>> EncryptFileAsync(
-        string sourceFilePath,
-        string destinationFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None,
-        CancellationToken cancellationToken = default);
-
-    Task<EncryptionResult<bool>> DecryptFileAsync(
-        string sourceFilePath,
-        string destinationFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        EncryptionMetadata metadata,
-        CancellationToken cancellationToken = default);
-
-    Task<EncryptionResult<bool>> DecryptFileAsync(
-        string sourceFilePath,
-        string destinationFilePath,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CancellationToken cancellationToken = default);
-
-    Task<byte[]> CreateEncryptedDataAsync(
-        byte[] plaintextData,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CompressionMode compression = CompressionMode.None,
-        CancellationToken cancellationToken = default);
-
-    Task<byte[]> ReadEncryptedDataAsync(
-        ReadOnlyMemory<byte> encryptedData,
-        string password,
-        KeyDerivationAlgorithm keyDerivationAlgorithm,
-        CancellationToken cancellationToken = default);
 }

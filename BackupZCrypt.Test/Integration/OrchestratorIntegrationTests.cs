@@ -48,18 +48,17 @@ internal sealed class OrchestratorIntegrationTests
         var sourceFile = Path.Combine(this.sourceDir, "test.txt");
         await File.WriteAllTextAsync(sourceFile, originalContent);
 
-        var encryptedFile = Path.Combine(this.destDir, "test.bzc");
+        var backupDir = Path.Combine(this.testDir, "backup");
         const string password = "IntegrationP@ss1";
 
         BackupRequest encryptRequest = new(
             sourceFile,
-            encryptedFile,
+            backupDir,
             password,
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Create,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         Progress<BackupStatus> progress = new();
@@ -71,22 +70,20 @@ internal sealed class OrchestratorIntegrationTests
         {
             Assert.That(encryptResult.IsSuccess, Is.True);
             Assert.That(encryptResult.Value.IsSuccess, Is.True);
-            Assert.That(File.Exists(encryptedFile), Is.True);
+            Assert.That(File.Exists(Path.Combine(backupDir, "manifest.bzc")), Is.True);
+            Assert.That(Directory.Exists(Path.Combine(backupDir, "chunks")), Is.True);
         }
 
         var decryptedDir = Path.Combine(this.testDir, "decrypted");
-        Directory.CreateDirectory(decryptedDir);
-        var decryptedFile = Path.Combine(decryptedDir, "test.txt");
 
         BackupRequest decryptRequest = new(
-            encryptedFile,
-            decryptedFile,
+            backupDir,
+            decryptedDir,
             password,
             password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Restore,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var decryptResult = await orchestrator.ExecuteAsync(
@@ -99,7 +96,8 @@ internal sealed class OrchestratorIntegrationTests
             Assert.That(decryptResult.Value.IsSuccess, Is.True);
         }
 
-        var decryptedContent = await File.ReadAllTextAsync(decryptedFile);
+        var decryptedContent = await File.ReadAllTextAsync(
+            Path.Combine(decryptedDir, "test.txt"));
         Assert.That(decryptedContent, Is.EqualTo(originalContent));
     }
 
@@ -117,8 +115,7 @@ internal sealed class OrchestratorIntegrationTests
             string.Empty,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+            BackupOperation.Create);
 
         Progress<BackupStatus> progress = new();
         var result = await orchestrator.ExecuteAsync(request, progress);
@@ -144,8 +141,7 @@ internal sealed class OrchestratorIntegrationTests
             "DifferentPass1!",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+            BackupOperation.Create);
 
         Progress<BackupStatus> progress = new();
         var result = await orchestrator.ExecuteAsync(request, progress);
@@ -170,8 +166,7 @@ internal sealed class OrchestratorIntegrationTests
             "Password1!",
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+            BackupOperation.Create);
 
         Progress<BackupStatus> progress = new();
         var result = await orchestrator.ExecuteAsync(request, progress);
@@ -200,7 +195,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Create,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         Progress<BackupStatus> progress = new();
@@ -234,7 +228,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Create,
-            NameObfuscationMode.None,
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
 
@@ -257,7 +250,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Restore,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var decryptResult = await orchestrator.ExecuteAsync(
@@ -281,63 +273,6 @@ internal sealed class OrchestratorIntegrationTests
     }
 
     [Test]
-    public async Task ExecuteAsync_Directory_WithObfuscation_RoundTrip()
-    {
-        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret.txt"), "Secret content");
-
-        var encryptedDir = Path.Combine(this.testDir, "encrypted-obf");
-        var decryptedDir = Path.Combine(this.testDir, "decrypted-obf");
-        const string password = "IntegrationP@ss1";
-
-        BackupRequest encryptRequest = new(
-            this.sourceDir,
-            encryptedDir,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.Guid,
-            ProceedOnWarnings: true);
-
-        Progress<BackupStatus> progress = new();
-        var encryptResult = await orchestrator.ExecuteAsync(
-            encryptRequest, progress);
-
-        Assert.That(encryptResult.IsSuccess, Is.True);
-
-        string[] encryptedFiles = [.. Directory.GetFiles(encryptedDir, "*.bzc")
-            .Where(f => !f.EndsWith("manifest.bzc", StringComparison.OrdinalIgnoreCase))];
-        Assert.That(
-            encryptedFiles.All(f => !Path.GetFileName(f).Contains("secret", StringComparison.Ordinal)),
-            Is.True);
-
-        BackupRequest decryptRequest = new(
-            encryptedDir,
-            decryptedDir,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Restore,
-            NameObfuscationMode.None,
-            ProceedOnWarnings: true);
-
-        var decryptResult = await orchestrator.ExecuteAsync(
-            decryptRequest, progress);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(decryptResult.IsSuccess, Is.True);
-            Assert.That(decryptResult.Value.IsSuccess, Is.True);
-        }
-
-        var decryptedContent = await File.ReadAllTextAsync(
-            Path.Combine(decryptedDir, "secret.txt"));
-        Assert.That(decryptedContent, Is.EqualTo("Secret content"));
-    }
-
-    [Test]
     public async Task ExecuteAsync_Directory_DecryptWithoutManifest_Fails()
     {
         var noManifestDir = Path.Combine(this.testDir, "no-manifest");
@@ -352,7 +287,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Restore,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         Progress<BackupStatus> progress = new();
@@ -383,7 +317,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Create,
-            NameObfuscationMode.None,
             CompressionMode.Zstd,
             ProceedOnWarnings: true);
 
@@ -411,7 +344,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Update,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var updateResult = await orchestrator.ExecuteAsync(
@@ -439,7 +371,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Restore,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var decryptResult = await orchestrator.ExecuteAsync(
@@ -483,7 +414,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Create,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         Progress<BackupStatus> progress = new();
@@ -497,7 +427,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
             BackupOperation.Update,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var updateResult = await orchestrator.ExecuteAsync(
@@ -509,95 +438,6 @@ internal sealed class OrchestratorIntegrationTests
             Assert.That(updateResult.Value.IsSuccess, Is.True);
             Assert.That(updateResult.Value.ProcessedFiles, Is.Zero);
             Assert.That(updateResult.Value.TotalFiles, Is.Zero);
-        }
-    }
-
-    [Test]
-    public async Task ExecuteAsync_Directory_Update_WithObfuscation_RoundTrip()
-    {
-        const string content1 = "Obfuscated file content one";
-        const string content2 = "Obfuscated file content two";
-        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret1.txt"), content1);
-        await File.WriteAllTextAsync(Path.Combine(sourceDir, "secret2.txt"), content2);
-
-        var encryptedDir = Path.Combine(this.testDir, "encrypted-obf-upd");
-        const string password = "IntegrationP@ss1";
-
-        BackupRequest encryptRequest = new(
-            this.sourceDir,
-            encryptedDir,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Create,
-            NameObfuscationMode.Guid,
-            CompressionMode.Zstd,
-            ProceedOnWarnings: true);
-
-        Progress<BackupStatus> progress = new();
-        await orchestrator.ExecuteAsync(encryptRequest, progress);
-
-        // Modify source: change secret1, add secret3
-        await File.WriteAllTextAsync(
-            Path.Combine(sourceDir, "secret1.txt"), "Modified obfuscated content one");
-        await File.WriteAllTextAsync(
-            Path.Combine(sourceDir, "secret3.txt"), "New obfuscated file three");
-
-        BackupRequest updateRequest = new(
-            this.sourceDir,
-            encryptedDir,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Update,
-            NameObfuscationMode.Guid,
-            ProceedOnWarnings: true);
-
-        var updateResult = await orchestrator.ExecuteAsync(
-            updateRequest, progress);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(updateResult.IsSuccess, Is.True);
-            Assert.That(updateResult.Value.IsSuccess, Is.True);
-        }
-
-        // Decrypt and verify
-        var decryptedDir = Path.Combine(this.testDir, "decrypted-obf-upd");
-
-        BackupRequest decryptRequest = new(
-            encryptedDir,
-            decryptedDir,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            BackupOperation.Restore,
-            NameObfuscationMode.Guid,
-            ProceedOnWarnings: true);
-
-        var decryptResult = await orchestrator.ExecuteAsync(
-            decryptRequest, progress);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(decryptResult.IsSuccess, Is.True);
-            Assert.That(decryptResult.Value.IsSuccess, Is.True);
-        }
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret1.txt")),
-                Is.EqualTo("Modified obfuscated content one"));
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret2.txt")),
-                Is.EqualTo(content2));
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(decryptedDir, "secret3.txt")),
-                Is.EqualTo("New obfuscated file three"));
         }
     }
 
@@ -621,7 +461,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.ChaCha20,
             KeyDerivationAlgorithm.Argon2id,
             BackupOperation.Create,
-            NameObfuscationMode.Sha256,
             CompressionMode.ZstdBest,
             ProceedOnWarnings: true);
 
@@ -644,7 +483,6 @@ internal sealed class OrchestratorIntegrationTests
             EncryptionAlgorithm.ChaCha20,
             KeyDerivationAlgorithm.Argon2id,
             BackupOperation.Restore,
-            NameObfuscationMode.None,
             ProceedOnWarnings: true);
 
         var decryptResult = await orchestrator.ExecuteAsync(

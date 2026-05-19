@@ -323,6 +323,5 @@ internal sealed class BackupRequestValidatorTests
             confirmPassword,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
-            operation,
-            NameObfuscationMode.None);
+            operation);
 }

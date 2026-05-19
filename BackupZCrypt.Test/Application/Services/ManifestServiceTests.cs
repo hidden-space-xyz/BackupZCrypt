@@ -2,354 +2,263 @@ namespace BackupZCrypt.Test.Application.Services;
 
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.Factories;
+using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Infrastructure.Services.FileSystem;
+using BackupZCrypt.Infrastructure.Strategies.ChunkCrypto;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using System.Text.Json;
 
 [TestFixture]
 internal sealed class ManifestServiceTests
 {
     private ManifestService service = null!;
+    private IChunkCryptoProviderFactory chunkCryptoProviderFactory = null!;
 
     [SetUp]
     public void SetUp()
     {
-        this.service = new ManifestService(new FileOperationsService());
+        this.chunkCryptoProviderFactory = CreateChunkCryptoProviderFactory();
+        this.service = new ManifestService(
+            new FileOperationsService(),
+            this.chunkCryptoProviderFactory);
     }
 
     [Test]
-    public async Task TryReadManifestAsync_DecryptionFails_ReturnsNull()
+    public async Task ReadChunkManifestPreambleAsync_NoFile_ReturnsNull()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var testDir = CreateTestDirectory();
 
         try
         {
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            byte[] preamble = [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.Argon2id];
-            byte[] fakeEncryptedContent = [1, 2, 3];
-            await File.WriteAllBytesAsync(manifestPath, [.. preamble, .. fakeEncryptedContent]);
-
-            var encryptionService =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-            encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
-            encryptionService
-                .ReadEncryptedDataAsync(
-                    Arg.Any<ReadOnlyMemory<byte>>(),
-                    Arg.Any<string>(),
-                    Arg.Any<KeyDerivationAlgorithm>())
-                .ThrowsAsync(new InvalidOperationException("decryption failed"));
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
+            var result = await this.service.ReadChunkManifestPreambleAsync(
+                testDir,
                 CancellationToken.None);
 
             Assert.That(result, Is.Null);
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            DeleteTestDirectory(testDir);
         }
     }
 
     [Test]
-    public async Task TryReadManifestAsync_EncryptedManifest_ParsesDecryptedPayload()
+    public async Task ReadChunkManifestPreambleAsync_FileTooSmall_ReturnsNull()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var testDir = CreateTestDirectory();
 
         try
         {
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            await File.WriteAllBytesAsync(
-                manifestPath,
-                [(byte)EncryptionAlgorithm.Aes, (byte)KeyDerivationAlgorithm.PBKDF2, 9, 8, 7]);
+            var manifestPath = Path.Combine(testDir, BackupConstants.ManifestFileName);
+            await File.WriteAllBytesAsync(manifestPath, new byte[46]);
 
-            ManifestDocument document = new(
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.PBKDF2,
-                NameObfuscationMode.None,
-                CompressionMode.None,
-                [new ManifestEntry("file.bzc", "file.txt", "c2FsdA==", "bm9uY2U=", string.Empty)]);
+            var result = await this.service.ReadChunkManifestPreambleAsync(
+                testDir,
+                CancellationToken.None);
 
-            var encryptionService =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-            encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
-            encryptionService
-                .ReadEncryptedDataAsync(
-                    Arg.Any<ReadOnlyMemory<byte>>(),
-                    Arg.Any<string>(),
-                    Arg.Any<KeyDerivationAlgorithm>(),
-                    Arg.Any<CancellationToken>())
-                .Returns(JsonSerializer.SerializeToUtf8Bytes(document));
+            Assert.That(result, Is.Null);
+        }
+        finally
+        {
+            DeleteTestDirectory(testDir);
+        }
+    }
 
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
+    [Test]
+    public async Task ReadChunkManifestPreambleAsync_ValidFile_ReturnsPreamble()
+    {
+        var testDir = CreateTestDirectory();
+
+        try
+        {
+            var manifestPath = Path.Combine(testDir, BackupConstants.ManifestFileName);
+            byte[] masterSalt = Enumerable.Range(0, 32).Select(static i => (byte)i).ToArray();
+            byte[] nonce = Enumerable.Range(32, 12).Select(static i => (byte)i).ToArray();
+            byte[] encryptedPayload = [9, 8, 7, 6];
+            byte[] preamble =
+            [
+                (byte)EncryptionAlgorithm.Aes,
+                (byte)KeyDerivationAlgorithm.Scrypt,
+                .. masterSalt,
+                .. nonce,
+                .. encryptedPayload,
+            ];
+
+            await File.WriteAllBytesAsync(manifestPath, preamble);
+
+            var result = await this.service.ReadChunkManifestPreambleAsync(
+                testDir,
                 CancellationToken.None);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.Not.Null);
-                Assert.That(result!.Header.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
-                Assert.That(result.FileMap.ContainsKey("file.bzc"), Is.True);
-                Assert.That(result.FileMap["file.bzc"].OriginalRelativePath, Is.EqualTo("file.txt"));
+                Assert.That(result!.Algorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
+                Assert.That(result.KeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
+                Assert.That(result.MasterSalt, Is.EqualTo(masterSalt));
+                Assert.That(result.Nonce, Is.EqualTo(nonce));
+                Assert.That(result.EncryptedPayload, Is.EqualTo(encryptedPayload));
             }
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            DeleteTestDirectory(testDir);
         }
     }
 
     [Test]
-    public async Task TryReadManifestAsync_ManifestDoesNotExist_ReturnsNull()
+    public async Task DecryptChunkManifest_InvalidKey_ReturnsNull()
     {
-        var encryptionService =
-            Substitute.For<IEncryptionAlgorithmStrategy>();
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var testDir = CreateTestDirectory();
 
         try
         {
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
+            byte[] encryptionKey = Enumerable.Range(0, 32).Select(static i => (byte)(i + 1)).ToArray();
+            byte[] invalidKey = Enumerable.Range(0, 32).Select(static i => (byte)(i + 2)).ToArray();
+
+            var errors = await this.service.SaveChunkManifestAsync(
+                CreateManifestData(),
+                testDir,
+                encryptionKey,
+                EncryptionAlgorithm.Aes,
                 CancellationToken.None);
 
-            Assert.That(result, Is.Null);
+            Assert.That(errors, Is.Empty);
+
+            var preamble = await this.service.ReadChunkManifestPreambleAsync(
+                testDir,
+                CancellationToken.None);
+
+            var manifest = this.service.DecryptChunkManifest(preamble!, invalidKey);
+
+            Assert.That(manifest, Is.Null);
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            DeleteTestDirectory(testDir);
         }
     }
 
     [Test]
-    public async Task TryReadManifestAsync_FileTooShortForPreamble_ReturnsNull()
+    public async Task SaveAndRead_RoundTrip()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var testDir = CreateTestDirectory();
 
         try
         {
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            await File.WriteAllBytesAsync(manifestPath, [1]);
+            byte[] encryptionKey = Enumerable.Range(0, 32).Select(static i => (byte)(255 - i)).ToArray();
+            var expected = CreateManifestData();
 
-            var encryptionService =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
+            var saveErrors = await this.service.SaveChunkManifestAsync(
+                expected,
+                testDir,
+                encryptionKey,
+                EncryptionAlgorithm.Aes,
                 CancellationToken.None);
 
-            Assert.That(result, Is.Null);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Test]
-    public async Task TryReadManifestAsync_NoMatchingStrategy_ReturnsNull()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            var manifestPath = Path.Combine(tempDir, "manifest.bzc");
-            byte[] preamble = [(byte)EncryptionAlgorithm.ChaCha20, (byte)KeyDerivationAlgorithm.Argon2id];
-            await File.WriteAllBytesAsync(manifestPath, [.. preamble, 1, 2, 3]);
-
-            var encryptionService =
-                Substitute.For<IEncryptionAlgorithmStrategy>();
-            encryptionService.Id.Returns(EncryptionAlgorithm.Aes);
-
-            var result = await service.TryReadManifestAsync(
-                tempDir,
-                [encryptionService],
-                "StrongP@ss1",
+            var preamble = await this.service.ReadChunkManifestPreambleAsync(
+                testDir,
                 CancellationToken.None);
-
-            Assert.That(result, Is.Null);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Test]
-    public async Task TrySaveManifestAsync_EmptyEntries_ReturnsNoErrors()
-    {
-        var encryptionService =
-            Substitute.For<IEncryptionAlgorithmStrategy>();
-
-        var errors = await service.TrySaveManifestAsync(
-            [],
-            CreateHeader(),
-            @"C:\dest",
-            encryptionService,
-            CreateRequest(),
-            CancellationToken.None);
-
-        Assert.That(errors, Is.Empty);
-    }
-
-    [Test]
-    public async Task TrySaveManifestAsync_EncryptionFails_ReturnsError()
-    {
-        var encryptionService =
-            Substitute.For<IEncryptionAlgorithmStrategy>();
-        encryptionService
-            .CreateEncryptedDataAsync(
-                Arg.Any<byte[]>(),
-                Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(),
-                Arg.Any<CompressionMode>())
-            .ThrowsAsync(new InvalidOperationException("encryption failed"));
-
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            List<ManifestEntry> entries = [new("obfuscated.bzc", "original.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
-
-            var errors = await service.TrySaveManifestAsync(
-                entries,
-                CreateHeader(),
-                tempDir,
-                encryptionService,
-                CreateRequest(),
-                CancellationToken.None);
-
-            Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(errors[0], Does.Contain("encryption failed"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Test]
-    public async Task TrySaveManifestAsync_WritesPreambleAndEncryptedPayload()
-    {
-        var encryptionService =
-            Substitute.For<IEncryptionAlgorithmStrategy>();
-        encryptionService
-            .CreateEncryptedDataAsync(
-                Arg.Any<byte[]>(),
-                Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(),
-                Arg.Any<CompressionMode>(),
-                Arg.Any<CancellationToken>())
-            .Returns([3, 4, 5]);
-
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            List<ManifestEntry> entries = [new("obfuscated.bzc", "original.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
-
-            var errors = await service.TrySaveManifestAsync(
-                entries,
-                CreateHeader(),
-                tempDir,
-                encryptionService,
-                CreateRequest(),
-                CancellationToken.None);
-
-            var manifestBytes = await File.ReadAllBytesAsync(Path.Combine(tempDir, "manifest.bzc"));
+            var manifest = this.service.DecryptChunkManifest(preamble!, encryptionKey);
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(errors, Is.Empty);
-                Assert.That(
-                    manifestBytes,
-                    Is.EqualTo(
-                        new byte[]
-                        {
-                            (byte)EncryptionAlgorithm.Aes,
-                            (byte)KeyDerivationAlgorithm.Argon2id,
-                            3,
-                            4,
-                            5,
-                        }));
+                Assert.That(saveErrors, Is.Empty);
+                Assert.That(preamble, Is.Not.Null);
+                Assert.That(preamble!.Algorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
+                Assert.That(preamble.KeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
+                Assert.That(preamble.MasterSalt, Is.EqualTo(Convert.FromBase64String(expected.MasterSalt)));
+                Assert.That(preamble.Nonce, Has.Length.EqualTo(12));
+                Assert.That(manifest, Is.Not.Null);
+                Assert.That(manifest!.Header.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
+                Assert.That(manifest.Header.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
+                Assert.That(manifest.Header.Compression, Is.EqualTo(CompressionMode.Zstd));
+                Assert.That(manifest.MasterSalt, Is.EqualTo(expected.MasterSalt));
+                Assert.That(manifest.Files, Has.Count.EqualTo(2));
+                Assert.That(manifest.Files[0].OriginalPath, Is.EqualTo("docs\\report.txt"));
+                Assert.That(manifest.Files[0].Chunks[0].Hash, Is.EqualTo("chunk-1"));
+                Assert.That(manifest.Files[1].OriginalPath, Is.EqualTo("images\\photo.jpg"));
             }
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            DeleteTestDirectory(testDir);
         }
     }
 
     [Test]
-    public async Task TrySaveManifestAsync_ExceptionThrown_ReturnsError()
+    public async Task SaveChunkManifestAsync_IOError_ReturnsError()
     {
-        var encryptionService =
-            Substitute.For<IEncryptionAlgorithmStrategy>();
-        encryptionService
-            .CreateEncryptedDataAsync(
-                Arg.Any<byte[]>(),
+        var fileOperationsService = Substitute.For<IFileOperationsService>();
+        fileOperationsService
+            .WriteAllBytesAsync(
                 Arg.Any<string>(),
-                Arg.Any<KeyDerivationAlgorithm>(),
-                Arg.Any<CompressionMode>())
-                .ThrowsAsync(new IOException("disk error"));
+                Arg.Any<byte[]>(),
+                Arg.Any<CancellationToken>())
+            .ThrowsAsync(new IOException("disk error"));
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"bzc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var manifestService = new ManifestService(
+            fileOperationsService,
+            this.chunkCryptoProviderFactory);
 
-        try
-        {
-            List<ManifestEntry> entries = [new("b.bzc", "a.txt", "c2FsdA==", "bm9uY2U=", string.Empty)];
+        var errors = await manifestService.SaveChunkManifestAsync(
+            CreateManifestData(),
+            @"C:\does-not-matter",
+            Enumerable.Range(0, 32).Select(static i => (byte)i).ToArray(),
+            EncryptionAlgorithm.Aes,
+            CancellationToken.None);
 
-            var errors = await service.TrySaveManifestAsync(
-                entries,
-                CreateHeader(),
-                tempDir,
-                encryptionService,
-                CreateRequest(),
-                CancellationToken.None);
-
-            Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(errors[0], Does.Contain("disk error"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        Assert.That(errors, Has.Count.EqualTo(1));
+        Assert.That(errors[0], Does.Contain("disk error"));
     }
 
-    private static ManifestHeader CreateHeader() =>
+    private static ChunkManifestData CreateManifestData() =>
         new(
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            NameObfuscationMode.None,
-            CompressionMode.None);
+            new ManifestHeader(
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.Zstd),
+            Convert.ToBase64String(Enumerable.Range(1, 32).Select(static i => (byte)i).ToArray()),
+            [
+                new ChunkManifestFileEntry(
+                    "docs\\report.txt",
+                    "file-hash-1",
+                    123,
+                    [
+                        new ChunkManifestChunkRef("chunk-1", 64, Convert.ToBase64String(Enumerable.Range(1, 12).Select(static i => (byte)(10 + i)).ToArray())),
+                        new ChunkManifestChunkRef("chunk-2", 59, Convert.ToBase64String(Enumerable.Range(1, 12).Select(static i => (byte)(30 + i)).ToArray())),
+                    ]),
+                new ChunkManifestFileEntry(
+                    "images\\photo.jpg",
+                    "file-hash-2",
+                    456,
+                    [
+                        new ChunkManifestChunkRef("chunk-3", 456, Convert.ToBase64String(Enumerable.Range(1, 12).Select(static i => (byte)(50 + i)).ToArray())),
+                    ]),
+            ]);
 
-    private static BackupRequest CreateRequest() =>
-        new(
-            @"C:\source",
-            @"C:\dest",
-            "StrongP@ss1",
-            "StrongP@ss1",
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Create,
-            NameObfuscationMode.None);
+    private static ChunkCryptoProviderFactory CreateChunkCryptoProviderFactory() =>
+        new([new AesChunkCryptoProvider()]);
+
+    private static string CreateTestDirectory()
+    {
+        var path = Path.Combine(
+            TestContext.CurrentContext.WorkDirectory,
+            "manifest-service-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void DeleteTestDirectory(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, true);
+        }
+    }
 }

@@ -6,7 +6,6 @@ using BackupZCrypt.Domain.Enums;
 public sealed record BackupCreationSettings(
     EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.Aes,
     KeyDerivationAlgorithm KeyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id,
-    NameObfuscationMode NameObfuscationMode = NameObfuscationMode.None,
     CompressionMode CompressionMode = CompressionMode.None)
     : ISettings<BackupCreationSettings>
 {
