@@ -1,10 +1,11 @@
-namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
 using BackupZCrypt.Infrastructure.Resources;
+
 using System.Security.Cryptography;
+
+namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 internal sealed class ChaCha20EncryptionStrategy : IEncryptionAlgorithmStrategy
 {

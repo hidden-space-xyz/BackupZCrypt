@@ -1,11 +1,13 @@
-namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
+
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
+
 using System.Security.Cryptography;
+
+namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

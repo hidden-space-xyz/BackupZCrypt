@@ -1,8 +1,7 @@
-namespace BackupZCrypt.Application.Services.Interfaces;
-
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Services.Interfaces;
 
 public interface IChunkedBackupService
 {

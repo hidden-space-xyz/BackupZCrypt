@@ -1,7 +1,7 @@
-namespace BackupZCrypt.Application.Services.Interfaces;
-
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Application.Services.Interfaces;
 
 public interface IPasswordService
 {

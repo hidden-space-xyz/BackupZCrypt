@@ -1,7 +1,7 @@
-namespace BackupZCrypt.Application.Services.Interfaces;
-
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Application.Services.Interfaces;
 
 public interface IManifestService
 {

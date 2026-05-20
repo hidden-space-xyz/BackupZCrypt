@@ -1,9 +1,9 @@
-namespace BackupZCrypt.Domain.Factories;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
+namespace BackupZCrypt.Domain.Factories;
 
 internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory

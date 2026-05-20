@@ -1,10 +1,11 @@
-namespace BackupZCrypt.Terminal;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Terminal.Commands;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
+namespace BackupZCrypt.Terminal;
 
 internal sealed class TerminalApplication(
     BackupCommand backupCommand,

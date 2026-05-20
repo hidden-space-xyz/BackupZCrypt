@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Application.Validators.Interfaces;
-
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Validators.Interfaces;
 
 public interface IBackupRequestValidator
 {

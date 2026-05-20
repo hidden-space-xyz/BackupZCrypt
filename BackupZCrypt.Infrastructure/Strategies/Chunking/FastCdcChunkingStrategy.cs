@@ -1,9 +1,10 @@
-namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
-
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
 using System.Buffers;
 using System.Runtime.CompilerServices;
+
+namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
 
 internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 {

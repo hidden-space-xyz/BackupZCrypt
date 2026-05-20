@@ -1,10 +1,11 @@
-namespace BackupZCrypt.Worker;
-
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Worker.Services;
+
 using Microsoft.Extensions.Options;
+
+namespace BackupZCrypt.Worker;
 
 internal sealed partial class Worker(
     ILogger<Worker> logger,

@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
-
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Application.ValueObjects.Manifest;
 
 internal sealed record ChunkManifestDocument(
     EncryptionAlgorithm EncryptionAlgorithm,

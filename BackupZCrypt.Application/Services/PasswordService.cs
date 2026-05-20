@@ -1,12 +1,13 @@
-namespace BackupZCrypt.Application.Services;
-
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
+
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+
+namespace BackupZCrypt.Application.Services;
 
 internal sealed partial class PasswordService : IPasswordService
 {

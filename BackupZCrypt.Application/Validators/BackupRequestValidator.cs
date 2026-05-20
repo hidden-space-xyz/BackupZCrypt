@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Application.Validators;
-
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
@@ -8,6 +6,8 @@ using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Validators;
 
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,

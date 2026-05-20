@@ -1,8 +1,9 @@
-namespace BackupZCrypt.Terminal.Commands;
-
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
+namespace BackupZCrypt.Terminal.Commands;
 
 internal sealed class AlgorithmInfoCommand(
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,

@@ -1,17 +1,19 @@
-namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
-
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
-using Org.BouncyCastle.Crypto;
+
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
+
 using System.Security.Cryptography;
+
+namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgorithmStrategy
 {
     private const int MacSize = EncryptionConstants.MacSize;
 
-    public abstract Domain.Enums.EncryptionAlgorithm Id { get; }
+    public abstract EncryptionAlgorithm Id { get; }
 
     public abstract string DisplayName { get; }
 

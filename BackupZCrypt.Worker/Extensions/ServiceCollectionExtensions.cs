@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Worker.Extensions;
-
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Worker.Extensions;
 
 internal static class ServiceCollectionExtensions
 {

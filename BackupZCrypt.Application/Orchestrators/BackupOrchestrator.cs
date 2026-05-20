@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Application.Orchestrators;
-
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
@@ -9,6 +7,8 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Orchestrators;
 
 internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,

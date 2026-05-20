@@ -1,7 +1,7 @@
-namespace BackupZCrypt.Application.ValueObjects.Backup;
-
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Application.ValueObjects.Backup;
 
 public sealed record BackupCreationSettings(
     EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.Aes,

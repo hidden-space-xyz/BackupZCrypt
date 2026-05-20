@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Domain.ValueObjects.Backup;
-
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 public sealed record BackupRequest(
     string SourcePath,

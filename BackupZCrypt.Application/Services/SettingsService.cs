@@ -1,9 +1,10 @@
-namespace BackupZCrypt.Application.Services;
-
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
+namespace BackupZCrypt.Application.Services;
 
 internal sealed class SettingsService(
     IFileOperationsService fileOperationsService,

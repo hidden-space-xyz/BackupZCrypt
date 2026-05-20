@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Worker.Services;
-
 using BackupZCrypt.Domain.Constants;
+
+namespace BackupZCrypt.Worker.Services;
 
 internal sealed partial class WorkerFileSystem(
     ILogger<WorkerFileSystem> logger) : IWorkerFileSystem

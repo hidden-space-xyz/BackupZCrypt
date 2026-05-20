@@ -1,10 +1,10 @@
-namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Resources;
-using Org.BouncyCastle.Crypto;
+
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
+
+namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 internal sealed class CamelliaEncryptionStrategy : BouncyCastleGcmEncryptionStrategyBase
 {

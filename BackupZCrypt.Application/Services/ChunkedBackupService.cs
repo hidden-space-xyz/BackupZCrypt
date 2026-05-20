@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Application.Services;
-
 using BackupZCrypt.Application.Constants;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
@@ -11,9 +9,12 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
+
+namespace BackupZCrypt.Application.Services;
 
 internal sealed class ChunkedBackupService(
     ICompressionServiceFactory compressionServiceFactory,

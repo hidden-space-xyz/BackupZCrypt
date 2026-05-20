@@ -1,12 +1,14 @@
-namespace BackupZCrypt.Terminal.Commands;
-
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
 using System.Globalization;
+
+namespace BackupZCrypt.Terminal.Commands;
 
 internal sealed class SettingsCommand(
     ISettingsService settingsService,

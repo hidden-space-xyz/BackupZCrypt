@@ -1,10 +1,11 @@
-namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
-
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
+
 using System.Security.Cryptography;
 using System.Text;
+
+namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

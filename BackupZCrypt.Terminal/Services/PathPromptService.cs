@@ -1,12 +1,12 @@
-namespace BackupZCrypt.Terminal.Services;
-
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Terminal.Services.Interfaces;
 using BackupZCrypt.Terminal.Resources;
+using BackupZCrypt.Terminal.Services.Interfaces;
 using Spectre.Console;
 using System.Security;
 using System.Text;
+
+namespace BackupZCrypt.Terminal.Services;
 
 internal sealed class PathPromptService(ISettingsService settingsService) : IPathPromptService
 {

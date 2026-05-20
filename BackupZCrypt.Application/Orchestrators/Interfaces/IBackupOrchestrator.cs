@@ -1,7 +1,7 @@
-namespace BackupZCrypt.Application.Orchestrators.Interfaces;
-
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Orchestrators.Interfaces;
 
 public interface IBackupOrchestrator
 {

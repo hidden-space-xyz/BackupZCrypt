@@ -1,9 +1,9 @@
-namespace BackupZCrypt.Application.Services;
-
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+
+namespace BackupZCrypt.Application.Services;
 
 internal sealed class DirectoryBackupService(
     IChunkedBackupService chunkedBackupService) : IDirectoryBackupService

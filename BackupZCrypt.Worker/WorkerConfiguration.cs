@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Worker;
-
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Worker;
 
 internal sealed class WorkerConfiguration
 {

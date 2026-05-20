@@ -1,7 +1,8 @@
-namespace BackupZCrypt.Terminal.Rendering;
-
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
+namespace BackupZCrypt.Terminal.Rendering;
 
 internal static class BannerRenderer
 {

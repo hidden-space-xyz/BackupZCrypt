@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Application.Services;
-
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -7,8 +5,11 @@ using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
 using System.Security.Cryptography;
 using System.Text.Json;
+
+namespace BackupZCrypt.Application.Services;
 
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,

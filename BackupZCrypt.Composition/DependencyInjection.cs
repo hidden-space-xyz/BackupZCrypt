@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Composition;
-
 using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services;
@@ -15,7 +13,10 @@ using BackupZCrypt.Infrastructure.Strategies.Chunking;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
 using BackupZCrypt.Infrastructure.Strategies.Encryption;
 using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
+
 using Microsoft.Extensions.DependencyInjection;
+
+namespace BackupZCrypt.Composition;
 
 public static class DependencyInjection
 {

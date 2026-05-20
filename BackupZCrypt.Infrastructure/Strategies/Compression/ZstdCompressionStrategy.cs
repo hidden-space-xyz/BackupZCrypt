@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Infrastructure.Strategies.Compression;
-
 using BackupZCrypt.Infrastructure.Resources;
+
+namespace BackupZCrypt.Infrastructure.Strategies.Compression;
 
 internal sealed class ZstdCompressionStrategy : ZstdCompressionStrategyBase
 {

@@ -1,8 +1,9 @@
-namespace BackupZCrypt.Infrastructure.Services.FileSystem;
-
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
+
 using System.Security.Cryptography;
+
+namespace BackupZCrypt.Infrastructure.Services.FileSystem;
 
 internal sealed class FileOperationsService : IFileOperationsService
 {

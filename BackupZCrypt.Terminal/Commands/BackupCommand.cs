@@ -1,5 +1,3 @@
-namespace BackupZCrypt.Terminal.Commands;
-
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -11,8 +9,12 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
 using BackupZCrypt.Terminal.Services.Interfaces;
+
 using Spectre.Console;
+
 using System.Diagnostics;
+
+namespace BackupZCrypt.Terminal.Commands;
 
 internal sealed class BackupCommand(
     IBackupOrchestrator orchestrator,

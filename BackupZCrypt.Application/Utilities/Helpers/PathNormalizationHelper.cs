@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Application.Utilities.Helpers;
-
 using BackupZCrypt.Application.Resources;
+
+namespace BackupZCrypt.Application.Utilities.Helpers;
 
 internal static class PathNormalizationHelper
 {

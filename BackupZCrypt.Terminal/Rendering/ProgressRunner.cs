@@ -1,10 +1,11 @@
-namespace BackupZCrypt.Terminal.Rendering;
-
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
+namespace BackupZCrypt.Terminal.Rendering;
 
 internal static class ProgressRunner
 {

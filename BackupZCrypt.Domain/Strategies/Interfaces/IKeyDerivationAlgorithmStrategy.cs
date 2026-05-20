@@ -1,6 +1,6 @@
-namespace BackupZCrypt.Domain.Strategies.Interfaces;
-
 using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Domain.Strategies.Interfaces;
 
 public interface IKeyDerivationAlgorithmStrategy
 {

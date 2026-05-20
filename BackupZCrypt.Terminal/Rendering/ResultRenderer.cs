@@ -1,9 +1,10 @@
-namespace BackupZCrypt.Terminal.Rendering;
-
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Resources;
+
 using Spectre.Console;
+
+namespace BackupZCrypt.Terminal.Rendering;
 
 internal static class ResultRenderer
 {
