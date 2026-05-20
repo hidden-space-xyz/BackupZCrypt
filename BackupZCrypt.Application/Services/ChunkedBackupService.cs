@@ -248,7 +248,10 @@ internal sealed class ChunkedBackupService(
                 preamble.MasterSalt,
                 request.KeyDerivationAlgorithm);
 
-            var existingManifest = DecryptChunkManifestWithCompatibility(preamble, keys);
+            var existingManifest = manifestService.DecryptChunkManifest(
+                preamble,
+                keys.ManifestEncryptionKey);
+
             if (existingManifest is null)
             {
                 return Result<BackupResult>.Failure(Messages.ManifestRequiredForUpdate);
@@ -481,7 +484,10 @@ internal sealed class ChunkedBackupService(
                 preamble.MasterSalt,
                 preamble.KeyDerivation);
 
-            var manifest = DecryptChunkManifestWithCompatibility(preamble, keys);
+            var manifest = manifestService.DecryptChunkManifest(
+                preamble,
+                keys.ManifestEncryptionKey);
+
             if (manifest is null)
             {
                 return Result<BackupResult>.Failure(Messages.ManifestRequiredForDecryption);
@@ -1184,27 +1190,6 @@ internal sealed class ChunkedBackupService(
         return compressionMode == CompressionMode.None
             ? null
             : compressionServiceFactory.Create(compressionMode);
-    }
-
-    private ChunkManifestData? DecryptChunkManifestWithCompatibility(
-        ManifestPreamble preamble,
-        DerivedKeySet keys)
-    {
-        // New backups use a dedicated manifest encryption subkey.
-        var manifest = manifestService.DecryptChunkManifest(
-            preamble,
-            keys.ManifestEncryptionKey);
-
-        if (manifest is not null)
-        {
-            return manifest;
-        }
-
-        // Compatibility fallback for backups produced by earlier versions that encrypted
-        // the manifest with the chunk encryption subkey.
-        return manifestService.DecryptChunkManifest(
-            preamble,
-            keys.ChunkEncryptionKey);
     }
 
     private DerivedKeySet DeriveKeySet(
