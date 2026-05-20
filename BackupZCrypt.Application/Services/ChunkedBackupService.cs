@@ -10,6 +10,7 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -27,6 +28,12 @@ internal sealed class ChunkedBackupService(
     private const int KeySizeBytes = 32;
     private const int NonceSizeBytes = 12;
     private const int SaltSizeBytes = 32;
+    private const int Sha256SizeBytes = 32;
+
+    private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
+
     private readonly Dictionary<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategiesById =
         encryptionStrategies.ToDictionary(static strategy => strategy.Id, static strategy => strategy);
 
@@ -39,28 +46,17 @@ internal sealed class ChunkedBackupService(
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var isFile = fileOperationsService.FileExists(sourcePath);
-        var isDirectory = fileOperationsService.DirectoryExists(sourcePath);
+        var source = await ResolveSourceAsync(
+            sourcePath,
+            allowSingleFile: true,
+            cancellationToken).ConfigureAwait(false);
 
-        string[] sourceFiles;
-        string sourceRoot;
-
-        if (isFile)
-        {
-            sourceFiles = [sourcePath];
-            sourceRoot = fileOperationsService.GetDirectoryName(sourcePath) ?? sourcePath;
-        }
-        else if (isDirectory)
-        {
-            sourceRoot = sourcePath;
-            sourceFiles = await fileOperationsService.GetFilesAsync(
-                sourcePath, "*.*", cancellationToken);
-        }
-        else
+        if (source is null)
         {
             return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
         }
 
+        var (sourceFiles, sourceRoot, isFile) = source.Value;
         if (sourceFiles.Length == 0)
         {
             stopwatch.Stop();
@@ -69,31 +65,34 @@ internal sealed class ChunkedBackupService(
                     errors: [Messages.NoFilesInSourceDirectory]));
         }
 
-        await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
-        var chunksDir = fileOperationsService.CombinePath(
-            destinationPath, BackupConstants.ChunksDirectoryName);
-        await fileOperationsService.CreateDirectoryAsync(chunksDir, cancellationToken);
+        await fileOperationsService.CreateDirectoryAsync(
+            destinationPath,
+            cancellationToken).ConfigureAwait(false);
 
-        var masterSalt = GenerateSalt();
-        var masterKey = DeriveKey(request.Password, masterSalt, request.KeyDerivationAlgorithm);
-        var encryptionKey = DeriveSubKey(masterKey, "chunk-encryption"u8);
-        var namingKey = DeriveSubKey(masterKey, "chunk-naming"u8);
+        var chunksDir = fileOperationsService.CombinePath(
+            destinationPath,
+            BackupConstants.ChunksDirectoryName);
+
+        await fileOperationsService.CreateDirectoryAsync(
+            chunksDir,
+            cancellationToken).ConfigureAwait(false);
+
+        byte[]? masterSalt = null;
+        DerivedKeySet? keys = null;
 
         try
         {
+            masterSalt = GenerateSalt();
+            keys = DeriveKeySet(
+                request.Password,
+                masterSalt,
+                request.KeyDerivationAlgorithm);
+
             var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
-            ICompressionStrategy? compressionStrategy = null;
-            if (request.Compression != CompressionMode.None)
-            {
-                compressionStrategy = compressionServiceFactory.Create(request.Compression);
-            }
+            var compressionStrategy = CreateCompressionStrategy(request.Compression);
 
             var totalFiles = sourceFiles.Length;
-            var totalBytes = sourceFiles.Sum(f =>
-            {
-                try { return fileOperationsService.GetFileSize(f); }
-                catch { return 0L; }
-            });
+            var totalBytes = SumFileSizes(sourceFiles);
 
             progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
 
@@ -102,7 +101,8 @@ internal sealed class ChunkedBackupService(
             long processedBytes = 0;
             var processedFiles = 0;
             string? fatalError = null;
-            ConcurrentDictionary<string, bool> storedChunks = new(StringComparer.Ordinal);
+            ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks =
+                new(StringComparer.Ordinal);
 
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var maxDop = Math.Max(1, Environment.ProcessorCount);
@@ -124,6 +124,7 @@ internal sealed class ChunkedBackupService(
                                 ? Path.GetFileName(file)
                                 : fileOperationsService.GetRelativePath(sourceRoot, file);
 
+                            ValidateRelativeManifestPath(relativePath);
                             var fileSize = fileOperationsService.GetFileSize(file);
 
                             var entry = await ChunkAndEncryptFileAsync(
@@ -131,12 +132,13 @@ internal sealed class ChunkedBackupService(
                                 relativePath,
                                 fileSize,
                                 chunksDir,
-                                encryptionKey,
-                                namingKey,
+                                keys.ChunkEncryptionKey,
+                                keys.ChunkNonceKey,
+                                keys.NamingKey,
                                 encryptionStrategy,
                                 compressionStrategy,
                                 storedChunks,
-                                token);
+                                token).ConfigureAwait(false);
 
                             fileEntries.Add(entry);
                             Interlocked.Increment(ref processedFiles);
@@ -154,15 +156,17 @@ internal sealed class ChunkedBackupService(
                             if (IsFileLevelError(ex))
                             {
                                 errors.Add(string.Format(
-                                    Messages.EncryptionErrorFormat, file, ex.Message));
+                                    Messages.EncryptionErrorFormat,
+                                    file,
+                                    ex.Message));
                             }
                             else
                             {
                                 Interlocked.CompareExchange(ref fatalError, ex.Message, null);
-                                await linkedCts.CancelAsync();
+                                await linkedCts.CancelAsync().ConfigureAwait(false);
                             }
                         }
-                    });
+                    }).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (fatalError is not null)
             {
@@ -178,14 +182,14 @@ internal sealed class ChunkedBackupService(
             ChunkManifestData manifestData = new(
                 header,
                 Convert.ToBase64String(masterSalt),
-                [.. fileEntries]);
+                [.. fileEntries.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)]);
 
             var manifestErrors = await manifestService.SaveChunkManifestAsync(
                 manifestData,
                 destinationPath,
-                encryptionKey,
+                keys.ManifestEncryptionKey,
                 request.EncryptionAlgorithm,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             List<string> errorList = [.. errors];
             errorList.AddRange(manifestErrors);
@@ -202,9 +206,12 @@ internal sealed class ChunkedBackupService(
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(masterKey);
-            CryptographicOperations.ZeroMemory(encryptionKey);
-            CryptographicOperations.ZeroMemory(namingKey);
+            keys?.Dispose();
+
+            if (masterSalt is not null)
+            {
+                CryptographicOperations.ZeroMemory(masterSalt);
+            }
         }
     }
 
@@ -219,7 +226,7 @@ internal sealed class ChunkedBackupService(
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(
             destinationPath,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (preamble is null)
         {
@@ -232,51 +239,55 @@ internal sealed class ChunkedBackupService(
             KeyDerivationAlgorithm = preamble.KeyDerivation,
         };
 
-        var masterSalt = preamble.MasterSalt;
-        var masterKey = DeriveKey(request.Password, masterSalt, request.KeyDerivationAlgorithm);
-        var encryptionKey = DeriveSubKey(masterKey, "chunk-encryption"u8);
-        var namingKey = DeriveSubKey(masterKey, "chunk-naming"u8);
-
-        var existingManifest = manifestService.DecryptChunkManifest(preamble, encryptionKey);
-        if (existingManifest is null)
-        {
-            return Result<BackupResult>.Failure(Messages.ManifestRequiredForUpdate);
-        }
-
-        request = request with
-        {
-            Compression = existingManifest.Header.Compression,
-        };
+        DerivedKeySet? keys = null;
 
         try
         {
-            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
-            ICompressionStrategy? compressionStrategy = null;
-            if (request.Compression != CompressionMode.None)
+            keys = DeriveKeySet(
+                request.Password,
+                preamble.MasterSalt,
+                request.KeyDerivationAlgorithm);
+
+            var existingManifest = DecryptChunkManifestWithCompatibility(preamble, keys);
+            if (existingManifest is null)
             {
-                compressionStrategy = compressionServiceFactory.Create(request.Compression);
+                return Result<BackupResult>.Failure(Messages.ManifestRequiredForUpdate);
             }
+
+            request = request with
+            {
+                Compression = existingManifest.Header.Compression,
+            };
+
+            var source = await ResolveSourceAsync(
+                sourcePath,
+                allowSingleFile: false,
+                cancellationToken).ConfigureAwait(false);
+
+            if (source is null)
+            {
+                return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
+            }
+
+            var (sourceFiles, sourceRoot, _) = source.Value;
+
+            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
+            var compressionStrategy = CreateCompressionStrategy(request.Compression);
 
             var chunksDir = fileOperationsService.CombinePath(
-                destinationPath, BackupConstants.ChunksDirectoryName);
-            await fileOperationsService.CreateDirectoryAsync(chunksDir, cancellationToken);
+                destinationPath,
+                BackupConstants.ChunksDirectoryName);
 
-            // Build index of existing files and their chunk hashes
-            Dictionary<string, ChunkManifestFileEntry> existingFileIndex = new(
-                StringComparer.OrdinalIgnoreCase);
-            HashSet<string> existingChunkHashes = new(StringComparer.Ordinal);
+            await fileOperationsService.CreateDirectoryAsync(
+                chunksDir,
+                cancellationToken).ConfigureAwait(false);
 
+            Dictionary<string, ChunkManifestFileEntry> existingFileIndex = new(StringComparer.FromComparison(PathComparer));
             foreach (var entry in existingManifest.Files)
             {
+                ValidateRelativeManifestPath(entry.OriginalPath);
                 existingFileIndex[entry.OriginalPath] = entry;
-                foreach (var chunk in entry.Chunks)
-                {
-                    existingChunkHashes.Add(chunk.Hash);
-                }
             }
-
-            var sourceFiles = await fileOperationsService.GetFilesAsync(
-                sourcePath, "*.*", cancellationToken);
 
             ConcurrentBag<ChunkManifestFileEntry> updatedEntries = [];
             ConcurrentBag<string> errors = [];
@@ -284,29 +295,27 @@ internal sealed class ChunkedBackupService(
             long processedBytes = 0;
             string? fatalError = null;
 
-            HashSet<string> sourceRelativePaths = new(StringComparer.OrdinalIgnoreCase);
             List<(string File, string RelativePath, long Size)> filesToProcess = [];
-            HashSet<string> referencedChunkHashes = new(StringComparer.Ordinal);
+            ConcurrentDictionary<string, byte> referencedChunkHashes = new(StringComparer.Ordinal);
 
-            // Determine which files need processing
             foreach (var file in sourceFiles)
             {
-                var relativePath = fileOperationsService.GetRelativePath(sourcePath, file);
-                sourceRelativePaths.Add(relativePath);
+                var relativePath = fileOperationsService.GetRelativePath(sourceRoot, file);
+                ValidateRelativeManifestPath(relativePath);
                 var fileSize = fileOperationsService.GetFileSize(file);
 
                 if (existingFileIndex.TryGetValue(relativePath, out var existing))
                 {
                     var currentHash = await fileOperationsService.ComputeFileHashAsync(
-                        file, cancellationToken);
+                        file,
+                        cancellationToken).ConfigureAwait(false);
 
                     if (string.Equals(currentHash, existing.FileHash, StringComparison.Ordinal))
                     {
-                        // File unchanged - keep existing entry
                         updatedEntries.Add(existing);
                         foreach (var chunk in existing.Chunks)
                         {
-                            referencedChunkHashes.Add(chunk.Hash);
+                            referencedChunkHashes.TryAdd(chunk.Hash, 0);
                         }
 
                         continue;
@@ -317,16 +326,17 @@ internal sealed class ChunkedBackupService(
             }
 
             var totalFilesToProcess = filesToProcess.Count;
-            var totalBytes = filesToProcess.Sum(f => f.Size);
+            var totalBytes = filesToProcess.Sum(static f => f.Size);
 
             progress?.Report(new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero));
 
-            // Re-chunk changed/new files, reusing existing chunks where possible
-            ConcurrentDictionary<string, bool> storedChunks = new(StringComparer.Ordinal);
-            foreach (var hash in existingChunkHashes)
-            {
-                storedChunks.TryAdd(hash, true);
-            }
+            var storedChunks = BuildStoredChunkNonceCache(
+                existingManifest.Files,
+                chunksDir,
+                keys.ChunkEncryptionKey,
+                keys.NamingKey,
+                encryptionStrategy,
+                cancellationToken);
 
             if (totalFilesToProcess > 0)
             {
@@ -351,22 +361,24 @@ internal sealed class ChunkedBackupService(
                                     fileItem.RelativePath,
                                     fileItem.Size,
                                     chunksDir,
-                                    encryptionKey,
-                                    namingKey,
+                                    keys.ChunkEncryptionKey,
+                                    keys.ChunkNonceKey,
+                                    keys.NamingKey,
                                     encryptionStrategy,
                                     compressionStrategy,
                                     storedChunks,
-                                    token);
+                                    token).ConfigureAwait(false);
 
                                 updatedEntries.Add(entry);
                                 foreach (var chunk in entry.Chunks)
                                 {
-                                    referencedChunkHashes.Add(chunk.Hash);
+                                    referencedChunkHashes.TryAdd(chunk.Hash, 0);
                                 }
 
                                 Interlocked.Increment(ref processedFiles);
                                 var currentBytes = Interlocked.Add(
-                                    ref processedBytes, fileItem.Size);
+                                    ref processedBytes,
+                                    fileItem.Size);
 
                                 progress?.Report(new BackupStatus(
                                     Volatile.Read(ref processedFiles),
@@ -380,15 +392,17 @@ internal sealed class ChunkedBackupService(
                                 if (IsFileLevelError(ex))
                                 {
                                     errors.Add(string.Format(
-                                        Messages.EncryptionErrorFormat, fileItem.File, ex.Message));
+                                        Messages.EncryptionErrorFormat,
+                                        fileItem.File,
+                                        ex.Message));
                                 }
                                 else
                                 {
                                     Interlocked.CompareExchange(ref fatalError, ex.Message, null);
-                                    await linkedCts.CancelAsync();
+                                    await linkedCts.CancelAsync().ConfigureAwait(false);
                                 }
                             }
-                        });
+                        }).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (fatalError is not null)
                 {
@@ -397,27 +411,32 @@ internal sealed class ChunkedBackupService(
                 }
             }
 
-            // Delete orphaned chunks
             await DeleteOrphanedChunksAsync(
-                chunksDir, referencedChunkHashes, namingKey, cancellationToken);
+                chunksDir,
+                referencedChunkHashes.Keys,
+                keys.NamingKey,
+                cancellationToken).ConfigureAwait(false);
 
-            // Save updated manifest
             ManifestHeader header = new(
                 request.EncryptionAlgorithm,
                 request.KeyDerivationAlgorithm,
                 request.Compression);
 
+            var canonicalEntries = await CanonicalizeChunkEntriesAsync(
+                updatedEntries,
+                storedChunks).ConfigureAwait(false);
+
             ChunkManifestData newManifest = new(
                 header,
                 existingManifest.MasterSalt,
-                [.. updatedEntries]);
+                canonicalEntries);
 
             var manifestErrors = await manifestService.SaveChunkManifestAsync(
                 newManifest,
                 destinationPath,
-                encryptionKey,
+                keys.ManifestEncryptionKey,
                 request.EncryptionAlgorithm,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             List<string> errorList = [.. errors];
             errorList.AddRange(manifestErrors);
@@ -431,9 +450,7 @@ internal sealed class ChunkedBackupService(
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(masterKey);
-            CryptographicOperations.ZeroMemory(encryptionKey);
-            CryptographicOperations.ZeroMemory(namingKey);
+            keys?.Dispose();
         }
     }
 
@@ -448,38 +465,47 @@ internal sealed class ChunkedBackupService(
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(
             sourcePath,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+
         if (preamble is null)
         {
             return Result<BackupResult>.Failure(Messages.ManifestRequiredForDecryption);
         }
 
-        var masterKey = DeriveKey(request.Password, preamble.MasterSalt, preamble.KeyDerivation);
-        var encryptionKey = DeriveSubKey(masterKey, "chunk-encryption"u8);
-        var namingKey = DeriveSubKey(masterKey, "chunk-naming"u8);
-
-        var manifest = manifestService.DecryptChunkManifest(preamble, encryptionKey);
-        if (manifest is null)
-        {
-            return Result<BackupResult>.Failure(Messages.ManifestRequiredForDecryption);
-        }
+        DerivedKeySet? keys = null;
 
         try
         {
-            var encryptionStrategy = ResolveEncryptionStrategy(
-                manifest.Header.EncryptionAlgorithm);
-            ICompressionStrategy? compressionStrategy = null;
-            if (manifest.Header.Compression != CompressionMode.None)
+            keys = DeriveKeySet(
+                request.Password,
+                preamble.MasterSalt,
+                preamble.KeyDerivation);
+
+            var manifest = DecryptChunkManifestWithCompatibility(preamble, keys);
+            if (manifest is null)
             {
-                compressionStrategy = compressionServiceFactory.Create(
-                    manifest.Header.Compression);
+                return Result<BackupResult>.Failure(Messages.ManifestRequiredForDecryption);
             }
 
+            var encryptionStrategy = ResolveEncryptionStrategy(
+                manifest.Header.EncryptionAlgorithm);
+
+            var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
+
             var chunksDir = fileOperationsService.CombinePath(
-                sourcePath, BackupConstants.ChunksDirectoryName);
+                sourcePath,
+                BackupConstants.ChunksDirectoryName);
+
+            var storedChunkNonces = BuildStoredChunkNonceCache(
+                manifest.Files,
+                chunksDir,
+                keys.ChunkEncryptionKey,
+                keys.NamingKey,
+                encryptionStrategy,
+                cancellationToken);
 
             var totalFiles = manifest.Files.Count;
-            var totalBytes = manifest.Files.Sum(f => f.TotalSize);
+            var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
             progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
 
             ConcurrentBag<string> errors = [];
@@ -488,7 +514,8 @@ internal sealed class ChunkedBackupService(
             string? fatalError = null;
 
             await fileOperationsService.CreateDirectoryAsync(
-                destinationPath, cancellationToken);
+                destinationPath,
+                cancellationToken).ConfigureAwait(false);
 
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken);
@@ -510,15 +537,17 @@ internal sealed class ChunkedBackupService(
                                 fileEntry,
                                 chunksDir,
                                 destinationPath,
-                                encryptionKey,
-                                namingKey,
+                                keys.ChunkEncryptionKey,
+                                keys.NamingKey,
                                 encryptionStrategy,
+                                storedChunkNonces,
                                 compressionStrategy,
-                                token);
+                                token).ConfigureAwait(false);
 
                             Interlocked.Increment(ref processedFiles);
                             var currentBytes = Interlocked.Add(
-                                ref processedBytes, fileEntry.TotalSize);
+                                ref processedBytes,
+                                fileEntry.TotalSize);
 
                             progress?.Report(new BackupStatus(
                                 Volatile.Read(ref processedFiles),
@@ -533,7 +562,7 @@ internal sealed class ChunkedBackupService(
                                 ref fatalError,
                                 Domain.Resources.Messages.InvalidPassword,
                                 null);
-                            await linkedCts.CancelAsync();
+                            await linkedCts.CancelAsync().ConfigureAwait(false);
                         }
                         catch (Exception ex) when (ex is not OperationCanceledException)
                         {
@@ -541,16 +570,19 @@ internal sealed class ChunkedBackupService(
                             {
                                 errors.Add(string.Format(
                                     Messages.EncryptionErrorFormat,
-                                    fileEntry.OriginalPath, ex.Message));
+                                    fileEntry.OriginalPath,
+                                    ex.Message));
                             }
                             else
                             {
                                 Interlocked.CompareExchange(
-                                    ref fatalError, ex.Message, null);
-                                await linkedCts.CancelAsync();
+                                    ref fatalError,
+                                    ex.Message,
+                                    null);
+                                await linkedCts.CancelAsync().ConfigureAwait(false);
                             }
                         }
-                    });
+                    }).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (fatalError is not null)
             {
@@ -571,9 +603,7 @@ internal sealed class ChunkedBackupService(
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(masterKey);
-            CryptographicOperations.ZeroMemory(encryptionKey);
-            CryptographicOperations.ZeroMemory(namingKey);
+            keys?.Dispose();
         }
     }
 
@@ -583,20 +613,25 @@ internal sealed class ChunkedBackupService(
         long fileSize,
         string chunksDir,
         byte[] encryptionKey,
+        byte[] nonceKey,
         byte[] namingKey,
         IEncryptionAlgorithmStrategy encryptionStrategy,
         ICompressionStrategy? compressionStrategy,
-        ConcurrentDictionary<string, bool> storedChunks,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
         CancellationToken cancellationToken)
     {
+        ValidateRelativeManifestPath(relativePath);
         List<ChunkManifestChunkRef> chunkRefs = [];
 
         await using var fileStream = fileOperationsService.OpenReadStream(
-            filePath, BackupIOConstants.CopyBufferSize);
+            filePath,
+            BackupIOConstants.CopyBufferSize);
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
-        await foreach (var chunkData in chunkingStrategy.ChunkAsync(fileStream, cancellationToken))
+        await foreach (var chunkData in chunkingStrategy
+            .ChunkAsync(fileStream, cancellationToken)
+            .ConfigureAwait(false))
         {
             fileHasher.AppendData(chunkData.Span);
 
@@ -604,49 +639,36 @@ internal sealed class ChunkedBackupService(
             var chunkHashB64 = Convert.ToBase64String(chunkHash);
             var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
             var chunkFilePath = fileOperationsService.CombinePath(
-                chunksDir, chunkFileName + BackupConstants.AppFileExtension);
+                chunksDir,
+                chunkFileName + BackupConstants.AppFileExtension);
 
-            var nonce = GenerateNonce();
-            var nonceB64 = Convert.ToBase64String(nonce);
+            var chunkOperation = new Lazy<Task<string>>(
+                () => EncryptAndStoreChunkAsync(
+                    chunkData,
+                    chunkHash,
+                    chunkFilePath,
+                    encryptionKey,
+                    nonceKey,
+                    encryptionStrategy,
+                    compressionStrategy,
+                    cancellationToken),
+                LazyThreadSafetyMode.ExecutionAndPublication);
 
-            if (storedChunks.TryAdd(chunkHashB64, true))
-            {
-                byte[] dataToEncrypt;
-                if (compressionStrategy is not null)
-                {
-                    await using MemoryStream inputStream = new(
-                        chunkData.ToArray(), writable: false);
-                    await using var compressedStream = await compressionStrategy.CompressAsync(
-                        inputStream, cancellationToken);
-                    await using MemoryStream compressedBuffer = new();
-                    await compressedStream.CopyToAsync(compressedBuffer, cancellationToken);
-                    dataToEncrypt = compressedBuffer.ToArray();
-                }
-                else
-                {
-                    dataToEncrypt = chunkData.ToArray();
-                }
+            var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
 
-                try
-                {
-                    var associatedData = BuildChunkAssociatedData(chunkHash, nonce);
-                    var encrypted = encryptionStrategy.EncryptChunk(
-                        dataToEncrypt, encryptionKey, nonce, associatedData);
-
-                    await fileOperationsService.WriteAllBytesAsync(
-                        chunkFilePath, encrypted, cancellationToken);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(dataToEncrypt);
-                }
-            }
+            var nonceB64 = await AwaitStoredChunkNonceAsync(
+                chunkHashB64,
+                storedChunk,
+                chunkOperation,
+                storedChunks).ConfigureAwait(false);
 
             chunkRefs.Add(new ChunkManifestChunkRef(chunkHashB64, chunkData.Length, nonceB64));
+            CryptographicOperations.ZeroMemory(chunkHash);
         }
 
         var fileHash = fileHasher.GetHashAndReset();
         var fileHashB64 = Convert.ToBase64String(fileHash);
+        CryptographicOperations.ZeroMemory(fileHash);
 
         return new ChunkManifestFileEntry(relativePath, fileHashB64, fileSize, chunkRefs);
     }
@@ -658,57 +680,400 @@ internal sealed class ChunkedBackupService(
         byte[] encryptionKey,
         byte[] namingKey,
         IEncryptionAlgorithmStrategy encryptionStrategy,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunkNonces,
         ICompressionStrategy? compressionStrategy,
         CancellationToken cancellationToken)
     {
-        var destFilePath = fileOperationsService.CombinePath(
-            destinationPath, fileEntry.OriginalPath);
+        ValidateRelativeManifestPath(fileEntry.OriginalPath);
+
+        var destFilePath = ResolveSafeDestinationPath(destinationPath, fileEntry.OriginalPath);
         var destDir = fileOperationsService.GetDirectoryName(destFilePath);
 
         if (!string.IsNullOrEmpty(destDir))
         {
-            await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
+            await fileOperationsService.CreateDirectoryAsync(
+                destDir,
+                cancellationToken).ConfigureAwait(false);
         }
 
         await using var destStream = fileOperationsService.CreateWriteStream(
-            destFilePath, BackupIOConstants.CopyBufferSize);
+            destFilePath,
+            BackupIOConstants.CopyBufferSize);
+
+        using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        long restoredBytes = 0;
 
         foreach (var chunkRef in fileEntry.Chunks)
         {
-            var chunkHash = Convert.FromBase64String(chunkRef.Hash);
-            var nonce = Convert.FromBase64String(chunkRef.Nonce);
+            var chunkHash = DecodeBase64FixedLength(chunkRef.Hash, Sha256SizeBytes, "Invalid chunk hash.");
+            var nonceB64 = storedChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
+                ? await storedChunk.Value.ConfigureAwait(false)
+                : chunkRef.Nonce;
+            var nonce = DecodeBase64FixedLength(nonceB64, NonceSizeBytes, "Invalid chunk nonce.");
             var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
             var chunkFilePath = fileOperationsService.CombinePath(
-                chunksDir, chunkFileName + BackupConstants.AppFileExtension);
+                chunksDir,
+                chunkFileName + BackupConstants.AppFileExtension);
 
             var encryptedData = await fileOperationsService.ReadAllBytesAsync(
-                chunkFilePath, cancellationToken);
+                chunkFilePath,
+                cancellationToken).ConfigureAwait(false);
 
             var associatedData = BuildChunkAssociatedData(chunkHash, nonce);
             var decryptedData = encryptionStrategy.DecryptChunk(
-                encryptedData, encryptionKey, nonce, associatedData);
+                encryptedData,
+                encryptionKey,
+                nonce,
+                associatedData);
 
             try
             {
                 if (compressionStrategy is not null)
                 {
                     await using MemoryStream compressedStream = new(
-                        decryptedData, writable: false);
+                        decryptedData,
+                        writable: false);
+
                     await using var decompressedStream =
                         await compressionStrategy.DecompressAsync(
-                            compressedStream, cancellationToken);
-                    await decompressedStream.CopyToAsync(destStream, cancellationToken);
+                            compressedStream,
+                            cancellationToken).ConfigureAwait(false);
+
+                    restoredBytes += await CopyToWithHashAsync(
+                        decompressedStream,
+                        destStream,
+                        fileHasher,
+                        cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
-                    await destStream.WriteAsync(decryptedData, cancellationToken);
+                    fileHasher.AppendData(decryptedData);
+                    await destStream.WriteAsync(
+                        decryptedData,
+                        cancellationToken).ConfigureAwait(false);
+                    restoredBytes += decryptedData.Length;
                 }
             }
             finally
             {
+                CryptographicOperations.ZeroMemory(chunkHash);
+                CryptographicOperations.ZeroMemory(nonce);
+                CryptographicOperations.ZeroMemory(associatedData);
+                CryptographicOperations.ZeroMemory(encryptedData);
                 CryptographicOperations.ZeroMemory(decryptedData);
             }
         }
+
+        if (restoredBytes != fileEntry.TotalSize)
+        {
+            throw new CryptographicException("Restored file size does not match the manifest.");
+        }
+
+        var expectedFileHash = DecodeBase64FixedLength(
+            fileEntry.FileHash,
+            Sha256SizeBytes,
+            "Invalid file hash.");
+        var actualFileHash = fileHasher.GetHashAndReset();
+
+        try
+        {
+            if (!CryptographicOperations.FixedTimeEquals(expectedFileHash, actualFileHash))
+            {
+                throw new CryptographicException("Restored file hash does not match the manifest.");
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(expectedFileHash);
+            CryptographicOperations.ZeroMemory(actualFileHash);
+        }
+    }
+
+    private async Task<string> EncryptAndStoreChunkAsync(
+        ReadOnlyMemory<byte> chunkData,
+        byte[] chunkHash,
+        string chunkFilePath,
+        byte[] encryptionKey,
+        byte[] nonceKey,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
+        ICompressionStrategy? compressionStrategy,
+        CancellationToken cancellationToken)
+    {
+        var nonce = ComputeChunkNonce(nonceKey, chunkHash);
+        var nonceB64 = Convert.ToBase64String(nonce);
+        byte[]? dataToEncrypt = null;
+        byte[]? encrypted = null;
+        byte[]? associatedData = null;
+
+        try
+        {
+            if (compressionStrategy is not null)
+            {
+                await using MemoryStream inputStream = new(
+                    chunkData.ToArray(),
+                    writable: false);
+
+                await using var compressedStream = await compressionStrategy.CompressAsync(
+                    inputStream,
+                    cancellationToken).ConfigureAwait(false);
+
+                await using MemoryStream compressedBuffer = new();
+                await compressedStream.CopyToAsync(
+                    compressedBuffer,
+                    cancellationToken).ConfigureAwait(false);
+
+                dataToEncrypt = compressedBuffer.ToArray();
+            }
+            else
+            {
+                dataToEncrypt = chunkData.ToArray();
+            }
+
+            associatedData = BuildChunkAssociatedData(chunkHash, nonce);
+            encrypted = encryptionStrategy.EncryptChunk(
+                dataToEncrypt,
+                encryptionKey,
+                nonce,
+                associatedData);
+
+            await fileOperationsService.WriteAllBytesAsync(
+                chunkFilePath,
+                encrypted,
+                cancellationToken).ConfigureAwait(false);
+
+            return nonceB64;
+        }
+        finally
+        {
+            if (dataToEncrypt is not null)
+            {
+                CryptographicOperations.ZeroMemory(dataToEncrypt);
+            }
+
+            if (encrypted is not null)
+            {
+                CryptographicOperations.ZeroMemory(encrypted);
+            }
+
+            if (associatedData is not null)
+            {
+                CryptographicOperations.ZeroMemory(associatedData);
+            }
+
+            CryptographicOperations.ZeroMemory(nonce);
+        }
+    }
+
+    private ConcurrentDictionary<string, Lazy<Task<string>>> BuildStoredChunkNonceCache(
+        IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
+        string chunksDir,
+        byte[] encryptionKey,
+        byte[] namingKey,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
+        CancellationToken cancellationToken)
+    {
+        var chunkNonceCandidates = BuildChunkNonceCandidates(manifestFiles);
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks =
+            new(StringComparer.Ordinal);
+
+        foreach (var (chunkHashB64, nonceCandidates) in chunkNonceCandidates)
+        {
+            var candidateCopy = nonceCandidates.ToArray();
+            var storedChunk = new Lazy<Task<string>>(
+                () => ResolveChunkNonceAsync(
+                    chunkHashB64,
+                    candidateCopy,
+                    chunksDir,
+                    encryptionKey,
+                    namingKey,
+                    encryptionStrategy,
+                    cancellationToken),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+
+            storedChunks.TryAdd(chunkHashB64, storedChunk);
+        }
+
+        return storedChunks;
+    }
+
+    private async Task<string> ResolveChunkNonceAsync(
+        string chunkHashB64,
+        string[] nonceCandidates,
+        string chunksDir,
+        byte[] encryptionKey,
+        byte[] namingKey,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
+        CancellationToken cancellationToken)
+    {
+        if (nonceCandidates.Length == 0)
+        {
+            throw new CryptographicException();
+        }
+
+        if (nonceCandidates.Length == 1)
+        {
+            return nonceCandidates[0];
+        }
+
+        var chunkHash = DecodeBase64FixedLength(chunkHashB64, Sha256SizeBytes, "Invalid chunk hash.");
+        var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
+        var chunkFilePath = fileOperationsService.CombinePath(
+            chunksDir,
+            chunkFileName + BackupConstants.AppFileExtension);
+        var encryptedData = await fileOperationsService.ReadAllBytesAsync(
+            chunkFilePath,
+            cancellationToken).ConfigureAwait(false);
+        CryptographicException? lastException = null;
+
+        try
+        {
+            foreach (var nonceCandidate in nonceCandidates)
+            {
+                byte[]? decryptedData = null;
+                byte[]? nonce = null;
+                byte[]? associatedData = null;
+
+                try
+                {
+                    nonce = DecodeBase64FixedLength(
+                        nonceCandidate,
+                        NonceSizeBytes,
+                        "Invalid chunk nonce.");
+                    associatedData = BuildChunkAssociatedData(chunkHash, nonce);
+                    decryptedData = encryptionStrategy.DecryptChunk(
+                        encryptedData,
+                        encryptionKey,
+                        nonce,
+                        associatedData);
+
+                    return nonceCandidate;
+                }
+                catch (FormatException ex)
+                {
+                    lastException = new CryptographicException(ex.Message, ex);
+                }
+                catch (CryptographicException ex)
+                {
+                    lastException = ex;
+                }
+                finally
+                {
+                    if (decryptedData is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(decryptedData);
+                    }
+
+                    if (nonce is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(nonce);
+                    }
+
+                    if (associatedData is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(associatedData);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(chunkHash);
+            CryptographicOperations.ZeroMemory(encryptedData);
+        }
+
+        throw lastException ?? new CryptographicException();
+    }
+
+    private static Dictionary<string, string[]> BuildChunkNonceCandidates(
+        IReadOnlyList<ChunkManifestFileEntry> manifestFiles)
+    {
+        Dictionary<string, List<string>> chunkNonceCandidates = new(StringComparer.Ordinal);
+
+        foreach (var file in manifestFiles)
+        {
+            ValidateRelativeManifestPath(file.OriginalPath);
+
+            foreach (var chunk in file.Chunks)
+            {
+                var decodedHash = DecodeBase64FixedLength(
+                    chunk.Hash,
+                    Sha256SizeBytes,
+                    "Invalid chunk hash.");
+                var decodedNonce = DecodeBase64FixedLength(
+                    chunk.Nonce,
+                    NonceSizeBytes,
+                    "Invalid chunk nonce.");
+                CryptographicOperations.ZeroMemory(decodedHash);
+                CryptographicOperations.ZeroMemory(decodedNonce);
+
+                if (!chunkNonceCandidates.TryGetValue(chunk.Hash, out var nonceCandidates))
+                {
+                    nonceCandidates = [];
+                    chunkNonceCandidates.Add(chunk.Hash, nonceCandidates);
+                }
+
+                if (!nonceCandidates.Contains(chunk.Nonce, StringComparer.Ordinal))
+                {
+                    nonceCandidates.Add(chunk.Nonce);
+                }
+            }
+        }
+
+        return chunkNonceCandidates.ToDictionary(
+            static pair => pair.Key,
+            static pair => pair.Value.ToArray(),
+            StringComparer.Ordinal);
+    }
+
+    private static async Task<string> AwaitStoredChunkNonceAsync(
+        string chunkHashB64,
+        Lazy<Task<string>> storedChunk,
+        Lazy<Task<string>> candidateChunk,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks)
+    {
+        try
+        {
+            return await storedChunk.Value.ConfigureAwait(false);
+        }
+        catch
+        {
+            if (ReferenceEquals(storedChunk, candidateChunk))
+            {
+                storedChunks.TryRemove(
+                    new KeyValuePair<string, Lazy<Task<string>>>(chunkHashB64, candidateChunk));
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task<IReadOnlyList<ChunkManifestFileEntry>> CanonicalizeChunkEntriesAsync(
+        IEnumerable<ChunkManifestFileEntry> entries,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks)
+    {
+        List<ChunkManifestFileEntry> canonicalEntries = [];
+
+        foreach (var entry in entries.OrderBy(static e => e.OriginalPath, StringComparer.Ordinal))
+        {
+            List<ChunkManifestChunkRef> canonicalChunks = [];
+
+            foreach (var chunk in entry.Chunks)
+            {
+                var nonce = storedChunks.TryGetValue(chunk.Hash, out var storedChunk)
+                    ? await storedChunk.Value.ConfigureAwait(false)
+                    : chunk.Nonce;
+
+                canonicalChunks.Add(new ChunkManifestChunkRef(chunk.Hash, chunk.Size, nonce));
+            }
+
+            canonicalEntries.Add(new ChunkManifestFileEntry(
+                entry.OriginalPath,
+                entry.FileHash,
+                entry.TotalSize,
+                canonicalChunks));
+        }
+
+        return canonicalEntries;
     }
 
     private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(
@@ -725,20 +1090,26 @@ internal sealed class ChunkedBackupService(
 
     private async Task DeleteOrphanedChunksAsync(
         string chunksDir,
-        HashSet<string> referencedChunkHashes,
+        IEnumerable<string> referencedChunkHashes,
         byte[] namingKey,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Build set of expected file names from referenced hashes
             HashSet<string> expectedFileNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (var hash in referencedChunkHashes)
             {
-                var hashBytes = Convert.FromBase64String(hash);
-                var fileName = ComputeChunkFileName(namingKey, hashBytes)
-                    + BackupConstants.AppFileExtension;
-                expectedFileNames.Add(fileName);
+                var hashBytes = DecodeBase64FixedLength(hash, Sha256SizeBytes, "Invalid chunk hash.");
+                try
+                {
+                    var fileName = ComputeChunkFileName(namingKey, hashBytes)
+                        + BackupConstants.AppFileExtension;
+                    expectedFileNames.Add(fileName);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(hashBytes);
+                }
             }
 
             if (!fileOperationsService.DirectoryExists(chunksDir))
@@ -747,7 +1118,9 @@ internal sealed class ChunkedBackupService(
             }
 
             var existingFiles = await fileOperationsService.GetFilesAsync(
-                chunksDir, "*" + BackupConstants.AppFileExtension, cancellationToken);
+                chunksDir,
+                "*" + BackupConstants.AppFileExtension,
+                cancellationToken).ConfigureAwait(false);
 
             foreach (var file in existingFiles)
             {
@@ -760,21 +1133,102 @@ internal sealed class ChunkedBackupService(
                     }
                     catch
                     {
-                        // Best-effort cleanup
+                        // Best-effort cleanup.
                     }
                 }
             }
         }
         catch
         {
-            // Best-effort cleanup
+            // Best-effort cleanup.
         }
     }
 
-    private byte[] DeriveKey(string password, byte[] salt, KeyDerivationAlgorithm kdf)
+    private async Task<(string[] SourceFiles, string SourceRoot, bool IsSingleFile)?> ResolveSourceAsync(
+        string sourcePath,
+        bool allowSingleFile,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+
+        var isFile = fileOperationsService.FileExists(sourcePath);
+        var isDirectory = fileOperationsService.DirectoryExists(sourcePath);
+
+        if (isFile)
+        {
+            if (!allowSingleFile)
+            {
+                return null;
+            }
+
+            var sourceRoot = fileOperationsService.GetDirectoryName(sourcePath) ?? string.Empty;
+            return ([sourcePath], sourceRoot, true);
+        }
+
+        if (!isDirectory)
+        {
+            return null;
+        }
+
+        var sourceFiles = await fileOperationsService.GetFilesAsync(
+            sourcePath,
+            "*",
+            cancellationToken).ConfigureAwait(false);
+
+        Array.Sort(sourceFiles, StringComparer.FromComparison(PathComparer));
+        return (sourceFiles, sourcePath, false);
+    }
+
+    private ICompressionStrategy? CreateCompressionStrategy(CompressionMode compressionMode)
+    {
+        return compressionMode == CompressionMode.None
+            ? null
+            : compressionServiceFactory.Create(compressionMode);
+    }
+
+    private ChunkManifestData? DecryptChunkManifestWithCompatibility(
+        ManifestPreamble preamble,
+        DerivedKeySet keys)
+    {
+        // New backups use a dedicated manifest encryption subkey.
+        var manifest = manifestService.DecryptChunkManifest(
+            preamble,
+            keys.ManifestEncryptionKey);
+
+        if (manifest is not null)
+        {
+            return manifest;
+        }
+
+        // Compatibility fallback for backups produced by earlier versions that encrypted
+        // the manifest with the chunk encryption subkey.
+        return manifestService.DecryptChunkManifest(
+            preamble,
+            keys.ChunkEncryptionKey);
+    }
+
+    private DerivedKeySet DeriveKeySet(
+        string password,
+        byte[] salt,
+        KeyDerivationAlgorithm kdf)
     {
         var strategy = keyDerivationServiceFactory.Create(kdf);
-        return strategy.DeriveKey(password, salt, KeySizeBytes * 8);
+        var masterKey = strategy.DeriveKey(password, salt, KeySizeBytes * 8);
+
+        try
+        {
+            return new DerivedKeySet(
+                masterKey,
+                DeriveSubKey(masterKey, "chunk-encryption"u8),
+                DeriveSubKey(masterKey, "chunk-nonce"u8),
+                DeriveSubKey(masterKey, "chunk-naming"u8),
+                DeriveSubKey(masterKey, "manifest-encryption"u8));
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(masterKey);
+            throw;
+        }
     }
 
     private static byte[] DeriveSubKey(byte[] masterKey, ReadOnlySpan<byte> context)
@@ -789,17 +1243,33 @@ internal sealed class ChunkedBackupService(
         return salt;
     }
 
-    private static byte[] GenerateNonce()
+    private static byte[] ComputeChunkNonce(byte[] nonceKey, byte[] chunkHash)
     {
+        var hmac = HMACSHA256.HashData(nonceKey, chunkHash);
         var nonce = new byte[NonceSizeBytes];
-        RandomNumberGenerator.Fill(nonce);
-        return nonce;
+
+        try
+        {
+            Buffer.BlockCopy(hmac, 0, nonce, 0, NonceSizeBytes);
+            return nonce;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(hmac);
+        }
     }
 
     private static string ComputeChunkFileName(byte[] namingKey, byte[] chunkHash)
     {
         var hmac = HMACSHA256.HashData(namingKey, chunkHash);
-        return Convert.ToHexStringLower(hmac);
+        try
+        {
+            return Convert.ToHexStringLower(hmac);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(hmac);
+        }
     }
 
     private static byte[] BuildChunkAssociatedData(byte[] chunkHash, byte[] nonce)
@@ -810,10 +1280,186 @@ internal sealed class ChunkedBackupService(
         return ad;
     }
 
+    private static async Task<long> CopyToWithHashAsync(
+        Stream source,
+        Stream destination,
+        IncrementalHash hasher,
+        CancellationToken cancellationToken)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(BackupIOConstants.CopyBufferSize);
+        long total = 0;
+
+        try
+        {
+            while (true)
+            {
+                var read = await source.ReadAsync(
+                    buffer.AsMemory(0, buffer.Length),
+                    cancellationToken).ConfigureAwait(false);
+
+                if (read == 0)
+                {
+                    return total;
+                }
+
+                hasher.AppendData(buffer.AsSpan(0, read));
+                await destination.WriteAsync(
+                    buffer.AsMemory(0, read),
+                    cancellationToken).ConfigureAwait(false);
+                total += read;
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, buffer.Length));
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private long SumFileSizes(IEnumerable<string> files)
+    {
+        long total = 0;
+
+        foreach (var file in files)
+        {
+            try
+            {
+                checked
+                {
+                    total += fileOperationsService.GetFileSize(file);
+                }
+            }
+            catch
+            {
+                // Preserve previous behavior: inaccessible files contribute zero here
+                // and are reported during actual processing.
+            }
+        }
+
+        return total;
+    }
+
+    private static byte[] DecodeBase64FixedLength(
+        string value,
+        int expectedLength,
+        string errorMessage)
+    {
+        byte[] decoded;
+
+        try
+        {
+            decoded = Convert.FromBase64String(value);
+        }
+        catch (FormatException ex)
+        {
+            throw new CryptographicException(errorMessage, ex);
+        }
+
+        if (decoded.Length != expectedLength)
+        {
+            CryptographicOperations.ZeroMemory(decoded);
+            throw new CryptographicException(errorMessage);
+        }
+
+        return decoded;
+    }
+
+    private static void ValidateRelativeManifestPath(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            throw new InvalidDataException("Manifest entry path is empty.");
+        }
+
+        if (Path.IsPathRooted(relativePath))
+        {
+            throw new InvalidDataException("Manifest entry path must be relative.");
+        }
+
+        var invalidChars = Path.GetInvalidPathChars();
+        if (relativePath.IndexOfAny(invalidChars) >= 0)
+        {
+            throw new InvalidDataException("Manifest entry path contains invalid characters.");
+        }
+
+        var pathSegments = relativePath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        if (pathSegments.Any(static segment => segment == ".."))
+        {
+            throw new InvalidDataException("Manifest entry path contains traversal segments.");
+        }
+    }
+
+    private static string ResolveSafeDestinationPath(
+        string destinationRoot,
+        string relativePath)
+    {
+        ValidateRelativeManifestPath(relativePath);
+
+        var rootFullPath = Path.GetFullPath(destinationRoot);
+        var destinationFullPath = Path.GetFullPath(Path.Combine(rootFullPath, relativePath));
+        var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
+
+        if (!destinationFullPath.StartsWith(rootWithSeparator, PathComparer))
+        {
+            throw new InvalidDataException("Manifest entry path escapes the restore directory.");
+        }
+
+        return destinationFullPath;
+    }
+
+    private static string EnsureTrailingDirectorySeparator(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar)
+            || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
+    }
+
     private static bool IsFileLevelError(Exception ex)
     {
         return ex is FileNotFoundException
+            or DirectoryNotFoundException
+            or PathTooLongException
             or IOException { Message: not null }
             or UnauthorizedAccessException;
+    }
+
+    private sealed class DerivedKeySet : IDisposable
+    {
+        public DerivedKeySet(
+            byte[] masterKey,
+            byte[] chunkEncryptionKey,
+            byte[] chunkNonceKey,
+            byte[] namingKey,
+            byte[] manifestEncryptionKey)
+        {
+            MasterKey = masterKey;
+            ChunkEncryptionKey = chunkEncryptionKey;
+            ChunkNonceKey = chunkNonceKey;
+            NamingKey = namingKey;
+            ManifestEncryptionKey = manifestEncryptionKey;
+        }
+
+        public byte[] MasterKey { get; }
+
+        public byte[] ChunkEncryptionKey { get; }
+
+        public byte[] ChunkNonceKey { get; }
+
+        public byte[] NamingKey { get; }
+
+        public byte[] ManifestEncryptionKey { get; }
+
+        public void Dispose()
+        {
+            CryptographicOperations.ZeroMemory(MasterKey);
+            CryptographicOperations.ZeroMemory(ChunkEncryptionKey);
+            CryptographicOperations.ZeroMemory(ChunkNonceKey);
+            CryptographicOperations.ZeroMemory(NamingKey);
+            CryptographicOperations.ZeroMemory(ManifestEncryptionKey);
+        }
     }
 }

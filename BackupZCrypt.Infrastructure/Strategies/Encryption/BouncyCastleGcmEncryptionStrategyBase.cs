@@ -2,6 +2,7 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Constants;
 
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -80,6 +81,11 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
             }
 
             return output;
+        }
+        catch (InvalidCipherTextException ex)
+        {
+            CryptographicOperations.ZeroMemory(output);
+            throw new CryptographicException(ex.Message, ex);
         }
         catch
         {
