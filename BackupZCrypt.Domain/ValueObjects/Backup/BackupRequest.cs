@@ -11,4 +11,5 @@ public sealed record BackupRequest(
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     BackupOperation Operation,
     CompressionMode Compression = CompressionMode.None,
-    bool ProceedOnWarnings = false);
+    bool ProceedOnWarnings = false
+);

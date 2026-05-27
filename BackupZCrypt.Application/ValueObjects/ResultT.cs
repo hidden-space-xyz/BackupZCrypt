@@ -14,7 +14,8 @@ public class Result<T> : Result
         this.IsSuccess
             ? this.value!
             : throw new InvalidOperationException(
-                Domain.Resources.Messages.CannotAccessFailedResultValue);
+                Domain.Resources.Messages.CannotAccessFailedResultValue
+            );
 
     public static implicit operator Result<T>(T value) => Success(value);
 

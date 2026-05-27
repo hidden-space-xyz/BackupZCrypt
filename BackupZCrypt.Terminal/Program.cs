@@ -1,3 +1,4 @@
+using System.Text;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -7,10 +8,7 @@ using BackupZCrypt.Terminal;
 using BackupZCrypt.Terminal.Commands;
 using BackupZCrypt.Terminal.Services;
 using BackupZCrypt.Terminal.Services.Interfaces;
-
 using Microsoft.Extensions.DependencyInjection;
-
-using System.Text;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
@@ -51,18 +49,21 @@ BackupCommand backupCommand = new(
     pathPromptService,
     encryptionStrategies,
     keyDerivationStrategies,
-    compressionStrategies);
+    compressionStrategies
+);
 
 SettingsCommand settingsCommand = new(
     settingsService,
     encryptionStrategies,
     keyDerivationStrategies,
-    compressionStrategies);
+    compressionStrategies
+);
 
 AlgorithmInfoCommand algorithmInfoCommand = new(
     encryptionStrategies,
     keyDerivationStrategies,
-    compressionStrategies);
+    compressionStrategies
+);
 
 TerminalApplication app = new(backupCommand, settingsCommand, algorithmInfoCommand);
 

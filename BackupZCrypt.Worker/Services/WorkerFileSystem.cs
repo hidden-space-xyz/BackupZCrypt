@@ -1,14 +1,13 @@
 using BackupZCrypt.Domain.Constants;
+using BackupZCrypt.Worker.Services.Interfaces;
 
 namespace BackupZCrypt.Worker.Services;
 
-internal sealed partial class WorkerFileSystem(
-    ILogger<WorkerFileSystem> logger) : IWorkerFileSystem
+internal sealed partial class WorkerFileSystem(ILogger<WorkerFileSystem> logger) : IWorkerFileSystem
 {
     public bool HasFilesToBackup(string path)
     {
-        return Directory.Exists(path)
-            && Directory.EnumerateFileSystemEntries(path).Any();
+        return Directory.Exists(path) && Directory.EnumerateFileSystemEntries(path).Any();
     }
 
     public bool HasFilesToRestore(string path)
@@ -33,8 +32,7 @@ internal sealed partial class WorkerFileSystem(
 
         try
         {
-            using FileStream fs = new(
-                manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using FileStream fs = new(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var firstByte = fs.ReadByte();
             return firstByte >= 0 && firstByte != '{';
         }
@@ -69,15 +67,15 @@ internal sealed partial class WorkerFileSystem(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Warning,
-        Message = "Failed to read manifest file '{Path}'.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to read manifest file '{Path}'.")]
     private partial void LogManifestReadFailed(Exception ex, string path);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Deleted source files in '{Path}'.")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted source files in '{Path}'.")]
     private partial void LogDeletedSourceFiles(string path);
 
-    [LoggerMessage(Level = LogLevel.Warning,
-        Message = "Failed to delete source files in '{Path}'.")]
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Failed to delete source files in '{Path}'."
+    )]
     private partial void LogDeleteSourceFilesFailed(Exception ex, string path);
 }

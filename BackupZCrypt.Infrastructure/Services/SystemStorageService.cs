@@ -1,6 +1,6 @@
 using BackupZCrypt.Domain.Services.Interfaces;
 
-namespace BackupZCrypt.Infrastructure.Services.FileSystem;
+namespace BackupZCrypt.Infrastructure.Services;
 
 internal sealed class SystemStorageService : ISystemStorageService
 {

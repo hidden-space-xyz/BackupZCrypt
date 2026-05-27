@@ -5,8 +5,9 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Domain.Factories;
 
-internal sealed class KeyDerivationServiceFactory(IEnumerable<IKeyDerivationAlgorithmStrategy> strategies)
-    : IKeyDerivationServiceFactory
+internal sealed class KeyDerivationServiceFactory(
+    IEnumerable<IKeyDerivationAlgorithmStrategy> strategies
+) : IKeyDerivationServiceFactory
 {
     private readonly Dictionary<
         KeyDerivationAlgorithm,
@@ -18,7 +19,8 @@ internal sealed class KeyDerivationServiceFactory(IEnumerable<IKeyDerivationAlgo
         return !this.strategies.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
-                string.Format(Messages.KeyDerivationAlgorithmNotRegisteredFormat, algorithm))
+                string.Format(Messages.KeyDerivationAlgorithmNotRegisteredFormat, algorithm)
+            )
             : strategy;
     }
 }

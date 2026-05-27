@@ -2,7 +2,6 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Terminal.Commands;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
-
 using Spectre.Console;
 
 namespace BackupZCrypt.Terminal;
@@ -10,7 +9,8 @@ namespace BackupZCrypt.Terminal;
 internal sealed class TerminalApplication(
     BackupCommand backupCommand,
     SettingsCommand settingsCommand,
-    AlgorithmInfoCommand algorithmInfoCommand)
+    AlgorithmInfoCommand algorithmInfoCommand
+)
 {
     public async Task RunAsync()
     {
@@ -28,7 +28,9 @@ internal sealed class TerminalApplication(
                         Messages.MenuRestoreBackup,
                         Messages.MenuSettings,
                         Messages.MenuAlgorithmInfo,
-                        Messages.MenuExit));
+                        Messages.MenuExit
+                    )
+            );
 
             if (choice == Messages.MenuCreateBackup)
             {
@@ -65,8 +67,6 @@ internal sealed class TerminalApplication(
 
     private static void WaitForEscapeKey()
     {
-        while (Console.ReadKey(intercept: true).Key != ConsoleKey.Escape)
-        {
-        }
+        while (Console.ReadKey(intercept: true).Key != ConsoleKey.Escape) { }
     }
 }

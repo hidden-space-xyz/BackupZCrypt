@@ -10,19 +10,22 @@ public interface IChunkedBackupService
         string destinationPath,
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 }

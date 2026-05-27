@@ -16,7 +16,8 @@ internal sealed class WorkerConfiguration
 
     public EncryptionAlgorithm EncryptionAlgorithm { get; set; } = EncryptionAlgorithm.Aes;
 
-    public KeyDerivationAlgorithm KeyDerivationAlgorithm { get; set; } = KeyDerivationAlgorithm.Argon2id;
+    public KeyDerivationAlgorithm KeyDerivationAlgorithm { get; set; } =
+        KeyDerivationAlgorithm.Argon2id;
 
     public CompressionMode Compression { get; set; } = CompressionMode.None;
 

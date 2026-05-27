@@ -6,9 +6,11 @@ public interface IBackupRequestValidator
 {
     Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
         BackupRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
         BackupRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

@@ -1,20 +1,21 @@
+using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
 
-using System.Security.Cryptography;
-
-namespace BackupZCrypt.Infrastructure.Services.FileSystem;
+namespace BackupZCrypt.Infrastructure.Services;
 
 internal sealed class FileOperationsService : IFileOperationsService
 {
     public async Task<string[]> GetFilesAsync(
         string directoryPath,
         string searchPattern = "*.*",
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         return await Task.Run(
             () => Directory.GetFiles(directoryPath, searchPattern, SearchOption.AllDirectories),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     public bool DirectoryExists(string directoryPath)
@@ -34,7 +35,8 @@ internal sealed class FileOperationsService : IFileOperationsService
 
     public async Task CreateDirectoryAsync(
         string directoryPath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         await Task.Run(() => Directory.CreateDirectory(directoryPath), cancellationToken);
     }
@@ -47,14 +49,16 @@ internal sealed class FileOperationsService : IFileOperationsService
     public async Task DeleteDirectoryAsync(
         string directoryPath,
         bool recursive,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         await Task.Run(() => Directory.Delete(directoryPath, recursive), cancellationToken);
     }
 
     public async Task CleanDirectoryAsync(
         string directoryPath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         await Task.Run(
             () =>
@@ -71,7 +75,8 @@ internal sealed class FileOperationsService : IFileOperationsService
                     subDirectory.Delete(recursive: true);
                 }
             },
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     public long GetFileSize(string filePath)
@@ -109,7 +114,8 @@ internal sealed class FileOperationsService : IFileOperationsService
                 Mode = FileMode.Open,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = bufferSize,
-            });
+            }
+        );
     }
 
     public Stream CreateWriteStream(string filePath, int bufferSize)
@@ -122,7 +128,8 @@ internal sealed class FileOperationsService : IFileOperationsService
                 Mode = FileMode.Create,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = bufferSize,
-            });
+            }
+        );
     }
 
     public Stream CreateTempStream(int bufferSize)
@@ -139,12 +146,14 @@ internal sealed class FileOperationsService : IFileOperationsService
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = bufferSize,
-            });
+            }
+        );
     }
 
     public async Task<string> ComputeFileHashAsync(
         string filePath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         await using FileStream stream = new(
             filePath,
@@ -152,7 +161,8 @@ internal sealed class FileOperationsService : IFileOperationsService
             FileAccess.Read,
             FileShare.Read,
             StreamConstants.CopyBufferSize,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
+            FileOptions.Asynchronous | FileOptions.SequentialScan
+        );
 
         var hash = await SHA256.HashDataAsync(stream, cancellationToken);
         return Convert.ToBase64String(hash);
@@ -160,7 +170,8 @@ internal sealed class FileOperationsService : IFileOperationsService
 
     public async Task<byte[]> ReadAllBytesAsync(
         string filePath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         return await File.ReadAllBytesAsync(filePath, cancellationToken);
     }
@@ -168,7 +179,8 @@ internal sealed class FileOperationsService : IFileOperationsService
     public async Task WriteAllBytesAsync(
         string filePath,
         byte[] bytes,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
     }

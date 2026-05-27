@@ -16,11 +16,13 @@ public interface IEncryptionAlgorithmStrategy
         ReadOnlySpan<byte> plaintext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData);
+        byte[] associatedData
+    );
 
     byte[] DecryptChunk(
         ReadOnlySpan<byte> ciphertext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData);
+        byte[] associatedData
+    );
 }

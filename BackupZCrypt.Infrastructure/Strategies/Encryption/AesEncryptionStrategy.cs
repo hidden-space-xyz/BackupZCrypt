@@ -1,9 +1,8 @@
+using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
-
-using System.Security.Cryptography;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
@@ -21,10 +20,11 @@ internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
         ReadOnlySpan<byte> plaintext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData)
+        byte[] associatedData
+    )
     {
         var ciphertext = new byte[plaintext.Length];
-        var tag = new byte[EncryptionConstants.MacSize / 8];
+        var tag = new byte[EncryptionConstants.TagSize];
 
         try
         {
@@ -47,21 +47,21 @@ internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
         ReadOnlySpan<byte> ciphertext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData)
+        byte[] associatedData
+    )
     {
-        const int tagSize = EncryptionConstants.MacSize / 8;
-        if (ciphertext.Length < tagSize)
+        if (ciphertext.Length < EncryptionConstants.TagSize)
         {
             throw new CryptographicException();
         }
 
-        var dataLength = ciphertext.Length - tagSize;
+        var dataLength = ciphertext.Length - EncryptionConstants.TagSize;
         var plaintext = new byte[dataLength];
         var tag = ciphertext[dataLength..].ToArray();
 
         try
         {
-            using AesGcm aes = new(key, tagSize);
+            using AesGcm aes = new(key, EncryptionConstants.TagSize);
             aes.Decrypt(nonce, ciphertext[..dataLength], tag, plaintext, associatedData);
             return plaintext;
         }

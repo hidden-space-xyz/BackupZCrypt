@@ -1,5 +1,4 @@
 using BackupZCrypt.Terminal.Resources;
-
 using Spectre.Console;
 
 namespace BackupZCrypt.Terminal.Rendering;
@@ -10,7 +9,8 @@ internal static class BannerRenderer
     {
         AnsiConsole.Write(new FigletText("BackupZCrypt").Color(Color.Cyan1).Centered());
         AnsiConsole.Write(
-            new Rule($"[dim]{Messages.BannerSubtitle}[/]").RuleStyle(Style.Parse("cyan")).Centered());
+            new Rule($"[dim]{Messages.BannerSubtitle}[/]").RuleStyle(Style.Parse("cyan")).Centered()
+        );
         AnsiConsole.WriteLine();
     }
 }

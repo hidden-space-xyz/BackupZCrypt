@@ -1,6 +1,5 @@
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal.Resources;
-
 using Spectre.Console;
 
 namespace BackupZCrypt.Terminal.Commands;
@@ -8,33 +7,40 @@ namespace BackupZCrypt.Terminal.Commands;
 internal sealed class AlgorithmInfoCommand(
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-    IReadOnlyList<ICompressionStrategy> compressionStrategies)
+    IReadOnlyList<ICompressionStrategy> compressionStrategies
+)
 {
     public void Execute()
     {
         AnsiConsole.Write(
             new Rule($"[bold cyan]{Messages.AlgorithmInformation}[/]").RuleStyle(
-                Style.Parse("grey")));
+                Style.Parse("grey")
+            )
+        );
         AnsiConsole.WriteLine();
 
         PrintStrategyTable(
             Messages.EncryptionAlgorithms,
             encryptionStrategies,
-            s => (s.DisplayName, s.Description));
+            s => (s.DisplayName, s.Description)
+        );
         PrintStrategyTable(
             Messages.KeyDerivationAlgorithms,
             keyDerivationStrategies,
-            s => (s.DisplayName, s.Description));
+            s => (s.DisplayName, s.Description)
+        );
         PrintStrategyTable(
             Messages.CompressionModes,
             compressionStrategies,
-            s => (s.DisplayName, s.Description));
+            s => (s.DisplayName, s.Description)
+        );
     }
 
     private static void PrintStrategyTable<T>(
         string title,
         IReadOnlyList<T> strategies,
-        Func<T, (string DisplayName, string Description)> selector)
+        Func<T, (string DisplayName, string Description)> selector
+    )
     {
         var table = new Table()
             .Border(TableBorder.Rounded)

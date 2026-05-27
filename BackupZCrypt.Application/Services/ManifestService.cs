@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -6,38 +8,29 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-using System.Security.Cryptography;
-using System.Text.Json;
-
 namespace BackupZCrypt.Application.Services;
 
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies) : IManifestService
+    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies
+) : IManifestService
 {
     private const int ChunkPreambleHeaderSize = 34;
-    private const int NonceSize = 12;
-    private const int MasterSaltSize = ChunkPreambleHeaderSize - 2;
-    private const int MinChunkManifestSize = ChunkPreambleHeaderSize + NonceSize + 1;
 
-    // Safety guard against malformed manifests causing unbounded memory allocations.
-    // Raise this only after confirming your production manifest sizes require it.
-    private const long MaxChunkManifestFileSizeBytes = 512L * 1024L * 1024L;
-
-    private static readonly JsonSerializerOptions ManifestJsonOptions = new(JsonSerializerDefaults.General)
-    {
-        MaxDepth = 128,
-        WriteIndented = false,
-    };
-
-    private readonly Dictionary<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategiesById =
-        encryptionStrategies.ToDictionary(static strategy => strategy.Id, static strategy => strategy);
+    private readonly Dictionary<
+        EncryptionAlgorithm,
+        IEncryptionAlgorithmStrategy
+    > encryptionStrategiesById = encryptionStrategies.ToDictionary(
+        static strategy => strategy.Id,
+        static strategy => strategy
+    );
 
     public async Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
         string destinationRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
@@ -56,15 +49,15 @@ internal sealed class ManifestService(
                 header.EncryptionAlgorithm,
                 header.KeyDerivationAlgorithm,
                 header.Compression,
-                [.. entries]);
+                [.. entries]
+            );
 
-            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document, ManifestJsonOptions);
+            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
             var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
 
-            await fileOperationsService.WriteAllBytesAsync(
-                manifestPath,
-                manifestBytes,
-                cancellationToken).ConfigureAwait(false);
+            await fileOperationsService
+                .WriteAllBytesAsync(manifestPath, manifestBytes, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -83,7 +76,8 @@ internal sealed class ManifestService(
 
     public async Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
         string sourceRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
 
@@ -95,20 +89,9 @@ internal sealed class ManifestService(
                 return null;
             }
 
-            var manifestSize = fileOperationsService.GetFileSize(manifestPath);
-            if (manifestSize < MinChunkManifestSize || manifestSize > MaxChunkManifestFileSizeBytes)
-            {
-                return null;
-            }
-
-            var rawFile = await fileOperationsService.ReadAllBytesAsync(
-                manifestPath,
-                cancellationToken).ConfigureAwait(false);
-
-            if (rawFile.Length < MinChunkManifestSize || rawFile.LongLength > MaxChunkManifestFileSizeBytes)
-            {
-                return null;
-            }
+            var rawFile = await fileOperationsService
+                .ReadAllBytesAsync(manifestPath, cancellationToken)
+                .ConfigureAwait(false);
 
             var algorithm = (EncryptionAlgorithm)rawFile[0];
             var keyDerivation = (KeyDerivationAlgorithm)rawFile[1];
@@ -121,9 +104,10 @@ internal sealed class ManifestService(
             return new ManifestPreamble(
                 algorithm,
                 keyDerivation,
-                rawFile.AsSpan(2, MasterSaltSize).ToArray(),
-                rawFile.AsSpan(ChunkPreambleHeaderSize, NonceSize).ToArray(),
-                rawFile.AsSpan(ChunkPreambleHeaderSize + NonceSize).ToArray());
+                rawFile.AsSpan(2, EncryptionConstants.SaltSize).ToArray(),
+                rawFile.AsSpan(ChunkPreambleHeaderSize, EncryptionConstants.NonceSize).ToArray(),
+                rawFile.AsSpan(ChunkPreambleHeaderSize + EncryptionConstants.NonceSize).ToArray()
+            );
         }
         catch (OperationCanceledException)
         {
@@ -135,9 +119,7 @@ internal sealed class ManifestService(
         }
     }
 
-    public ChunkManifestData? DecryptChunkManifest(
-        ManifestPreamble preamble,
-        byte[] encryptionKey)
+    public ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey)
     {
         ArgumentNullException.ThrowIfNull(preamble);
         ArgumentNullException.ThrowIfNull(encryptionKey);
@@ -147,11 +129,13 @@ internal sealed class ManifestService(
 
         try
         {
-            if (preamble.MasterSalt.Length != MasterSaltSize
-                || preamble.Nonce.Length != NonceSize
+            if (
+                preamble.MasterSalt.Length != EncryptionConstants.SaltSize
+                || preamble.Nonce.Length != EncryptionConstants.NonceSize
                 || preamble.EncryptedPayload.Length == 0
                 || !Enum.IsDefined(preamble.Algorithm)
-                || !Enum.IsDefined(preamble.KeyDerivation))
+                || !Enum.IsDefined(preamble.KeyDerivation)
+            )
             {
                 return null;
             }
@@ -160,25 +144,29 @@ internal sealed class ManifestService(
             var associatedData = BuildChunkPreambleHeader(
                 preamble.Algorithm,
                 preamble.KeyDerivation,
-                preamble.MasterSalt);
+                preamble.MasterSalt
+            );
 
             plaintext = encryptionStrategy.DecryptChunk(
                 preamble.EncryptedPayload,
                 encryptionKey,
                 preamble.Nonce,
-                associatedData);
+                associatedData
+            );
 
-            var document = JsonSerializer.Deserialize<ChunkManifestDocument>(
-                plaintext,
-                ManifestJsonOptions);
+            var document = JsonSerializer.Deserialize<ChunkManifestDocument>(plaintext);
 
-            if (document is null
+            if (
+                document is null
                 || document.EncryptionAlgorithm != preamble.Algorithm
                 || document.KeyDerivationAlgorithm != preamble.KeyDerivation
-                || !TryDecodeBase64(document.MasterSalt, MasterSaltSize, out documentMasterSalt)
-                || !CryptographicOperations.FixedTimeEquals(
-                    documentMasterSalt,
-                    preamble.MasterSalt))
+                || !TryDecodeBase64(
+                    document.MasterSalt,
+                    EncryptionConstants.SaltSize,
+                    out documentMasterSalt
+                )
+                || !CryptographicOperations.FixedTimeEquals(documentMasterSalt, preamble.MasterSalt)
+            )
             {
                 return null;
             }
@@ -208,7 +196,8 @@ internal sealed class ManifestService(
         string destinationRoot,
         byte[] encryptionKey,
         EncryptionAlgorithm algorithm,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(manifestData);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
@@ -222,16 +211,20 @@ internal sealed class ManifestService(
         try
         {
             var masterSalt = Convert.FromBase64String(manifestData.MasterSalt);
-            if (masterSalt.Length != MasterSaltSize)
+            if (masterSalt.Length != EncryptionConstants.SaltSize)
             {
                 throw new FormatException("Manifest master salt must be exactly 32 bytes.");
             }
 
-            if (!Enum.IsDefined(algorithm)
+            if (
+                !Enum.IsDefined(algorithm)
                 || !Enum.IsDefined(manifestData.Header.KeyDerivationAlgorithm)
-                || !Enum.IsDefined(manifestData.Header.Compression))
+                || !Enum.IsDefined(manifestData.Header.Compression)
+            )
             {
-                throw new InvalidDataException("Manifest contains an unsupported algorithm identifier.");
+                throw new InvalidDataException(
+                    "Manifest contains an unsupported algorithm identifier."
+                );
             }
 
             ChunkManifestDocument document = new(
@@ -239,42 +232,47 @@ internal sealed class ManifestService(
                 manifestData.Header.KeyDerivationAlgorithm,
                 manifestData.Header.Compression,
                 manifestData.MasterSalt,
-                manifestData.Files
-                    .OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)
+                manifestData
+                    .Files.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)
                     .Select(static f => new ChunkManifestFileEntrySerialized(
                         f.OriginalPath,
                         f.FileHash,
                         f.TotalSize,
-                        [.. f.Chunks]))
-                    .ToList());
+                        [.. f.Chunks]
+                    ))
+                    .ToList()
+            );
 
-            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document, ManifestJsonOptions);
+            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
 
-            var nonce = new byte[NonceSize];
+            var nonce = new byte[EncryptionConstants.NonceSize];
             RandomNumberGenerator.Fill(nonce);
 
             var preambleHeader = BuildChunkPreambleHeader(
                 algorithm,
                 manifestData.Header.KeyDerivationAlgorithm,
-                masterSalt);
+                masterSalt
+            );
 
             var encryptionStrategy = ResolveEncryptionStrategy(algorithm);
             encryptedBytes = encryptionStrategy.EncryptChunk(
                 manifestBytes,
                 encryptionKey,
                 nonce,
-                preambleHeader);
+                preambleHeader
+            );
 
-            payload = new byte[ChunkPreambleHeaderSize + NonceSize + encryptedBytes.Length];
+            payload = new byte[
+                ChunkPreambleHeaderSize + EncryptionConstants.NonceSize + encryptedBytes.Length
+            ];
             preambleHeader.CopyTo(payload, 0);
             nonce.CopyTo(payload, ChunkPreambleHeaderSize);
-            encryptedBytes.CopyTo(payload, ChunkPreambleHeaderSize + NonceSize);
+            encryptedBytes.CopyTo(payload, ChunkPreambleHeaderSize + EncryptionConstants.NonceSize);
 
             var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
-            await fileOperationsService.WriteAllBytesAsync(
-                manifestPath,
-                payload,
-                cancellationToken).ConfigureAwait(false);
+            await fileOperationsService
+                .WriteAllBytesAsync(manifestPath, payload, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -304,13 +302,15 @@ internal sealed class ManifestService(
     private static byte[] BuildChunkPreambleHeader(
         EncryptionAlgorithm algorithm,
         KeyDerivationAlgorithm keyDerivation,
-        byte[] masterSalt)
+        byte[] masterSalt
+    )
     {
-        if (masterSalt.Length != MasterSaltSize)
+        if (masterSalt.Length != EncryptionConstants.SaltSize)
         {
             throw new ArgumentException(
                 "Manifest master salt must be exactly 32 bytes.",
-                nameof(masterSalt));
+                nameof(masterSalt)
+            );
         }
 
         var preambleHeader = new byte[ChunkPreambleHeaderSize];
@@ -320,10 +320,7 @@ internal sealed class ManifestService(
         return preambleHeader;
     }
 
-    private static bool TryDecodeBase64(
-        string value,
-        int expectedLength,
-        out byte[] decoded)
+    private static bool TryDecodeBase64(string value, int expectedLength, out byte[] decoded)
     {
         decoded = [];
 
@@ -348,28 +345,31 @@ internal sealed class ManifestService(
         ManifestHeader header = new(
             document.EncryptionAlgorithm,
             document.KeyDerivationAlgorithm,
-            document.Compression);
+            document.Compression
+        );
 
-        List<ChunkManifestFileEntry> files = document.Files
-            .Select(static f => new ChunkManifestFileEntry(
+        List<ChunkManifestFileEntry> files = document
+            .Files.Select(static f => new ChunkManifestFileEntry(
                 f.OriginalPath,
                 f.FileHash,
                 f.TotalSize,
-                [.. f.Chunks]))
+                [.. f.Chunks]
+            ))
             .ToList();
 
         return new ChunkManifestData(header, document.MasterSalt, files);
     }
 
-    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(
-        EncryptionAlgorithm algorithm)
+    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(EncryptionAlgorithm algorithm)
     {
         return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
                 string.Format(
-                    BackupZCrypt.Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
-                    algorithm))
+                    Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
+                    algorithm
+                )
+            )
             : strategy;
     }
 }

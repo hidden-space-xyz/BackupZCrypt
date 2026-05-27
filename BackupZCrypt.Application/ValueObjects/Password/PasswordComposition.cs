@@ -5,7 +5,8 @@ public sealed record PasswordComposition(
     bool HasLower,
     bool HasDigit,
     bool HasSpecial,
-    bool HasOther)
+    bool HasOther
+)
 {
     public int CategoryCount =>
         (this.HasUpper ? 1 : 0)

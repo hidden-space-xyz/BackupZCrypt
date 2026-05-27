@@ -7,7 +7,8 @@ public sealed record BackupStatus
         int totalFiles,
         long processedBytes,
         long totalBytes,
-        TimeSpan elapsed)
+        TimeSpan elapsed
+    )
     {
         ArgumentOutOfRangeException.ThrowIfNegative(processedFiles);
         ArgumentOutOfRangeException.ThrowIfNegative(totalFiles);

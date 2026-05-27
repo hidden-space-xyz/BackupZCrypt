@@ -5,7 +5,8 @@ public interface IFileOperationsService
     Task<string[]> GetFilesAsync(
         string directoryPath,
         string searchPattern = "*.*",
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     bool DirectoryExists(string directoryPath);
 
@@ -20,11 +21,10 @@ public interface IFileOperationsService
     Task DeleteDirectoryAsync(
         string directoryPath,
         bool recursive,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
-    Task CleanDirectoryAsync(
-        string directoryPath,
-        CancellationToken cancellationToken = default);
+    Task CleanDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
 
     long GetFileSize(string filePath);
 
@@ -42,12 +42,16 @@ public interface IFileOperationsService
 
     Stream CreateTempStream(int bufferSize);
 
-    Task<string> ComputeFileHashAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<string> ComputeFileHashAsync(
+        string filePath,
+        CancellationToken cancellationToken = default
+    );
 
     Task<byte[]> ReadAllBytesAsync(string filePath, CancellationToken cancellationToken = default);
 
     Task WriteAllBytesAsync(
         string filePath,
         byte[] bytes,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

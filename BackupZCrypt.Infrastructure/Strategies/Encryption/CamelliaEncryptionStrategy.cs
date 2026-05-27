@@ -1,6 +1,5 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Resources;
-
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 

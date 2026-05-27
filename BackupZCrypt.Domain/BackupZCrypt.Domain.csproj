@@ -1,41 +1,41 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<NeutralLanguage>en</NeutralLanguage>
-		<AnalysisLevel>latest</AnalysisLevel>
-		<AnalysisMode>All</AnalysisMode>
-		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
-		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
-	</PropertyGroup>
-	<ItemGroup>
-		<InternalsVisibleTo Include="BackupZCrypt.Composition" />
-		<InternalsVisibleTo Include="BackupZCrypt.Test" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.15.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
-	<ItemGroup>
-		<EmbeddedResource Update="Resources\Messages.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>Messages.Designer.cs</LastGenOutput>
-			<CustomToolNamespace>BackupZCrypt.Domain.Resources</CustomToolNamespace>
-		</EmbeddedResource>
-		<EmbeddedResource Update="Resources\Messages.es.resx">
-			<DependentUpon>Messages.resx</DependentUpon>
-		</EmbeddedResource>
-		<Compile Update="Resources\Messages.Designer.cs">
-			<AutoGen>true</AutoGen>
-			<DesignTime>true</DesignTime>
-			<DependentUpon>Messages.resx</DependentUpon>
-		</Compile>
-	</ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NeutralLanguage>en</NeutralLanguage>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>All</AnalysisMode>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BackupZCrypt.Composition" />
+    <InternalsVisibleTo Include="BackupZCrypt.Test" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Messages.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Messages.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>BackupZCrypt.Domain.Resources</CustomToolNamespace>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Messages.es.resx">
+      <DependentUpon>Messages.resx</DependentUpon>
+    </EmbeddedResource>
+    <Compile Update="Resources\Messages.Designer.cs">
+      <AutoGen>true</AutoGen>
+      <DesignTime>true</DesignTime>
+      <DependentUpon>Messages.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

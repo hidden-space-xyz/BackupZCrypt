@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -9,10 +10,7 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Rendering;
 using BackupZCrypt.Terminal.Resources;
 using BackupZCrypt.Terminal.Services.Interfaces;
-
 using Spectre.Console;
-
-using System.Diagnostics;
 
 namespace BackupZCrypt.Terminal.Commands;
 
@@ -24,7 +22,8 @@ internal sealed class BackupCommand(
     IPathPromptService pathPromptService,
     IReadOnlyList<IEncryptionAlgorithmStrategy> encryptionStrategies,
     IReadOnlyList<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-    IReadOnlyList<ICompressionStrategy> compressionStrategies)
+    IReadOnlyList<ICompressionStrategy> compressionStrategies
+)
 {
     public async Task ExecuteAsync(BackupOperation operation)
     {
@@ -36,7 +35,8 @@ internal sealed class BackupCommand(
         };
 
         AnsiConsole.Write(
-            new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey")));
+            new Rule($"[bold cyan]{operationName}[/]").RuleStyle(Style.Parse("grey"))
+        );
         AnsiConsole.WriteLine();
 
         if (operation == BackupOperation.Update)
@@ -61,7 +61,8 @@ internal sealed class BackupCommand(
     private async Task ExecuteCreateBackupAsync(
         string operationName,
         string sourcePath,
-        string destinationPath)
+        string destinationPath
+    )
     {
         BackupCreationSettings settings;
 
@@ -72,7 +73,8 @@ internal sealed class BackupCommand(
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
             return;
         }
 
@@ -90,7 +92,6 @@ internal sealed class BackupCommand(
             {
                 PrintGeneratedPassword(password);
             }
-
         }
 
         var selectedCompression = this.ResolveCompressionStrategy(settings);
@@ -101,11 +102,14 @@ internal sealed class BackupCommand(
             destinationPath,
             selectedEncryption,
             selectedKdf,
-            selectedCompression);
+            selectedCompression
+        );
 
         if (
             !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
+                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"
+            )
+        )
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
@@ -124,7 +128,8 @@ internal sealed class BackupCommand(
                 selectedKdf!.Id,
                 BackupOperation.Create,
                 selectedCompression?.Id ?? CompressionMode.None,
-                ProceedOnWarnings: false);
+                ProceedOnWarnings: false
+            );
 
             await RunOperationAsync(request, operationName, Messages.Encrypting);
         }
@@ -139,7 +144,8 @@ internal sealed class BackupCommand(
                 default,
                 BackupOperation.Create,
                 selectedCompression.Id,
-                ProceedOnWarnings: false);
+                ProceedOnWarnings: false
+            );
 
             await RunOperationAsync(request, operationName, Messages.Compressing);
         }
@@ -152,7 +158,8 @@ internal sealed class BackupCommand(
     private async Task ExecuteRestoreBackupAsync(
         string operationName,
         string sourcePath,
-        string destinationPath)
+        string destinationPath
+    )
     {
         if (!DetectManifest(sourcePath))
         {
@@ -175,7 +182,9 @@ internal sealed class BackupCommand(
 
         if (
             !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
+                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"
+            )
+        )
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
@@ -192,7 +201,8 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Restore);
+                BackupOperation.Restore
+            );
 
             await RunOperationAsync(request, operationName, Messages.Decrypting);
         }
@@ -207,7 +217,8 @@ internal sealed class BackupCommand(
                 default,
                 BackupOperation.Restore,
                 compressionStrategies[0].Id,
-                ProceedOnWarnings: false);
+                ProceedOnWarnings: false
+            );
 
             await RunOperationAsync(request, operationName, Messages.Decompressing);
         }
@@ -239,7 +250,9 @@ internal sealed class BackupCommand(
 
         if (
             !await AnsiConsole.ConfirmAsync(
-                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"))
+                $"[yellow]{string.Format(Messages.ProceedConfirmFormat, operationName.ToUpperInvariant())}[/]"
+            )
+        )
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return;
@@ -256,7 +269,8 @@ internal sealed class BackupCommand(
                 password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Update);
+                BackupOperation.Update
+            );
 
             await RunOperationAsync(request, operationName, Messages.Updating);
         }
@@ -271,7 +285,8 @@ internal sealed class BackupCommand(
                 default,
                 BackupOperation.Update,
                 compressionStrategies[0].Id,
-                ProceedOnWarnings: false);
+                ProceedOnWarnings: false
+            );
 
             await RunOperationAsync(request, operationName, Messages.Updating);
         }
@@ -280,7 +295,8 @@ internal sealed class BackupCommand(
     private async Task ExecutePlainCopyAsync(
         string operationName,
         string sourcePath,
-        string destinationPath)
+        string destinationPath
+    )
     {
         AnsiConsole.WriteLine();
 
@@ -309,8 +325,7 @@ internal sealed class BackupCommand(
                     Directory.CreateDirectory(destinationPath);
                 }
 
-                var files = Directory.GetFiles(
-                    sourcePath, "*", SearchOption.AllDirectories);
+                var files = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
                 totalFileCount = files.Length;
 
                 await AnsiConsole
@@ -322,12 +337,14 @@ internal sealed class BackupCommand(
                         new ProgressBarColumn(),
                         new PercentageColumn(),
                         new RemainingTimeColumn(),
-                        new SpinnerColumn())
+                        new SpinnerColumn()
+                    )
                     .StartAsync(async ctx =>
                     {
                         var task = ctx.AddTask(
                             $"[cyan]{string.Format(Messages.OperationIngFormat, Messages.Copying)}[/]",
-                            maxValue: Math.Max(totalFileCount, 1));
+                            maxValue: Math.Max(totalFileCount, 1)
+                        );
 
                         foreach (var file in files)
                         {
@@ -345,18 +362,27 @@ internal sealed class BackupCommand(
                             try
                             {
                                 await using FileStream sourceStream = new(
-                                    file, FileMode.Open, FileAccess.Read,
-                                    FileShare.Read, 4096, useAsync: true);
+                                    file,
+                                    FileMode.Open,
+                                    FileAccess.Read,
+                                    FileShare.Read,
+                                    4096,
+                                    useAsync: true
+                                );
                                 await using FileStream destStream = new(
-                                    destFile, FileMode.Create, FileAccess.Write,
-                                    FileShare.None, 4096, useAsync: true);
+                                    destFile,
+                                    FileMode.Create,
+                                    FileAccess.Write,
+                                    FileShare.None,
+                                    4096,
+                                    useAsync: true
+                                );
                                 await sourceStream.CopyToAsync(destStream, cts.Token);
 
                                 totalBytes += new FileInfo(file).Length;
                                 processedFiles++;
                             }
-                            catch (Exception ex)
-                                when (ex is not OperationCanceledException)
+                            catch (Exception ex) when (ex is not OperationCanceledException)
                             {
                                 errors.Add($"{relativePath}: {ex.Message}");
                             }
@@ -379,19 +405,20 @@ internal sealed class BackupCommand(
                         new TaskDescriptionColumn(),
                         new ProgressBarColumn(),
                         new PercentageColumn(),
-                        new SpinnerColumn())
+                        new SpinnerColumn()
+                    )
                     .StartAsync(async ctx =>
                     {
                         var task = ctx.AddTask(
                             $"[cyan]{string.Format(Messages.OperationIngFormat, Messages.Copying)}[/]",
-                            maxValue: 1);
+                            maxValue: 1
+                        );
 
                         string destFile;
 
                         if (Directory.Exists(destinationPath))
                         {
-                            destFile = Path.Combine(
-                                destinationPath, Path.GetFileName(sourcePath));
+                            destFile = Path.Combine(destinationPath, Path.GetFileName(sourcePath));
                         }
                         else
                         {
@@ -408,18 +435,27 @@ internal sealed class BackupCommand(
                         try
                         {
                             await using FileStream sourceStream = new(
-                                sourcePath, FileMode.Open, FileAccess.Read,
-                                FileShare.Read, 4096, useAsync: true);
+                                sourcePath,
+                                FileMode.Open,
+                                FileAccess.Read,
+                                FileShare.Read,
+                                4096,
+                                useAsync: true
+                            );
                             await using FileStream destStream = new(
-                                destFile, FileMode.Create, FileAccess.Write,
-                                FileShare.None, 4096, useAsync: true);
+                                destFile,
+                                FileMode.Create,
+                                FileAccess.Write,
+                                FileShare.None,
+                                4096,
+                                useAsync: true
+                            );
                             await sourceStream.CopyToAsync(destStream, cts.Token);
 
                             totalBytes = new FileInfo(sourcePath).Length;
                             processedFiles = 1;
                         }
-                        catch (Exception ex)
-                            when (ex is not OperationCanceledException)
+                        catch (Exception ex) when (ex is not OperationCanceledException)
                         {
                             errors.Add(ex.Message);
                         }
@@ -439,17 +475,23 @@ internal sealed class BackupCommand(
                 {
                     manifestDir = destinationPath;
                     var files = Directory.GetFiles(
-                        destinationPath, "*", SearchOption.AllDirectories);
+                        destinationPath,
+                        "*",
+                        SearchOption.AllDirectories
+                    );
 
                     foreach (var file in files)
                     {
                         var relativePath = Path.GetRelativePath(destinationPath, file);
-                        entries.Add(new ManifestEntry(
-                            relativePath,
-                            relativePath,
-                            string.Empty,
-                            string.Empty,
-                            string.Empty));
+                        entries.Add(
+                            new ManifestEntry(
+                                relativePath,
+                                relativePath,
+                                string.Empty,
+                                string.Empty,
+                                string.Empty
+                            )
+                        );
                     }
                 }
                 else
@@ -459,24 +501,25 @@ internal sealed class BackupCommand(
                         : destinationPath;
                     manifestDir = Path.GetDirectoryName(destFile) ?? destinationPath;
                     var fileName = Path.GetFileName(destFile);
-                    entries.Add(new ManifestEntry(
-                        fileName,
-                        fileName,
-                        string.Empty,
-                        string.Empty,
-                        string.Empty));
+                    entries.Add(
+                        new ManifestEntry(
+                            fileName,
+                            fileName,
+                            string.Empty,
+                            string.Empty,
+                            string.Empty
+                        )
+                    );
                 }
 
-                ManifestHeader header = new(
-                    default,
-                    default,
-                    CompressionMode.None);
+                ManifestHeader header = new(default, default, CompressionMode.None);
 
                 await manifestService.TrySavePlainManifestAsync(
                     entries,
                     header,
                     manifestDir,
-                    cts.Token);
+                    cts.Token
+                );
             }
 
             BackupResult result = new(
@@ -486,7 +529,8 @@ internal sealed class BackupCommand(
                 processedFiles,
                 totalFileCount,
                 errors,
-                []);
+                []
+            );
 
             ResultRenderer.Print(result, operationName);
         }
@@ -497,13 +541,15 @@ internal sealed class BackupCommand(
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
         }
     }
 
     private static void PrintFailure(string operationName, string[] errors) =>
         AnsiConsole.MarkupLine(
-            $"[red]{string.Format(Messages.FailedFormat, operationName, Markup.Escape(string.Join(", ", errors)))}[/]");
+            $"[red]{string.Format(Messages.FailedFormat, operationName, Markup.Escape(string.Join(", ", errors)))}[/]"
+        );
 
     private static void PrintSummary(
         string operationName,
@@ -511,7 +557,8 @@ internal sealed class BackupCommand(
         string destinationPath,
         IEncryptionAlgorithmStrategy? encryption,
         IKeyDerivationAlgorithmStrategy? kdf,
-        ICompressionStrategy? compression)
+        ICompressionStrategy? compression
+    )
     {
         AnsiConsole.WriteLine();
         var summaryTable = new Table()
@@ -560,7 +607,9 @@ internal sealed class BackupCommand(
                 .Validate(p =>
                     !string.IsNullOrWhiteSpace(p)
                         ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")));
+                        : ValidationResult.Error($"[red]{Messages.PasswordCannotBeEmpty}[/]")
+                )
+        );
 
     private (string Password, string ConfirmPassword, bool WasAutoGenerated) PromptPasswords()
     {
@@ -568,9 +617,11 @@ internal sealed class BackupCommand(
         {
             var password = AnsiConsole.Prompt(
                 new TextPrompt<string>(
-                    $"[green]{Messages.PasswordPrompt}[/] {Messages.PasswordPromptHint}")
+                    $"[green]{Messages.PasswordPrompt}[/] {Messages.PasswordPromptHint}"
+                )
                     .Secret()
-                    .AllowEmpty());
+                    .AllowEmpty()
+            );
 
             if (string.IsNullOrWhiteSpace(password))
             {
@@ -583,7 +634,8 @@ internal sealed class BackupCommand(
 
                 password = passwordService.GeneratePassword(
                     autoGeneratedLength,
-                    autoGeneratedOptions);
+                    autoGeneratedOptions
+                );
                 return (password, password, true);
             }
 
@@ -598,10 +650,12 @@ internal sealed class BackupCommand(
                 _ => "white",
             };
             AnsiConsole.MarkupLine(
-                $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]");
+                $"  {Messages.PasswordStrengthLabel} [{strengthColor}]{Markup.Escape(strength.Description)}[/]"
+            );
 
             var confirmPassword = AnsiConsole.Prompt(
-                new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret());
+                new TextPrompt<string>($"[green]{Messages.ConfirmPasswordPrompt}[/]:").Secret()
+            );
 
             return (password, confirmPassword, false);
         }
@@ -614,9 +668,12 @@ internal sealed class BackupCommand(
             return null;
         }
 
-        return compressionStrategies.FirstOrDefault(strategy => strategy.Id == settings.CompressionMode)
+        return compressionStrategies.FirstOrDefault(strategy =>
+                strategy.Id == settings.CompressionMode
+            )
             ?? throw new InvalidOperationException(
-                $"No compression strategy is registered for '{settings.CompressionMode}'.");
+                $"No compression strategy is registered for '{settings.CompressionMode}'."
+            );
     }
 
     private IEncryptionAlgorithmStrategy? ResolveEncryptionStrategy(BackupCreationSettings settings)
@@ -626,24 +683,29 @@ internal sealed class BackupCommand(
             return null;
         }
 
-        return encryptionStrategies.FirstOrDefault(
-                strategy => strategy.Id == settings.EncryptionAlgorithm)
+        return encryptionStrategies.FirstOrDefault(strategy =>
+                strategy.Id == settings.EncryptionAlgorithm
+            )
             ?? throw new InvalidOperationException(
-                $"No encryption strategy is registered for '{settings.EncryptionAlgorithm}'.");
+                $"No encryption strategy is registered for '{settings.EncryptionAlgorithm}'."
+            );
     }
 
     private IKeyDerivationAlgorithmStrategy? ResolveKeyDerivationStrategy(
-        BackupCreationSettings settings)
+        BackupCreationSettings settings
+    )
     {
         if (settings.EncryptionAlgorithm == EncryptionAlgorithm.None)
         {
             return null;
         }
 
-        return keyDerivationStrategies.FirstOrDefault(
-                strategy => strategy.Id == settings.KeyDerivationAlgorithm)
+        return keyDerivationStrategies.FirstOrDefault(strategy =>
+                strategy.Id == settings.KeyDerivationAlgorithm
+            )
             ?? throw new InvalidOperationException(
-                $"No key derivation strategy is registered for '{settings.KeyDerivationAlgorithm}'.");
+                $"No key derivation strategy is registered for '{settings.KeyDerivationAlgorithm}'."
+            );
     }
 
     private static bool DetectManifest(string sourcePath)
@@ -690,7 +752,8 @@ internal sealed class BackupCommand(
         BackupRequest request,
         string operationName,
         string operationIngName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         AnsiConsole.MarkupLine($"⚠  [yellow]{Messages.WarningsLabel}[/]");
         foreach (var warning in response.Warnings)
@@ -703,7 +766,9 @@ internal sealed class BackupCommand(
         if (
             !await AnsiConsole.ConfirmAsync(
                 $"[yellow]{string.Format(Messages.ContinueDespiteWarningsFormat, operationName.ToUpperInvariant())}[/]",
-                cancellationToken: cancellationToken))
+                cancellationToken: cancellationToken
+            )
+        )
         {
             AnsiConsole.MarkupLine($"[grey]{Messages.OperationCancelled}[/]");
             return null;
@@ -715,7 +780,8 @@ internal sealed class BackupCommand(
             orchestrator,
             proceedRequest,
             operationIngName,
-            cancellationToken);
+            cancellationToken
+        );
 
         if (!result.IsSuccess)
         {
@@ -737,7 +803,10 @@ internal sealed class BackupCommand(
                 new Markup($"[bold]{Markup.Escape(password)}[/]"),
                 new Text(string.Empty),
                 new Markup(
-                    $"[dim]{Messages.LengthLabel}[/]   {password.Length} {Messages.CharactersLabel}")))
+                    $"[dim]{Messages.LengthLabel}[/]   {password.Length} {Messages.CharactersLabel}"
+                )
+            )
+        )
         {
             Header = new PanelHeader($"{Messages.GeneratedPasswordHeader}"),
             Border = BoxBorder.Rounded,
@@ -754,7 +823,8 @@ internal sealed class BackupCommand(
     private async Task RunOperationAsync(
         BackupRequest request,
         string operationName,
-        string operationIngName)
+        string operationIngName
+    )
     {
         AnsiConsole.WriteLine();
 
@@ -773,7 +843,8 @@ internal sealed class BackupCommand(
                 orchestrator,
                 request,
                 operationIngName,
-                cts.Token);
+                cts.Token
+            );
 
             if (!result.IsSuccess)
             {
@@ -796,7 +867,8 @@ internal sealed class BackupCommand(
                     request,
                     operationName,
                     operationIngName,
-                    cts.Token);
+                    cts.Token
+                );
 
                 if (response is null)
                 {
@@ -813,7 +885,8 @@ internal sealed class BackupCommand(
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine(
-                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]");
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
         }
     }
 }

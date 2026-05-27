@@ -1,9 +1,8 @@
+using System.Security.Cryptography;
+using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
-
-using System.Security.Cryptography;
-using System.Text;
 
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
@@ -32,7 +31,8 @@ internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrat
                 salt,
                 Iterations,
                 HashAlgorithmName.SHA256,
-                keySize / 8);
+                keySize / 8
+            );
 
             var result = new byte[key.Length];
             Array.Copy(key, result, key.Length);

@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Worker.Services;
+namespace BackupZCrypt.Worker.Services.Interfaces;
 
 internal interface IWorkerFileSystem
 {

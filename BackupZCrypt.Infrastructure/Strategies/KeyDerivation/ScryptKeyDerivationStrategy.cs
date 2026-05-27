@@ -1,11 +1,9 @@
+using System.Security.Cryptography;
+using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Resources;
-
 using Org.BouncyCastle.Crypto.Generators;
-
-using System.Security.Cryptography;
-using System.Text;
 
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
@@ -36,7 +34,8 @@ internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrat
                 CostParameter,
                 BlockSize,
                 Parallelization,
-                keySize / 8);
+                keySize / 8
+            );
         }
         catch (Exception ex)
         {

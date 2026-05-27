@@ -8,5 +8,6 @@ public interface IBackupOrchestrator
     Task<Result<BackupResult>> ExecuteAsync(
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

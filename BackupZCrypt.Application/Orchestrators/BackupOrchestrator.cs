@@ -14,16 +14,16 @@ internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
     IFileBackupService fileBackupService,
-    IDirectoryBackupService directoryBackupService) : IBackupOrchestrator
+    IDirectoryBackupService directoryBackupService
+) : IBackupOrchestrator
 {
     public async Task<Result<BackupResult>> ExecuteAsync(
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        var validationResult = await ValidateRequestAsync(
-            request,
-            cancellationToken);
+        var validationResult = await ValidateRequestAsync(request, cancellationToken);
         if (validationResult is not null)
         {
             return validationResult;
@@ -52,8 +52,11 @@ internal sealed class BackupOrchestrator(
             }
         }
 
-        if (request.Operation == BackupOperation.Create && isDirectory
-            && fileOperationsService.DirectoryExists(destinationPath))
+        if (
+            request.Operation == BackupOperation.Create
+            && isDirectory
+            && fileOperationsService.DirectoryExists(destinationPath)
+        )
         {
             await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
         }
@@ -69,7 +72,8 @@ internal sealed class BackupOrchestrator(
                     destinationPath,
                     request,
                     progress,
-                    cancellationToken);
+                    cancellationToken
+                );
             }
 
             if (isFile)
@@ -79,7 +83,8 @@ internal sealed class BackupOrchestrator(
                     destinationPath,
                     request,
                     progress,
-                    cancellationToken);
+                    cancellationToken
+                );
             }
 
             return await directoryBackupService.ProcessAsync(
@@ -87,7 +92,8 @@ internal sealed class BackupOrchestrator(
                 destinationPath,
                 request,
                 progress,
-                cancellationToken);
+                cancellationToken
+            );
         }
         catch (OperationCanceledException)
         {
@@ -96,12 +102,12 @@ internal sealed class BackupOrchestrator(
         catch (Exception ex)
         {
             return Result<BackupResult>.Failure(
-                string.Format(Messages.UnexpectedErrorFormat, ex.Message));
+                string.Format(Messages.UnexpectedErrorFormat, ex.Message)
+            );
         }
     }
 
-    private static (string SourcePath, string DestinationPath) NormalizePaths(
-        BackupRequest request)
+    private static (string SourcePath, string DestinationPath) NormalizePaths(BackupRequest request)
     {
         var sourcePath =
             PathNormalizationHelper.TryNormalize(request.SourcePath, out _) ?? request.SourcePath;
@@ -115,7 +121,8 @@ internal sealed class BackupOrchestrator(
 
     private async Task CleanDestinationDirectoryAsync(
         string destinationPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
     }
@@ -123,7 +130,8 @@ internal sealed class BackupOrchestrator(
     private async Task EnsureDestinationDirectoryAsync(
         string sourcePath,
         string destinationPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (fileOperationsService.DirectoryExists(sourcePath))
         {
@@ -141,24 +149,26 @@ internal sealed class BackupOrchestrator(
 
     private async Task<Result<BackupResult>?> ValidateRequestAsync(
         BackupRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var errors = await backupRequestValidator.AnalyzeErrorsAsync(
-            request,
-            cancellationToken);
+        var errors = await backupRequestValidator.AnalyzeErrorsAsync(request, cancellationToken);
         if (errors.Count > 0)
         {
             return Result<BackupResult>.Success(
-                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors));
+                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: errors)
+            );
         }
 
         var warnings = await backupRequestValidator.AnalyzeWarningsAsync(
             request,
-            cancellationToken);
+            cancellationToken
+        );
         if (warnings.Count > 0 && !request.ProceedOnWarnings)
         {
             return Result<BackupResult>.Success(
-                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings));
+                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings)
+            );
         }
 
         return null;

@@ -1,12 +1,10 @@
+using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
-
-using System.Security.Cryptography;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
@@ -26,7 +24,8 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
         ReadOnlySpan<byte> plaintext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData)
+        byte[] associatedData
+    )
     {
         var input = plaintext.ToArray();
 
@@ -59,7 +58,8 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
         ReadOnlySpan<byte> ciphertext,
         byte[] key,
         byte[] nonce,
-        byte[] associatedData)
+        byte[] associatedData
+    )
     {
         var input = ciphertext.ToArray();
         var cipher = CreateCipher();

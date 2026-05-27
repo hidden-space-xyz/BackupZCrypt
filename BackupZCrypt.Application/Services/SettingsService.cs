@@ -1,14 +1,14 @@
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Domain.Services.Interfaces;
-
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Domain.Services.Interfaces;
 
 namespace BackupZCrypt.Application.Services;
 
 internal sealed class SettingsService(
     IFileOperationsService fileOperationsService,
-    string? baseDirectoryPath = null) : ISettingsService
+    string? baseDirectoryPath = null
+) : ISettingsService
 {
     private const string SettingsDirectoryName = "BackupZCrypt";
 
@@ -37,7 +37,10 @@ internal sealed class SettingsService(
             return defaults;
         }
 
-        var rawSettings = await fileOperationsService.ReadAllBytesAsync(filePath, cancellationToken);
+        var rawSettings = await fileOperationsService.ReadAllBytesAsync(
+            filePath,
+            cancellationToken
+        );
 
         try
         {
@@ -45,12 +48,12 @@ internal sealed class SettingsService(
 
             return settings
                 ?? throw new InvalidOperationException(
-                    $"Settings file '{filePath}' is empty or invalid.");
+                    $"Settings file '{filePath}' is empty or invalid."
+                );
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException(
-                $"Settings file '{filePath}' is invalid.", ex);
+            throw new InvalidOperationException($"Settings file '{filePath}' is invalid.", ex);
         }
     }
 
@@ -64,8 +67,7 @@ internal sealed class SettingsService(
 
         if (string.IsNullOrWhiteSpace(directoryPath))
         {
-            throw new InvalidOperationException(
-                $"Settings path '{filePath}' is invalid.");
+            throw new InvalidOperationException($"Settings path '{filePath}' is invalid.");
         }
 
         await fileOperationsService.CreateDirectoryAsync(directoryPath, cancellationToken);

@@ -1,10 +1,10 @@
+using System.Security;
+using System.Text;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Terminal.Resources;
 using BackupZCrypt.Terminal.Services.Interfaces;
 using Spectre.Console;
-using System.Security;
-using System.Text;
 
 namespace BackupZCrypt.Terminal.Services;
 
@@ -24,7 +24,9 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 Messages.PathDoesNotExist,
                 recentPaths.LastSourcePath,
                 PathValidationMode.ExistingFileOrDirectory,
-                AllowFileBrowsing: true));
+                AllowFileBrowsing: true
+            )
+        );
     }
 
     public async Task<string> PromptDestinationPathAsync()
@@ -39,7 +41,9 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 Messages.InvalidPath,
                 recentPaths.LastDestinationPath,
                 PathValidationMode.AnyPath,
-                AllowFileBrowsing: true));
+                AllowFileBrowsing: true
+            )
+        );
     }
 
     public async Task<string> PromptUpdateSourcePathAsync()
@@ -54,7 +58,9 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 Messages.UpdateSourceMustBeDirectory,
                 recentPaths.LastSourcePath,
                 PathValidationMode.ExistingDirectory,
-                AllowFileBrowsing: false));
+                AllowFileBrowsing: false
+            )
+        );
     }
 
     public async Task<string> PromptUpdateBackupPathAsync()
@@ -69,17 +75,22 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 Messages.PathDoesNotExist,
                 recentPaths.LastDestinationPath,
                 PathValidationMode.ExistingDirectory,
-                AllowFileBrowsing: false));
+                AllowFileBrowsing: false
+            )
+        );
     }
 
     public async Task RememberPathsAsync(
         string sourcePath,
         string destinationPath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var settings = await settingsService.GetOrCreateAsync<RecentPathSettings>(cancellationToken);
+            var settings = await settingsService.GetOrCreateAsync<RecentPathSettings>(
+                cancellationToken
+            );
 
             await settingsService.SaveAsync(
                 settings with
@@ -87,15 +98,18 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                     LastSourcePath = Path.GetFullPath(sourcePath),
                     LastDestinationPath = Path.GetFullPath(destinationPath),
                 },
-                cancellationToken);
+                cancellationToken
+            );
         }
-        catch (Exception ex) when (
-            ex is ArgumentException
-            or InvalidOperationException
-            or IOException
-            or NotSupportedException
-            or SecurityException
-            or UnauthorizedAccessException)
+        catch (Exception ex)
+            when (ex
+                    is ArgumentException
+                        or InvalidOperationException
+                        or IOException
+                        or NotSupportedException
+                        or SecurityException
+                        or UnauthorizedAccessException
+            )
         {
             PrintWarning(Messages.PathHistorySaveWarningFormat, ex.Message);
         }
@@ -110,7 +124,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 ? null
                 : string.Format(
                     Messages.UseLastPathOptionFormat,
-                    Markup.Escape(TruncateMiddle(definition.LastPath, 72)));
+                    Markup.Escape(TruncateMiddle(definition.LastPath, 72))
+                );
 
             if (useLastChoice is null)
             {
@@ -128,10 +143,12 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
             var selected = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title(
-                        $"[green]{Markup.Escape(string.Format(Messages.PathSelectionPromptFormat, definition.Label))}[/]")
+                        $"[green]{Markup.Escape(string.Format(Messages.PathSelectionPromptFormat, definition.Label))}[/]"
+                    )
                     .HighlightStyle(Style.Parse("bold cyan"))
                     .PageSize(Math.Max(3, choices.Count))
-                    .AddChoices(choices));
+                    .AddChoices(choices)
+            );
 
             if (selected == manualChoice)
             {
@@ -144,17 +161,21 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 continue;
             }
 
-            if (TryValidatePath(
+            if (
+                TryValidatePath(
                     definition.LastPath ?? string.Empty,
                     definition,
                     out var normalizedLastPath,
-                    out var errorMessage))
+                    out var errorMessage
+                )
+            )
             {
                 return normalizedLastPath;
             }
 
             AnsiConsole.MarkupLine(
-                $"[red]{Markup.Escape(string.Format(Messages.SavedPathUnavailableFormat, definition.Label))}[/]");
+                $"[red]{Markup.Escape(string.Format(Messages.SavedPathUnavailableFormat, definition.Label))}[/]"
+            );
             AnsiConsole.MarkupLine($"[dim]{Markup.Escape(errorMessage)}[/]");
             AnsiConsole.WriteLine();
         }
@@ -179,11 +200,14 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                 {
                     Console.WriteLine();
 
-                    if (TryValidatePath(
+                    if (
+                        TryValidatePath(
                             inputBuilder.ToString(),
                             definition,
                             out var normalizedPath,
-                            out var errorMessage))
+                            out var errorMessage
+                        )
+                    )
                     {
                         return normalizedPath;
                     }
@@ -218,13 +242,13 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
                     var result = GetCompletionResult(
                         inputBuilder.ToString(),
                         definition.ValidationMode,
-                        definition.AllowFileBrowsing);
+                        definition.AllowFileBrowsing
+                    );
 
                     if (result.Replacement.Length > inputBuilder.Length)
                     {
                         var suffix = result.Replacement[inputBuilder.Length..];
-                        inputBuilder.Clear()
-                            .Append(result.Replacement);
+                        inputBuilder.Clear().Append(result.Replacement);
                         Console.Write(suffix);
                     }
 
@@ -251,7 +275,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
     private static CompletionResult GetCompletionResult(
         string input,
         PathValidationMode validationMode,
-        bool allowFileBrowsing)
+        bool allowFileBrowsing
+    )
     {
         if (!TryCreateCompletionContext(input, out var context))
         {
@@ -267,20 +292,28 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
 
         try
         {
-            candidates = [.. Directory
-                .EnumerateFileSystemEntries(context.SearchDirectory)
-                .Select(path => new CompletionCandidate(path, Directory.Exists(path)))
-                .Where(candidate =>
-                    (allowFileBrowsing || candidate.IsDirectory)
-                    && candidate.Name.StartsWith(context.PartialName, StringComparison.OrdinalIgnoreCase)
-                    && (validationMode != PathValidationMode.ExistingDirectory || candidate.IsDirectory))
-                .OrderByDescending(candidate => candidate.IsDirectory)
-                .ThenBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)];
+            candidates =
+            [
+                .. Directory
+                    .EnumerateFileSystemEntries(context.SearchDirectory)
+                    .Select(path => new CompletionCandidate(path, Directory.Exists(path)))
+                    .Where(candidate =>
+                        (allowFileBrowsing || candidate.IsDirectory)
+                        && candidate.Name.StartsWith(
+                            context.PartialName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        && (
+                            validationMode != PathValidationMode.ExistingDirectory
+                            || candidate.IsDirectory
+                        )
+                    )
+                    .OrderByDescending(candidate => candidate.IsDirectory)
+                    .ThenBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase),
+            ];
         }
-        catch (Exception ex) when (
-            ex is IOException
-            or UnauthorizedAccessException
-            or SecurityException)
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or SecurityException)
         {
             return CompletionResult.None(input);
         }
@@ -292,7 +325,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
 
         if (candidates.Count == 1)
         {
-            var completedPath = context.ReplacementPrefix
+            var completedPath =
+                context.ReplacementPrefix
                 + candidates[0].Name
                 + (candidates[0].IsDirectory ? Path.DirectorySeparatorChar : string.Empty);
 
@@ -305,12 +339,16 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
             return new CompletionResult(context.ReplacementPrefix + commonPrefix, [], false);
         }
 
-        List<string> suggestions = [.. candidates
-            .Take(MaxSuggestionCount)
-            .Select(candidate =>
-                candidate.IsDirectory
-                    ? $"[blue]{Markup.Escape(candidate.Name)}[/]"
-                    : $"[grey]{Markup.Escape(candidate.Name)}[/]")];
+        List<string> suggestions =
+        [
+            .. candidates
+                .Take(MaxSuggestionCount)
+                .Select(candidate =>
+                    candidate.IsDirectory
+                        ? $"[blue]{Markup.Escape(candidate.Name)}[/]"
+                        : $"[grey]{Markup.Escape(candidate.Name)}[/]"
+                ),
+        ];
 
         if (candidates.Count > MaxSuggestionCount)
         {
@@ -330,7 +368,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
             context = new CompletionContext(
                 Environment.CurrentDirectory,
                 string.Empty,
-                trimmedInput);
+                trimmedInput
+            );
             return true;
         }
 
@@ -351,7 +390,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
         string rawInput,
         PathPromptDefinition definition,
         out string normalizedPath,
-        out string errorMessage)
+        out string errorMessage
+    )
     {
         normalizedPath = string.Empty;
 
@@ -392,12 +432,14 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
         {
             return await settingsService.GetOrCreateAsync<RecentPathSettings>();
         }
-        catch (Exception ex) when (
-            ex is InvalidOperationException
-            or IOException
-            or NotSupportedException
-            or SecurityException
-            or UnauthorizedAccessException)
+        catch (Exception ex)
+            when (ex
+                    is InvalidOperationException
+                        or IOException
+                        or NotSupportedException
+                        or SecurityException
+                        or UnauthorizedAccessException
+            )
         {
             PrintWarning(Messages.PathHistoryLoadWarningFormat, ex.Message);
             return RecentPathSettings.DefaultValue;
@@ -406,8 +448,7 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
 
     private static void PrintWarning(string format, string detail)
     {
-        AnsiConsole.MarkupLine(
-            $"[yellow]{string.Format(format, Markup.Escape(detail))}[/]");
+        AnsiConsole.MarkupLine($"[yellow]{string.Format(format, Markup.Escape(detail))}[/]");
         AnsiConsole.WriteLine();
     }
 
@@ -418,12 +459,14 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
             normalizedPath = Path.GetFullPath(SanitizePath(path));
             return true;
         }
-        catch (Exception ex) when (
-            ex is ArgumentException
-            or IOException
-            or NotSupportedException
-            or SecurityException
-            or UnauthorizedAccessException)
+        catch (Exception ex)
+            when (ex
+                    is ArgumentException
+                        or IOException
+                        or NotSupportedException
+                        or SecurityException
+                        or UnauthorizedAccessException
+            )
         {
             normalizedPath = string.Empty;
             return false;
@@ -445,8 +488,11 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
             var maxLength = Math.Min(prefix.Length, candidate.Length);
             var sharedLength = 0;
 
-            while (sharedLength < maxLength
-                   && char.ToUpperInvariant(prefix[sharedLength]) == char.ToUpperInvariant(candidate[sharedLength]))
+            while (
+                sharedLength < maxLength
+                && char.ToUpperInvariant(prefix[sharedLength])
+                    == char.ToUpperInvariant(candidate[sharedLength])
+            )
             {
                 sharedLength++;
             }
@@ -475,7 +521,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
         return string.Concat(
             value.AsSpan(0, headLength),
             "...",
-            value.AsSpan(value.Length - tailLength));
+            value.AsSpan(value.Length - tailLength)
+        );
     }
 
     private static string BuildPrompt(PathPromptDefinition definition) =>
@@ -487,9 +534,7 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
     {
         var sanitized = rawInput.Trim();
 
-        if (sanitized.Length >= 2
-            && sanitized[0] == '"'
-            && sanitized[^1] == '"')
+        if (sanitized.Length >= 2 && sanitized[0] == '"' && sanitized[^1] == '"')
         {
             return sanitized[1..^1];
         }
@@ -504,12 +549,14 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
         string InvalidPathError,
         string? LastPath,
         PathValidationMode ValidationMode,
-        bool AllowFileBrowsing);
+        bool AllowFileBrowsing
+    );
 
     private readonly record struct CompletionContext(
         string SearchDirectory,
         string ReplacementPrefix,
-        string PartialName);
+        string PartialName
+    );
 
     private sealed record CompletionCandidate(string Path, bool IsDirectory)
     {
@@ -519,7 +566,8 @@ internal sealed class PathPromptService(ISettingsService settingsService) : IPat
     private sealed record CompletionResult(
         string Replacement,
         IReadOnlyList<string> Suggestions,
-        bool ShouldPrintSuggestions)
+        bool ShouldPrintSuggestions
+    )
     {
         public static CompletionResult None(string replacement) => new(replacement, [], false);
     }

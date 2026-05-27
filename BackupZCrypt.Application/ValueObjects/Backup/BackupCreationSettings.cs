@@ -6,8 +6,8 @@ namespace BackupZCrypt.Application.ValueObjects.Backup;
 public sealed record BackupCreationSettings(
     EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.Aes,
     KeyDerivationAlgorithm KeyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id,
-    CompressionMode CompressionMode = CompressionMode.None)
-    : ISettings<BackupCreationSettings>
+    CompressionMode CompressionMode = CompressionMode.None
+) : ISettings<BackupCreationSettings>
 {
     public static BackupCreationSettings DefaultValue { get; } = new();
 

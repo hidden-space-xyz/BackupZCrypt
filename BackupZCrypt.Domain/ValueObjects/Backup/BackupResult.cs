@@ -9,7 +9,8 @@ public sealed record BackupResult
         int processedFiles,
         int totalFiles,
         IEnumerable<string>? errors = null,
-        IEnumerable<string>? warnings = null)
+        IEnumerable<string>? warnings = null
+    )
     {
         ValidateInputs(elapsedTime, totalBytes, processedFiles, totalFiles);
 
@@ -42,9 +43,11 @@ public sealed record BackupResult
 
     public int FailedFiles => this.TotalFiles - this.ProcessedFiles;
 
-    public double SuccessRate => this.TotalFiles == 0 ? 1.0 : (double)this.ProcessedFiles / this.TotalFiles;
+    public double SuccessRate =>
+        this.TotalFiles == 0 ? 1.0 : (double)this.ProcessedFiles / this.TotalFiles;
 
-    public bool IsPartialSuccess => this.ProcessedFiles > 0 && this.ProcessedFiles < this.TotalFiles;
+    public bool IsPartialSuccess =>
+        this.ProcessedFiles > 0 && this.ProcessedFiles < this.TotalFiles;
 
     public double BytesPerSecond =>
         this.ElapsedTime.TotalSeconds > 0 ? this.TotalBytes / this.ElapsedTime.TotalSeconds : 0;
@@ -56,7 +59,8 @@ public sealed record BackupResult
         TimeSpan elapsedTime,
         long totalBytes,
         int processedFiles,
-        int totalFiles)
+        int totalFiles
+    )
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(elapsedTime, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfNegative(totalBytes);

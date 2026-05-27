@@ -1,11 +1,10 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
-
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -83,7 +82,8 @@ internal sealed partial class PasswordService : IPasswordService
             return new PasswordStrengthAnalysis(
                 PasswordStrength.VeryWeak,
                 Messages.EmptyPasswordDescription,
-                0);
+                0
+            );
         }
 
         var trimmed = password.Trim();
@@ -105,7 +105,8 @@ internal sealed partial class PasswordService : IPasswordService
             score < MaxScore
             && compositionFlags.CategoryCount >= MinCategoriesForBonus
             && trimmed.Length >= MinLengthForBonus
-            && entropy >= MinEntropyForBonus)
+            && entropy >= MinEntropyForBonus
+        )
         {
             score = Math.Min(MaxScore, score + BonusPoints);
         }
@@ -151,8 +152,9 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (options.HasFlag(PasswordGenerationOptions.ExcludeSimilarCharacters))
         {
-            availableChars = new string(
-                [.. availableChars.Where(c => !SimilarChars.Contains(c, StringComparison.Ordinal))]);
+            availableChars = new string([
+                .. availableChars.Where(c => !SimilarChars.Contains(c, StringComparison.Ordinal)),
+            ]);
         }
 
         if (string.IsNullOrEmpty(availableChars))
@@ -165,7 +167,7 @@ internal sealed partial class PasswordService : IPasswordService
         var charCount = availableChars.Length;
         var maxValidByte = 256 - (256 % charCount);
 
-        for (var i = 0; i < length;)
+        for (var i = 0; i < length; )
         {
             var buffer = new byte[1];
             RandomNumberGenerator.Fill(buffer);
@@ -363,19 +365,21 @@ internal sealed partial class PasswordService : IPasswordService
         PasswordStrength strength,
         double entropy,
         PasswordComposition flags,
-        string password)
+        string password
+    )
     {
         StringBuilder sb = new();
         sb.Append(
-            strength switch
-            {
-                PasswordStrength.VeryWeak => Messages.StrengthVeryWeak,
-                PasswordStrength.Weak => Messages.StrengthWeak,
-                PasswordStrength.Fair => Messages.StrengthFair,
-                PasswordStrength.Good => Messages.StrengthGood,
-                PasswordStrength.Strong => Messages.StrengthStrong,
-                _ => "?",
-            })
+                strength switch
+                {
+                    PasswordStrength.VeryWeak => Messages.StrengthVeryWeak,
+                    PasswordStrength.Weak => Messages.StrengthWeak,
+                    PasswordStrength.Fair => Messages.StrengthFair,
+                    PasswordStrength.Good => Messages.StrengthGood,
+                    PasswordStrength.Strong => Messages.StrengthStrong,
+                    _ => "?",
+                }
+            )
             .Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
 
         List<string> tips = [];
@@ -427,8 +431,7 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (tips.Count > 0)
         {
-            sb.Append($" // {Messages.Suggestions} ")
-                .AppendJoin(", ", tips.Take(3));
+            sb.Append($" // {Messages.Suggestions} ").AppendJoin(", ", tips.Take(3));
         }
         else if (strength == PasswordStrength.Strong)
         {
@@ -442,7 +445,9 @@ internal sealed partial class PasswordService : IPasswordService
     {
         var lower = password.ToLowerInvariant();
 
-        return LinearSequences.Any(seq => lower.Contains(seq[..Math.Min(seq.Length, 4)], StringComparison.Ordinal))
+        return LinearSequences.Any(seq =>
+                lower.Contains(seq[..Math.Min(seq.Length, 4)], StringComparison.Ordinal)
+            )
             || LinearSequences.Any(seq =>
             {
                 string rev = new([.. seq.Reverse()]);

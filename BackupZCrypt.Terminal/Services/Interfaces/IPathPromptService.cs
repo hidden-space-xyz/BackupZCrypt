@@ -13,5 +13,6 @@ internal interface IPathPromptService
     Task RememberPathsAsync(
         string sourcePath,
         string destinationPath,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

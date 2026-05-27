@@ -10,5 +10,6 @@ public interface IFileBackupService
         string destinationPath,
         BackupRequest request,
         IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 }

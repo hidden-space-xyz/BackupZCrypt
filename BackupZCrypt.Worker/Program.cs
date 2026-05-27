@@ -2,6 +2,7 @@ using BackupZCrypt.Composition;
 using BackupZCrypt.Worker;
 using BackupZCrypt.Worker.Extensions;
 using BackupZCrypt.Worker.Services;
+using BackupZCrypt.Worker.Services.Interfaces;
 
 var builder = Host.CreateApplicationBuilder(args);
 

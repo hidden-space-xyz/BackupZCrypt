@@ -12,20 +12,24 @@ namespace BackupZCrypt.Application.Validators;
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
-    IPasswordService passwordService) : IBackupRequestValidator
+    IPasswordService passwordService
+) : IBackupRequestValidator
 {
     public async Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
         BackupRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         List<string> errors = [];
 
         var sourcePath = PathNormalizationHelper.TryNormalize(
             request.SourcePath,
-            out var sourceNormalizeError);
+            out var sourceNormalizeError
+        );
         var destinationPath = PathNormalizationHelper.TryNormalize(
             request.DestinationPath,
-            out var destinationNormalizeError);
+            out var destinationNormalizeError
+        );
 
         if (sourceNormalizeError is not null)
         {
@@ -47,7 +51,8 @@ internal sealed class BackupRequestValidator(
             errors.Add(Messages.SourcePathEmpty);
         }
         else if (
-            !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath))
+            !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath)
+        )
         {
             errors.Add(string.Format(Messages.SourcePathNotExistFormat, sourcePath));
         }
@@ -76,7 +81,8 @@ internal sealed class BackupRequestValidator(
                     var files = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
-                        cancellationToken);
+                        cancellationToken
+                    );
                     if (files.Length == 0)
                     {
                         errors.Add(Messages.SourceDirectoryEmpty);
@@ -112,7 +118,8 @@ internal sealed class BackupRequestValidator(
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
                         errors.Add(
-                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive));
+                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
+                        );
                     }
                 }
             }
@@ -122,7 +129,10 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && string.IsNullOrWhiteSpace(request.Password))
+        if (
+            request.EncryptionAlgorithm != EncryptionAlgorithm.None
+            && string.IsNullOrWhiteSpace(request.Password)
+        )
         {
             errors.Add(Messages.PasswordRequired);
         }
@@ -144,14 +154,18 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (request.EncryptionAlgorithm != EncryptionAlgorithm.None && request.Operation == BackupOperation.Create)
+        if (
+            request.EncryptionAlgorithm != EncryptionAlgorithm.None
+            && request.Operation == BackupOperation.Create
+        )
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
                 errors.Add(Messages.ConfirmPasswordRequired);
             }
             else if (
-                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
+                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
+            )
             {
                 errors.Add(Messages.PasswordMismatch);
             }
@@ -167,7 +181,9 @@ internal sealed class BackupRequestValidator(
                         string.Equals(
                             sourcePath,
                             destinationPath,
-                            StringComparison.OrdinalIgnoreCase))
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         errors.Add(Messages.SourceDestinationSameFile);
                     }
@@ -178,21 +194,27 @@ internal sealed class BackupRequestValidator(
                         string.Equals(
                             sourcePath,
                             destinationPath,
-                            StringComparison.OrdinalIgnoreCase))
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         errors.Add(Messages.SourceDestinationSameDirectory);
                     }
                     else if (
                         destinationPath.StartsWith(
                             sourcePath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase))
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         errors.Add(Messages.DestinationInsideSource);
                     }
                     else if (
                         sourcePath.StartsWith(
                             destinationPath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase))
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         errors.Add(Messages.SourceInsideDestination);
                     }
@@ -208,14 +230,13 @@ internal sealed class BackupRequestValidator(
 
     public async Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
         BackupRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         List<string> warnings = [];
 
         var sourcePath = PathNormalizationHelper.TryNormalize(request.SourcePath, out _);
-        var destinationPath = PathNormalizationHelper.TryNormalize(
-            request.DestinationPath,
-            out _);
+        var destinationPath = PathNormalizationHelper.TryNormalize(request.DestinationPath, out _);
         if (sourcePath is null || destinationPath is null)
         {
             return warnings;
@@ -228,12 +249,14 @@ internal sealed class BackupRequestValidator(
                 var destinationDrive = systemStorage.GetPathRoot(destinationPath);
                 if (
                     !string.IsNullOrEmpty(destinationDrive)
-                    && systemStorage.IsDriveReady(destinationDrive))
+                    && systemStorage.IsDriveReady(destinationDrive)
+                )
                 {
                     var sourceFiles = await fileOperations.GetFilesAsync(
                         sourcePath,
                         "*.*",
-                        cancellationToken);
+                        cancellationToken
+                    );
                     var totalSize = sourceFiles.Sum(f =>
                     {
                         try
@@ -254,7 +277,9 @@ internal sealed class BackupRequestValidator(
                             string.Format(
                                 Messages.LowDiskSpaceFormat,
                                 ByteSizeFormatter.Format(available),
-                                ByteSizeFormatter.Format(requiredSpace)));
+                                ByteSizeFormatter.Format(requiredSpace)
+                            )
+                        );
                     }
                 }
             }
@@ -264,17 +289,20 @@ internal sealed class BackupRequestValidator(
                 var files = await fileOperations.GetFilesAsync(
                     sourcePath,
                     "*.*",
-                    cancellationToken);
+                    cancellationToken
+                );
                 var fileCount = files.Length;
                 if (fileCount > 10000)
                 {
                     warnings.Add(
-                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0")));
+                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
+                    );
                 }
                 else if (fileCount > 1000)
                 {
                     warnings.Add(
-                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0")));
+                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0"))
+                    );
                 }
             }
 
@@ -291,7 +319,8 @@ internal sealed class BackupRequestValidator(
                 var existingFiles = await fileOperations.GetFilesAsync(
                     destinationPath,
                     "*.*",
-                    cancellationToken);
+                    cancellationToken
+                );
                 if (existingFiles.Length > 0)
                 {
                     hasExistingFiles = true;
@@ -304,14 +333,17 @@ internal sealed class BackupRequestValidator(
                 warnings.Add(
                     string.Format(
                         Messages.DestinationExistingFilesFormat,
-                        existingFileCount.ToString("N0")));
+                        existingFileCount.ToString("N0")
+                    )
+                );
             }
 
-            if (request.EncryptionAlgorithm != EncryptionAlgorithm.None
-                && request.Operation == BackupOperation.Create)
+            if (
+                request.EncryptionAlgorithm != EncryptionAlgorithm.None
+                && request.Operation == BackupOperation.Create
+            )
             {
-                var strength = passwordService.AnalyzePasswordStrength(
-                    request.Password);
+                var strength = passwordService.AnalyzePasswordStrength(request.Password);
                 if (strength.Score < 60)
                 {
                     warnings.Add(Messages.WeakPasswordWarning);

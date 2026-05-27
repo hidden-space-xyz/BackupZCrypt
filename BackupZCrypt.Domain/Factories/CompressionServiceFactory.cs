@@ -16,7 +16,8 @@ internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy
         return !this.strategies.TryGetValue(mode, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(mode),
-                string.Format(Messages.CompressionModeNotRegisteredFormat, mode))
+                string.Format(Messages.CompressionModeNotRegisteredFormat, mode)
+            )
             : strategy;
     }
 }

@@ -9,20 +9,21 @@ public interface IManifestService
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
         string destinationRoot,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
         string sourceRoot,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
-    ChunkManifestData? DecryptChunkManifest(
-        ManifestPreamble preamble,
-        byte[] encryptionKey);
+    ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey);
 
     Task<IReadOnlyList<string>> SaveChunkManifestAsync(
         ChunkManifestData manifestData,
         string destinationRoot,
         byte[] encryptionKey,
         EncryptionAlgorithm algorithm,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 }

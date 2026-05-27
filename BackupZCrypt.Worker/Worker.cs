@@ -1,8 +1,7 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
-using BackupZCrypt.Worker.Services;
-
+using BackupZCrypt.Worker.Services.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace BackupZCrypt.Worker;
@@ -12,7 +11,8 @@ internal sealed partial class Worker(
     IOptions<WorkerConfiguration> options,
     IBackupOrchestrator orchestrator,
     IWorkerFileSystem fileSystem,
-    IHostApplicationLifetime lifetime) : BackgroundService
+    IHostApplicationLifetime lifetime
+) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -49,11 +49,13 @@ internal sealed partial class Worker(
 
     private async Task RunBackupAsync(
         WorkerConfiguration config,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         LogStartingOperation("Backup", config.BackupSourcePath, config.BackupDestinationPath);
 
-        var password = config.EncryptionAlgorithm != EncryptionAlgorithm.None ? config.Password : string.Empty;
+        var password =
+            config.EncryptionAlgorithm != EncryptionAlgorithm.None ? config.Password : string.Empty;
 
         BackupRequest request = new(
             config.BackupSourcePath,
@@ -64,7 +66,8 @@ internal sealed partial class Worker(
             config.KeyDerivationAlgorithm,
             BackupOperation.Create,
             config.Compression,
-            ProceedOnWarnings: true);
+            ProceedOnWarnings: true
+        );
 
         var result = await ExecuteOperationAsync("Backup", request, cancellationToken);
 
@@ -76,13 +79,16 @@ internal sealed partial class Worker(
 
     private async Task RunRestoreAsync(
         WorkerConfiguration config,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         LogStartingOperation("Restore", config.RestoreSourcePath, config.RestoreDestinationPath);
 
         var isEncrypted = fileSystem.IsManifestEncrypted(config.RestoreSourcePath);
         var password = isEncrypted ? config.Password : string.Empty;
-        var encryptionAlgorithm = isEncrypted ? config.EncryptionAlgorithm : EncryptionAlgorithm.None;
+        var encryptionAlgorithm = isEncrypted
+            ? config.EncryptionAlgorithm
+            : EncryptionAlgorithm.None;
 
         BackupRequest request = new(
             config.RestoreSourcePath,
@@ -93,7 +99,8 @@ internal sealed partial class Worker(
             config.KeyDerivationAlgorithm,
             BackupOperation.Restore,
             config.Compression,
-            ProceedOnWarnings: true);
+            ProceedOnWarnings: true
+        );
 
         var result = await ExecuteOperationAsync("Restore", request, cancellationToken);
 
@@ -106,13 +113,21 @@ internal sealed partial class Worker(
     private async Task<BackupResult?> ExecuteOperationAsync(
         string operationName,
         BackupRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var result = await orchestrator.ExecuteAsync(
             request,
             new Progress<BackupStatus>(status =>
-                LogProgress(operationName, status.ProcessedFiles, status.TotalFiles, status.ProcessedBytes)),
-            cancellationToken);
+                LogProgress(
+                    operationName,
+                    status.ProcessedFiles,
+                    status.TotalFiles,
+                    status.ProcessedBytes
+                )
+            ),
+            cancellationToken
+        );
 
         if (!result.IsSuccess)
         {
@@ -133,41 +148,54 @@ internal sealed partial class Worker(
             operation.ProcessedFiles,
             operation.TotalFiles,
             operation.TotalBytes,
-            operation.ElapsedTime);
+            operation.ElapsedTime
+        );
 
         return operation;
     }
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "No files found in backup source '{Path}'. Skipping backup.")]
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "No files found in backup source '{Path}'. Skipping backup."
+    )]
     private partial void LogNoBackupFiles(string path);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "No files found in restore source '{Path}'. Skipping restore.")]
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "No files found in restore source '{Path}'. Skipping restore."
+    )]
     private partial void LogNoRestoreFiles(string path);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Nothing to process. Stopping.")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Nothing to process. Stopping.")]
     private partial void LogNothingToProcess();
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "Starting {Operation} from '{Source}' to '{Destination}'.")]
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Starting {Operation} from '{Source}' to '{Destination}'."
+    )]
     private partial void LogStartingOperation(string operation, string source, string destination);
 
-    [LoggerMessage(Level = LogLevel.Debug,
-        Message = "{Operation} progress: {Processed}/{Total} files, {Bytes} bytes.")]
+    [LoggerMessage(
+        Level = LogLevel.Debug,
+        Message = "{Operation} progress: {Processed}/{Total} files, {Bytes} bytes."
+    )]
     private partial void LogProgress(string operation, int processed, int total, long bytes);
 
-    [LoggerMessage(Level = LogLevel.Error,
-        Message = "{Operation} failed: {Errors}")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Operation} failed: {Errors}")]
     private partial void LogOperationFailed(string operation, string errors);
 
-    [LoggerMessage(Level = LogLevel.Error,
-        Message = "{Operation} completed with errors: {Errors}")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Operation} completed with errors: {Errors}")]
     private partial void LogOperationErrors(string operation, string errors);
 
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "{Operation} completed: {Processed}/{Total} files, {Bytes} bytes in {Elapsed}.")]
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "{Operation} completed: {Processed}/{Total} files, {Bytes} bytes in {Elapsed}."
+    )]
     private partial void LogOperationCompleted(
-        string operation, int processed, int total, long bytes, TimeSpan elapsed);
+        string operation,
+        int processed,
+        int total,
+        long bytes,
+        TimeSpan elapsed
+    );
 }

@@ -1,6 +1,5 @@
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-
 using ZstdSharp;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Compression;
@@ -18,19 +17,15 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
     protected abstract int CompressionLevel { get; }
 
     public async Task<Stream> CompressAsync(
-    Stream inputStream,
-    CancellationToken cancellationToken = default)
+        Stream inputStream,
+        CancellationToken cancellationToken = default
+    )
     {
         var output = CreateTempStream();
 
-        await using (CompressionStream zstd = new(
-            output,
-            CompressionLevel))
+        await using (CompressionStream zstd = new(output, CompressionLevel))
         {
-            await inputStream.CopyToAsync(
-                zstd,
-                StreamConstants.CopyBufferSize,
-                cancellationToken);
+            await inputStream.CopyToAsync(zstd, StreamConstants.CopyBufferSize, cancellationToken);
         }
 
         output.Position = 0;
@@ -39,7 +34,8 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
 
     public async Task<Stream> DecompressAsync(
         Stream inputStream,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var output = CreateTempStream();
         await using (DecompressionStream zstd = new(inputStream))
@@ -65,6 +61,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
                     | FileOptions.SequentialScan
                     | FileOptions.DeleteOnClose,
                 BufferSize = StreamConstants.CopyBufferSize,
-            });
+            }
+        );
     }
 }
