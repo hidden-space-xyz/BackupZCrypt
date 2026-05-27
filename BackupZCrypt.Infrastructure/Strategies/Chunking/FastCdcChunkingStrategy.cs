@@ -9,8 +9,8 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
     private const int ChunkTargetSize = 1 * 1024 * 1024;
     private const int ChunkMinSize = 256 * 1024;
     private const int ChunkMaxSize = 4 * 1024 * 1024;
-    private const ulong MaskSmall = 0x0000D91767537000UL;
-    private const ulong MaskLarge = 0x0000D91707537000UL;
+    private const ulong MaskSmall = 0x0000D93767537000UL;
+    private const ulong MaskLarge = 0x0000D90707537000UL;
     private const ulong MaskSmallShifted = MaskSmall << 1;
     private const ulong MaskLargeShifted = MaskLarge << 1;
 
