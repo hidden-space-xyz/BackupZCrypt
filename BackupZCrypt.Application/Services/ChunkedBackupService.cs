@@ -1,4 +1,3 @@
-using BackupZCrypt.Application.Constants;
 using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
@@ -9,7 +8,6 @@ using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
-
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -26,8 +24,6 @@ internal sealed class ChunkedBackupService(
     IKeyDerivationServiceFactory keyDerivationServiceFactory) : IChunkedBackupService
 {
     private const int KeySizeBytes = 32;
-    private const int NonceSizeBytes = 12;
-    private const int SaltSizeBytes = 32;
     private const int Sha256SizeBytes = 32;
 
     private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
@@ -631,7 +627,7 @@ internal sealed class ChunkedBackupService(
 
         await using var fileStream = fileOperationsService.OpenReadStream(
             filePath,
-            BackupIOConstants.CopyBufferSize);
+            StreamConstants.CopyBufferSize);
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
@@ -704,7 +700,7 @@ internal sealed class ChunkedBackupService(
 
         await using var destStream = fileOperationsService.CreateWriteStream(
             destFilePath,
-            BackupIOConstants.CopyBufferSize);
+            StreamConstants.CopyBufferSize);
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         long restoredBytes = 0;
@@ -715,7 +711,7 @@ internal sealed class ChunkedBackupService(
             var nonceB64 = storedChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
                 ? await storedChunk.Value.ConfigureAwait(false)
                 : chunkRef.Nonce;
-            var nonce = DecodeBase64FixedLength(nonceB64, NonceSizeBytes, "Invalid chunk nonce.");
+            var nonce = DecodeBase64FixedLength(nonceB64, EncryptionConstants.NonceSize, "Invalid chunk nonce.");
             var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
             var chunkFilePath = fileOperationsService.CombinePath(
                 chunksDir,
@@ -943,7 +939,7 @@ internal sealed class ChunkedBackupService(
                 {
                     nonce = DecodeBase64FixedLength(
                         nonceCandidate,
-                        NonceSizeBytes,
+                        EncryptionConstants.NonceSize,
                         "Invalid chunk nonce.");
                     associatedData = BuildChunkAssociatedData(chunkHash, nonce);
                     decryptedData = encryptionStrategy.DecryptChunk(
@@ -1007,7 +1003,7 @@ internal sealed class ChunkedBackupService(
                     "Invalid chunk hash.");
                 var decodedNonce = DecodeBase64FixedLength(
                     chunk.Nonce,
-                    NonceSizeBytes,
+                    EncryptionConstants.NonceSize,
                     "Invalid chunk nonce.");
                 CryptographicOperations.ZeroMemory(decodedHash);
                 CryptographicOperations.ZeroMemory(decodedNonce);
@@ -1223,7 +1219,7 @@ internal sealed class ChunkedBackupService(
 
     private static byte[] GenerateSalt()
     {
-        var salt = new byte[SaltSizeBytes];
+        var salt = new byte[EncryptionConstants.SaltSize];
         RandomNumberGenerator.Fill(salt);
         return salt;
     }
@@ -1231,11 +1227,11 @@ internal sealed class ChunkedBackupService(
     private static byte[] ComputeChunkNonce(byte[] nonceKey, byte[] chunkHash)
     {
         var hmac = HMACSHA256.HashData(nonceKey, chunkHash);
-        var nonce = new byte[NonceSizeBytes];
+        var nonce = new byte[EncryptionConstants.NonceSize];
 
         try
         {
-            Buffer.BlockCopy(hmac, 0, nonce, 0, NonceSizeBytes);
+            Buffer.BlockCopy(hmac, 0, nonce, 0, EncryptionConstants.NonceSize);
             return nonce;
         }
         finally
@@ -1271,7 +1267,7 @@ internal sealed class ChunkedBackupService(
         IncrementalHash hasher,
         CancellationToken cancellationToken)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(BackupIOConstants.CopyBufferSize);
+        var buffer = ArrayPool<byte>.Shared.Rent(StreamConstants.CopyBufferSize);
         long total = 0;
 
         try

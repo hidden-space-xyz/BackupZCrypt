@@ -1,6 +1,6 @@
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Constants;
 using BackupZCrypt.Infrastructure.Resources;
 
 using System.Security.Cryptography;
@@ -49,7 +49,7 @@ internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
         byte[] nonce,
         byte[] associatedData)
     {
-        var tagSize = EncryptionConstants.MacSize / 8;
+        const int tagSize = EncryptionConstants.MacSize / 8;
         if (ciphertext.Length < tagSize)
         {
             throw new CryptographicException();
