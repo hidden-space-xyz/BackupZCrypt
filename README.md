@@ -1,6 +1,5 @@
 <p align="center">
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
-<img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
 <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
@@ -25,7 +24,7 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 - **🧩 Chunk-Based Architecture** — Files are split into variable-size chunks using content-defined chunking (FastCDC), so small edits don't require re-encrypting entire files
 - **🖱️ Simple Interface** — No cryptography knowledge needed — just select files, choose a password, and encrypt
-- **🤖 Automated Worker** — Run unattended backups and restores as a background service or Docker container
+- **🤖 Automated Worker** — Run unattended backups and restores as a background service
 - **🏦 Military-Grade Security** — Uses the same encryption standards trusted by financial institutions
 - **🔌 No Internet Required** — Works completely offline, keeping your sensitive data off the network
 - **🛠️ Multiple Security Options** — Choose from multiple proven encryption and key derivation methods
@@ -54,7 +53,7 @@ The Terminal mode provides an interactive command-line interface for manual back
 
 ### 🤖 Worker (Automated)
 
-The Worker is a background service that performs **automated, unattended backups and restores**. It runs once, processes any pending operations, and stops automatically — perfect for scheduled tasks, CI/CD pipelines, or containerized environments.
+The Worker is a background service that performs **automated, unattended backups and restores**. It runs once, processes any pending operations, and stops automatically — perfect for scheduled tasks and CI/CD pipelines.
 
 #### How It Works
 

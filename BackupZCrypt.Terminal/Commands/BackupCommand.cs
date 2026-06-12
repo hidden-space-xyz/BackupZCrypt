@@ -161,16 +161,16 @@ internal sealed class BackupCommand(
         string destinationPath
     )
     {
-        if (!DetectManifest(sourcePath))
+        var manifestKind = DetectManifestKind(sourcePath);
+
+        if (manifestKind == ManifestKind.Missing)
         {
             AnsiConsole.MarkupLine($"[red]{Messages.ManifestNotFound}[/]");
             return;
         }
 
-        var isEncrypted = DetectEncryptedManifest(sourcePath);
-
         var password = string.Empty;
-        if (isEncrypted)
+        if (manifestKind == ManifestKind.Encrypted)
         {
             AnsiConsole.MarkupLine($"[cyan]{Messages.EncryptedBackupDetected}[/]");
             password = PromptDecryptionPassword();
@@ -192,36 +192,29 @@ internal sealed class BackupCommand(
 
         await pathPromptService.RememberPathsAsync(sourcePath, destinationPath);
 
-        if (isEncrypted)
+        if (manifestKind == ManifestKind.PlainCopy)
         {
-            BackupRequest request = new(
-                sourcePath,
-                destinationPath,
-                password,
-                password,
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Restore
-            );
-
-            await RunOperationAsync(request, operationName, Messages.Decrypting);
+            await ExecutePlainRestoreAsync(operationName, sourcePath, destinationPath);
+            return;
         }
-        else
-        {
-            BackupRequest request = new(
-                sourcePath,
-                destinationPath,
-                string.Empty,
-                string.Empty,
-                default,
-                default,
-                BackupOperation.Restore,
-                compressionStrategies[0].Id,
-                ProceedOnWarnings: false
-            );
 
-            await RunOperationAsync(request, operationName, Messages.Decompressing);
-        }
+        BackupRequest request = new(
+            sourcePath,
+            destinationPath,
+            password,
+            password,
+            manifestKind == ManifestKind.Encrypted
+                ? EncryptionAlgorithm.Aes
+                : EncryptionAlgorithm.None,
+            KeyDerivationAlgorithm.Argon2id,
+            BackupOperation.Restore
+        );
+
+        await RunOperationAsync(
+            request,
+            operationName,
+            manifestKind == ManifestKind.Encrypted ? Messages.Decrypting : Messages.Decompressing
+        );
     }
 
     private async Task ExecuteUpdateBackupAsync(string operationName)
@@ -229,16 +222,16 @@ internal sealed class BackupCommand(
         var sourcePath = await pathPromptService.PromptUpdateSourcePathAsync();
         var backupPath = await pathPromptService.PromptUpdateBackupPathAsync();
 
-        if (!DetectManifest(backupPath))
+        var manifestKind = DetectManifestKind(backupPath);
+
+        if (manifestKind == ManifestKind.Missing)
         {
             AnsiConsole.MarkupLine($"[red]{Messages.UpdateManifestNotFound}[/]");
             return;
         }
 
-        var isEncrypted = DetectEncryptedManifest(backupPath);
-
         var password = string.Empty;
-        if (isEncrypted)
+        if (manifestKind == ManifestKind.Encrypted)
         {
             AnsiConsole.MarkupLine($"[cyan]{Messages.EncryptedBackupDetected}[/]");
             password = PromptDecryptionPassword();
@@ -260,36 +253,19 @@ internal sealed class BackupCommand(
 
         await pathPromptService.RememberPathsAsync(sourcePath, backupPath);
 
-        if (isEncrypted)
-        {
-            BackupRequest request = new(
-                sourcePath,
-                backupPath,
-                password,
-                password,
-                EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.Argon2id,
-                BackupOperation.Update
-            );
+        BackupRequest request = new(
+            sourcePath,
+            backupPath,
+            password,
+            password,
+            manifestKind == ManifestKind.Encrypted
+                ? EncryptionAlgorithm.Aes
+                : EncryptionAlgorithm.None,
+            KeyDerivationAlgorithm.Argon2id,
+            BackupOperation.Update
+        );
 
-            await RunOperationAsync(request, operationName, Messages.Updating);
-        }
-        else
-        {
-            BackupRequest request = new(
-                sourcePath,
-                backupPath,
-                string.Empty,
-                string.Empty,
-                default,
-                default,
-                BackupOperation.Update,
-                compressionStrategies[0].Id,
-                ProceedOnWarnings: false
-            );
-
-            await RunOperationAsync(request, operationName, Messages.Updating);
-        }
+        await RunOperationAsync(request, operationName, Messages.Updating);
     }
 
     private async Task ExecutePlainCopyAsync(
@@ -302,12 +278,14 @@ internal sealed class BackupCommand(
 
         using CancellationTokenSource cts = new();
 
-        Console.CancelKeyPress += (_, e) =>
+        ConsoleCancelEventHandler cancelHandler = (_, e) =>
         {
             e.Cancel = true;
             cts.Cancel();
             AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
         };
+
+        Console.CancelKeyPress += cancelHandler;
 
         try
         {
@@ -544,6 +522,153 @@ internal sealed class BackupCommand(
                 $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
             );
         }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
+    private static async Task ExecutePlainRestoreAsync(
+        string operationName,
+        string sourcePath,
+        string destinationPath
+    )
+    {
+        AnsiConsole.WriteLine();
+
+        using CancellationTokenSource cts = new();
+
+        ConsoleCancelEventHandler cancelHandler = (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+            AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
+        };
+
+        Console.CancelKeyPress += cancelHandler;
+
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            List<string> errors = [];
+            var processedFiles = 0;
+            long totalBytes = 0;
+
+            var sourceDir = Directory.Exists(sourcePath)
+                ? sourcePath
+                : Path.GetDirectoryName(sourcePath) ?? sourcePath;
+
+            string[] files =
+                File.Exists(sourcePath) && !Directory.Exists(sourcePath)
+                    ? [sourcePath]
+                    : [
+                        .. Directory
+                            .GetFiles(sourceDir, "*", SearchOption.AllDirectories)
+                            .Where(file =>
+                                !string.Equals(
+                                    Path.GetFileName(file),
+                                    BackupConstants.ManifestFileName,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            ),
+                    ];
+
+            var totalFileCount = files.Length;
+            Directory.CreateDirectory(destinationPath);
+
+            await AnsiConsole
+                .Progress()
+                .AutoClear(false)
+                .HideCompleted(false)
+                .Columns(
+                    new TaskDescriptionColumn(),
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
+                    new SpinnerColumn()
+                )
+                .StartAsync(async ctx =>
+                {
+                    var task = ctx.AddTask(
+                        $"[cyan]{string.Format(Messages.OperationIngFormat, Messages.Copying)}[/]",
+                        maxValue: Math.Max(totalFileCount, 1)
+                    );
+
+                    foreach (var file in files)
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
+
+                        var relativePath = Path.GetRelativePath(sourceDir, file);
+                        var destFile = Path.Combine(destinationPath, relativePath);
+                        var destDir = Path.GetDirectoryName(destFile);
+
+                        if (destDir is not null)
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
+
+                        try
+                        {
+                            await using FileStream sourceStream = new(
+                                file,
+                                FileMode.Open,
+                                FileAccess.Read,
+                                FileShare.Read,
+                                4096,
+                                useAsync: true
+                            );
+                            await using FileStream destStream = new(
+                                destFile,
+                                FileMode.Create,
+                                FileAccess.Write,
+                                FileShare.None,
+                                4096,
+                                useAsync: true
+                            );
+                            await sourceStream.CopyToAsync(destStream, cts.Token);
+
+                            totalBytes += new FileInfo(file).Length;
+                            processedFiles++;
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            errors.Add($"{relativePath}: {ex.Message}");
+                        }
+
+                        task.Value = processedFiles + errors.Count;
+                        task.Description =
+                            $"[cyan]{string.Format(Messages.OperationIngFilesFormat, Messages.Copying, processedFiles, totalFileCount)}[/]";
+                    }
+                });
+
+            sw.Stop();
+
+            BackupResult result = new(
+                errors.Count == 0,
+                sw.Elapsed,
+                totalBytes,
+                processedFiles,
+                totalFileCount,
+                errors,
+                []
+            );
+
+            ResultRenderer.Print(result, operationName);
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.MarkupLine($"[yellow]{Messages.OperationCancelledByUser}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
+            );
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
     }
 
     private static void PrintFailure(string operationName, string[] errors) =>
@@ -708,17 +833,7 @@ internal sealed class BackupCommand(
             );
     }
 
-    private static bool DetectManifest(string sourcePath)
-    {
-        var dir = Directory.Exists(sourcePath)
-            ? sourcePath
-            : Path.GetDirectoryName(sourcePath) ?? string.Empty;
-
-        return !string.IsNullOrEmpty(dir)
-            && File.Exists(Path.Combine(dir, BackupConstants.ManifestFileName));
-    }
-
-    private static bool DetectEncryptedManifest(string sourcePath)
+    private static ManifestKind DetectManifestKind(string sourcePath)
     {
         var dir = Directory.Exists(sourcePath)
             ? sourcePath
@@ -726,24 +841,33 @@ internal sealed class BackupCommand(
 
         if (string.IsNullOrEmpty(dir))
         {
-            return false;
+            return ManifestKind.Missing;
         }
 
         var manifestPath = Path.Combine(dir, BackupConstants.ManifestFileName);
         if (!File.Exists(manifestPath))
         {
-            return false;
+            return ManifestKind.Missing;
         }
 
         try
         {
             using FileStream fs = new(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var firstByte = fs.ReadByte();
-            return firstByte >= 0 && firstByte != '{';
+
+            // The first byte distinguishes the manifest format: '{' is the plain JSON
+            // manifest written by plain copies, 0 is an unencrypted chunked manifest
+            // (EncryptionAlgorithm.None) and any other value an encrypted preamble.
+            return fs.ReadByte() switch
+            {
+                < 0 => ManifestKind.Missing,
+                '{' => ManifestKind.PlainCopy,
+                0 => ManifestKind.UnencryptedChunked,
+                _ => ManifestKind.Encrypted,
+            };
         }
         catch
         {
-            return false;
+            return ManifestKind.Missing;
         }
     }
 
@@ -830,12 +954,16 @@ internal sealed class BackupCommand(
 
         using CancellationTokenSource cts = new();
 
-        Console.CancelKeyPress += (_, e) =>
+        // The handler must be removed afterwards: leaving it subscribed would make a
+        // later Ctrl+C invoke it on an already disposed CancellationTokenSource.
+        ConsoleCancelEventHandler cancelHandler = (_, e) =>
         {
             e.Cancel = true;
             cts.Cancel();
             AnsiConsole.MarkupLine($"[yellow]{Messages.Cancelling}[/]");
         };
+
+        Console.CancelKeyPress += cancelHandler;
 
         try
         {
@@ -888,5 +1016,17 @@ internal sealed class BackupCommand(
                 $"[red]{string.Format(Messages.UnexpectedErrorFormat, Markup.Escape(ex.Message))}[/]"
             );
         }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
+    private enum ManifestKind
+    {
+        Missing = 0,
+        PlainCopy = 1,
+        UnencryptedChunked = 2,
+        Encrypted = 3,
     }
 }

@@ -1,3 +1,4 @@
+using System.IO.Enumeration;
 using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -8,12 +9,35 @@ internal sealed class FileOperationsService : IFileOperationsService
 {
     public async Task<string[]> GetFilesAsync(
         string directoryPath,
-        string searchPattern = "*.*",
+        string searchPattern = "*",
         CancellationToken cancellationToken = default
     )
     {
         return await Task.Run(
-            () => Directory.GetFiles(directoryPath, searchPattern, SearchOption.AllDirectories),
+            () =>
+            {
+                FileSystemEnumerable<string> enumerable = new(
+                    directoryPath,
+                    static (ref FileSystemEntry entry) => entry.ToFullPath(),
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true,
+                        AttributesToSkip = FileAttributes.None,
+                    }
+                )
+                {
+                    ShouldIncludePredicate = (ref FileSystemEntry entry) =>
+                        !entry.IsDirectory
+                        && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName),
+                    // Never recurse into directory reparse points (symlinks/junctions):
+                    // they can create cycles or pull in content outside the source tree.
+                    ShouldRecursePredicate = static (ref FileSystemEntry entry) =>
+                        (entry.Attributes & FileAttributes.ReparsePoint) == 0,
+                };
+
+                return enumerable.ToArray();
+            },
             cancellationToken
         );
     }
@@ -44,6 +68,11 @@ internal sealed class FileOperationsService : IFileOperationsService
     public void DeleteFile(string filePath)
     {
         File.Delete(filePath);
+    }
+
+    public void MoveFile(string sourcePath, string destinationPath, bool overwrite)
+    {
+        File.Move(sourcePath, destinationPath, overwrite);
     }
 
     public async Task DeleteDirectoryAsync(
@@ -127,24 +156,6 @@ internal sealed class FileOperationsService : IFileOperationsService
                 Access = FileAccess.Write,
                 Mode = FileMode.Create,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
-                BufferSize = bufferSize,
-            }
-        );
-    }
-
-    public Stream CreateTempStream(int bufferSize)
-    {
-        var tempFilePath = Path.GetTempFileName();
-        return new FileStream(
-            tempFilePath,
-            new FileStreamOptions
-            {
-                Access = FileAccess.ReadWrite,
-                Mode = FileMode.Create,
-                Options =
-                    FileOptions.Asynchronous
-                    | FileOptions.SequentialScan
-                    | FileOptions.DeleteOnClose,
                 BufferSize = bufferSize,
             }
         );

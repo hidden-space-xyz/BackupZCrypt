@@ -31,6 +31,10 @@ internal sealed class ChunkedBackupService(
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 
+    private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
+
+    private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
+
     private readonly Dictionary<
         EncryptionAlgorithm,
         IEncryptionAlgorithmStrategy
@@ -475,14 +479,6 @@ internal sealed class ChunkedBackupService(
                 }
             }
 
-            await DeleteOrphanedChunksAsync(
-                    chunksDir,
-                    referencedChunkHashes.Keys,
-                    keys.NamingKey,
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
-
             ManifestHeader header = new(
                 request.EncryptionAlgorithm,
                 request.KeyDerivationAlgorithm,
@@ -507,6 +503,19 @@ internal sealed class ChunkedBackupService(
                     cancellationToken
                 )
                 .ConfigureAwait(false);
+
+            // Orphaned chunks may still be referenced by the previous manifest, so they
+            // are only deleted once the new manifest has been persisted successfully.
+            if (manifestErrors.Count == 0)
+            {
+                await DeleteOrphanedChunksAsync(
+                        chunksDir,
+                        referencedChunkHashes.Keys,
+                        keys.NamingKey,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
+            }
 
             List<string> errorList = [.. errors];
             errorList.AddRange(manifestErrors);
@@ -866,6 +875,7 @@ internal sealed class ChunkedBackupService(
                             decompressedStream,
                             destStream,
                             fileHasher,
+                            fileEntry.TotalSize - restoredBytes,
                             cancellationToken
                         )
                         .ConfigureAwait(false);
@@ -936,31 +946,41 @@ internal sealed class ChunkedBackupService(
         {
             if (compressionStrategy is not null)
             {
-                await using MemoryStream inputStream = new(chunkData.ToArray(), writable: false);
+                await using var inputStream = CreateReadOnlyStream(chunkData);
 
                 await using var compressedStream = await compressionStrategy
                     .CompressAsync(inputStream, cancellationToken)
                     .ConfigureAwait(false);
 
-                await using MemoryStream compressedBuffer = new();
-                await compressedStream
-                    .CopyToAsync(compressedBuffer, cancellationToken)
-                    .ConfigureAwait(false);
+                if (compressedStream is MemoryStream compressedMemory)
+                {
+                    dataToEncrypt = compressedMemory.ToArray();
+                }
+                else
+                {
+                    await using MemoryStream compressedBuffer = new();
+                    await compressedStream
+                        .CopyToAsync(compressedBuffer, cancellationToken)
+                        .ConfigureAwait(false);
 
-                dataToEncrypt = compressedBuffer.ToArray();
-            }
-            else
-            {
-                dataToEncrypt = chunkData.ToArray();
+                    dataToEncrypt = compressedBuffer.ToArray();
+                }
             }
 
             associatedData = BuildChunkAssociatedData(chunkHash, nonce);
-            encrypted = encryptionStrategy.EncryptChunk(
-                dataToEncrypt,
-                encryptionKey,
-                nonce,
-                associatedData
-            );
+            encrypted = dataToEncrypt is not null
+                ? encryptionStrategy.EncryptChunk(
+                    dataToEncrypt,
+                    encryptionKey,
+                    nonce,
+                    associatedData
+                )
+                : encryptionStrategy.EncryptChunk(
+                    chunkData.Span,
+                    encryptionKey,
+                    nonce,
+                    associatedData
+                );
 
             await fileOperationsService
                 .WriteAllBytesAsync(chunkFilePath, encrypted, cancellationToken)
@@ -1358,7 +1378,16 @@ internal sealed class ChunkedBackupService(
 
     private static byte[] DeriveSubKey(byte[] masterKey, ReadOnlySpan<byte> context)
     {
-        return HKDF.Expand(HashAlgorithmName.SHA256, masterKey, KeySizeBytes, context.ToArray());
+        var subKey = new byte[KeySizeBytes];
+        HKDF.Expand(HashAlgorithmName.SHA256, masterKey, subKey, context);
+        return subKey;
+    }
+
+    private static MemoryStream CreateReadOnlyStream(ReadOnlyMemory<byte> data)
+    {
+        return System.Runtime.InteropServices.MemoryMarshal.TryGetArray(data, out var segment)
+            ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
+            : new MemoryStream(data.ToArray(), writable: false);
     }
 
     private static byte[] GenerateSalt()
@@ -1409,6 +1438,7 @@ internal sealed class ChunkedBackupService(
         Stream source,
         Stream destination,
         IncrementalHash hasher,
+        long maxBytes,
         CancellationToken cancellationToken
     )
     {
@@ -1428,11 +1458,21 @@ internal sealed class ChunkedBackupService(
                     return total;
                 }
 
+                total += read;
+
+                // Stops decompression bombs before they reach the destination file:
+                // a genuine chunk can never exceed the size declared in the manifest.
+                if (total > maxBytes)
+                {
+                    throw new InvalidDataException(
+                        "Decompressed data exceeds the size declared in the manifest."
+                    );
+                }
+
                 hasher.AppendData(buffer.AsSpan(0, read));
                 await destination
                     .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
                     .ConfigureAwait(false);
-                total += read;
             }
         }
         finally
@@ -1503,8 +1543,7 @@ internal sealed class ChunkedBackupService(
             throw new InvalidDataException("Manifest entry path must be relative.");
         }
 
-        var invalidChars = Path.GetInvalidPathChars();
-        if (relativePath.IndexOfAny(invalidChars) >= 0)
+        if (relativePath.IndexOfAny(InvalidPathChars) >= 0)
         {
             throw new InvalidDataException("Manifest entry path contains invalid characters.");
         }
@@ -1517,6 +1556,18 @@ internal sealed class ChunkedBackupService(
         if (pathSegments.Any(static segment => segment == ".."))
         {
             throw new InvalidDataException("Manifest entry path contains traversal segments.");
+        }
+
+        // On Windows, characters such as ':' would silently redirect writes to NTFS
+        // alternate data streams; reject any segment that is not a valid file name.
+        if (
+            OperatingSystem.IsWindows()
+            && pathSegments.Any(static segment => segment.IndexOfAny(InvalidFileNameChars) >= 0)
+        )
+        {
+            throw new InvalidDataException(
+                "Manifest entry path contains invalid file name characters."
+            );
         }
     }
 

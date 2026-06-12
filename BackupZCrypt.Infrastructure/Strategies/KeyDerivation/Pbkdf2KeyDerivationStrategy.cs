@@ -21,22 +21,17 @@ internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrat
     public byte[] DeriveKey(string password, byte[] salt, int keySize)
     {
         byte[]? passwordBytes = null;
-        byte[]? key = null;
 
         try
         {
             passwordBytes = Encoding.UTF8.GetBytes(password);
-            key = Rfc2898DeriveBytes.Pbkdf2(
+            return Rfc2898DeriveBytes.Pbkdf2(
                 passwordBytes,
                 salt,
                 Iterations,
                 HashAlgorithmName.SHA256,
                 keySize / 8
             );
-
-            var result = new byte[key.Length];
-            Array.Copy(key, result, key.Length);
-            return result;
         }
         catch (Exception ex)
         {
@@ -47,11 +42,6 @@ internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrat
             if (passwordBytes is not null)
             {
                 CryptographicOperations.ZeroMemory(passwordBytes);
-            }
-
-            if (key is not null)
-            {
-                CryptographicOperations.ZeroMemory(key);
             }
         }
     }

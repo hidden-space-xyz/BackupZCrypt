@@ -18,8 +18,18 @@ internal sealed class SettingsService(
         Converters = { new JsonStringEnumConverter() },
     };
 
+    // LocalApplicationData instead of the temp directory: temp may be purged at any
+    // time and is world-readable on some platforms, while settings include recent
+    // backup paths.
     private string BaseDirectoryPath { get; } =
-        baseDirectoryPath ?? Path.Combine(Path.GetTempPath(), SettingsDirectoryName);
+        baseDirectoryPath
+        ?? Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create
+            ),
+            SettingsDirectoryName
+        );
 
     public string GetFilePath<T>()
         where T : class, ISettings<T> =>
@@ -46,15 +56,20 @@ internal sealed class SettingsService(
         {
             var settings = JsonSerializer.Deserialize<T>(rawSettings, SerializerOptions);
 
-            return settings
-                ?? throw new InvalidOperationException(
-                    $"Settings file '{filePath}' is empty or invalid."
-                );
+            if (settings is not null)
+            {
+                return settings;
+            }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            throw new InvalidOperationException($"Settings file '{filePath}' is invalid.", ex);
+            // Fall through to self-healing below.
         }
+
+        // A corrupted settings file must not block the application: recreate defaults.
+        var recreated = T.DefaultValue;
+        await this.SaveAsync(recreated, cancellationToken);
+        return recreated;
     }
 
     public async Task SaveAsync<T>(T settings, CancellationToken cancellationToken = default)

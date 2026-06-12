@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, ScryptKeyDerivationStrategy>();
 
         // Encryption Strategies
+        services.AddSingleton<IEncryptionAlgorithmStrategy, NoneEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, AesEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, TwofishEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, SerpentEncryptionStrategy>();

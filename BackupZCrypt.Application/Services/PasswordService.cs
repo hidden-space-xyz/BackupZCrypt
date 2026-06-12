@@ -166,20 +166,35 @@ internal sealed partial class PasswordService : IPasswordService
 
         var charCount = availableChars.Length;
         var maxValidByte = 256 - (256 % charCount);
+        var randomBytes = new byte[Math.Max(length * 2, 64)];
+        var bufferIndex = randomBytes.Length;
 
-        for (var i = 0; i < length; )
+        try
         {
-            var buffer = new byte[1];
-            RandomNumberGenerator.Fill(buffer);
-
-            if (buffer[0] < maxValidByte)
+            for (var i = 0; i < length; )
             {
-                password.Append(availableChars[buffer[0] % charCount]);
-                i++;
-            }
-        }
+                if (bufferIndex >= randomBytes.Length)
+                {
+                    RandomNumberGenerator.Fill(randomBytes);
+                    bufferIndex = 0;
+                }
 
-        return password.ToString();
+                var value = randomBytes[bufferIndex++];
+
+                if (value < maxValidByte)
+                {
+                    password.Append(availableChars[value % charCount]);
+                    i++;
+                }
+            }
+
+            return password.ToString();
+        }
+        finally
+        {
+            // The random bytes map directly to password characters.
+            CryptographicOperations.ZeroMemory(randomBytes);
+        }
     }
 
     private static int EstimatePoolSize(string password, out PasswordComposition flags)

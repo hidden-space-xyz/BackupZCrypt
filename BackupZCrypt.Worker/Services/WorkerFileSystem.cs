@@ -34,7 +34,10 @@ internal sealed partial class WorkerFileSystem(ILogger<WorkerFileSystem> logger)
         {
             using FileStream fs = new(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var firstByte = fs.ReadByte();
-            return firstByte >= 0 && firstByte != '{';
+
+            // Byte 0 identifies an unencrypted chunked manifest (EncryptionAlgorithm.None)
+            // and '{' a plain JSON manifest; anything else is an encrypted preamble.
+            return firstByte > 0 && firstByte != '{';
         }
         catch (IOException ex)
         {

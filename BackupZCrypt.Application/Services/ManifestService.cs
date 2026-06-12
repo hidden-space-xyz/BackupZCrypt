@@ -55,8 +55,7 @@ internal sealed class ManifestService(
             manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
             var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
 
-            await fileOperationsService
-                .WriteAllBytesAsync(manifestPath, manifestBytes, cancellationToken)
+            await WriteFileAtomicallyAsync(manifestPath, manifestBytes, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -270,8 +269,7 @@ internal sealed class ManifestService(
             encryptedBytes.CopyTo(payload, ChunkPreambleHeaderSize + EncryptionConstants.NonceSize);
 
             var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
-            await fileOperationsService
-                .WriteAllBytesAsync(manifestPath, payload, cancellationToken)
+            await WriteFileAtomicallyAsync(manifestPath, payload, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -297,6 +295,39 @@ internal sealed class ManifestService(
         }
 
         return errors;
+    }
+
+    // The manifest is the single point of failure of a backup: a torn write would
+    // make every chunk unrecoverable, so it is replaced via temp file + rename.
+    private async Task WriteFileAtomicallyAsync(
+        string finalPath,
+        byte[] payload,
+        CancellationToken cancellationToken
+    )
+    {
+        var tempPath = finalPath + ".tmp";
+
+        try
+        {
+            await fileOperationsService
+                .WriteAllBytesAsync(tempPath, payload, cancellationToken)
+                .ConfigureAwait(false);
+
+            fileOperationsService.MoveFile(tempPath, finalPath, overwrite: true);
+        }
+        catch
+        {
+            try
+            {
+                fileOperationsService.DeleteFile(tempPath);
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
+
+            throw;
+        }
     }
 
     private static byte[] BuildChunkPreambleHeader(

@@ -21,7 +21,10 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
         CancellationToken cancellationToken = default
     )
     {
-        var output = CreateTempStream();
+        // Chunk sizes are bounded by the chunking strategy, so compression happens
+        // fully in memory: spilling plaintext-derived data to temporary files would
+        // leak unencrypted content to disk.
+        MemoryStream output = new();
 
         await using (CompressionStream zstd = new(output, CompressionLevel))
         {
@@ -32,36 +35,11 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
         return output;
     }
 
-    public async Task<Stream> DecompressAsync(
+    public Task<Stream> DecompressAsync(
         Stream inputStream,
         CancellationToken cancellationToken = default
     )
     {
-        var output = CreateTempStream();
-        await using (DecompressionStream zstd = new(inputStream))
-        {
-            await zstd.CopyToAsync(output, StreamConstants.CopyBufferSize, cancellationToken);
-        }
-
-        output.Position = 0;
-        return output;
-    }
-
-    private static FileStream CreateTempStream()
-    {
-        var tempFilePath = Path.GetRandomFileName();
-        return new FileStream(
-            tempFilePath,
-            new FileStreamOptions
-            {
-                Access = FileAccess.ReadWrite,
-                Mode = FileMode.Create,
-                Options =
-                    FileOptions.Asynchronous
-                    | FileOptions.SequentialScan
-                    | FileOptions.DeleteOnClose,
-                BufferSize = StreamConstants.CopyBufferSize,
-            }
-        );
+        return Task.FromResult<Stream>(new DecompressionStream(inputStream));
     }
 }

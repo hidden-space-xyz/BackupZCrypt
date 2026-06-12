@@ -3,6 +3,7 @@ using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Composition;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Terminal;
 using BackupZCrypt.Terminal.Commands;
@@ -26,9 +27,13 @@ SettingsCommand.ApplyLanguage(languageSettings.LanguageCode);
 var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 var passwordService = provider.GetRequiredService<IPasswordService>();
 var manifestService = provider.GetRequiredService<IManifestService>();
+// "None" is offered through a dedicated menu entry, not as a strategy choice.
 List<IEncryptionAlgorithmStrategy> encryptionStrategies =
 [
-    .. provider.GetServices<IEncryptionAlgorithmStrategy>().OrderBy(s => s.Id),
+    .. provider
+        .GetServices<IEncryptionAlgorithmStrategy>()
+        .Where(s => s.Id != EncryptionAlgorithm.None)
+        .OrderBy(s => s.Id),
 ];
 List<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies =
 [

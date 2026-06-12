@@ -80,7 +80,7 @@ internal sealed class BackupRequestValidator(
                 {
                     var files = await fileOperations.GetFilesAsync(
                         sourcePath,
-                        "*.*",
+                        "*",
                         cancellationToken
                     );
                     if (files.Length == 0)
@@ -246,17 +246,19 @@ internal sealed class BackupRequestValidator(
         {
             if (fileOperations.DirectoryExists(sourcePath))
             {
+                // Enumerate the source tree once and reuse it for every warning check.
+                var sourceFiles = await fileOperations.GetFilesAsync(
+                    sourcePath,
+                    "*",
+                    cancellationToken
+                );
+
                 var destinationDrive = systemStorage.GetPathRoot(destinationPath);
                 if (
                     !string.IsNullOrEmpty(destinationDrive)
                     && systemStorage.IsDriveReady(destinationDrive)
                 )
                 {
-                    var sourceFiles = await fileOperations.GetFilesAsync(
-                        sourcePath,
-                        "*.*",
-                        cancellationToken
-                    );
                     var totalSize = sourceFiles.Sum(f =>
                     {
                         try
@@ -282,16 +284,8 @@ internal sealed class BackupRequestValidator(
                         );
                     }
                 }
-            }
 
-            if (fileOperations.DirectoryExists(sourcePath))
-            {
-                var files = await fileOperations.GetFilesAsync(
-                    sourcePath,
-                    "*.*",
-                    cancellationToken
-                );
-                var fileCount = files.Length;
+                var fileCount = sourceFiles.Length;
                 if (fileCount > 10000)
                 {
                     warnings.Add(
@@ -318,7 +312,7 @@ internal sealed class BackupRequestValidator(
             {
                 var existingFiles = await fileOperations.GetFilesAsync(
                     destinationPath,
-                    "*.*",
+                    "*",
                     cancellationToken
                 );
                 if (existingFiles.Length > 0)

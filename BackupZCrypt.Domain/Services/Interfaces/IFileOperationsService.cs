@@ -4,7 +4,7 @@ public interface IFileOperationsService
 {
     Task<string[]> GetFilesAsync(
         string directoryPath,
-        string searchPattern = "*.*",
+        string searchPattern = "*",
         CancellationToken cancellationToken = default
     );
 
@@ -17,6 +17,8 @@ public interface IFileOperationsService
     Task CreateDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
 
     void DeleteFile(string filePath);
+
+    void MoveFile(string sourcePath, string destinationPath, bool overwrite);
 
     Task DeleteDirectoryAsync(
         string directoryPath,
@@ -39,8 +41,6 @@ public interface IFileOperationsService
     Stream OpenReadStream(string filePath, int bufferSize);
 
     Stream CreateWriteStream(string filePath, int bufferSize);
-
-    Stream CreateTempStream(int bufferSize);
 
     Task<string> ComputeFileHashAsync(
         string filePath,
