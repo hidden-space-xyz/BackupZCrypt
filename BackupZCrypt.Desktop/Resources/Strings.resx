@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTagline" xml:space="preserve"><value>Encrypted backups</value></data>
+  <data name="NavCreate" xml:space="preserve"><value>Create Backup</value></data>
+  <data name="NavUpdate" xml:space="preserve"><value>Update Backup</value></data>
+  <data name="NavRestore" xml:space="preserve"><value>Restore</value></data>
+  <data name="NavSettings" xml:space="preserve"><value>Settings</value></data>
+  <data name="NavAbout" xml:space="preserve"><value>Algorithms</value></data>
+  <data name="CreateTitle" xml:space="preserve"><value>Create Backup</value></data>
+  <data name="CreateSubtitle" xml:space="preserve"><value>Encrypt your files into a chunk-based backup. Only you, with your password, can read them.</value></data>
+  <data name="UpdateTitle" xml:space="preserve"><value>Update Backup</value></data>
+  <data name="UpdateSubtitle" xml:space="preserve"><value>Refresh an existing backup with the latest changes. Only modified chunks are re-encrypted.</value></data>
+  <data name="RestoreTitle" xml:space="preserve"><value>Restore Backup</value></data>
+  <data name="RestoreSubtitle" xml:space="preserve"><value>Decrypt a backup and restore the original files to any folder.</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
+  <data name="SettingsSubtitle" xml:space="preserve"><value>Defaults for new backups and application language.</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>Algorithms</value></data>
+  <data name="AboutSubtitle" xml:space="preserve"><value>Algorithms available for encryption, key derivation and compression.</value></data>
+  <data name="SectionLocations" xml:space="preserve"><value>Locations</value></data>
+  <data name="SectionSecurity" xml:space="preserve"><value>Security</value></data>
+  <data name="SectionOptions" xml:space="preserve"><value>Options</value></data>
+  <data name="SectionDefaults" xml:space="preserve"><value>Defaults</value></data>
+  <data name="SectionConfiguration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="ConfigurationHint" xml:space="preserve"><value>These options are configured in Settings.</value></data>
+  <data name="EditInSettings" xml:space="preserve"><value>Edit in Settings</value></data>
+  <data name="SourceLabel" xml:space="preserve"><value>Source</value></data>
+  <data name="SourceHint" xml:space="preserve"><value>Folder or file to back up…</value></data>
+  <data name="UpdateSourceHint" xml:space="preserve"><value>Folder with the current files…</value></data>
+  <data name="DestinationLabel" xml:space="preserve"><value>Destination</value></data>
+  <data name="DestinationHint" xml:space="preserve"><value>Folder where the backup will be written…</value></data>
+  <data name="BackupLabel" xml:space="preserve"><value>Backup</value></data>
+  <data name="BackupHint" xml:space="preserve"><value>Folder containing the backup (manifest.bzc)…</value></data>
+  <data name="RestoreDestinationHint" xml:space="preserve"><value>Folder where files will be restored…</value></data>
+  <data name="BrowseFolder" xml:space="preserve"><value>Folder…</value></data>
+  <data name="BrowseFile" xml:space="preserve"><value>File…</value></data>
+  <data name="EncryptionLabel" xml:space="preserve"><value>Encryption</value></data>
+  <data name="KeyDerivationLabel" xml:space="preserve"><value>Key derivation</value></data>
+  <data name="CompressionLabel" xml:space="preserve"><value>Compression</value></data>
+  <data name="NoneEncryptionName" xml:space="preserve"><value>None</value></data>
+  <data name="NoneEncryptionDescription" xml:space="preserve"><value>Files are stored without encryption.</value></data>
+  <data name="NoneCompressionName" xml:space="preserve"><value>None</value></data>
+  <data name="NoneCompressionDescription" xml:space="preserve"><value>Chunks are stored uncompressed.</value></data>
+  <data name="PasswordLabel" xml:space="preserve"><value>Password</value></data>
+  <data name="PasswordHint" xml:space="preserve"><value>Enter a strong password…</value></data>
+  <data name="ConfirmPasswordLabel" xml:space="preserve"><value>Confirm password</value></data>
+  <data name="ConfirmPasswordHint" xml:space="preserve"><value>Repeat the password…</value></data>
+  <data name="RevealPasswordTooltip" xml:space="preserve"><value>Show password</value></data>
+  <data name="GenerateButton" xml:space="preserve"><value>Generate</value></data>
+  <data name="CopyButton" xml:space="preserve"><value>Copy</value></data>
+  <data name="CopiedNotice" xml:space="preserve"><value>Copied to clipboard.</value></data>
+  <data name="GeneratedPasswordNotice" xml:space="preserve"><value>Store this password somewhere safe. Without it, the backup cannot be restored.</value></data>
+  <data name="StartBackup" xml:space="preserve"><value>Start backup</value></data>
+  <data name="StartUpdate" xml:space="preserve"><value>Update backup</value></data>
+  <data name="StartRestore" xml:space="preserve"><value>Restore backup</value></data>
+  <data name="CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ProgressFilesFormat" xml:space="preserve"><value>{0} of {1} files</value></data>
+  <data name="ElapsedFormat" xml:space="preserve"><value>Elapsed: {0}</value></data>
+  <data name="DetectEncrypted" xml:space="preserve"><value>Encrypted backup detected — password required.</value></data>
+  <data name="DetectUnencrypted" xml:space="preserve"><value>Unencrypted backup detected — no password needed.</value></data>
+  <data name="DetectPlain" xml:space="preserve"><value>This backup is a plain copy: its files are stored as-is and can be copied directly from the backup folder.</value></data>
+  <data name="DetectMissing" xml:space="preserve"><value>No backup manifest found at this location.</value></data>
+  <data name="WarningsTitle" xml:space="preserve"><value>Warnings</value></data>
+  <data name="ContinueAnyway" xml:space="preserve"><value>Continue anyway</value></data>
+  <data name="DismissButton" xml:space="preserve"><value>Dismiss</value></data>
+  <data name="ResultSuccessTitle" xml:space="preserve"><value>Operation completed</value></data>
+  <data name="ResultPartialTitle" xml:space="preserve"><value>Completed with errors</value></data>
+  <data name="ResultErrorTitle" xml:space="preserve"><value>Operation failed</value></data>
+  <data name="ResultCancelled" xml:space="preserve"><value>Operation cancelled</value></data>
+  <data name="ResultFilesFormat" xml:space="preserve"><value>{0} of {1} files processed</value></data>
+  <data name="ResultDurationFormat" xml:space="preserve"><value>Duration: {0}</value></data>
+  <data name="ResultSizeFormat" xml:space="preserve"><value>Total size: {0}</value></data>
+  <data name="ErrorsTitle" xml:space="preserve"><value>Errors</value></data>
+  <data name="LanguageLabel" xml:space="preserve"><value>Language</value></data>
+  <data name="LanguageSystemDefault" xml:space="preserve"><value>System default</value></data>
+  <data name="LanguageRestartNote" xml:space="preserve"><value>Language changes apply after restarting the application.</value></data>
+  <data name="SaveButton" xml:space="preserve"><value>Save</value></data>
+  <data name="SettingsSavedNotice" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="SettingsFileLabel" xml:space="preserve"><value>Settings file</value></data>
+  <data name="VersionFormat" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="PickFolderTitle" xml:space="preserve"><value>Select a folder</value></data>
+  <data name="PickFileTitle" xml:space="preserve"><value>Select a file</value></data>
+</root>

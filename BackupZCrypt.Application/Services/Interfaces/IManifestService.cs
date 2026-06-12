@@ -5,6 +5,11 @@ namespace BackupZCrypt.Application.Services.Interfaces;
 
 public interface IManifestService
 {
+    Task<ManifestKind> DetectManifestKindAsync(
+        string backupPath,
+        CancellationToken cancellationToken = default
+    );
+
     Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,

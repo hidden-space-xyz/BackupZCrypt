@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:views="using:BackupZCrypt.Desktop.Views"
+             xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             x:Class="BackupZCrypt.Desktop.Views.CreateBackupView"
+             x:DataType="vm:CreateBackupViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+
+      <!-- Header -->
+      <StackPanel Spacing="6">
+        <TextBlock Classes="h1" Text="{x:Static res:Strings.CreateTitle}" />
+        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.CreateSubtitle}" />
+      </StackPanel>
+
+      <!-- Locations -->
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionLocations}" />
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.SourceLabel}" />
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding SourcePath}"
+                       Watermark="{x:Static res:Strings.SourceHint}" />
+              <Button Grid.Column="1"
+                      Margin="8,0,0,0"
+                      Content="{x:Static res:Strings.BrowseFolder}"
+                      Command="{Binding PickSourceFolderCommand}" />
+              <Button Grid.Column="2"
+                      Margin="8,0,0,0"
+                      Content="{x:Static res:Strings.BrowseFile}"
+                      Command="{Binding PickSourceFileCommand}" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding DestinationPath}"
+                       Watermark="{x:Static res:Strings.DestinationHint}" />
+              <Button Grid.Column="1"
+                      Margin="8,0,0,0"
+                      Content="{x:Static res:Strings.BrowseFolder}"
+                      Command="{Binding PickDestinationFolderCommand}" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Effective configuration (read-only, owned by Settings) -->
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="section" Text="{x:Static res:Strings.SectionConfiguration}" />
+              <TextBlock Classes="dim"
+                         FontSize="12"
+                         Text="{x:Static res:Strings.ConfigurationHint}" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="link"
+                    VerticalAlignment="Center"
+                    Content="{x:Static res:Strings.EditInSettings}"
+                    Command="{Binding OpenSettingsCommand}" />
+          </Grid>
+
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="170,*">
+              <TextBlock Grid.Column="0"
+                         Classes="dim"
+                         Text="{x:Static res:Strings.EncryptionLabel}" />
+              <TextBlock Grid.Column="1" Classes="label" Text="{Binding EncryptionSummary}" />
+            </Grid>
+            <Grid ColumnDefinitions="170,*" IsVisible="{Binding IsEncryptionEnabled}">
+              <TextBlock Grid.Column="0"
+                         Classes="dim"
+                         Text="{x:Static res:Strings.KeyDerivationLabel}" />
+              <TextBlock Grid.Column="1" Classes="label" Text="{Binding KeyDerivationSummary}" />
+            </Grid>
+            <Grid ColumnDefinitions="170,*">
+              <TextBlock Grid.Column="0"
+                         Classes="dim"
+                         Text="{x:Static res:Strings.CompressionLabel}" />
+              <TextBlock Grid.Column="1" Classes="label" Text="{Binding CompressionSummary}" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Password (only when encryption is enabled) -->
+      <Border Classes="card" IsVisible="{Binding IsEncryptionEnabled}">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding Password}"
+                       PasswordChar="●"
+                       RevealPassword="{Binding RevealPassword}"
+                       Watermark="{x:Static res:Strings.PasswordHint}" />
+              <ToggleButton Grid.Column="1"
+                            Margin="8,0,0,0"
+                            Content="👁"
+                            IsChecked="{Binding RevealPassword}"
+                            ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}" />
+              <Button Grid.Column="2"
+                      Margin="8,0,0,0"
+                      Content="{x:Static res:Strings.GenerateButton}"
+                      Command="{Binding GeneratePasswordCommand}" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding HasStrength}">
+            <ProgressBar Height="6"
+                         CornerRadius="3"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="{Binding StrengthScore}"
+                         Foreground="{Binding StrengthBrush}" />
+            <TextBlock Classes="dim"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Text="{Binding StrengthDescription}" />
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.ConfirmPasswordLabel}" />
+            <TextBox Classes="field"
+                     Text="{Binding ConfirmPassword}"
+                     PasswordChar="●"
+                     RevealPassword="{Binding RevealPassword}"
+                     Watermark="{x:Static res:Strings.ConfirmPasswordHint}" />
+          </StackPanel>
+
+          <Border Background="{StaticResource InfoCardBrush}"
+                  BorderBrush="{StaticResource AccentBrush}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="16"
+                  IsVisible="{Binding ShowGeneratedNotice}">
+            <StackPanel Spacing="10">
+              <TextBlock TextWrapping="Wrap"
+                         Foreground="{StaticResource PrimaryTextBrush}"
+                         Text="{x:Static res:Strings.GeneratedPasswordNotice}" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="{x:Static res:Strings.CopyButton}"
+                        Command="{Binding CopyPasswordCommand}" />
+                <TextBlock Classes="dim"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           IsVisible="{Binding ShowCopiedNotice}"
+                           Text="{x:Static res:Strings.CopiedNotice}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Action -->
+      <Button Classes="primary"
+              HorizontalAlignment="Left"
+              Content="{x:Static res:Strings.StartBackup}"
+              Command="{Binding StartCommand}" />
+
+      <views:OperationStatusView />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

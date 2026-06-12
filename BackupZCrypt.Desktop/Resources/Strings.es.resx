@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTagline" xml:space="preserve"><value>Copias cifradas</value></data>
+  <data name="NavCreate" xml:space="preserve"><value>Crear copia</value></data>
+  <data name="NavUpdate" xml:space="preserve"><value>Actualizar copia</value></data>
+  <data name="NavRestore" xml:space="preserve"><value>Restaurar</value></data>
+  <data name="NavSettings" xml:space="preserve"><value>Ajustes</value></data>
+  <data name="NavAbout" xml:space="preserve"><value>Algoritmos</value></data>
+  <data name="CreateTitle" xml:space="preserve"><value>Crear copia de seguridad</value></data>
+  <data name="CreateSubtitle" xml:space="preserve"><value>Cifra tus archivos en una copia por bloques. Solo tú, con tu contraseña, podrás leerlos.</value></data>
+  <data name="UpdateTitle" xml:space="preserve"><value>Actualizar copia de seguridad</value></data>
+  <data name="UpdateSubtitle" xml:space="preserve"><value>Actualiza una copia existente con los últimos cambios. Solo se vuelven a cifrar los bloques modificados.</value></data>
+  <data name="RestoreTitle" xml:space="preserve"><value>Restaurar copia de seguridad</value></data>
+  <data name="RestoreSubtitle" xml:space="preserve"><value>Descifra una copia y restaura los archivos originales en cualquier carpeta.</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Ajustes</value></data>
+  <data name="SettingsSubtitle" xml:space="preserve"><value>Valores predeterminados para nuevas copias e idioma de la aplicación.</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>Algoritmos</value></data>
+  <data name="AboutSubtitle" xml:space="preserve"><value>Algoritmos disponibles para cifrado, derivación de clave y compresión.</value></data>
+  <data name="SectionLocations" xml:space="preserve"><value>Ubicaciones</value></data>
+  <data name="SectionSecurity" xml:space="preserve"><value>Seguridad</value></data>
+  <data name="SectionOptions" xml:space="preserve"><value>Opciones</value></data>
+  <data name="SectionDefaults" xml:space="preserve"><value>Valores predeterminados</value></data>
+  <data name="SectionConfiguration" xml:space="preserve"><value>Configuración</value></data>
+  <data name="ConfigurationHint" xml:space="preserve"><value>Estas opciones se configuran en Ajustes.</value></data>
+  <data name="EditInSettings" xml:space="preserve"><value>Editar en Ajustes</value></data>
+  <data name="SourceLabel" xml:space="preserve"><value>Origen</value></data>
+  <data name="SourceHint" xml:space="preserve"><value>Carpeta o archivo a respaldar…</value></data>
+  <data name="UpdateSourceHint" xml:space="preserve"><value>Carpeta con los archivos actuales…</value></data>
+  <data name="DestinationLabel" xml:space="preserve"><value>Destino</value></data>
+  <data name="DestinationHint" xml:space="preserve"><value>Carpeta donde se escribirá la copia…</value></data>
+  <data name="BackupLabel" xml:space="preserve"><value>Copia de seguridad</value></data>
+  <data name="BackupHint" xml:space="preserve"><value>Carpeta que contiene la copia (manifest.bzc)…</value></data>
+  <data name="RestoreDestinationHint" xml:space="preserve"><value>Carpeta donde se restaurarán los archivos…</value></data>
+  <data name="BrowseFolder" xml:space="preserve"><value>Carpeta…</value></data>
+  <data name="BrowseFile" xml:space="preserve"><value>Archivo…</value></data>
+  <data name="EncryptionLabel" xml:space="preserve"><value>Cifrado</value></data>
+  <data name="KeyDerivationLabel" xml:space="preserve"><value>Derivación de clave</value></data>
+  <data name="CompressionLabel" xml:space="preserve"><value>Compresión</value></data>
+  <data name="NoneEncryptionName" xml:space="preserve"><value>Ninguno</value></data>
+  <data name="NoneEncryptionDescription" xml:space="preserve"><value>Los archivos se almacenan sin cifrar.</value></data>
+  <data name="NoneCompressionName" xml:space="preserve"><value>Ninguna</value></data>
+  <data name="NoneCompressionDescription" xml:space="preserve"><value>Los bloques se almacenan sin comprimir.</value></data>
+  <data name="PasswordLabel" xml:space="preserve"><value>Contraseña</value></data>
+  <data name="PasswordHint" xml:space="preserve"><value>Introduce una contraseña fuerte…</value></data>
+  <data name="ConfirmPasswordLabel" xml:space="preserve"><value>Confirmar contraseña</value></data>
+  <data name="ConfirmPasswordHint" xml:space="preserve"><value>Repite la contraseña…</value></data>
+  <data name="RevealPasswordTooltip" xml:space="preserve"><value>Mostrar contraseña</value></data>
+  <data name="GenerateButton" xml:space="preserve"><value>Generar</value></data>
+  <data name="CopyButton" xml:space="preserve"><value>Copiar</value></data>
+  <data name="CopiedNotice" xml:space="preserve"><value>Copiada al portapapeles.</value></data>
+  <data name="GeneratedPasswordNotice" xml:space="preserve"><value>Guarda esta contraseña en un lugar seguro. Sin ella, la copia no se podrá restaurar.</value></data>
+  <data name="StartBackup" xml:space="preserve"><value>Iniciar copia</value></data>
+  <data name="StartUpdate" xml:space="preserve"><value>Actualizar copia</value></data>
+  <data name="StartRestore" xml:space="preserve"><value>Restaurar copia</value></data>
+  <data name="CancelButton" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="ProgressFilesFormat" xml:space="preserve"><value>{0} de {1} archivos</value></data>
+  <data name="ElapsedFormat" xml:space="preserve"><value>Transcurrido: {0}</value></data>
+  <data name="DetectEncrypted" xml:space="preserve"><value>Copia cifrada detectada: se requiere contraseña.</value></data>
+  <data name="DetectUnencrypted" xml:space="preserve"><value>Copia sin cifrar detectada: no se necesita contraseña.</value></data>
+  <data name="DetectPlain" xml:space="preserve"><value>Esta copia es una copia simple: sus archivos están sin transformar y pueden copiarse directamente desde la carpeta.</value></data>
+  <data name="DetectMissing" xml:space="preserve"><value>No se encontró un manifiesto de copia en esta ubicación.</value></data>
+  <data name="WarningsTitle" xml:space="preserve"><value>Advertencias</value></data>
+  <data name="ContinueAnyway" xml:space="preserve"><value>Continuar de todos modos</value></data>
+  <data name="DismissButton" xml:space="preserve"><value>Descartar</value></data>
+  <data name="ResultSuccessTitle" xml:space="preserve"><value>Operación completada</value></data>
+  <data name="ResultPartialTitle" xml:space="preserve"><value>Completada con errores</value></data>
+  <data name="ResultErrorTitle" xml:space="preserve"><value>La operación falló</value></data>
+  <data name="ResultCancelled" xml:space="preserve"><value>Operación cancelada</value></data>
+  <data name="ResultFilesFormat" xml:space="preserve"><value>{0} de {1} archivos procesados</value></data>
+  <data name="ResultDurationFormat" xml:space="preserve"><value>Duración: {0}</value></data>
+  <data name="ResultSizeFormat" xml:space="preserve"><value>Tamaño total: {0}</value></data>
+  <data name="ErrorsTitle" xml:space="preserve"><value>Errores</value></data>
+  <data name="LanguageLabel" xml:space="preserve"><value>Idioma</value></data>
+  <data name="LanguageSystemDefault" xml:space="preserve"><value>Idioma del sistema</value></data>
+  <data name="LanguageRestartNote" xml:space="preserve"><value>El cambio de idioma se aplica al reiniciar la aplicación.</value></data>
+  <data name="SaveButton" xml:space="preserve"><value>Guardar</value></data>
+  <data name="SettingsSavedNotice" xml:space="preserve"><value>Ajustes guardados.</value></data>
+  <data name="SettingsFileLabel" xml:space="preserve"><value>Archivo de ajustes</value></data>
+  <data name="VersionFormat" xml:space="preserve"><value>Versión {0}</value></data>
+  <data name="PickFolderTitle" xml:space="preserve"><value>Selecciona una carpeta</value></data>
+  <data name="PickFileTitle" xml:space="preserve"><value>Selecciona un archivo</value></data>
+</root>

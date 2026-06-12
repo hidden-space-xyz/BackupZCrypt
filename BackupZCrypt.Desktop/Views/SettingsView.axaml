@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:m="using:BackupZCrypt.Desktop.Models"
+             xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             x:Class="BackupZCrypt.Desktop.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+
+      <StackPanel Spacing="6">
+        <TextBlock Classes="h1" Text="{x:Static res:Strings.SettingsTitle}" />
+        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.SettingsSubtitle}" />
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionDefaults}" />
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
+            <ComboBox Classes="field"
+                      ItemsSource="{Binding EncryptionOptions}"
+                      SelectedItem="{Binding SelectedEncryption}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="m:EncryptionOption">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Description}"
+                               Classes="dim"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+            <ComboBox Classes="field"
+                      ItemsSource="{Binding KeyDerivationOptions}"
+                      SelectedItem="{Binding SelectedKeyDerivation}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="m:KeyDerivationOption">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Description}"
+                               Classes="dim"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
+            <ComboBox Classes="field"
+                      ItemsSource="{Binding CompressionOptions}"
+                      SelectedItem="{Binding SelectedCompression}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="m:CompressionOption">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Description}"
+                               Classes="dim"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.LanguageLabel}" />
+          <ComboBox Classes="field"
+                    ItemsSource="{Binding LanguageOptions}"
+                    SelectedItem="{Binding SelectedLanguage}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="m:LanguageOption">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="dim"
+                     FontSize="12"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding ShowRestartNote}"
+                     Foreground="{StaticResource WarningBrush}"
+                     Text="{x:Static res:Strings.LanguageRestartNote}" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Classes="primary"
+                Content="{x:Static res:Strings.SaveButton}"
+                Command="{Binding SaveCommand}" />
+        <TextBlock Classes="dim"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding ShowSavedNotice}"
+                   Foreground="{StaticResource SuccessBrush}"
+                   Text="{x:Static res:Strings.SettingsSavedNotice}" />
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="section" Text="{x:Static res:Strings.SettingsFileLabel}" />
+        <TextBlock Classes="dim"
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Text="{Binding SettingsFilePath}" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

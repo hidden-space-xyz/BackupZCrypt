@@ -45,7 +45,15 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 ## 🚀 Usage
 
-BackupZCrypt offers two execution modes depending on your needs:
+BackupZCrypt offers three execution modes depending on your needs:
+
+### 🖥️ Desktop (Recommended)
+
+A modern, cross-platform desktop application built with Avalonia UI. Create, update, and restore encrypted backups through a polished graphical interface featuring live password strength analysis, a secure password generator, automatic detection of encrypted backups, and real-time progress reporting. Available in English and Spanish.
+
+```bash
+dotnet run --project BackupZCrypt.Desktop
+```
 
 ### 💻 Terminal (Interactive)
 

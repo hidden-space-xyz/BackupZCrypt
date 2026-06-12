@@ -25,6 +25,70 @@ internal sealed class ManifestService(
         static strategy => strategy
     );
 
+    public async Task<ManifestKind> DetectManifestKindAsync(
+        string backupPath,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(backupPath);
+
+        try
+        {
+            var directory = fileOperationsService.DirectoryExists(backupPath)
+                ? backupPath
+                : fileOperationsService.GetDirectoryName(backupPath) ?? string.Empty;
+
+            if (string.IsNullOrEmpty(directory))
+            {
+                return ManifestKind.Missing;
+            }
+
+            var manifestPath = fileOperationsService.CombinePath(
+                directory,
+                BackupConstants.ManifestFileName
+            );
+
+            if (!fileOperationsService.FileExists(manifestPath))
+            {
+                return ManifestKind.Missing;
+            }
+
+            var firstByte = new byte[1];
+
+            await using var stream = fileOperationsService.OpenReadStream(
+                manifestPath,
+                bufferSize: 16
+            );
+
+            var read = await stream
+                .ReadAsync(firstByte.AsMemory(0, 1), cancellationToken)
+                .ConfigureAwait(false);
+
+            if (read == 0)
+            {
+                return ManifestKind.Missing;
+            }
+
+            // The first byte identifies the manifest format: '{' is the plain JSON
+            // manifest written by plain copies, 0 is an unencrypted chunked manifest
+            // (EncryptionAlgorithm.None) and any other value an encrypted preamble.
+            return firstByte[0] switch
+            {
+                (byte)'{' => ManifestKind.PlainCopy,
+                0 => ManifestKind.UnencryptedChunked,
+                _ => ManifestKind.Encrypted,
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return ManifestKind.Missing;
+        }
+    }
+
     public async Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,

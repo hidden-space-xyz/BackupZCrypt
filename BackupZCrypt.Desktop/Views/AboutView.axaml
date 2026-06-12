@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:m="using:BackupZCrypt.Desktop.Models"
+             xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             x:Class="BackupZCrypt.Desktop.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+
+      <StackPanel Spacing="6">
+        <TextBlock Classes="h1" Text="{x:Static res:Strings.AboutTitle}" />
+        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.AboutSubtitle}" />
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.EncryptionLabel}" />
+          <ItemsControl ItemsSource="{Binding EncryptionAlgorithms}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="m:AlgorithmInfo">
+                <StackPanel Spacing="2" Margin="0,6">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Description}"
+                             Classes="dim"
+                             FontSize="13"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+          <ItemsControl ItemsSource="{Binding KeyDerivationAlgorithms}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="m:AlgorithmInfo">
+                <StackPanel Spacing="2" Margin="0,6">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Description}"
+                             Classes="dim"
+                             FontSize="13"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.CompressionLabel}" />
+          <ItemsControl ItemsSource="{Binding CompressionAlgorithms}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="m:AlgorithmInfo">
+                <StackPanel Spacing="2" Margin="0,6">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Description}"
+                             Classes="dim"
+                             FontSize="13"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

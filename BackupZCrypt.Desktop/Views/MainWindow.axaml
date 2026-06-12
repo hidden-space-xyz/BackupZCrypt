@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+        xmlns:m="using:BackupZCrypt.Desktop.Models"
+        xmlns:res="using:BackupZCrypt.Desktop.Resources"
+        x:Class="BackupZCrypt.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="BackupZCrypt"
+        Width="1120" Height="760"
+        MinWidth="960" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource AppBackgroundBrush}">
+
+  <Grid ColumnDefinitions="248,*">
+
+    <!-- Sidebar -->
+    <Border Grid.Column="0"
+            Background="{StaticResource SidebarBackgroundBrush}"
+            BorderBrush="{StaticResource CardBorderBrush}"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto">
+
+        <StackPanel Grid.Row="0" Margin="24,28,24,24" Spacing="6">
+          <TextBlock FontSize="20" FontWeight="Bold">
+            <Run Text="Backup" Foreground="{StaticResource PrimaryTextBrush}" /><Run Text="ZCrypt" Foreground="{StaticResource AccentBrush}" />
+          </TextBlock>
+          <TextBlock Classes="dim"
+                     FontSize="12"
+                     Text="{x:Static res:Strings.AppTagline}" />
+        </StackPanel>
+
+        <ListBox Grid.Row="1"
+                 Classes="nav"
+                 ItemsSource="{Binding NavigationItems}"
+                 SelectedItem="{Binding SelectedItem}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="m:NavigationItem">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding Icon}" FontSize="15" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Title}"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource PrimaryTextBrush}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Grid.Row="2"
+                   Classes="dim"
+                   Margin="24,16,24,20"
+                   FontSize="11"
+                   Text="{Binding VersionText}" />
+      </Grid>
+    </Border>
+
+    <!-- Active page -->
+    <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
+  </Grid>
+</Window>

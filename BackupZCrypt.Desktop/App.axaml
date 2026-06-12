@@ -1,0 +1,47 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BackupZCrypt.Desktop"
+             x:Class="BackupZCrypt.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.DataTemplates>
+    <local:ViewLocator />
+  </Application.DataTemplates>
+
+  <Application.Resources>
+    <!-- Accent palette consumed by the Fluent theme -->
+    <Color x:Key="SystemAccentColor">#7C66F2</Color>
+    <Color x:Key="SystemAccentColorDark1">#6B55E0</Color>
+    <Color x:Key="SystemAccentColorDark2">#5A46C8</Color>
+    <Color x:Key="SystemAccentColorDark3">#4938AB</Color>
+    <Color x:Key="SystemAccentColorLight1">#8F7BF5</Color>
+    <Color x:Key="SystemAccentColorLight2">#A492F7</Color>
+    <Color x:Key="SystemAccentColorLight3">#B9AAFA</Color>
+
+    <!-- Application palette -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#7C66F2" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#8F7BF5" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#6B55E0" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#12141B" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#181B24" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#1C1F2A" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#2A2E3D" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#E8EAF0" />
+    <SolidColorBrush x:Key="DimTextBrush" Color="#9AA1B5" />
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#272B3B" />
+    <SolidColorBrush x:Key="NavHoverBrush" Color="#20232F" />
+    <SolidColorBrush x:Key="DisabledButtonBrush" Color="#33374A" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#3FB68B" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#E5B458" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#E2606C" />
+    <SolidColorBrush x:Key="SuccessCardBrush" Color="#17251F" />
+    <SolidColorBrush x:Key="WarningCardBrush" Color="#2B2417" />
+    <SolidColorBrush x:Key="DangerCardBrush" Color="#2B1A1E" />
+    <SolidColorBrush x:Key="InfoCardBrush" Color="#1B2230" />
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://BackupZCrypt.Desktop/Styles/AppStyles.axaml" />
+  </Application.Styles>
+</Application>
