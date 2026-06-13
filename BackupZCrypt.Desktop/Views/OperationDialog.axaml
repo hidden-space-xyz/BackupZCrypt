@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+        xmlns:res="using:BackupZCrypt.Desktop.Resources"
+        x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
+        x:DataType="vm:OperationViewModelBase"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Border Background="{StaticResource CardBackgroundBrush}"
+          BorderBrush="{StaticResource CardBorderBrush}"
+          BorderThickness="1"
+          CornerRadius="12"
+          Width="470"
+          Padding="28">
+    <Panel>
+
+      <StackPanel Spacing="18" IsVisible="{Binding IsRunning}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="⏳"
+                     FontSize="20"
+                     VerticalAlignment="Center" />
+          <TextBlock Classes="section"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource PrimaryTextBrush}"
+                     Text="{x:Static res:Strings.ProgressTitle}" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Classes="label" Text="{Binding ProgressText}" />
+            <TextBlock Classes="dim" FontSize="12" Text="{Binding ElapsedText}" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Content="{x:Static res:Strings.CancelButton}"
+                  Command="{Binding CancelOperationCommand}"
+                  VerticalAlignment="Center" />
+        </Grid>
+        <ProgressBar Height="8"
+                     CornerRadius="4"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="{Binding ProgressValue}"
+                     Foreground="{StaticResource AccentBrush}" />
+      </StackPanel>
+
+      <StackPanel Spacing="18" IsVisible="{Binding ShowWarnings}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="⚠"
+                     FontSize="20"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource WarningBrush}" />
+          <TextBlock Classes="section"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource WarningBrush}"
+                     Text="{x:Static res:Strings.WarningsTitle}" />
+        </StackPanel>
+        <ScrollViewer MaxHeight="300">
+          <ItemsControl ItemsSource="{Binding Warnings}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}"
+                           TextWrapping="Wrap"
+                           Margin="0,3"
+                           Foreground="{StaticResource PrimaryTextBrush}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+          <Button Content="{x:Static res:Strings.DismissButton}"
+                  Command="{Binding DismissWarningsCommand}" />
+          <Button Classes="primary"
+                  Content="{x:Static res:Strings.ContinueAnyway}"
+                  Command="{Binding ContinueAnywayCommand}" />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Spacing="18" IsVisible="{Binding HasResult}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="✔"
+                     FontSize="20"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource SuccessBrush}"
+                     IsVisible="{Binding ResultIsSuccess}" />
+          <TextBlock Text="✘"
+                     FontSize="20"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource DangerBrush}"
+                     IsVisible="{Binding !ResultIsSuccess}" />
+          <TextBlock Classes="section"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource PrimaryTextBrush}"
+                     Text="{Binding ResultTitle}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4" IsVisible="{Binding HasResultDetails}">
+          <TextBlock Classes="dim" Text="{Binding ResultFiles}" />
+          <TextBlock Classes="dim" Text="{Binding ResultDuration}" />
+          <TextBlock Classes="dim" Text="{Binding ResultSize}" />
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding ShowErrors}">
+          <TextBlock Classes="label"
+                     Foreground="{StaticResource DangerBrush}"
+                     Text="{x:Static res:Strings.ErrorsTitle}" />
+          <ScrollViewer MaxHeight="240">
+            <ItemsControl ItemsSource="{Binding Errors}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}"
+                             TextWrapping="Wrap"
+                             Margin="0,2"
+                             Foreground="{StaticResource DangerBrush}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+
+        <Button Classes="primary"
+                HorizontalAlignment="Right"
+                Content="{x:Static res:Strings.CloseButton}"
+                Command="{Binding DismissResultCommand}" />
+      </StackPanel>
+
+    </Panel>
+  </Border>
+</Window>

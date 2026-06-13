@@ -311,6 +311,16 @@ internal static class Strings
     public static string CancelButton => Get();
 
     /// <summary>
+    /// Gets the close button text.
+    /// </summary>
+    public static string CloseButton => Get();
+
+    /// <summary>
+    /// Gets the operation-in-progress dialog heading.
+    /// </summary>
+    public static string ProgressTitle => Get();
+
+    /// <summary>
     /// Gets the format string for processed/total file progress.
     /// </summary>
     public static string ProgressFilesFormat => Get();

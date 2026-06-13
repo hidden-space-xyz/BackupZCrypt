@@ -59,12 +59,12 @@
             BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*,Auto">
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="24,16,24,24" Spacing="12">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,8,0,10" Spacing="14">
           <Image Source="avares://BackupZCrypt.Desktop/Resources/CloudZCrypt.png"
-                 Width="34" Height="34"
+                 Width="44" Height="44"
                  VerticalAlignment="Center" />
           <StackPanel Spacing="4" VerticalAlignment="Center">
-            <TextBlock FontSize="20" FontWeight="Bold">
+            <TextBlock FontSize="23" FontWeight="Bold">
               <Run Text="Backup" Foreground="{StaticResource PrimaryTextBrush}" /><Run Text="ZCrypt" Foreground="{StaticResource AccentBrush}" />
             </TextBlock>
             <TextBlock Classes="dim"

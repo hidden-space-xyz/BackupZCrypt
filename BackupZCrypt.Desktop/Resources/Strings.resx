@@ -294,6 +294,12 @@
   <data name="CancelButton" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="CloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ProgressTitle" xml:space="preserve">
+    <value>Processing…</value>
+  </data>
   <data name="ProgressFilesFormat" xml:space="preserve">
     <value>{0} of {1} files</value>
   </data>

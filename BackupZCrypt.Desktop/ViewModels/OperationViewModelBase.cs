@@ -208,6 +208,12 @@ public abstract partial class OperationViewModelBase(
         Warnings.Clear();
     }
 
+    [RelayCommand]
+    private void DismissResult()
+    {
+        HasResult = false;
+    }
+
     private async Task RunAsync(bool proceedOnWarnings)
     {
         ResetState();
