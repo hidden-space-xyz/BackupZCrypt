@@ -90,9 +90,10 @@
         </ListBox>
 
         <TextBlock Grid.Row="2"
-                   Classes="dim"
                    Margin="24,16,24,20"
                    FontSize="11"
+                   FontWeight="Medium"
+                   Foreground="{StaticResource AccentBrush}"
                    Text="{Binding VersionText}" />
       </Grid>
     </Border>

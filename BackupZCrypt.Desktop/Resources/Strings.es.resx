@@ -193,10 +193,10 @@
     <value>La contraseña es la única forma de descifrar una copia: si la pierdes, los datos no se podrán recuperar. Guárdala en un gestor de contraseñas. El medidor de fortaleza te ayuda a elegir una contraseña robusta.</value>
   </data>
   <data name="HelpSettingsTitle" xml:space="preserve">
-    <value>Valores predeterminados</value>
+    <value>Cambiar los ajustes</value>
   </data>
   <data name="HelpSettingsText" xml:space="preserve">
-    <value>En «Ajustes» defines el cifrado, la derivación de clave, la compresión y el idioma que se aplican a las nuevas copias.</value>
+    <value>Abre «Ajustes» en la barra lateral para cambiar el cifrado, la derivación de clave, la compresión y el idioma que se aplican a las nuevas copias.</value>
   </data>
   <data name="SectionLocations" xml:space="preserve">
     <value>Ubicaciones</value>
@@ -281,12 +281,6 @@
   </data>
   <data name="CopyButton" xml:space="preserve">
     <value>Copiar</value>
-  </data>
-  <data name="CopiedNotice" xml:space="preserve">
-    <value>Copiada al portapapeles.</value>
-  </data>
-  <data name="GeneratedPasswordNotice" xml:space="preserve">
-    <value>Guarda esta contraseña en un lugar seguro. Sin ella, la copia no se podrá restaurar.</value>
   </data>
   <data name="StartBackup" xml:space="preserve">
     <value>Iniciar copia</value>

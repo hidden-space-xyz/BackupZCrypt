@@ -193,10 +193,10 @@
     <value>The password is the only way to decrypt a backup: if you lose it, the data cannot be recovered. Keep it in a password manager. The strength meter helps you choose a robust one.</value>
   </data>
   <data name="HelpSettingsTitle" xml:space="preserve">
-    <value>Defaults</value>
+    <value>Change the settings</value>
   </data>
   <data name="HelpSettingsText" xml:space="preserve">
-    <value>In “Settings” you set the encryption, key derivation, compression and language applied to new backups.</value>
+    <value>Open “Settings” in the sidebar to change the encryption, key derivation, compression and language applied to new backups.</value>
   </data>
   <data name="SectionLocations" xml:space="preserve">
     <value>Locations</value>
@@ -281,12 +281,6 @@
   </data>
   <data name="CopyButton" xml:space="preserve">
     <value>Copy</value>
-  </data>
-  <data name="CopiedNotice" xml:space="preserve">
-    <value>Copied to clipboard.</value>
-  </data>
-  <data name="GeneratedPasswordNotice" xml:space="preserve">
-    <value>Store this password somewhere safe. Without it, the backup cannot be restored.</value>
   </data>
   <data name="StartBackup" xml:space="preserve">
     <value>Start backup</value>

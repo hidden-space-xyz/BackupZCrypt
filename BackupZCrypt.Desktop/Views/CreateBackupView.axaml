@@ -58,7 +58,7 @@
 
           <StackPanel Spacing="6">
             <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
-            <Grid ColumnDefinitions="*,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
               <TextBox Grid.Column="0"
                        Classes="field"
                        Text="{Binding Password}"
@@ -71,6 +71,11 @@
                             IsChecked="{Binding RevealPassword}"
                             ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}" />
               <Button Grid.Column="2"
+                      Margin="8,0,0,0"
+                      Content="📋"
+                      Command="{Binding CopyPasswordCommand}"
+                      ToolTip.Tip="{x:Static res:Strings.CopyButton}" />
+              <Button Grid.Column="3"
                       Margin="8,0,0,0"
                       Content="{x:Static res:Strings.GenerateButton}"
                       Command="{Binding GeneratePasswordCommand}" />
@@ -98,28 +103,6 @@
                      RevealPassword="{Binding RevealPassword}"
                      PlaceholderText="{x:Static res:Strings.ConfirmPasswordHint}" />
           </StackPanel>
-
-          <Border Background="{StaticResource InfoCardBrush}"
-                  BorderBrush="{StaticResource AccentBrush}"
-                  BorderThickness="1"
-                  CornerRadius="8"
-                  Padding="16"
-                  IsVisible="{Binding ShowGeneratedNotice}">
-            <StackPanel Spacing="10">
-              <TextBlock TextWrapping="Wrap"
-                         Foreground="{StaticResource PrimaryTextBrush}"
-                         Text="{x:Static res:Strings.GeneratedPasswordNotice}" />
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Content="{x:Static res:Strings.CopyButton}"
-                        Command="{Binding CopyPasswordCommand}" />
-                <TextBlock Classes="dim"
-                           VerticalAlignment="Center"
-                           FontSize="12"
-                           IsVisible="{Binding ShowCopiedNotice}"
-                           Text="{x:Static res:Strings.CopiedNotice}" />
-              </StackPanel>
-            </StackPanel>
-          </Border>
         </StackPanel>
       </Border>
 

@@ -36,6 +36,7 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     public partial bool IsEncryptionEnabled { get; set; } = true;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CopyPasswordCommand))]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -55,12 +56,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     [ObservableProperty]
     public partial bool HasStrength { get; set; }
-
-    [ObservableProperty]
-    public partial bool ShowGeneratedNotice { get; set; }
-
-    [ObservableProperty]
-    public partial bool ShowCopiedNotice { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.
@@ -189,21 +184,15 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
         Password = generated;
         ConfirmPassword = generated;
-        RevealPassword = true;
-        ShowGeneratedNotice = true;
-        ShowCopiedNotice = false;
+        RevealPassword = false;
     }
 
-    [RelayCommand]
+    private bool CanCopyPassword => Password.Length > 0;
+
+    [RelayCommand(CanExecute = nameof(CanCopyPassword))]
     private async Task CopyPasswordAsync()
     {
-        if (Password.Length == 0)
-        {
-            return;
-        }
-
         await clipboardService.SetTextAsync(Password);
-        ShowCopiedNotice = true;
     }
 
     private void UpdateEncryptionState()
@@ -213,8 +202,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     partial void OnPasswordChanged(string value)
     {
-        ShowCopiedNotice = false;
-
         if (string.IsNullOrEmpty(value))
         {
             HasStrength = false;

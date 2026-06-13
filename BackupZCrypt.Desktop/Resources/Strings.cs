@@ -286,19 +286,9 @@ internal static class Strings
     public static string GenerateButton => Get();
 
     /// <summary>
-    /// Gets the copy button text.
+    /// Gets the copy-password button tooltip.
     /// </summary>
     public static string CopyButton => Get();
-
-    /// <summary>
-    /// Gets the "copied to clipboard" notice.
-    /// </summary>
-    public static string CopiedNotice => Get();
-
-    /// <summary>
-    /// Gets the "password generated" notice.
-    /// </summary>
-    public static string GeneratedPasswordNotice => Get();
 
     /// <summary>
     /// Gets the start-backup button text.
