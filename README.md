@@ -24,7 +24,6 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 - **🧩 Chunk-Based Architecture** — Files are split into variable-size chunks using content-defined chunking (FastCDC), so small edits don't require re-encrypting entire files
 - **🖱️ Simple Interface** — No cryptography knowledge needed — just select files, choose a password, and encrypt
-- **🤖 Automated Worker** — Run unattended backups and restores as a background service
 - **🏦 Military-Grade Security** — Uses the same encryption standards trusted by financial institutions
 - **🔌 No Internet Required** — Works completely offline, keeping your sensitive data off the network
 - **🛠️ Multiple Security Options** — Choose from multiple proven encryption and key derivation methods
@@ -40,57 +39,43 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **🔐 Single KDF Per Session** — One expensive key derivation produces a master key; sub-keys for encryption and chunk naming are derived via HKDF, eliminating per-file KDF overhead
 - **🕵️ HMAC-Based Chunk Naming** — Chunk filenames are HMAC-SHA256 of the plaintext hash, keyed with a naming sub-key, preventing content confirmation attacks
 - **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
+- **🌍 Localized Interface** — Available in English and Spanish
 - **💻 Local Processing Only** — Your files and passwords never leave your computer
 - **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
 
 ## 🚀 Usage
 
-BackupZCrypt offers three execution modes depending on your needs:
+BackupZCrypt is a modern, cross-platform desktop application built with Avalonia UI. Create, update, and restore encrypted backups through a polished graphical interface featuring live password strength analysis, a secure password generator, automatic detection of encrypted backups, and real-time progress reporting.
 
-### 🖥️ Desktop (Recommended)
+- **🔐 Create Backup** — Select a source folder (or file), a destination, and a password to produce an encrypted backup
+- **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
+- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
+- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
 
-A modern, cross-platform desktop application built with Avalonia UI. Create, update, and restore encrypted backups through a polished graphical interface featuring live password strength analysis, a secure password generator, automatic detection of encrypted backups, and real-time progress reporting. Available in English and Spanish.
+## 🛠️ Building from Source
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
+
+### Build and Run
 
 ```bash
+git clone https://github.com/your-username/BackupZCrypt.git
+cd BackupZCrypt
+dotnet build BackupZCrypt.sln
 dotnet run --project BackupZCrypt.Desktop
 ```
 
-### 💻 Terminal (Interactive)
+### Project Structure
 
-The Terminal mode provides an interactive command-line interface for manual backup and restore operations. Ideal for one-off tasks or when you want full control over each step.
-
-### 🤖 Worker (Automated)
-
-The Worker is a background service that performs **automated, unattended backups and restores**. It runs once, processes any pending operations, and stops automatically — perfect for scheduled tasks and CI/CD pipelines.
-
-#### How It Works
-
-The worker uses **four directory bindings**:
-
-| Directory | Default Path | Purpose |
-|---|---|---|
-| **BackupSource** | `/data/backup-source` | Place files here to create an encrypted backup |
-| **BackupDestination** | `/data/backup-destination` | Encrypted backup output is written here |
-| **RestoreSource** | `/data/restore-source` | Place an encrypted backup here to restore it |
-| **RestoreDestination** | `/data/restore-destination` | Restored files are written here |
-
-**On startup**, the worker:
-1. Checks `BackupSource` for files → if found, creates/updates an encrypted backup in `BackupDestination`
-2. Checks `RestoreSource` for a valid backup (manifest file) → if found, restores it to `RestoreDestination`
-3. Optionally deletes source files after each successful operation
-4. Stops automatically when there is nothing left to process
-
-#### Environment Variables
-
-All configuration options are available as environment variables:
-
-| Variable | Description | Default |
-|---|---|---|
-| `BACKUP_PASSWORD` | Password for encryption/decryption | *(empty)* |
-| `BACKUP_ENCRYPTION_ALGORITHM` | `None`, `Aes`, `Twofish`, `Serpent`, `ChaCha20`, `Camellia` | `Aes` |
-| `BACKUP_KEY_DERIVATION_ALGORITHM` | `Argon2id`, `PBKDF2`, `Scrypt` | `Argon2id` |
-| `BACKUP_COMPRESSION` | `None`, `ZstdFast`, `Zstd`, `ZstdBest` | `None` |
-| `BACKUP_DELETE_SOURCE_FILES` | Delete source files after operation (`true`/`false`) | `false` |
+| Project | Purpose |
+|---|---|
+| `BackupZCrypt.Domain` | Core contracts: enums, constants, strategy and service interfaces, value objects |
+| `BackupZCrypt.Application` | Business logic: backup orchestration, chunked backup engine, manifest and settings services |
+| `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; file system access |
+| `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |
+| `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
 
 ## 🚀 Roadmap
 
