@@ -34,8 +34,9 @@ public sealed record CompressionOption(CompressionMode Id, string Name, string D
 public sealed record LanguageOption(string? Code, string Name);
 
 /// <summary>
-/// Display metadata for an algorithm, used on the About page.
+/// Display metadata for an algorithm, used on the help page.
 /// </summary>
 /// <param name="Name">The localized display name.</param>
+/// <param name="Summary">The localized one-line takeaway.</param>
 /// <param name="Description">The localized description.</param>
-public sealed record AlgorithmInfo(string Name, string Description);
+public sealed record AlgorithmInfo(string Name, string Summary, string Description);

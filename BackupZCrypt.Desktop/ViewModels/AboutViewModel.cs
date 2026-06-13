@@ -35,6 +35,7 @@ public sealed class AboutViewModel : ViewModelBase
                 .OrderBy(static s => s.Id)
                 .Select(static s => new AlgorithmInfo(
                     AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id),
                     AlgorithmMetadataProvider.GetDescription(s.Id)
                 )),
         ];
@@ -45,6 +46,7 @@ public sealed class AboutViewModel : ViewModelBase
                 .OrderBy(static s => s.Id)
                 .Select(static s => new AlgorithmInfo(
                     AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id),
                     AlgorithmMetadataProvider.GetDescription(s.Id)
                 )),
         ];
@@ -55,6 +57,7 @@ public sealed class AboutViewModel : ViewModelBase
                 .OrderBy(static s => s.Id)
                 .Select(static s => new AlgorithmInfo(
                     AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id),
                     AlgorithmMetadataProvider.GetDescription(s.Id)
                 )),
         ];

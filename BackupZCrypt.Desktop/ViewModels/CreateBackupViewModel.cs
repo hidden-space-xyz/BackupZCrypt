@@ -2,16 +2,13 @@ using Avalonia.Media;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Desktop.Messages;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
@@ -30,9 +27,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     private readonly IPasswordService passwordService;
     private readonly IClipboardService clipboardService;
-    private readonly IReadOnlyDictionary<EncryptionAlgorithm, string> encryptionNames;
-    private readonly IReadOnlyDictionary<KeyDerivationAlgorithm, string> keyDerivationNames;
-    private readonly IReadOnlyDictionary<CompressionMode, string> compressionNames;
 
     private EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.Aes;
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
@@ -40,15 +34,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     [ObservableProperty]
     public partial bool IsEncryptionEnabled { get; set; } = true;
-
-    [ObservableProperty]
-    public partial string EncryptionSummary { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string KeyDerivationSummary { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string CompressionSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
@@ -85,45 +70,26 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     /// <param name="filePicker">The folder/file picker service.</param>
     /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
     /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
-    /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
-    /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
-    /// <param name="compressionStrategies">The available compression strategies.</param>
     public CreateBackupViewModel(
         IBackupOrchestrator orchestrator,
         ISettingsService settingsService,
         IFilePickerService filePicker,
         IClipboardService clipboardService,
-        IPasswordService passwordService,
-        IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
-        IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-        IEnumerable<ICompressionStrategy> compressionStrategies
+        IPasswordService passwordService
     )
         : base(orchestrator, settingsService, filePicker)
     {
         this.passwordService = passwordService;
         this.clipboardService = clipboardService;
 
-        encryptionNames = encryptionStrategies.ToDictionary(
-            static s => s.Id,
-            static s => AlgorithmMetadataProvider.GetName(s.Id)
-        );
-        keyDerivationNames = keyDerivationStrategies.ToDictionary(
-            static s => s.Id,
-            static s => AlgorithmMetadataProvider.GetName(s.Id)
-        );
-        compressionNames = compressionStrategies.ToDictionary(
-            static s => s.Id,
-            static s => AlgorithmMetadataProvider.GetName(s.Id)
-        );
-
-        UpdateConfigurationSummary();
+        UpdateEncryptionState();
     }
 
     /// <summary>
-    /// Refreshes the displayed algorithm configuration from the latest settings defaults, unless an
-    /// operation is currently in flight.
+    /// Refreshes the encryption state from the latest settings defaults, unless an operation is
+    /// currently in flight.
     /// </summary>
-    /// <returns>A task that completes once the configuration summary has been refreshed.</returns>
+    /// <returns>A task that completes once the encryption state has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
     {
         await base.OnNavigatedToAsync();
@@ -139,7 +105,7 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
             encryptionAlgorithm = defaults.EncryptionAlgorithm;
             keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
             compressionMode = defaults.CompressionMode;
-            UpdateConfigurationSummary();
+            UpdateEncryptionState();
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -178,12 +144,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
             compressionMode,
             proceedOnWarnings
         );
-    }
-
-    [RelayCommand]
-    private static void OpenSettings()
-    {
-        WeakReferenceMessenger.Default.Send(new NavigateToPageMessage(typeof(SettingsViewModel)));
     }
 
     [RelayCommand]
@@ -246,27 +206,9 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
         ShowCopiedNotice = true;
     }
 
-    private void UpdateConfigurationSummary()
+    private void UpdateEncryptionState()
     {
         IsEncryptionEnabled = encryptionAlgorithm != EncryptionAlgorithm.None;
-
-        EncryptionSummary =
-            encryptionAlgorithm == EncryptionAlgorithm.None
-                ? Strings.NoneEncryptionName
-                : encryptionNames.GetValueOrDefault(
-                    encryptionAlgorithm,
-                    Strings.NoneEncryptionName
-                );
-
-        KeyDerivationSummary = keyDerivationNames.GetValueOrDefault(
-            keyDerivationAlgorithm,
-            string.Empty
-        );
-
-        CompressionSummary =
-            compressionMode == CompressionMode.None
-                ? Strings.NoneCompressionName
-                : compressionNames.GetValueOrDefault(compressionMode, Strings.NoneCompressionName);
     }
 
     partial void OnPasswordChanged(string value)

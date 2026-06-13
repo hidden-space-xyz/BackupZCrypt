@@ -44,7 +44,7 @@ public sealed partial class MainWindowViewModel
             new NavigationItem("🔄", Strings.NavUpdate, updateBackup),
             new NavigationItem("📦", Strings.NavRestore, restoreBackup),
             new NavigationItem("⚙️", Strings.NavSettings, settings),
-            new NavigationItem("ℹ️", Strings.NavAbout, about),
+            new NavigationItem("❓", Strings.NavAbout, about),
         ];
 
         VersionText = about.VersionText;

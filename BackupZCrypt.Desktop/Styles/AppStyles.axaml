@@ -16,7 +16,7 @@
   <Style Selector="TextBlock.section">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
     <Setter Property="LetterSpacing" Value="1.2" />
   </Style>
 
@@ -36,6 +36,16 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="24" />
+  </Style>
+
+  <Style Selector="Border.helpBadge">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Background" Value="{StaticResource InfoCardBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Top" />
   </Style>
 
   <Style Selector="Button.primary">
@@ -79,7 +89,17 @@
 
   <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
     <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:selected TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
   </Style>
 
   <Style Selector="Button.link">

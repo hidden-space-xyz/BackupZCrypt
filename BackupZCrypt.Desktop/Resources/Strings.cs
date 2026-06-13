@@ -96,6 +96,61 @@ internal static class Strings
     public static string AboutSubtitle => Get();
 
     /// <summary>
+    /// Gets the quick-guide section heading on the help page.
+    /// </summary>
+    public static string HelpGuideSection => Get();
+
+    /// <summary>
+    /// Gets the create-backup help title.
+    /// </summary>
+    public static string HelpCreateTitle => Get();
+
+    /// <summary>
+    /// Gets the create-backup help text.
+    /// </summary>
+    public static string HelpCreateText => Get();
+
+    /// <summary>
+    /// Gets the update-backup help title.
+    /// </summary>
+    public static string HelpUpdateTitle => Get();
+
+    /// <summary>
+    /// Gets the update-backup help text.
+    /// </summary>
+    public static string HelpUpdateText => Get();
+
+    /// <summary>
+    /// Gets the restore-backup help title.
+    /// </summary>
+    public static string HelpRestoreTitle => Get();
+
+    /// <summary>
+    /// Gets the restore-backup help text.
+    /// </summary>
+    public static string HelpRestoreText => Get();
+
+    /// <summary>
+    /// Gets the password help title.
+    /// </summary>
+    public static string HelpPasswordTitle => Get();
+
+    /// <summary>
+    /// Gets the password help text.
+    /// </summary>
+    public static string HelpPasswordText => Get();
+
+    /// <summary>
+    /// Gets the defaults help title.
+    /// </summary>
+    public static string HelpSettingsTitle => Get();
+
+    /// <summary>
+    /// Gets the defaults help text.
+    /// </summary>
+    public static string HelpSettingsText => Get();
+
+    /// <summary>
     /// Gets the locations section heading.
     /// </summary>
     public static string SectionLocations => Get();
@@ -114,21 +169,6 @@ internal static class Strings
     /// Gets the defaults section heading.
     /// </summary>
     public static string SectionDefaults => Get();
-
-    /// <summary>
-    /// Gets the configuration section heading.
-    /// </summary>
-    public static string SectionConfiguration => Get();
-
-    /// <summary>
-    /// Gets the configuration hint text.
-    /// </summary>
-    public static string ConfigurationHint => Get();
-
-    /// <summary>
-    /// Gets the "edit in settings" link text.
-    /// </summary>
-    public static string EditInSettings => Get();
 
     /// <summary>
     /// Gets the source field label.

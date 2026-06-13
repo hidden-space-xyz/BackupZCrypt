@@ -1,5 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
   </resheader>
@@ -12,174 +117,532 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AppTagline" xml:space="preserve"><value>Encrypted backups</value></data>
-  <data name="NavCreate" xml:space="preserve"><value>Create Backup</value></data>
-  <data name="NavUpdate" xml:space="preserve"><value>Update Backup</value></data>
-  <data name="NavRestore" xml:space="preserve"><value>Restore</value></data>
-  <data name="NavSettings" xml:space="preserve"><value>Settings</value></data>
-  <data name="NavAbout" xml:space="preserve"><value>Algorithms</value></data>
-  <data name="CreateTitle" xml:space="preserve"><value>Create Backup</value></data>
-  <data name="CreateSubtitle" xml:space="preserve"><value>Encrypt your files into a chunk-based backup. Only you, with your password, can read them.</value></data>
-  <data name="UpdateTitle" xml:space="preserve"><value>Update Backup</value></data>
-  <data name="UpdateSubtitle" xml:space="preserve"><value>Refresh an existing backup with the latest changes. Only modified chunks are re-encrypted.</value></data>
-  <data name="RestoreTitle" xml:space="preserve"><value>Restore Backup</value></data>
-  <data name="RestoreSubtitle" xml:space="preserve"><value>Decrypt a backup and restore the original files to any folder.</value></data>
-  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
-  <data name="SettingsSubtitle" xml:space="preserve"><value>Defaults for new backups and application language.</value></data>
-  <data name="AboutTitle" xml:space="preserve"><value>Algorithms</value></data>
-  <data name="AboutSubtitle" xml:space="preserve"><value>Algorithms available for encryption, key derivation and compression.</value></data>
-  <data name="SectionLocations" xml:space="preserve"><value>Locations</value></data>
-  <data name="SectionSecurity" xml:space="preserve"><value>Security</value></data>
-  <data name="SectionOptions" xml:space="preserve"><value>Options</value></data>
-  <data name="SectionDefaults" xml:space="preserve"><value>Defaults</value></data>
-  <data name="SectionConfiguration" xml:space="preserve"><value>Configuration</value></data>
-  <data name="ConfigurationHint" xml:space="preserve"><value>These options are configured in Settings.</value></data>
-  <data name="EditInSettings" xml:space="preserve"><value>Edit in Settings</value></data>
-  <data name="SourceLabel" xml:space="preserve"><value>Source</value></data>
-  <data name="SourceHint" xml:space="preserve"><value>Folder or file to back up…</value></data>
-  <data name="UpdateSourceHint" xml:space="preserve"><value>Folder with the current files…</value></data>
-  <data name="DestinationLabel" xml:space="preserve"><value>Destination</value></data>
-  <data name="DestinationHint" xml:space="preserve"><value>Folder where the backup will be written…</value></data>
-  <data name="BackupLabel" xml:space="preserve"><value>Backup</value></data>
-  <data name="BackupHint" xml:space="preserve"><value>Folder containing the backup (manifest.bzc)…</value></data>
-  <data name="RestoreDestinationHint" xml:space="preserve"><value>Folder where files will be restored…</value></data>
-  <data name="BrowseFolder" xml:space="preserve"><value>Folder…</value></data>
-  <data name="BrowseFile" xml:space="preserve"><value>File…</value></data>
-  <data name="EncryptionLabel" xml:space="preserve"><value>Encryption</value></data>
-  <data name="KeyDerivationLabel" xml:space="preserve"><value>Key derivation</value></data>
-  <data name="CompressionLabel" xml:space="preserve"><value>Compression</value></data>
-  <data name="NoneEncryptionName" xml:space="preserve"><value>None</value></data>
-  <data name="NoneEncryptionDescription" xml:space="preserve"><value>Files are stored without encryption.</value></data>
-  <data name="NoneCompressionName" xml:space="preserve"><value>None</value></data>
-  <data name="NoneCompressionDescription" xml:space="preserve"><value>Chunks are stored uncompressed.</value></data>
-  <data name="PasswordLabel" xml:space="preserve"><value>Password</value></data>
-  <data name="PasswordHint" xml:space="preserve"><value>Enter a strong password…</value></data>
-  <data name="ConfirmPasswordLabel" xml:space="preserve"><value>Confirm password</value></data>
-  <data name="ConfirmPasswordHint" xml:space="preserve"><value>Repeat the password…</value></data>
-  <data name="RevealPasswordTooltip" xml:space="preserve"><value>Show password</value></data>
-  <data name="GenerateButton" xml:space="preserve"><value>Generate</value></data>
-  <data name="CopyButton" xml:space="preserve"><value>Copy</value></data>
-  <data name="CopiedNotice" xml:space="preserve"><value>Copied to clipboard.</value></data>
-  <data name="GeneratedPasswordNotice" xml:space="preserve"><value>Store this password somewhere safe. Without it, the backup cannot be restored.</value></data>
-  <data name="StartBackup" xml:space="preserve"><value>Start backup</value></data>
-  <data name="StartUpdate" xml:space="preserve"><value>Update backup</value></data>
-  <data name="StartRestore" xml:space="preserve"><value>Restore backup</value></data>
-  <data name="CancelButton" xml:space="preserve"><value>Cancel</value></data>
-  <data name="ProgressFilesFormat" xml:space="preserve"><value>{0} of {1} files</value></data>
-  <data name="ElapsedFormat" xml:space="preserve"><value>Elapsed: {0}</value></data>
-  <data name="DetectEncrypted" xml:space="preserve"><value>Encrypted backup detected — password required.</value></data>
-  <data name="DetectUnencrypted" xml:space="preserve"><value>Unencrypted backup detected — no password needed.</value></data>
-  <data name="DetectPlain" xml:space="preserve"><value>This backup is a plain copy: its files are stored as-is and can be copied directly from the backup folder.</value></data>
-  <data name="DetectMissing" xml:space="preserve"><value>No backup manifest found at this location.</value></data>
-  <data name="WarningsTitle" xml:space="preserve"><value>Warnings</value></data>
-  <data name="ContinueAnyway" xml:space="preserve"><value>Continue anyway</value></data>
-  <data name="DismissButton" xml:space="preserve"><value>Dismiss</value></data>
-  <data name="ResultSuccessTitle" xml:space="preserve"><value>Operation completed</value></data>
-  <data name="ResultPartialTitle" xml:space="preserve"><value>Completed with errors</value></data>
-  <data name="ResultErrorTitle" xml:space="preserve"><value>Operation failed</value></data>
-  <data name="ResultCancelled" xml:space="preserve"><value>Operation cancelled</value></data>
-  <data name="ResultFilesFormat" xml:space="preserve"><value>{0} of {1} files processed</value></data>
-  <data name="ResultDurationFormat" xml:space="preserve"><value>Duration: {0}</value></data>
-  <data name="ResultSizeFormat" xml:space="preserve"><value>Total size: {0}</value></data>
-  <data name="ErrorsTitle" xml:space="preserve"><value>Errors</value></data>
-  <data name="LanguageLabel" xml:space="preserve"><value>Language</value></data>
-  <data name="LanguageSystemDefault" xml:space="preserve"><value>System default</value></data>
-  <data name="LanguageRestartNote" xml:space="preserve"><value>Language changes apply after restarting the application.</value></data>
-  <data name="SaveButton" xml:space="preserve"><value>Save</value></data>
-  <data name="SettingsSavedNotice" xml:space="preserve"><value>Settings saved.</value></data>
-  <data name="SettingsFileLabel" xml:space="preserve"><value>Settings file</value></data>
-  <data name="VersionFormat" xml:space="preserve"><value>Version {0}</value></data>
-  <data name="PickFolderTitle" xml:space="preserve"><value>Select a folder</value></data>
-  <data name="PickFileTitle" xml:space="preserve"><value>Select a file</value></data>
-  <data name="WindowMinimize" xml:space="preserve"><value>Minimize</value></data>
-  <data name="WindowMaximize" xml:space="preserve"><value>Maximize</value></data>
-  <data name="WindowClose" xml:space="preserve"><value>Close</value></data>
-  <!-- Algorithm display text (moved from Infrastructure) -->
-  <data name="AesDisplayName" xml:space="preserve"><value>AES-256 GCM</value></data>
-  <data name="AesDescription" xml:space="preserve"><value>The industry standard encryption used by governments, banks, and most secure applications worldwide. Very fast on modern computers and phones thanks to built-in hardware support. Recommended for most users.</value></data>
-  <data name="AesSummary" xml:space="preserve"><value>Recommended — fast and widely trusted (default)</value></data>
-  <data name="SerpentDisplayName" xml:space="preserve"><value>Serpent-256 GCM</value></data>
-  <data name="SerpentDescription" xml:space="preserve"><value>Designed with an extra-large security margin, making it one of the most conservative choices available. Noticeably slower than AES, but favored when maximum caution is the priority over speed.</value></data>
-  <data name="SerpentSummary" xml:space="preserve"><value>Maximum security margin (slower than AES)</value></data>
-  <data name="CamelliaDisplayName" xml:space="preserve"><value>Camellia-256 GCM</value></data>
-  <data name="CamelliaDescription" xml:space="preserve"><value>A strong alternative to AES developed in Japan, with comparable security and performance. Recognized by international standards bodies and a good choice when a non-U.S. algorithm is preferred.</value></data>
-  <data name="CamelliaSummary" xml:space="preserve"><value>Strong AES alternative (international standard)</value></data>
-  <data name="ChaCha20DisplayName" xml:space="preserve"><value>ChaCha20-Poly1305</value></data>
-  <data name="ChaCha20Description" xml:space="preserve"><value>A modern, fast encryption method that excels on older or low-power devices that lack dedicated AES hardware. Widely used in VPNs (WireGuard), web browsing (TLS), and messaging apps.</value></data>
-  <data name="ChaCha20Summary" xml:space="preserve"><value>Fast on all devices, even without AES hardware</value></data>
-  <data name="TwofishDisplayName" xml:space="preserve"><value>Twofish-256 GCM</value></data>
-  <data name="TwofishDescription" xml:space="preserve"><value>A well-respected encryption algorithm that uses a fundamentally different internal design than AES. A solid option if you want to avoid relying on a single algorithm family.</value></data>
-  <data name="TwofishSummary" xml:space="preserve"><value>Good alternative with a different design approach</value></data>
-  <data name="Pbkdf2DisplayName" xml:space="preserve"><value>PBKDF2 (HMAC-SHA256)</value></data>
-  <data name="Pbkdf2Description" xml:space="preserve"><value>A traditional and widely compatible method to convert your password into an encryption key. Supported everywhere, but offers less protection against attackers with specialized hardware (GPUs). Choose this when compatibility with older systems is important.</value></data>
-  <data name="Pbkdf2Summary" xml:space="preserve"><value>Maximum compatibility with older systems</value></data>
-  <data name="Argon2idDisplayName" xml:space="preserve"><value>Argon2id</value></data>
-  <data name="Argon2idDescription" xml:space="preserve"><value>The most modern and secure way to convert your password into an encryption key. Specifically designed to resist attacks using specialized hardware (GPUs, custom chips) by requiring large amounts of memory. Recommended for most users.</value></data>
-  <data name="Argon2idSummary" xml:space="preserve"><value>Recommended — strongest password protection (default)</value></data>
-  <data name="ScryptDisplayName" xml:space="preserve"><value>Scrypt</value></data>
-  <data name="ScryptDescription" xml:space="preserve"><value>A strong method to convert your password into an encryption key that also resists hardware-based attacks by requiring significant memory. A good middle ground between PBKDF2 and Argon2id, with wider software support than Argon2id.</value></data>
-  <data name="ScryptSummary" xml:space="preserve"><value>Strong protection, broader compatibility than Argon2id</value></data>
-  <data name="ZstdFastDisplayName" xml:space="preserve"><value>Zstandard (Fast)</value></data>
-  <data name="ZstdFastDescription" xml:space="preserve"><value>Zstandard compression at minimum level, prioritizing speed over file size. Ideal when you want some compression with minimal performance impact.</value></data>
-  <data name="ZstdFastSummary" xml:space="preserve"><value>Fastest compression, larger files</value></data>
-  <data name="ZstdDisplayName" xml:space="preserve"><value>Zstandard (Normal)</value></data>
-  <data name="ZstdDescription" xml:space="preserve"><value>Zstandard compression at the default level, offering a good balance between speed and compression ratio. Recommended for most use cases.</value></data>
-  <data name="ZstdSummary" xml:space="preserve"><value>Good balance of speed and compression (recommended)</value></data>
-  <data name="ZstdBestDisplayName" xml:space="preserve"><value>Zstandard (Best)</value></data>
-  <data name="ZstdBestDescription" xml:space="preserve"><value>Zstandard compression at maximum level, achieving the smallest file sizes at the cost of longer compression time. Best for large files where minimizing size matters most.</value></data>
-  <data name="ZstdBestSummary" xml:space="preserve"><value>Smallest files, slowest compression</value></data>
-  <!-- Operation messages (MessageCode; moved from Application/Domain) -->
-  <data name="SourcePathEmpty" xml:space="preserve"><value>Please select a source file or directory to process.</value></data>
-  <data name="SourcePathNotExist" xml:space="preserve"><value>Source path does not exist.</value></data>
-  <data name="SourcePathNotExistFormat" xml:space="preserve"><value>The selected source path does not exist: {0}</value></data>
-  <data name="SourceFileEmpty" xml:space="preserve"><value>The selected file is empty and cannot be processed.</value></data>
-  <data name="SourceDirectoryEmpty" xml:space="preserve"><value>The selected directory is empty - no files to process.</value></data>
-  <data name="SourceAccessDenied" xml:space="preserve"><value>Access denied to the source path. Please check permissions or run as administrator.</value></data>
-  <data name="SourceAccessErrorFormat" xml:space="preserve"><value>Error accessing source path: {0}</value></data>
-  <data name="DestinationPathEmpty" xml:space="preserve"><value>Please select a destination path.</value></data>
-  <data name="DestinationDriveNotAccessibleFormat" xml:space="preserve"><value>The destination drive '{0}' does not exist or is not accessible.</value></data>
-  <data name="DestinationInvalidFormat" xml:space="preserve"><value>Invalid destination path: {0}</value></data>
-  <data name="SourceDestinationSameFile" xml:space="preserve"><value>Source and destination files cannot be the same. Please choose a different destination.</value></data>
-  <data name="SourceDestinationSameDirectory" xml:space="preserve"><value>Source and destination directories cannot be the same. Please choose a different destination.</value></data>
-  <data name="DestinationInsideSource" xml:space="preserve"><value>Destination directory cannot be inside the source directory. This would create a recursive operation.</value></data>
-  <data name="SourceInsideDestination" xml:space="preserve"><value>Source directory cannot be inside the destination directory. Please choose a different path.</value></data>
-  <data name="InvalidPathFormat" xml:space="preserve"><value>Invalid path: {0}</value></data>
-  <data name="PasswordRequired" xml:space="preserve"><value>Please enter a password for encryption/decryption.</value></data>
-  <data name="PasswordTooShort" xml:space="preserve"><value>Password must be at least 8 characters long for security.</value></data>
-  <data name="PasswordTooLong" xml:space="preserve"><value>Password is too long (maximum 1000 characters).</value></data>
-  <data name="PasswordLeadingTrailingSpaces" xml:space="preserve"><value>Password should not start or end with spaces.</value></data>
-  <data name="ConfirmPasswordRequired" xml:space="preserve"><value>Please confirm your password.</value></data>
-  <data name="PasswordMismatch" xml:space="preserve"><value>Password and confirmation password do not match. Please check both fields.</value></data>
-  <data name="LowDiskSpaceFormat" xml:space="preserve"><value>Low disk space: Available {0}, estimated need {1}</value></data>
-  <data name="LargeOperationFormat" xml:space="preserve"><value>Large operation: {0} files will be processed. This may take considerable time.</value></data>
-  <data name="MediumOperationFormat" xml:space="preserve"><value>Medium operation: {0} files will be processed.</value></data>
-  <data name="DestinationExistingFilesFormat" xml:space="preserve"><value>Destination contains {0} existing file(s) that may be overwritten.</value></data>
-  <data name="WeakPasswordWarning" xml:space="preserve"><value>Password strength is below recommended level. Consider using a stronger password.</value></data>
-  <data name="NoFilesInSourceDirectory" xml:space="preserve"><value>No files found in the source directory.</value></data>
-  <data name="EncryptionErrorFormat" xml:space="preserve"><value>Encryption error for file: {0} - {1}</value></data>
-  <data name="AllFilesFailed" xml:space="preserve"><value>Failed to process any files.</value></data>
-  <data name="ManifestWriteFailedFormat" xml:space="preserve"><value>Failed to write or encrypt manifest: {0}</value></data>
-  <data name="ManifestRequiredForUpdate" xml:space="preserve"><value>Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest.</value></data>
-  <data name="ManifestRequiredForDecryption" xml:space="preserve"><value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value></data>
-  <data name="UpdateSourceMustBeDirectory" xml:space="preserve"><value>Update operation is only supported for directory backups.</value></data>
-  <data name="BackupDestinationMustExist" xml:space="preserve"><value>Backup destination directory does not exist. Cannot update a non-existent backup.</value></data>
-  <data name="InvalidPassword" xml:space="preserve"><value>Invalid password or corrupted file. Please verify the password and file integrity.</value></data>
-  <data name="UnexpectedErrorFormat" xml:space="preserve"><value>An unexpected error occurred: {0}</value></data>
-  <data name="StrengthVeryWeak" xml:space="preserve"><value>Very Weak</value></data>
-  <data name="StrengthWeak" xml:space="preserve"><value>Weak</value></data>
-  <data name="StrengthFair" xml:space="preserve"><value>Fair</value></data>
-  <data name="StrengthGood" xml:space="preserve"><value>Good</value></data>
-  <data name="StrengthStrong" xml:space="preserve"><value>Strong</value></data>
-  <data name="EntropyFormat" xml:space="preserve"><value>Entropy: {0} bits</value></data>
-  <data name="Suggestions" xml:space="preserve"><value>Suggestions:</value></data>
-  <data name="GoodJob" xml:space="preserve"><value>Good job!</value></data>
-  <data name="TipIncreaseLength" xml:space="preserve"><value>Increase length (≥12 chars)</value></data>
-  <data name="TipAddUppercase" xml:space="preserve"><value>Add uppercase letters</value></data>
-  <data name="TipAddLowercase" xml:space="preserve"><value>Add lowercase letters</value></data>
-  <data name="TipAddDigits" xml:space="preserve"><value>Add digits</value></data>
-  <data name="TipAddSymbols" xml:space="preserve"><value>Add symbols</value></data>
-  <data name="TipMoreVariety" xml:space="preserve"><value>Use more character variety</value></data>
-  <data name="TipAvoidSequences" xml:space="preserve"><value>Avoid sequences (e.g. abc, 123, qwerty)</value></data>
-  <data name="TipReduceRepeats" xml:space="preserve"><value>Reduce repeated characters</value></data>
-  <data name="TipAvoidYears" xml:space="preserve"><value>Avoid years</value></data>
+  <data name="AppTagline" xml:space="preserve">
+    <value>Encrypted backups</value>
+  </data>
+  <data name="NavCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="NavUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="NavRestore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="NavSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="NavAbout" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="CreateTitle" xml:space="preserve">
+    <value>Create Backup</value>
+  </data>
+  <data name="CreateSubtitle" xml:space="preserve">
+    <value>Encrypt your files into a chunk-based backup. Only you, with your password, can read them.</value>
+  </data>
+  <data name="UpdateTitle" xml:space="preserve">
+    <value>Update Backup</value>
+  </data>
+  <data name="UpdateSubtitle" xml:space="preserve">
+    <value>Refresh an existing backup with the latest changes. Only modified chunks are re-encrypted.</value>
+  </data>
+  <data name="RestoreTitle" xml:space="preserve">
+    <value>Restore Backup</value>
+  </data>
+  <data name="RestoreSubtitle" xml:space="preserve">
+    <value>Decrypt a backup and restore the original files to any folder.</value>
+  </data>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsSubtitle" xml:space="preserve">
+    <value>Defaults for new backups and application language.</value>
+  </data>
+  <data name="AboutTitle" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="AboutSubtitle" xml:space="preserve">
+    <value>Quick guide to using BackupZCrypt and a reference for the available algorithms.</value>
+  </data>
+  <data name="HelpGuideSection" xml:space="preserve">
+    <value>Quick guide</value>
+  </data>
+  <data name="HelpCreateTitle" xml:space="preserve">
+    <value>Create a backup</value>
+  </data>
+  <data name="HelpCreateText" xml:space="preserve">
+    <value>Pick the source (folder or file) and the destination folder. With encryption on, type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
+  </data>
+  <data name="HelpUpdateTitle" xml:space="preserve">
+    <value>Update a backup</value>
+  </data>
+  <data name="HelpUpdateText" xml:space="preserve">
+    <value>Select the current source folder and the existing backup. Only changed chunks are re-encrypted, so it is much faster than rebuilding it from scratch.</value>
+  </data>
+  <data name="HelpRestoreTitle" xml:space="preserve">
+    <value>Restore a backup</value>
+  </data>
+  <data name="HelpRestoreText" xml:space="preserve">
+    <value>Pick the backup folder (the one containing manifest.bzc) and the folder where you want the files restored. If the backup is encrypted, you will be asked for the password.</value>
+  </data>
+  <data name="HelpPasswordTitle" xml:space="preserve">
+    <value>Password &amp; security</value>
+  </data>
+  <data name="HelpPasswordText" xml:space="preserve">
+    <value>The password is the only way to decrypt a backup: if you lose it, the data cannot be recovered. Keep it in a password manager. The strength meter helps you choose a robust one.</value>
+  </data>
+  <data name="HelpSettingsTitle" xml:space="preserve">
+    <value>Defaults</value>
+  </data>
+  <data name="HelpSettingsText" xml:space="preserve">
+    <value>In “Settings” you set the encryption, key derivation, compression and language applied to new backups.</value>
+  </data>
+  <data name="SectionLocations" xml:space="preserve">
+    <value>Locations</value>
+  </data>
+  <data name="SectionSecurity" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="SectionOptions" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="SectionDefaults" xml:space="preserve">
+    <value>Defaults</value>
+  </data>
+  <data name="SourceLabel" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="SourceHint" xml:space="preserve">
+    <value>Folder or file to back up…</value>
+  </data>
+  <data name="UpdateSourceHint" xml:space="preserve">
+    <value>Folder with the current files…</value>
+  </data>
+  <data name="DestinationLabel" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="DestinationHint" xml:space="preserve">
+    <value>Folder where the backup will be written…</value>
+  </data>
+  <data name="BackupLabel" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="BackupHint" xml:space="preserve">
+    <value>Folder containing the backup (manifest.bzc)…</value>
+  </data>
+  <data name="RestoreDestinationHint" xml:space="preserve">
+    <value>Folder where files will be restored…</value>
+  </data>
+  <data name="BrowseFolder" xml:space="preserve">
+    <value>Folder…</value>
+  </data>
+  <data name="BrowseFile" xml:space="preserve">
+    <value>File…</value>
+  </data>
+  <data name="EncryptionLabel" xml:space="preserve">
+    <value>Encryption</value>
+  </data>
+  <data name="KeyDerivationLabel" xml:space="preserve">
+    <value>Key derivation</value>
+  </data>
+  <data name="CompressionLabel" xml:space="preserve">
+    <value>Compression</value>
+  </data>
+  <data name="NoneEncryptionName" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="NoneEncryptionDescription" xml:space="preserve">
+    <value>Files are stored without encryption.</value>
+  </data>
+  <data name="NoneCompressionName" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="NoneCompressionDescription" xml:space="preserve">
+    <value>Chunks are stored uncompressed.</value>
+  </data>
+  <data name="PasswordLabel" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="PasswordHint" xml:space="preserve">
+    <value>Enter a strong password…</value>
+  </data>
+  <data name="ConfirmPasswordLabel" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="ConfirmPasswordHint" xml:space="preserve">
+    <value>Repeat the password…</value>
+  </data>
+  <data name="RevealPasswordTooltip" xml:space="preserve">
+    <value>Show password</value>
+  </data>
+  <data name="GenerateButton" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="CopyButton" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="CopiedNotice" xml:space="preserve">
+    <value>Copied to clipboard.</value>
+  </data>
+  <data name="GeneratedPasswordNotice" xml:space="preserve">
+    <value>Store this password somewhere safe. Without it, the backup cannot be restored.</value>
+  </data>
+  <data name="StartBackup" xml:space="preserve">
+    <value>Start backup</value>
+  </data>
+  <data name="StartUpdate" xml:space="preserve">
+    <value>Update backup</value>
+  </data>
+  <data name="StartRestore" xml:space="preserve">
+    <value>Restore backup</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ProgressFilesFormat" xml:space="preserve">
+    <value>{0} of {1} files</value>
+  </data>
+  <data name="ElapsedFormat" xml:space="preserve">
+    <value>Elapsed: {0}</value>
+  </data>
+  <data name="DetectEncrypted" xml:space="preserve">
+    <value>Encrypted backup detected — password required.</value>
+  </data>
+  <data name="DetectUnencrypted" xml:space="preserve">
+    <value>Unencrypted backup detected — no password needed.</value>
+  </data>
+  <data name="DetectPlain" xml:space="preserve">
+    <value>This backup is a plain copy: its files are stored as-is and can be copied directly from the backup folder.</value>
+  </data>
+  <data name="DetectMissing" xml:space="preserve">
+    <value>No backup manifest found at this location.</value>
+  </data>
+  <data name="WarningsTitle" xml:space="preserve">
+    <value>Warnings</value>
+  </data>
+  <data name="ContinueAnyway" xml:space="preserve">
+    <value>Continue anyway</value>
+  </data>
+  <data name="DismissButton" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="ResultSuccessTitle" xml:space="preserve">
+    <value>Operation completed</value>
+  </data>
+  <data name="ResultPartialTitle" xml:space="preserve">
+    <value>Completed with errors</value>
+  </data>
+  <data name="ResultErrorTitle" xml:space="preserve">
+    <value>Operation failed</value>
+  </data>
+  <data name="ResultCancelled" xml:space="preserve">
+    <value>Operation cancelled</value>
+  </data>
+  <data name="ResultFilesFormat" xml:space="preserve">
+    <value>{0} of {1} files processed</value>
+  </data>
+  <data name="ResultDurationFormat" xml:space="preserve">
+    <value>Duration: {0}</value>
+  </data>
+  <data name="ResultSizeFormat" xml:space="preserve">
+    <value>Total size: {0}</value>
+  </data>
+  <data name="ErrorsTitle" xml:space="preserve">
+    <value>Errors</value>
+  </data>
+  <data name="LanguageLabel" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="LanguageSystemDefault" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="LanguageRestartNote" xml:space="preserve">
+    <value>Language changes apply after restarting the application.</value>
+  </data>
+  <data name="SaveButton" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SettingsSavedNotice" xml:space="preserve">
+    <value>Settings saved.</value>
+  </data>
+  <data name="SettingsFileLabel" xml:space="preserve">
+    <value>Settings file</value>
+  </data>
+  <data name="VersionFormat" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="PickFolderTitle" xml:space="preserve">
+    <value>Select a folder</value>
+  </data>
+  <data name="PickFileTitle" xml:space="preserve">
+    <value>Select a file</value>
+  </data>
+  <data name="WindowMinimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="WindowMaximize" xml:space="preserve">
+    <value>Maximize</value>
+  </data>
+  <data name="WindowClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AesDisplayName" xml:space="preserve">
+    <value>AES-256 GCM</value>
+  </data>
+  <data name="AesDescription" xml:space="preserve">
+    <value>The industry standard encryption used by governments, banks, and most secure applications worldwide. Very fast on modern computers and phones thanks to built-in hardware support. Recommended for most users.</value>
+  </data>
+  <data name="AesSummary" xml:space="preserve">
+    <value>Recommended — fast and widely trusted (default)</value>
+  </data>
+  <data name="SerpentDisplayName" xml:space="preserve">
+    <value>Serpent-256 GCM</value>
+  </data>
+  <data name="SerpentDescription" xml:space="preserve">
+    <value>Designed with an extra-large security margin, making it one of the most conservative choices available. Noticeably slower than AES, but favored when maximum caution is the priority over speed.</value>
+  </data>
+  <data name="SerpentSummary" xml:space="preserve">
+    <value>Maximum security margin (slower than AES)</value>
+  </data>
+  <data name="CamelliaDisplayName" xml:space="preserve">
+    <value>Camellia-256 GCM</value>
+  </data>
+  <data name="CamelliaDescription" xml:space="preserve">
+    <value>A strong alternative to AES developed in Japan, with comparable security and performance. Recognized by international standards bodies and a good choice when a non-U.S. algorithm is preferred.</value>
+  </data>
+  <data name="CamelliaSummary" xml:space="preserve">
+    <value>Strong AES alternative (international standard)</value>
+  </data>
+  <data name="ChaCha20DisplayName" xml:space="preserve">
+    <value>ChaCha20-Poly1305</value>
+  </data>
+  <data name="ChaCha20Description" xml:space="preserve">
+    <value>A modern, fast encryption method that excels on older or low-power devices that lack dedicated AES hardware. Widely used in VPNs (WireGuard), web browsing (TLS), and messaging apps.</value>
+  </data>
+  <data name="ChaCha20Summary" xml:space="preserve">
+    <value>Fast on all devices, even without AES hardware</value>
+  </data>
+  <data name="TwofishDisplayName" xml:space="preserve">
+    <value>Twofish-256 GCM</value>
+  </data>
+  <data name="TwofishDescription" xml:space="preserve">
+    <value>A well-respected encryption algorithm that uses a fundamentally different internal design than AES. A solid option if you want to avoid relying on a single algorithm family.</value>
+  </data>
+  <data name="TwofishSummary" xml:space="preserve">
+    <value>Good alternative with a different design approach</value>
+  </data>
+  <data name="Pbkdf2DisplayName" xml:space="preserve">
+    <value>PBKDF2 (HMAC-SHA256)</value>
+  </data>
+  <data name="Pbkdf2Description" xml:space="preserve">
+    <value>A traditional and widely compatible method to convert your password into an encryption key. Supported everywhere, but offers less protection against attackers with specialized hardware (GPUs). Choose this when compatibility with older systems is important.</value>
+  </data>
+  <data name="Pbkdf2Summary" xml:space="preserve">
+    <value>Maximum compatibility with older systems</value>
+  </data>
+  <data name="Argon2idDisplayName" xml:space="preserve">
+    <value>Argon2id</value>
+  </data>
+  <data name="Argon2idDescription" xml:space="preserve">
+    <value>The most modern and secure way to convert your password into an encryption key. Specifically designed to resist attacks using specialized hardware (GPUs, custom chips) by requiring large amounts of memory. Recommended for most users.</value>
+  </data>
+  <data name="Argon2idSummary" xml:space="preserve">
+    <value>Recommended — strongest password protection (default)</value>
+  </data>
+  <data name="ScryptDisplayName" xml:space="preserve">
+    <value>Scrypt</value>
+  </data>
+  <data name="ScryptDescription" xml:space="preserve">
+    <value>A strong method to convert your password into an encryption key that also resists hardware-based attacks by requiring significant memory. A good middle ground between PBKDF2 and Argon2id, with wider software support than Argon2id.</value>
+  </data>
+  <data name="ScryptSummary" xml:space="preserve">
+    <value>Strong protection, broader compatibility than Argon2id</value>
+  </data>
+  <data name="ZstdFastDisplayName" xml:space="preserve">
+    <value>Zstandard (Fast)</value>
+  </data>
+  <data name="ZstdFastDescription" xml:space="preserve">
+    <value>Zstandard compression at minimum level, prioritizing speed over file size. Ideal when you want some compression with minimal performance impact.</value>
+  </data>
+  <data name="ZstdFastSummary" xml:space="preserve">
+    <value>Fastest compression, larger files</value>
+  </data>
+  <data name="ZstdDisplayName" xml:space="preserve">
+    <value>Zstandard (Normal)</value>
+  </data>
+  <data name="ZstdDescription" xml:space="preserve">
+    <value>Zstandard compression at the default level, offering a good balance between speed and compression ratio. Recommended for most use cases.</value>
+  </data>
+  <data name="ZstdSummary" xml:space="preserve">
+    <value>Recommended — Good balance of speed and compression</value>
+  </data>
+  <data name="ZstdBestDisplayName" xml:space="preserve">
+    <value>Zstandard (Best)</value>
+  </data>
+  <data name="ZstdBestDescription" xml:space="preserve">
+    <value>Zstandard compression at maximum level, achieving the smallest file sizes at the cost of longer compression time. Best for large files where minimizing size matters most.</value>
+  </data>
+  <data name="ZstdBestSummary" xml:space="preserve">
+    <value>Smallest files, slowest compression</value>
+  </data>
+  <data name="SourcePathEmpty" xml:space="preserve">
+    <value>Please select a source file or directory to process.</value>
+  </data>
+  <data name="SourcePathNotExist" xml:space="preserve">
+    <value>Source path does not exist.</value>
+  </data>
+  <data name="SourcePathNotExistFormat" xml:space="preserve">
+    <value>The selected source path does not exist: {0}</value>
+  </data>
+  <data name="SourceFileEmpty" xml:space="preserve">
+    <value>The selected file is empty and cannot be processed.</value>
+  </data>
+  <data name="SourceDirectoryEmpty" xml:space="preserve">
+    <value>The selected directory is empty - no files to process.</value>
+  </data>
+  <data name="SourceAccessDenied" xml:space="preserve">
+    <value>Access denied to the source path. Please check permissions or run as administrator.</value>
+  </data>
+  <data name="SourceAccessErrorFormat" xml:space="preserve">
+    <value>Error accessing source path: {0}</value>
+  </data>
+  <data name="DestinationPathEmpty" xml:space="preserve">
+    <value>Please select a destination path.</value>
+  </data>
+  <data name="DestinationDriveNotAccessibleFormat" xml:space="preserve">
+    <value>The destination drive '{0}' does not exist or is not accessible.</value>
+  </data>
+  <data name="DestinationInvalidFormat" xml:space="preserve">
+    <value>Invalid destination path: {0}</value>
+  </data>
+  <data name="SourceDestinationSameFile" xml:space="preserve">
+    <value>Source and destination files cannot be the same. Please choose a different destination.</value>
+  </data>
+  <data name="SourceDestinationSameDirectory" xml:space="preserve">
+    <value>Source and destination directories cannot be the same. Please choose a different destination.</value>
+  </data>
+  <data name="DestinationInsideSource" xml:space="preserve">
+    <value>Destination directory cannot be inside the source directory. This would create a recursive operation.</value>
+  </data>
+  <data name="SourceInsideDestination" xml:space="preserve">
+    <value>Source directory cannot be inside the destination directory. Please choose a different path.</value>
+  </data>
+  <data name="InvalidPathFormat" xml:space="preserve">
+    <value>Invalid path: {0}</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Please enter a password for encryption/decryption.</value>
+  </data>
+  <data name="PasswordTooShort" xml:space="preserve">
+    <value>Password must be at least 8 characters long for security.</value>
+  </data>
+  <data name="PasswordTooLong" xml:space="preserve">
+    <value>Password is too long (maximum 1000 characters).</value>
+  </data>
+  <data name="PasswordLeadingTrailingSpaces" xml:space="preserve">
+    <value>Password should not start or end with spaces.</value>
+  </data>
+  <data name="ConfirmPasswordRequired" xml:space="preserve">
+    <value>Please confirm your password.</value>
+  </data>
+  <data name="PasswordMismatch" xml:space="preserve">
+    <value>Password and confirmation password do not match. Please check both fields.</value>
+  </data>
+  <data name="LowDiskSpaceFormat" xml:space="preserve">
+    <value>Low disk space: Available {0}, estimated need {1}</value>
+  </data>
+  <data name="LargeOperationFormat" xml:space="preserve">
+    <value>Large operation: {0} files will be processed. This may take considerable time.</value>
+  </data>
+  <data name="MediumOperationFormat" xml:space="preserve">
+    <value>Medium operation: {0} files will be processed.</value>
+  </data>
+  <data name="DestinationExistingFilesFormat" xml:space="preserve">
+    <value>Destination contains {0} existing file(s) that may be overwritten.</value>
+  </data>
+  <data name="WeakPasswordWarning" xml:space="preserve">
+    <value>Password strength is below recommended level. Consider using a stronger password.</value>
+  </data>
+  <data name="NoFilesInSourceDirectory" xml:space="preserve">
+    <value>No files found in the source directory.</value>
+  </data>
+  <data name="EncryptionErrorFormat" xml:space="preserve">
+    <value>Encryption error for file: {0} - {1}</value>
+  </data>
+  <data name="AllFilesFailed" xml:space="preserve">
+    <value>Failed to process any files.</value>
+  </data>
+  <data name="ManifestWriteFailedFormat" xml:space="preserve">
+    <value>Failed to write or encrypt manifest: {0}</value>
+  </data>
+  <data name="ManifestRequiredForUpdate" xml:space="preserve">
+    <value>Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest.</value>
+  </data>
+  <data name="ManifestRequiredForDecryption" xml:space="preserve">
+    <value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value>
+  </data>
+  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
+    <value>Update operation is only supported for directory backups.</value>
+  </data>
+  <data name="BackupDestinationMustExist" xml:space="preserve">
+    <value>Backup destination directory does not exist. Cannot update a non-existent backup.</value>
+  </data>
+  <data name="InvalidPassword" xml:space="preserve">
+    <value>Invalid password or corrupted file. Please verify the password and file integrity.</value>
+  </data>
+  <data name="UnexpectedErrorFormat" xml:space="preserve">
+    <value>An unexpected error occurred: {0}</value>
+  </data>
+  <data name="StrengthVeryWeak" xml:space="preserve">
+    <value>Very Weak</value>
+  </data>
+  <data name="StrengthWeak" xml:space="preserve">
+    <value>Weak</value>
+  </data>
+  <data name="StrengthFair" xml:space="preserve">
+    <value>Fair</value>
+  </data>
+  <data name="StrengthGood" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="StrengthStrong" xml:space="preserve">
+    <value>Strong</value>
+  </data>
+  <data name="EntropyFormat" xml:space="preserve">
+    <value>Entropy: {0} bits</value>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Suggestions:</value>
+  </data>
+  <data name="GoodJob" xml:space="preserve">
+    <value>Good job!</value>
+  </data>
+  <data name="TipIncreaseLength" xml:space="preserve">
+    <value>Increase length (≥12 chars)</value>
+  </data>
+  <data name="TipAddUppercase" xml:space="preserve">
+    <value>Add uppercase letters</value>
+  </data>
+  <data name="TipAddLowercase" xml:space="preserve">
+    <value>Add lowercase letters</value>
+  </data>
+  <data name="TipAddDigits" xml:space="preserve">
+    <value>Add digits</value>
+  </data>
+  <data name="TipAddSymbols" xml:space="preserve">
+    <value>Add symbols</value>
+  </data>
+  <data name="TipMoreVariety" xml:space="preserve">
+    <value>Use more character variety</value>
+  </data>
+  <data name="TipAvoidSequences" xml:space="preserve">
+    <value>Avoid sequences (e.g. abc, 123, qwerty)</value>
+  </data>
+  <data name="TipReduceRepeats" xml:space="preserve">
+    <value>Reduce repeated characters</value>
+  </data>
+  <data name="TipAvoidYears" xml:space="preserve">
+    <value>Avoid years</value>
+  </data>
 </root>

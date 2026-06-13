@@ -83,8 +83,7 @@
                 <TextBlock Text="{Binding Icon}" FontSize="15" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Title}"
                            FontSize="14"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource PrimaryTextBrush}" />
+                           VerticalAlignment="Center" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>

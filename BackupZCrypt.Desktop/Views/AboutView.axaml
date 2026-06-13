@@ -6,6 +6,25 @@
              x:Class="BackupZCrypt.Desktop.Views.AboutView"
              x:DataType="vm:AboutViewModel">
 
+  <UserControl.Resources>
+    <DataTemplate x:Key="AlgorithmTemplate" x:DataType="m:AlgorithmInfo">
+      <StackPanel Spacing="3" Margin="0,8">
+        <TextBlock Text="{Binding Name}"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource PrimaryTextBrush}" />
+        <TextBlock Text="{Binding Summary}"
+                   FontSize="12"
+                   FontWeight="Medium"
+                   TextWrapping="Wrap"
+                   Foreground="{StaticResource AccentBrush}" />
+        <TextBlock Text="{Binding Description}"
+                   Classes="dim"
+                   FontSize="13"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
   <ScrollViewer>
     <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
@@ -15,59 +34,78 @@
       </StackPanel>
 
       <Border Classes="card">
-        <StackPanel Spacing="14">
+        <StackPanel Spacing="18">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.HelpGuideSection}" />
+
+          <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Grid.Column="0" Classes="helpBadge">
+                <TextBlock Text="🔐" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Classes="label" Text="{x:Static res:Strings.HelpCreateTitle}" />
+                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpCreateText}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Grid.Column="0" Classes="helpBadge">
+                <TextBlock Text="🔄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Classes="label" Text="{x:Static res:Strings.HelpUpdateTitle}" />
+                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpUpdateText}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Grid.Column="0" Classes="helpBadge">
+                <TextBlock Text="📦" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Classes="label" Text="{x:Static res:Strings.HelpRestoreTitle}" />
+                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpRestoreText}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.HelpPasswordTitle}" />
+          <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpPasswordText}" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.HelpSettingsTitle}" />
+          <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpSettingsText}" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="6">
           <TextBlock Classes="section" Text="{x:Static res:Strings.EncryptionLabel}" />
-          <ItemsControl ItemsSource="{Binding EncryptionAlgorithms}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="m:AlgorithmInfo">
-                <StackPanel Spacing="2" Margin="0,6">
-                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Description}"
-                             Classes="dim"
-                             FontSize="13"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <ItemsControl ItemsSource="{Binding EncryptionAlgorithms}"
+                        ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>
 
       <Border Classes="card">
-        <StackPanel Spacing="14">
+        <StackPanel Spacing="6">
           <TextBlock Classes="section" Text="{x:Static res:Strings.KeyDerivationLabel}" />
-          <ItemsControl ItemsSource="{Binding KeyDerivationAlgorithms}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="m:AlgorithmInfo">
-                <StackPanel Spacing="2" Margin="0,6">
-                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Description}"
-                             Classes="dim"
-                             FontSize="13"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <ItemsControl ItemsSource="{Binding KeyDerivationAlgorithms}"
+                        ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>
 
       <Border Classes="card">
-        <StackPanel Spacing="14">
+        <StackPanel Spacing="6">
           <TextBlock Classes="section" Text="{x:Static res:Strings.CompressionLabel}" />
-          <ItemsControl ItemsSource="{Binding CompressionAlgorithms}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="m:AlgorithmInfo">
-                <StackPanel Spacing="2" Margin="0,6">
-                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Description}"
-                             Classes="dim"
-                             FontSize="13"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <ItemsControl ItemsSource="{Binding CompressionAlgorithms}"
+                        ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>
     </StackPanel>

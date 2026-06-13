@@ -52,45 +52,6 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card">
-        <StackPanel Spacing="16">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-              <TextBlock Classes="section" Text="{x:Static res:Strings.SectionConfiguration}" />
-              <TextBlock Classes="dim"
-                         FontSize="12"
-                         Text="{x:Static res:Strings.ConfigurationHint}" />
-            </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="link"
-                    VerticalAlignment="Center"
-                    Content="{x:Static res:Strings.EditInSettings}"
-                    Command="{Binding OpenSettingsCommand}" />
-          </Grid>
-
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="170,*">
-              <TextBlock Grid.Column="0"
-                         Classes="dim"
-                         Text="{x:Static res:Strings.EncryptionLabel}" />
-              <TextBlock Grid.Column="1" Classes="label" Text="{Binding EncryptionSummary}" />
-            </Grid>
-            <Grid ColumnDefinitions="170,*" IsVisible="{Binding IsEncryptionEnabled}">
-              <TextBlock Grid.Column="0"
-                         Classes="dim"
-                         Text="{x:Static res:Strings.KeyDerivationLabel}" />
-              <TextBlock Grid.Column="1" Classes="label" Text="{Binding KeyDerivationSummary}" />
-            </Grid>
-            <Grid ColumnDefinitions="170,*">
-              <TextBlock Grid.Column="0"
-                         Classes="dim"
-                         Text="{x:Static res:Strings.CompressionLabel}" />
-              <TextBlock Grid.Column="1" Classes="label" Text="{Binding CompressionSummary}" />
-            </Grid>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
       <Border Classes="card" IsVisible="{Binding IsEncryptionEnabled}">
         <StackPanel Spacing="16">
           <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
