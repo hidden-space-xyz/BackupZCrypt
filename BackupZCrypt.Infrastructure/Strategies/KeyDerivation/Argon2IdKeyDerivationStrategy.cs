@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -14,12 +13,6 @@ internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStr
     private const int Parallelism = 2;
 
     public KeyDerivationAlgorithm Id => KeyDerivationAlgorithm.Argon2id;
-
-    public string DisplayName => Messages.Argon2idDisplayName;
-
-    public string Description => Messages.Argon2idDescription;
-
-    public string Summary => Messages.Argon2idSummary;
 
     public byte[] DeriveKey(string password, byte[] salt, int keySize)
     {
@@ -46,7 +39,7 @@ internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStr
         {
             Array.Clear(key, 0, key.Length);
 
-            throw new CryptographicException(Messages.Argon2idKeyDerivationError, ex);
+            throw new CryptographicException("Failed to derive key with Argon2id.", ex);
         }
         finally
         {

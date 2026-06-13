@@ -10,12 +10,6 @@ internal sealed class NoneEncryptionStrategy : IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.None;
 
-    public string DisplayName => "None";
-
-    public string Description => "No encryption. Chunks are stored as-is.";
-
-    public string Summary => "No encryption";
-
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
         byte[] key,

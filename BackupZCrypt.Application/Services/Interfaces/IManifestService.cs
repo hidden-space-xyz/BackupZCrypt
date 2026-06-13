@@ -1,5 +1,6 @@
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services.Interfaces;
 
@@ -10,7 +11,7 @@ public interface IManifestService
         CancellationToken cancellationToken = default
     );
 
-    Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
+    Task<IReadOnlyList<LocalizableMessage>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
         string destinationRoot,
@@ -24,7 +25,7 @@ public interface IManifestService
 
     ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey);
 
-    Task<IReadOnlyList<string>> SaveChunkManifestAsync(
+    Task<IReadOnlyList<LocalizableMessage>> SaveChunkManifestAsync(
         ChunkManifestData manifestData,
         string destinationRoot,
         byte[] encryptionKey,

@@ -2,17 +2,16 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
-using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -58,7 +57,7 @@ internal sealed class ChunkedBackupService(
 
         if (source is null)
         {
-            return Result<BackupResult>.Failure(Resources.Messages.SourcePathNotExist);
+            return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
         }
 
         var (sourceFiles, sourceRoot, isFile) = source.Value;
@@ -72,7 +71,7 @@ internal sealed class ChunkedBackupService(
                     0,
                     0,
                     0,
-                    errors: [Resources.Messages.NoFilesInSourceDirectory]
+                    errors: [new LocalizableMessage(MessageCode.NoFilesInSourceDirectory)]
                 )
             );
         }
@@ -107,10 +106,10 @@ internal sealed class ChunkedBackupService(
             progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
 
             ConcurrentBag<ChunkManifestFileEntry> fileEntries = [];
-            ConcurrentBag<string> errors = [];
+            ConcurrentBag<LocalizableMessage> errors = [];
             long processedBytes = 0;
             var processedFiles = 0;
-            string? fatalError = null;
+            LocalizableMessage? fatalError = null;
             ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks = new(
                 StringComparer.Ordinal
             );
@@ -175,8 +174,8 @@ internal sealed class ChunkedBackupService(
                                 if (IsFileLevelError(ex))
                                 {
                                     errors.Add(
-                                        string.Format(
-                                            Resources.Messages.EncryptionErrorFormat,
+                                        new LocalizableMessage(
+                                            MessageCode.EncryptionErrorFormat,
                                             file,
                                             ex.Message
                                         )
@@ -184,7 +183,14 @@ internal sealed class ChunkedBackupService(
                                 }
                                 else
                                 {
-                                    Interlocked.CompareExchange(ref fatalError, ex.Message, null);
+                                    Interlocked.CompareExchange(
+                                        ref fatalError,
+                                        new LocalizableMessage(
+                                            MessageCode.UnexpectedErrorFormat,
+                                            ex.Message
+                                        ),
+                                        null
+                                    );
                                     await linkedCts.CancelAsync().ConfigureAwait(false);
                                 }
                             }
@@ -195,7 +201,7 @@ internal sealed class ChunkedBackupService(
             catch (OperationCanceledException) when (fatalError is not null)
             {
                 stopwatch.Stop();
-                return Result<BackupResult>.Failure(fatalError);
+                return Result<BackupResult>.Failure(fatalError!);
             }
 
             ManifestHeader header = new(
@@ -220,7 +226,7 @@ internal sealed class ChunkedBackupService(
                 )
                 .ConfigureAwait(false);
 
-            List<string> errorList = [.. errors];
+            List<LocalizableMessage> errorList = [.. errors];
             errorList.AddRange(manifestErrors);
 
             stopwatch.Stop();
@@ -228,10 +234,7 @@ internal sealed class ChunkedBackupService(
 
             return errorList.Count > 0 && processedFiles == 0
                 ? Result<BackupResult>.Failure(
-                    string.Format(
-                        Resources.Messages.AllFilesFailedFormat,
-                        string.Join("; ", errorList)
-                    )
+                    [new LocalizableMessage(MessageCode.AllFilesFailed), .. errorList]
                 )
                 : Result<BackupResult>.Success(
                     new BackupResult(
@@ -271,7 +274,7 @@ internal sealed class ChunkedBackupService(
 
         if (preamble is null)
         {
-            return Result<BackupResult>.Failure(Resources.Messages.ManifestRequiredForUpdate);
+            return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForUpdate);
         }
 
         request = request with
@@ -297,7 +300,7 @@ internal sealed class ChunkedBackupService(
 
             if (existingManifest is null)
             {
-                return Result<BackupResult>.Failure(Resources.Messages.ManifestRequiredForUpdate);
+                return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForUpdate);
             }
 
             request = request with { Compression = existingManifest.Header.Compression };
@@ -311,7 +314,7 @@ internal sealed class ChunkedBackupService(
 
             if (source is null)
             {
-                return Result<BackupResult>.Failure(Resources.Messages.SourcePathNotExist);
+                return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
             }
 
             var (sourceFiles, sourceRoot, _) = source.Value;
@@ -338,10 +341,10 @@ internal sealed class ChunkedBackupService(
             }
 
             ConcurrentBag<ChunkManifestFileEntry> updatedEntries = [];
-            ConcurrentBag<string> errors = [];
+            ConcurrentBag<LocalizableMessage> errors = [];
             var processedFiles = 0;
             long processedBytes = 0;
-            string? fatalError = null;
+            LocalizableMessage? fatalError = null;
 
             List<(string File, string RelativePath, long Size)> filesToProcess = [];
             ConcurrentDictionary<string, byte> referencedChunkHashes = new(StringComparer.Ordinal);
@@ -451,8 +454,8 @@ internal sealed class ChunkedBackupService(
                                     if (IsFileLevelError(ex))
                                     {
                                         errors.Add(
-                                            string.Format(
-                                                Resources.Messages.EncryptionErrorFormat,
+                                            new LocalizableMessage(
+                                                MessageCode.EncryptionErrorFormat,
                                                 fileItem.File,
                                                 ex.Message
                                             )
@@ -462,7 +465,10 @@ internal sealed class ChunkedBackupService(
                                     {
                                         Interlocked.CompareExchange(
                                             ref fatalError,
-                                            ex.Message,
+                                            new LocalizableMessage(
+                                                MessageCode.UnexpectedErrorFormat,
+                                                ex.Message
+                                            ),
                                             null
                                         );
                                         await linkedCts.CancelAsync().ConfigureAwait(false);
@@ -475,7 +481,7 @@ internal sealed class ChunkedBackupService(
                 catch (OperationCanceledException) when (fatalError is not null)
                 {
                     stopwatch.Stop();
-                    return Result<BackupResult>.Failure(fatalError);
+                    return Result<BackupResult>.Failure(fatalError!);
                 }
             }
 
@@ -517,7 +523,7 @@ internal sealed class ChunkedBackupService(
                     .ConfigureAwait(false);
             }
 
-            List<string> errorList = [.. errors];
+            List<LocalizableMessage> errorList = [.. errors];
             errorList.AddRange(manifestErrors);
 
             stopwatch.Stop();
@@ -556,7 +562,7 @@ internal sealed class ChunkedBackupService(
 
         if (preamble is null)
         {
-            return Result<BackupResult>.Failure(Resources.Messages.ManifestRequiredForDecryption);
+            return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
         }
 
         DerivedKeySet? keys = null;
@@ -572,9 +578,7 @@ internal sealed class ChunkedBackupService(
 
             if (manifest is null)
             {
-                return Result<BackupResult>.Failure(
-                    Resources.Messages.ManifestRequiredForDecryption
-                );
+                return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
             }
 
             var encryptionStrategy = ResolveEncryptionStrategy(manifest.Header.EncryptionAlgorithm);
@@ -599,10 +603,10 @@ internal sealed class ChunkedBackupService(
             var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
             progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
 
-            ConcurrentBag<string> errors = [];
+            ConcurrentBag<LocalizableMessage> errors = [];
             long processedBytes = 0;
             var processedFiles = 0;
-            string? fatalError = null;
+            LocalizableMessage? fatalError = null;
 
             await fileOperationsService
                 .CreateDirectoryAsync(destinationPath, cancellationToken)
@@ -659,7 +663,7 @@ internal sealed class ChunkedBackupService(
                             {
                                 Interlocked.CompareExchange(
                                     ref fatalError,
-                                    Domain.Resources.Messages.InvalidPassword,
+                                    new LocalizableMessage(MessageCode.InvalidPassword),
                                     null
                                 );
                                 await linkedCts.CancelAsync().ConfigureAwait(false);
@@ -669,8 +673,8 @@ internal sealed class ChunkedBackupService(
                                 if (IsFileLevelError(ex))
                                 {
                                     errors.Add(
-                                        string.Format(
-                                            Resources.Messages.EncryptionErrorFormat,
+                                        new LocalizableMessage(
+                                            MessageCode.EncryptionErrorFormat,
                                             fileEntry.OriginalPath,
                                             ex.Message
                                         )
@@ -678,7 +682,14 @@ internal sealed class ChunkedBackupService(
                                 }
                                 else
                                 {
-                                    Interlocked.CompareExchange(ref fatalError, ex.Message, null);
+                                    Interlocked.CompareExchange(
+                                        ref fatalError,
+                                        new LocalizableMessage(
+                                            MessageCode.UnexpectedErrorFormat,
+                                            ex.Message
+                                        ),
+                                        null
+                                    );
                                     await linkedCts.CancelAsync().ConfigureAwait(false);
                                 }
                             }
@@ -689,19 +700,16 @@ internal sealed class ChunkedBackupService(
             catch (OperationCanceledException) when (fatalError is not null)
             {
                 stopwatch.Stop();
-                return Result<BackupResult>.Failure(fatalError);
+                return Result<BackupResult>.Failure(fatalError!);
             }
 
-            List<string> errorList = [.. errors];
+            List<LocalizableMessage> errorList = [.. errors];
             stopwatch.Stop();
             var isSuccess = errorList.Count == 0 && processedFiles == totalFiles;
 
             return errorList.Count > 0 && processedFiles == 0
                 ? Result<BackupResult>.Failure(
-                    string.Format(
-                        Resources.Messages.AllFilesFailedFormat,
-                        string.Join("; ", errorList)
-                    )
+                    [new LocalizableMessage(MessageCode.AllFilesFailed), .. errorList]
                 )
                 : Result<BackupResult>.Success(
                     new BackupResult(
@@ -1243,10 +1251,7 @@ internal sealed class ChunkedBackupService(
         return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
-                string.Format(
-                    Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
-                    algorithm
-                )
+                $"Encryption algorithm '{algorithm}' is not registered."
             )
             : strategy;
     }

@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -89,7 +89,7 @@ internal sealed class ManifestService(
         }
     }
 
-    public async Task<IReadOnlyList<string>> TrySavePlainManifestAsync(
+    public async Task<IReadOnlyList<LocalizableMessage>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
         string destinationRoot,
@@ -99,7 +99,7 @@ internal sealed class ManifestService(
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
 
-        List<string> errors = [];
+        List<LocalizableMessage> errors = [];
         if (entries.Count == 0)
         {
             return errors;
@@ -124,7 +124,7 @@ internal sealed class ManifestService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            errors.Add(string.Format(Messages.ManifestWriteFailedFormat, ex.Message));
+            errors.Add(new LocalizableMessage(MessageCode.ManifestWriteFailedFormat, ex.Message));
         }
         finally
         {
@@ -254,7 +254,7 @@ internal sealed class ManifestService(
         }
     }
 
-    public async Task<IReadOnlyList<string>> SaveChunkManifestAsync(
+    public async Task<IReadOnlyList<LocalizableMessage>> SaveChunkManifestAsync(
         ChunkManifestData manifestData,
         string destinationRoot,
         byte[] encryptionKey,
@@ -266,7 +266,7 @@ internal sealed class ManifestService(
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
         ArgumentNullException.ThrowIfNull(encryptionKey);
 
-        List<string> errors = [];
+        List<LocalizableMessage> errors = [];
         byte[]? manifestBytes = null;
         byte[]? encryptedBytes = null;
         byte[]? payload = null;
@@ -338,7 +338,7 @@ internal sealed class ManifestService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            errors.Add(string.Format(Messages.ManifestWriteFailedFormat, ex.Message));
+            errors.Add(new LocalizableMessage(MessageCode.ManifestWriteFailedFormat, ex.Message));
         }
         finally
         {
@@ -460,10 +460,7 @@ internal sealed class ManifestService(
         return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
-                string.Format(
-                    Domain.Resources.Messages.EncryptionAlgorithmNotRegisteredFormat,
-                    algorithm
-                )
+                $"Encryption algorithm '{algorithm}' is not registered."
             )
             : strategy;
     }

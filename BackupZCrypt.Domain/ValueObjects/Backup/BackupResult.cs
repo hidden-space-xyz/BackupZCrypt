@@ -1,3 +1,5 @@
+using BackupZCrypt.Domain.ValueObjects.Localization;
+
 namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 public sealed record BackupResult
@@ -8,8 +10,8 @@ public sealed record BackupResult
         long totalBytes,
         int processedFiles,
         int totalFiles,
-        IEnumerable<string>? errors = null,
-        IEnumerable<string>? warnings = null
+        IEnumerable<LocalizableMessage>? errors = null,
+        IEnumerable<LocalizableMessage>? warnings = null
     )
     {
         ValidateInputs(elapsedTime, totalBytes, processedFiles, totalFiles);
@@ -19,8 +21,8 @@ public sealed record BackupResult
         this.TotalBytes = totalBytes;
         this.ProcessedFiles = processedFiles;
         this.TotalFiles = totalFiles;
-        this.Errors = errors?.ToArray() ?? (string[])[];
-        this.Warnings = warnings?.ToArray() ?? (string[])[];
+        this.Errors = errors?.ToArray() ?? (LocalizableMessage[])[];
+        this.Warnings = warnings?.ToArray() ?? (LocalizableMessage[])[];
     }
 
     public bool IsSuccess { get; }
@@ -33,9 +35,9 @@ public sealed record BackupResult
 
     public int TotalFiles { get; }
 
-    public IReadOnlyList<string> Errors { get; }
+    public IReadOnlyList<LocalizableMessage> Errors { get; }
 
-    public IReadOnlyList<string> Warnings { get; }
+    public IReadOnlyList<LocalizableMessage> Warnings { get; }
 
     public bool HasErrors => this.Errors.Count > 0;
 

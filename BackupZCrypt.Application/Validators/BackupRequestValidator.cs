@@ -1,4 +1,3 @@
-using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
@@ -6,6 +5,7 @@ using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Validators;
 
@@ -15,12 +15,12 @@ internal sealed class BackupRequestValidator(
     IPasswordService passwordService
 ) : IBackupRequestValidator
 {
-    public async Task<IReadOnlyList<string>> AnalyzeErrorsAsync(
+    public async Task<IReadOnlyList<LocalizableMessage>> AnalyzeErrorsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
     )
     {
-        List<string> errors = [];
+        List<LocalizableMessage> errors = [];
 
         var sourcePath = PathNormalizationHelper.TryNormalize(
             request.SourcePath,
@@ -48,13 +48,13 @@ internal sealed class BackupRequestValidator(
 
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
-            errors.Add(Messages.SourcePathEmpty);
+            errors.Add(new LocalizableMessage(MessageCode.SourcePathEmpty));
         }
         else if (
             !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath)
         )
         {
-            errors.Add(string.Format(Messages.SourcePathNotExistFormat, sourcePath));
+            errors.Add(new LocalizableMessage(MessageCode.SourcePathNotExistFormat, sourcePath));
         }
         else
         {
@@ -73,7 +73,7 @@ internal sealed class BackupRequestValidator(
 
                     if (fileSize == 0)
                     {
-                        errors.Add(Messages.SourceFileEmpty);
+                        errors.Add(new LocalizableMessage(MessageCode.SourceFileEmpty));
                     }
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
@@ -85,23 +85,23 @@ internal sealed class BackupRequestValidator(
                     );
                     if (files.Length == 0)
                     {
-                        errors.Add(Messages.SourceDirectoryEmpty);
+                        errors.Add(new LocalizableMessage(MessageCode.SourceDirectoryEmpty));
                     }
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                errors.Add(Messages.SourceAccessDenied);
+                errors.Add(new LocalizableMessage(MessageCode.SourceAccessDenied));
             }
             catch (Exception ex)
             {
-                errors.Add(string.Format(Messages.SourceAccessErrorFormat, ex.Message));
+                errors.Add(new LocalizableMessage(MessageCode.SourceAccessErrorFormat, ex.Message));
             }
         }
 
         if (string.IsNullOrWhiteSpace(destinationPath))
         {
-            errors.Add(Messages.DestinationPathEmpty);
+            errors.Add(new LocalizableMessage(MessageCode.DestinationPathEmpty));
         }
         else
         {
@@ -118,14 +118,19 @@ internal sealed class BackupRequestValidator(
                     if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                     {
                         errors.Add(
-                            string.Format(Messages.DestinationDriveNotAccessibleFormat, drive)
+                            new LocalizableMessage(
+                                MessageCode.DestinationDriveNotAccessibleFormat,
+                                drive
+                            )
                         );
                     }
                 }
             }
             catch (Exception ex)
             {
-                errors.Add(string.Format(Messages.DestinationInvalidFormat, ex.Message));
+                errors.Add(
+                    new LocalizableMessage(MessageCode.DestinationInvalidFormat, ex.Message)
+                );
             }
         }
 
@@ -134,23 +139,23 @@ internal sealed class BackupRequestValidator(
             && string.IsNullOrWhiteSpace(request.Password)
         )
         {
-            errors.Add(Messages.PasswordRequired);
+            errors.Add(new LocalizableMessage(MessageCode.PasswordRequired));
         }
         else if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
         {
             if (request.Password.Length < 8)
             {
-                errors.Add(Messages.PasswordTooShort);
+                errors.Add(new LocalizableMessage(MessageCode.PasswordTooShort));
             }
 
             if (request.Password.Length > 1000)
             {
-                errors.Add(Messages.PasswordTooLong);
+                errors.Add(new LocalizableMessage(MessageCode.PasswordTooLong));
             }
 
             if (request.Password.Trim() != request.Password)
             {
-                errors.Add(Messages.PasswordLeadingTrailingSpaces);
+                errors.Add(new LocalizableMessage(MessageCode.PasswordLeadingTrailingSpaces));
             }
         }
 
@@ -161,13 +166,13 @@ internal sealed class BackupRequestValidator(
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
-                errors.Add(Messages.ConfirmPasswordRequired);
+                errors.Add(new LocalizableMessage(MessageCode.ConfirmPasswordRequired));
             }
             else if (
                 !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
             )
             {
-                errors.Add(Messages.PasswordMismatch);
+                errors.Add(new LocalizableMessage(MessageCode.PasswordMismatch));
             }
         }
 
@@ -185,7 +190,7 @@ internal sealed class BackupRequestValidator(
                         )
                     )
                     {
-                        errors.Add(Messages.SourceDestinationSameFile);
+                        errors.Add(new LocalizableMessage(MessageCode.SourceDestinationSameFile));
                     }
                 }
                 else if (fileOperations.DirectoryExists(sourcePath))
@@ -198,7 +203,9 @@ internal sealed class BackupRequestValidator(
                         )
                     )
                     {
-                        errors.Add(Messages.SourceDestinationSameDirectory);
+                        errors.Add(
+                            new LocalizableMessage(MessageCode.SourceDestinationSameDirectory)
+                        );
                     }
                     else if (
                         destinationPath.StartsWith(
@@ -207,7 +214,7 @@ internal sealed class BackupRequestValidator(
                         )
                     )
                     {
-                        errors.Add(Messages.DestinationInsideSource);
+                        errors.Add(new LocalizableMessage(MessageCode.DestinationInsideSource));
                     }
                     else if (
                         sourcePath.StartsWith(
@@ -216,7 +223,7 @@ internal sealed class BackupRequestValidator(
                         )
                     )
                     {
-                        errors.Add(Messages.SourceInsideDestination);
+                        errors.Add(new LocalizableMessage(MessageCode.SourceInsideDestination));
                     }
                 }
             }
@@ -228,12 +235,12 @@ internal sealed class BackupRequestValidator(
         return errors;
     }
 
-    public async Task<IReadOnlyList<string>> AnalyzeWarningsAsync(
+    public async Task<IReadOnlyList<LocalizableMessage>> AnalyzeWarningsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
     )
     {
-        List<string> warnings = [];
+        List<LocalizableMessage> warnings = [];
 
         var sourcePath = PathNormalizationHelper.TryNormalize(request.SourcePath, out _);
         var destinationPath = PathNormalizationHelper.TryNormalize(request.DestinationPath, out _);
@@ -276,8 +283,8 @@ internal sealed class BackupRequestValidator(
                     if (available >= 0 && available < requiredSpace)
                     {
                         warnings.Add(
-                            string.Format(
-                                Messages.LowDiskSpaceFormat,
+                            new LocalizableMessage(
+                                MessageCode.LowDiskSpaceFormat,
                                 ByteSizeFormatter.Format(available),
                                 ByteSizeFormatter.Format(requiredSpace)
                             )
@@ -289,13 +296,19 @@ internal sealed class BackupRequestValidator(
                 if (fileCount > 10000)
                 {
                     warnings.Add(
-                        string.Format(Messages.LargeOperationFormat, fileCount.ToString("N0"))
+                        new LocalizableMessage(
+                            MessageCode.LargeOperationFormat,
+                            fileCount.ToString("N0")
+                        )
                     );
                 }
                 else if (fileCount > 1000)
                 {
                     warnings.Add(
-                        string.Format(Messages.MediumOperationFormat, fileCount.ToString("N0"))
+                        new LocalizableMessage(
+                            MessageCode.MediumOperationFormat,
+                            fileCount.ToString("N0")
+                        )
                     );
                 }
             }
@@ -325,8 +338,8 @@ internal sealed class BackupRequestValidator(
             if (hasExistingFiles && request.Operation == BackupOperation.Restore)
             {
                 warnings.Add(
-                    string.Format(
-                        Messages.DestinationExistingFilesFormat,
+                    new LocalizableMessage(
+                        MessageCode.DestinationExistingFilesFormat,
                         existingFileCount.ToString("N0")
                     )
                 );
@@ -340,7 +353,7 @@ internal sealed class BackupRequestValidator(
                 var strength = passwordService.AnalyzePasswordStrength(request.Password);
                 if (strength.Score < 60)
                 {
-                    warnings.Add(Messages.WeakPasswordWarning);
+                    warnings.Add(new LocalizableMessage(MessageCode.WeakPasswordWarning));
                 }
             }
         }

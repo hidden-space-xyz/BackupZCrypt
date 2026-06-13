@@ -1,10 +1,10 @@
-using BackupZCrypt.Application.Resources;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Utilities.Helpers;
 
 internal static class PathNormalizationHelper
 {
-    internal static string? TryNormalize(string rawPath, out string? error)
+    internal static string? TryNormalize(string rawPath, out LocalizableMessage? error)
     {
         error = null;
         try
@@ -19,7 +19,7 @@ internal static class PathNormalizationHelper
         }
         catch (Exception ex)
         {
-            error = string.Format(Messages.InvalidPathFormat, ex.Message);
+            error = new LocalizableMessage(MessageCode.InvalidPathFormat, ex.Message);
             return null;
         }
     }

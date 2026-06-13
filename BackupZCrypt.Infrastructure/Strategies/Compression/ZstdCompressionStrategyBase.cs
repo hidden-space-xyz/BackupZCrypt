@@ -8,12 +8,6 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
 {
     public abstract Domain.Enums.CompressionMode Id { get; }
 
-    public abstract string DisplayName { get; }
-
-    public abstract string Description { get; }
-
-    public abstract string Summary { get; }
-
     protected abstract int CompressionLevel { get; }
 
     public async Task<Stream> CompressAsync(

@@ -1,5 +1,4 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
@@ -7,6 +6,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Orchestrators;
 
@@ -36,19 +36,19 @@ internal sealed class BackupOrchestrator(
 
         if (!isDirectory && !isFile)
         {
-            return Result<BackupResult>.Failure(Messages.SourcePathNotExist);
+            return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
         }
 
         if (request.Operation == BackupOperation.Update)
         {
             if (!isDirectory)
             {
-                return Result<BackupResult>.Failure(Messages.UpdateSourceMustBeDirectory);
+                return Result<BackupResult>.Failure(MessageCode.UpdateSourceMustBeDirectory);
             }
 
             if (!fileOperationsService.DirectoryExists(destinationPath))
             {
-                return Result<BackupResult>.Failure(Messages.BackupDestinationMustExist);
+                return Result<BackupResult>.Failure(MessageCode.BackupDestinationMustExist);
             }
         }
 
@@ -101,9 +101,7 @@ internal sealed class BackupOrchestrator(
         }
         catch (Exception ex)
         {
-            return Result<BackupResult>.Failure(
-                string.Format(Messages.UnexpectedErrorFormat, ex.Message)
-            );
+            return Result<BackupResult>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
         }
     }
 

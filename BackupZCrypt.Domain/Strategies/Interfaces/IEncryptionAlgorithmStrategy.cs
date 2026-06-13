@@ -6,12 +6,6 @@ public interface IEncryptionAlgorithmStrategy
 {
     EncryptionAlgorithm Id { get; }
 
-    string DisplayName { get; }
-
-    string Description { get; }
-
-    string Summary { get; }
-
     byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
         byte[] key,

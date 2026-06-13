@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
@@ -21,21 +22,30 @@ public sealed class AboutViewModel : ViewModelBase
             .. encryptionStrategies
                 .Where(static s => s.Id != EncryptionAlgorithm.None)
                 .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(s.DisplayName, s.Description)),
+                .Select(static s => new AlgorithmInfo(
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetDescription(s.Id)
+                )),
         ];
 
         KeyDerivationAlgorithms =
         [
             .. keyDerivationStrategies
                 .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(s.DisplayName, s.Description)),
+                .Select(static s => new AlgorithmInfo(
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetDescription(s.Id)
+                )),
         ];
 
         CompressionAlgorithms =
         [
             .. compressionStrategies
                 .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(s.DisplayName, s.Description)),
+                .Select(static s => new AlgorithmInfo(
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetDescription(s.Id)
+                )),
         ];
 
         var version =

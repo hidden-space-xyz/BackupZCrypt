@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Resources;
 using Org.BouncyCastle.Crypto.Generators;
 
 namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
@@ -14,12 +13,6 @@ internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrat
     private const int Parallelization = 1;
 
     public KeyDerivationAlgorithm Id => KeyDerivationAlgorithm.Scrypt;
-
-    public string DisplayName => Messages.ScryptDisplayName;
-
-    public string Description => Messages.ScryptDescription;
-
-    public string Summary => Messages.ScryptSummary;
 
     public byte[] DeriveKey(string password, byte[] salt, int keySize)
     {
@@ -39,7 +32,7 @@ internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrat
         }
         catch (Exception ex)
         {
-            throw new CryptographicException(Messages.ScryptKeyDerivationError, ex);
+            throw new CryptographicException("Failed to derive key with scrypt.", ex);
         }
         finally
         {

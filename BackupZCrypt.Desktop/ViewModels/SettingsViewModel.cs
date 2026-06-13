@@ -3,6 +3,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -53,14 +54,22 @@ public sealed partial class SettingsViewModel : ViewModelBase
             .. encryptionStrategies
                 .Where(static s => s.Id != EncryptionAlgorithm.None)
                 .OrderBy(static s => s.Id)
-                .Select(static s => new EncryptionOption(s.Id, s.DisplayName, s.Summary)),
+                .Select(static s => new EncryptionOption(
+                    s.Id,
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id)
+                )),
         ];
 
         KeyDerivationOptions =
         [
             .. keyDerivationStrategies
                 .OrderBy(static s => s.Id)
-                .Select(static s => new KeyDerivationOption(s.Id, s.DisplayName, s.Summary)),
+                .Select(static s => new KeyDerivationOption(
+                    s.Id,
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id)
+                )),
         ];
 
         CompressionOptions =
@@ -72,7 +81,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ),
             .. compressionStrategies
                 .OrderBy(static s => s.Id)
-                .Select(static s => new CompressionOption(s.Id, s.DisplayName, s.Summary)),
+                .Select(static s => new CompressionOption(
+                    s.Id,
+                    AlgorithmMetadataProvider.GetName(s.Id),
+                    AlgorithmMetadataProvider.GetSummary(s.Id)
+                )),
         ];
 
         LanguageOptions =

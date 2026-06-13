@@ -1,6 +1,5 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
-using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Domain.Factories;
@@ -16,7 +15,7 @@ internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy
         return !this.strategies.TryGetValue(mode, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(mode),
-                string.Format(Messages.CompressionModeNotRegisteredFormat, mode)
+                $"Compression mode '{mode}' is not registered."
             )
             : strategy;
     }

@@ -1,9 +1,11 @@
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.ValueObjects.Password;
 
 public sealed record PasswordStrengthAnalysis(
     PasswordStrength Strength,
-    string Description,
-    double Score
+    double Score,
+    double Entropy,
+    IReadOnlyList<MessageCode> Tips
 );

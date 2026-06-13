@@ -14,12 +14,6 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
 
     public abstract EncryptionAlgorithm Id { get; }
 
-    public abstract string DisplayName { get; }
-
-    public abstract string Description { get; }
-
-    public abstract string Summary { get; }
-
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
         byte[] key,

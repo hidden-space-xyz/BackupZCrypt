@@ -6,8 +6,10 @@ using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -241,7 +243,7 @@ public abstract partial class OperationViewModelBase(
         {
             foreach (var warning in operation.Warnings)
             {
-                Warnings.Add(warning);
+                Warnings.Add(MessageLocalizer.Localize(warning));
             }
 
             ShowWarnings = true;
@@ -275,7 +277,7 @@ public abstract partial class OperationViewModelBase(
 
         foreach (var error in operation.Errors)
         {
-            Errors.Add(error);
+            Errors.Add(MessageLocalizer.Localize(error));
         }
 
         ShowErrors = Errors.Count > 0;
@@ -286,7 +288,7 @@ public abstract partial class OperationViewModelBase(
         }
     }
 
-    private void ShowFailure(IEnumerable<string> errors)
+    private void ShowFailure(IEnumerable<LocalizableMessage> errors)
     {
         HasResult = true;
         ResultIsSuccess = false;
@@ -294,7 +296,7 @@ public abstract partial class OperationViewModelBase(
 
         foreach (var error in errors)
         {
-            Errors.Add(error);
+            Errors.Add(MessageLocalizer.Localize(error));
         }
 
         ShowErrors = Errors.Count > 0;

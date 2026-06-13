@@ -171,8 +171,83 @@ internal static class Strings
 
     public static string PickFileTitle => Get();
 
+    // Algorithm display text (moved from Infrastructure). Resolved by name through
+    // AlgorithmMetadataProvider, which maps each strategy enum value to these keys.
+    public static string AesDisplayName => Get();
+
+    public static string AesDescription => Get();
+
+    public static string AesSummary => Get();
+
+    public static string SerpentDisplayName => Get();
+
+    public static string SerpentDescription => Get();
+
+    public static string SerpentSummary => Get();
+
+    public static string CamelliaDisplayName => Get();
+
+    public static string CamelliaDescription => Get();
+
+    public static string CamelliaSummary => Get();
+
+    public static string ChaCha20DisplayName => Get();
+
+    public static string ChaCha20Description => Get();
+
+    public static string ChaCha20Summary => Get();
+
+    public static string TwofishDisplayName => Get();
+
+    public static string TwofishDescription => Get();
+
+    public static string TwofishSummary => Get();
+
+    public static string Pbkdf2DisplayName => Get();
+
+    public static string Pbkdf2Description => Get();
+
+    public static string Pbkdf2Summary => Get();
+
+    public static string Argon2idDisplayName => Get();
+
+    public static string Argon2idDescription => Get();
+
+    public static string Argon2idSummary => Get();
+
+    public static string ScryptDisplayName => Get();
+
+    public static string ScryptDescription => Get();
+
+    public static string ScryptSummary => Get();
+
+    public static string ZstdFastDisplayName => Get();
+
+    public static string ZstdFastDescription => Get();
+
+    public static string ZstdFastSummary => Get();
+
+    public static string ZstdDisplayName => Get();
+
+    public static string ZstdDescription => Get();
+
+    public static string ZstdSummary => Get();
+
+    public static string ZstdBestDisplayName => Get();
+
+    public static string ZstdBestDescription => Get();
+
+    public static string ZstdBestSummary => Get();
+
     private static string Get([CallerMemberName] string name = "")
     {
         return ResourceManager.GetString(name, CultureInfo.CurrentUICulture) ?? name;
+    }
+
+    // Dynamic lookup for MessageCode-keyed strings (Bucket B), resolved by the
+    // enum member name. Used by MessageLocalizer / PasswordStrengthFormatter.
+    internal static string GetByKey(string key)
+    {
+        return ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
     }
 }

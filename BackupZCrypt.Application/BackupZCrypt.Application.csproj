@@ -26,19 +26,4 @@
   <ItemGroup>
     <ProjectReference Include="..\BackupZCrypt.Domain\BackupZCrypt.Domain.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Update="Resources\Messages.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Messages.Designer.cs</LastGenOutput>
-      <CustomToolNamespace>BackupZCrypt.Application.Resources</CustomToolNamespace>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\Messages.es.resx">
-      <DependentUpon>Messages.resx</DependentUpon>
-    </EmbeddedResource>
-    <Compile Update="Resources\Messages.Designer.cs">
-      <AutoGen>true</AutoGen>
-      <DesignTime>true</DesignTime>
-      <DependentUpon>Messages.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
 </Project>

@@ -2,19 +2,12 @@ using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Resources;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
 {
     public EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;
-
-    public string DisplayName => Messages.AesDisplayName;
-
-    public string Description => Messages.AesDescription;
-
-    public string Summary => Messages.AesSummary;
 
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,

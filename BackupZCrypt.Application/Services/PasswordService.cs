@@ -1,10 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using BackupZCrypt.Application.Resources;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -79,11 +79,7 @@ internal sealed partial class PasswordService : IPasswordService
     {
         if (string.IsNullOrEmpty(password))
         {
-            return new PasswordStrengthAnalysis(
-                PasswordStrength.VeryWeak,
-                Messages.EmptyPasswordDescription,
-                0
-            );
+            return new PasswordStrengthAnalysis(PasswordStrength.VeryWeak, 0, 0, []);
         }
 
         var trimmed = password.Trim();
@@ -112,9 +108,9 @@ internal sealed partial class PasswordService : IPasswordService
         }
 
         var strength = GetStrengthFromScore(score);
-        var description = BuildDescription(strength, entropy, compositionFlags, trimmed);
+        var tips = BuildTips(compositionFlags, trimmed);
 
-        return new PasswordStrengthAnalysis(strength, description, Math.Round(score, 2));
+        return new PasswordStrengthAnalysis(strength, Math.Round(score, 2), entropy, tips);
     }
 
     public string GeneratePassword(int length, PasswordGenerationOptions options)
@@ -123,7 +119,10 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (options == PasswordGenerationOptions.None)
         {
-            throw new ArgumentException(Messages.PasswordOptionsNone, nameof(options));
+            throw new ArgumentException(
+                "At least one character type must be selected.",
+                nameof(options)
+            );
         }
 
         StringBuilder charSet = new();
@@ -159,7 +158,10 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (string.IsNullOrEmpty(availableChars))
         {
-            throw new ArgumentException(Messages.NoCharactersAvailable, nameof(options));
+            throw new ArgumentException(
+                "No characters available for password generation with the given options.",
+                nameof(options)
+            );
         }
 
         StringBuilder password = new(length);
@@ -376,84 +378,56 @@ internal sealed partial class PasswordService : IPasswordService
         };
     }
 
-    private static string BuildDescription(
-        PasswordStrength strength,
-        double entropy,
-        PasswordComposition flags,
-        string password
-    )
+    private static List<MessageCode> BuildTips(PasswordComposition flags, string password)
     {
-        StringBuilder sb = new();
-        sb.Append(
-                strength switch
-                {
-                    PasswordStrength.VeryWeak => Messages.StrengthVeryWeak,
-                    PasswordStrength.Weak => Messages.StrengthWeak,
-                    PasswordStrength.Fair => Messages.StrengthFair,
-                    PasswordStrength.Good => Messages.StrengthGood,
-                    PasswordStrength.Strong => Messages.StrengthStrong,
-                    _ => "?",
-                }
-            )
-            .Append($" // {string.Format(Messages.EntropyFormat, entropy.ToString("0.0"))}");
-
-        List<string> tips = [];
+        List<MessageCode> tips = [];
 
         if (password.Length < 12)
         {
-            tips.Add(Messages.TipIncreaseLength);
+            tips.Add(MessageCode.TipIncreaseLength);
         }
 
         if (!flags.HasUpper)
         {
-            tips.Add(Messages.TipAddUppercase);
+            tips.Add(MessageCode.TipAddUppercase);
         }
 
         if (!flags.HasLower)
         {
-            tips.Add(Messages.TipAddLowercase);
+            tips.Add(MessageCode.TipAddLowercase);
         }
 
         if (!flags.HasDigit)
         {
-            tips.Add(Messages.TipAddDigits);
+            tips.Add(MessageCode.TipAddDigits);
         }
 
         if (!flags.HasSpecial)
         {
-            tips.Add(Messages.TipAddSymbols);
+            tips.Add(MessageCode.TipAddSymbols);
         }
 
         if (flags.CategoryCount < 4 && password.Length < 16)
         {
-            tips.Add(Messages.TipMoreVariety);
+            tips.Add(MessageCode.TipMoreVariety);
         }
 
         if (HasObviousSequence(password))
         {
-            tips.Add(Messages.TipAvoidSequences);
+            tips.Add(MessageCode.TipAvoidSequences);
         }
 
         if (HasRepeats(password))
         {
-            tips.Add(Messages.TipReduceRepeats);
+            tips.Add(MessageCode.TipReduceRepeats);
         }
 
         if (YearRegex.IsMatch(password))
         {
-            tips.Add(Messages.TipAvoidYears);
+            tips.Add(MessageCode.TipAvoidYears);
         }
 
-        if (tips.Count > 0)
-        {
-            sb.Append($" // {Messages.Suggestions} ").AppendJoin(", ", tips.Take(3));
-        }
-        else if (strength == PasswordStrength.Strong)
-        {
-            sb.Append($" // {Messages.GoodJob}");
-        }
-
-        return sb.ToString();
+        return tips;
     }
 
     private static bool HasObviousSequence(string password)

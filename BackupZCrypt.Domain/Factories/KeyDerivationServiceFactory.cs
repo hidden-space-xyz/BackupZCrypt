@@ -1,6 +1,5 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
-using BackupZCrypt.Domain.Resources;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Domain.Factories;
@@ -19,7 +18,7 @@ internal sealed class KeyDerivationServiceFactory(
         return !this.strategies.TryGetValue(algorithm, out var strategy)
             ? throw new ArgumentOutOfRangeException(
                 nameof(algorithm),
-                string.Format(Messages.KeyDerivationAlgorithmNotRegisteredFormat, algorithm)
+                $"Key derivation algorithm '{algorithm}' is not registered."
             )
             : strategy;
     }

@@ -4,6 +4,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Desktop.Messages;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -91,15 +92,15 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
         encryptionNames = encryptionStrategies.ToDictionary(
             static s => s.Id,
-            static s => s.DisplayName
+            static s => AlgorithmMetadataProvider.GetName(s.Id)
         );
         keyDerivationNames = keyDerivationStrategies.ToDictionary(
             static s => s.Id,
-            static s => s.DisplayName
+            static s => AlgorithmMetadataProvider.GetName(s.Id)
         );
         compressionNames = compressionStrategies.ToDictionary(
             static s => s.Id,
-            static s => s.DisplayName
+            static s => AlgorithmMetadataProvider.GetName(s.Id)
         );
 
         UpdateConfigurationSummary();
@@ -260,7 +261,7 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
         HasStrength = true;
         StrengthScore = analysis.Score;
-        StrengthDescription = analysis.Description;
+        StrengthDescription = PasswordStrengthFormatter.Format(analysis);
         StrengthBrush = analysis.Strength switch
         {
             PasswordStrength.VeryWeak or PasswordStrength.Weak => WeakBrush,
