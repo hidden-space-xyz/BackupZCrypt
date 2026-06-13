@@ -17,20 +17,30 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Composition;
 
+/// <summary>
+/// Composition-root extension methods that wire Domain contracts to their Infrastructure
+/// implementations and register the Application-layer services in the DI container.
+/// </summary>
 public static class DependencyInjection
 {
+    /// <summary>
+    /// Registers the Infrastructure implementations of Domain contracts: the factories,
+    /// the key-derivation/encryption/compression/chunking algorithm strategies, and the
+    /// file-system and storage services. Every strategy is registered as a singleton so
+    /// consumers can resolve the full <see cref="IEnumerable{T}"/> set and index by the
+    /// strategy's enum <c>Id</c>.
+    /// </summary>
+    /// <param name="services">The service collection to add the registrations to.</param>
+    /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
     public static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
-        // Factories
         services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
         services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
 
-        // Key Derivation Strategies
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();
         services.AddSingleton<IKeyDerivationAlgorithmStrategy, ScryptKeyDerivationStrategy>();
 
-        // Encryption Strategies
         services.AddSingleton<IEncryptionAlgorithmStrategy, NoneEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, AesEncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, TwofishEncryptionStrategy>();
@@ -38,15 +48,12 @@ public static class DependencyInjection
         services.AddSingleton<IEncryptionAlgorithmStrategy, ChaCha20EncryptionStrategy>();
         services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
 
-        // Compression Strategies
         services.AddSingleton<ICompressionStrategy, ZstdFastCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
         services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
 
-        // Chunking Strategies
         services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
 
-        // Services
         services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<IFileOperationsService, FileOperationsService>();
         services.AddSingleton<ISystemStorageService, SystemStorageService>();
@@ -54,6 +61,12 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>
+    /// Registers the Application-layer orchestrators, backup/manifest/settings services,
+    /// and request validators as singletons.
+    /// </summary>
+    /// <param name="services">The service collection to add the registrations to.</param>
+    /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();

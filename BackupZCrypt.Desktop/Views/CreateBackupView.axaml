@@ -9,13 +9,11 @@
   <ScrollViewer>
     <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
-      <!-- Header -->
       <StackPanel Spacing="6">
         <TextBlock Classes="h1" Text="{x:Static res:Strings.CreateTitle}" />
         <TextBlock Classes="subtitle" Text="{x:Static res:Strings.CreateSubtitle}" />
       </StackPanel>
 
-      <!-- Locations -->
       <Border Classes="card">
         <StackPanel Spacing="16">
           <TextBlock Classes="section" Text="{x:Static res:Strings.SectionLocations}" />
@@ -54,7 +52,6 @@
         </StackPanel>
       </Border>
 
-      <!-- Effective configuration (read-only, owned by Settings) -->
       <Border Classes="card">
         <StackPanel Spacing="16">
           <Grid ColumnDefinitions="*,Auto">
@@ -94,7 +91,6 @@
         </StackPanel>
       </Border>
 
-      <!-- Password (only when encryption is enabled) -->
       <Border Classes="card" IsVisible="{Binding IsEncryptionEnabled}">
         <StackPanel Spacing="16">
           <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
@@ -166,7 +162,6 @@
         </StackPanel>
       </Border>
 
-      <!-- Action -->
       <Button Classes="primary"
               HorizontalAlignment="Left"
               Content="{x:Static res:Strings.StartBackup}"

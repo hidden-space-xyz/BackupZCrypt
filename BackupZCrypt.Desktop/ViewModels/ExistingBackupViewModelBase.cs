@@ -8,9 +8,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
-// Adds automatic backup detection on top of the operation engine: whenever the
-// backup path changes, the manifest is inspected to tell the user whether a
-// password is required before they even start the operation.
+/// <summary>
+/// Adds automatic backup detection on top of the operation engine: whenever the backup path changes,
+/// the manifest is inspected to tell the user whether a password is required before the operation starts.
+/// </summary>
+/// <param name="orchestrator">The orchestrator that executes backup operations.</param>
+/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="filePicker">The folder/file picker service.</param>
+/// <param name="manifestService">The service used to detect the kind of manifest at a backup path.</param>
 public abstract partial class ExistingBackupViewModelBase(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
@@ -46,10 +51,16 @@ public abstract partial class ExistingBackupViewModelBase(
     [ObservableProperty]
     private bool isPasswordRequired;
 
-    // The path that points at the existing backup (source for restore,
-    // destination for update).
+    /// <summary>
+    /// Gets the path that points at the existing backup (the source for a restore, the destination for an update).
+    /// </summary>
     protected abstract string BackupPath { get; }
 
+    /// <summary>
+    /// Determines whether the operation can start, additionally requiring a detected chunked manifest
+    /// and a password when the manifest is encrypted.
+    /// </summary>
+    /// <returns><see langword="true"/> when the operation may begin; otherwise <see langword="false"/>.</returns>
     protected override bool CanStart()
     {
         return base.CanStart()
@@ -57,6 +68,9 @@ public abstract partial class ExistingBackupViewModelBase(
             && (!IsPasswordRequired || Password.Length > 0);
     }
 
+    /// <summary>
+    /// Re-runs backup detection whenever a relevant path changes.
+    /// </summary>
     protected override void HandlePathChanged()
     {
         _ = RefreshDetectionAsync();
@@ -87,7 +101,6 @@ public abstract partial class ExistingBackupViewModelBase(
             kind = ManifestKind.Missing;
         }
 
-        // A newer detection request superseded this one while awaiting.
         if (version != Volatile.Read(ref detectionVersion))
         {
             return;

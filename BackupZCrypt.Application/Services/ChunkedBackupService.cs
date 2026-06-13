@@ -15,6 +15,18 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
+/// <summary>
+/// Implements chunk-based backup, update, and restore. Files are split into content-defined
+/// chunks that are deduplicated by content hash, optionally compressed, and individually
+/// encrypted with per-chunk nonces; sub-keys for chunk encryption, nonce derivation, chunk
+/// naming, and the manifest are derived from the password-derived master key via HKDF.
+/// </summary>
+/// <param name="compressionServiceFactory">Factory producing compression strategies for a compression mode.</param>
+/// <param name="encryptionStrategies">The available encryption strategies, indexed by their algorithm identifier.</param>
+/// <param name="fileOperationsService">Service used to read, write, and enumerate files.</param>
+/// <param name="manifestService">Service used to read and write the encrypted backup manifest.</param>
+/// <param name="chunkingStrategy">Strategy used to split file streams into content-defined chunks.</param>
+/// <param name="keyDerivationServiceFactory">Factory producing key derivation services for an algorithm.</param>
 internal sealed class ChunkedBackupService(
     ICompressionServiceFactory compressionServiceFactory,
     IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
@@ -42,6 +54,16 @@ internal sealed class ChunkedBackupService(
         static strategy => strategy
     );
 
+    /// <summary>
+    /// Creates a new chunked backup, processing files in parallel, deduplicating chunks by content,
+    /// and persisting an encrypted manifest.
+    /// </summary>
+    /// <param name="sourcePath">The file or directory to back up.</param>
+    /// <param name="destinationPath">The directory where the chunks directory and manifest are written.</param>
+    /// <param name="request">The backup request carrying the password and algorithm choices.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A result describing the backup outcome, including any per-file errors.</returns>
     public async Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
@@ -258,6 +280,17 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Updates an existing chunked backup by re-chunking only files whose content hash changed,
+    /// rewriting the manifest, and deleting chunks no longer referenced once the manifest is saved.
+    /// The encryption, key derivation, and compression settings are taken from the existing backup.
+    /// </summary>
+    /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
+    /// <param name="destinationPath">The directory containing the existing backup to update.</param>
+    /// <param name="request">The backup request carrying the password used to open the manifest.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A result describing the update outcome, including any per-file errors.</returns>
     public async Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
@@ -510,8 +543,6 @@ internal sealed class ChunkedBackupService(
                 )
                 .ConfigureAwait(false);
 
-            // Orphaned chunks may still be referenced by the previous manifest, so they
-            // are only deleted once the new manifest has been persisted successfully.
             if (manifestErrors.Count == 0)
             {
                 await DeleteOrphanedChunksAsync(
@@ -546,6 +577,16 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Restores files from a chunked backup, decrypting and reassembling chunks in parallel and
+    /// verifying each restored file's size and hash against the manifest.
+    /// </summary>
+    /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
+    /// <param name="destinationPath">The directory into which files are reconstructed.</param>
+    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A result describing the restore outcome; a wrong password surfaces as a failure result.</returns>
     public async Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
@@ -1302,14 +1343,12 @@ internal sealed class ChunkedBackupService(
                     }
                     catch
                     {
-                        // Best-effort cleanup.
                     }
                 }
             }
         }
         catch
         {
-            // Best-effort cleanup.
         }
     }
 
@@ -1465,8 +1504,6 @@ internal sealed class ChunkedBackupService(
 
                 total += read;
 
-                // Stops decompression bombs before they reach the destination file:
-                // a genuine chunk can never exceed the size declared in the manifest.
                 if (total > maxBytes)
                 {
                     throw new InvalidDataException(
@@ -1502,8 +1539,6 @@ internal sealed class ChunkedBackupService(
             }
             catch
             {
-                // Preserve previous behavior: inaccessible files contribute zero here
-                // and are reported during actual processing.
             }
         }
 
@@ -1563,8 +1598,6 @@ internal sealed class ChunkedBackupService(
             throw new InvalidDataException("Manifest entry path contains traversal segments.");
         }
 
-        // On Windows, characters such as ':' would silently redirect writes to NTFS
-        // alternate data streams; reject any segment that is not a valid file name.
         if (
             OperatingSystem.IsWindows()
             && pathSegments.Any(static segment => segment.IndexOfAny(InvalidFileNameChars) >= 0)

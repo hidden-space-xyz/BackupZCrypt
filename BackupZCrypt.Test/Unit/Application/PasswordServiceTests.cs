@@ -25,7 +25,6 @@ public sealed class PasswordServiceTests
     {
         var analysis = this.sut.AnalyzePasswordStrength("abc");
 
-        // "abc" is short, lowercase-only, and a known common substring/sequence.
         Assert.That(
             analysis.Strength is PasswordStrength.VeryWeak or PasswordStrength.Weak,
             Is.True,
@@ -74,8 +73,6 @@ public sealed class PasswordServiceTests
     [Test]
     public void AnalyzePasswordStrength_ContainsYear_AddsAvoidYearsTip()
     {
-        // The year detector requires word boundaries around the year (\b(19|20)\d{2}\b),
-        // so the digits must be flanked by non-word characters.
         var analysis = this.sut.AnalyzePasswordStrength("summer-1999!");
 
         Assert.That(analysis.Tips, Does.Contain(MessageCode.TipAvoidYears));

@@ -11,8 +11,6 @@ namespace BackupZCrypt.Test.Unit.Application;
 
 public sealed class BackupRequestValidatorTests
 {
-    // Absolute paths so PathNormalizationHelper.TryNormalize (Path.GetFullPath) is a no-op
-    // and the mocks can be keyed by the exact normalized string.
     private static readonly string SourceDir = Path.GetFullPath(
         Path.Combine(Path.GetTempPath(), "bzc-validator-src")
     );
@@ -50,7 +48,6 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
     {
-        // Empty source normalizes to string.Empty (no normalize error), so the empty-path branch fires.
         var request = ValidRequest(string.Empty, DestinationDir);
         this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
@@ -98,7 +95,6 @@ public sealed class BackupRequestValidatorTests
             .Returns([Path.Combine(SourceDir, "a.txt")]);
         this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        // 7 chars, under the 8-char minimum.
         var request = ValidRequest(SourceDir, DestinationDir, password: "Ab1!xyz");
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
@@ -157,7 +153,6 @@ public sealed class BackupRequestValidatorTests
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
 
-        // Destination drive is reachable, so no destination error is raised.
         this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("C:\\");
         this.systemStorage.IsDriveReady("C:\\").Returns(true);
 
@@ -171,8 +166,6 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeWarnings_WeakPassword_ReportsWeakPasswordWarning()
     {
-        // No source directory => the disk/file-count checks are skipped; only the
-        // password-strength branch fires for a Create operation with encryption on.
         this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
         this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
@@ -219,10 +212,8 @@ public sealed class BackupRequestValidatorTests
 
         this.systemStorage.GetPathRoot(DestinationDir).Returns("C:\\");
         this.systemStorage.IsDriveReady("C:\\").Returns(true);
-        // Required = 1_000_000 * 1.2 = 1_200_000; report less than that.
         this.systemStorage.GetAvailableFreeSpace("C:\\").Returns(500_000L);
 
-        // Strong password so the weak-password warning does not also fire.
         this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
@@ -250,7 +241,6 @@ public sealed class BackupRequestValidatorTests
             .Returns(files);
         this.fileOperations.GetFileSize(Arg.Any<string>()).Returns(1L);
 
-        // No drive configured => disk-space branch skipped (GetPathRoot returns null by default).
         this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));

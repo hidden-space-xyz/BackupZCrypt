@@ -4,13 +4,10 @@ using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
-// Argon2id is memory-heavy (~256 MB) and slow, so the determinism, salt-sensitivity and
-// password-sensitivity checks are folded into a single theory: each KDF runs DeriveKey
-// only four times total (and Argon2id is never placed inside a larger data-driven loop).
 public sealed class KeyDerivationStrategyTests
 {
     private const string Password = "correct horse battery staple";
-    private const int KeySizeBits = EncryptionConstants.KeySize; // 256
+    private const int KeySizeBits = EncryptionConstants.KeySize;
 
     private static readonly byte[] Salt =
     [
@@ -34,20 +31,16 @@ public sealed class KeyDerivationStrategyTests
     {
         var key = kdf.DeriveKey(Password, Salt, KeySizeBits);
 
-        // Correct output length: keySize is in bits, the key is keySize/8 bytes.
         Assert.That(key.Length, Is.EqualTo(KeySizeBits / 8));
 
-        // Determinism: identical inputs yield byte-identical output.
         var keyAgain = kdf.DeriveKey(Password, Salt, KeySizeBits);
         Assert.That(keyAgain, Is.EqualTo(key));
 
-        // Salt sensitivity: flipping one salt byte changes the key.
         var otherSalt = (byte[])Salt.Clone();
         otherSalt[0] ^= 0xFF;
         var keyOtherSalt = kdf.DeriveKey(Password, otherSalt, KeySizeBits);
         Assert.That(keyOtherSalt, Is.Not.EqualTo(key));
 
-        // Password sensitivity: a different password changes the key.
         var keyOtherPassword = kdf.DeriveKey(Password + "!", Salt, KeySizeBits);
         Assert.That(keyOtherPassword, Is.Not.EqualTo(key));
     }

@@ -9,7 +9,6 @@
   </Application.DataTemplates>
 
   <Application.Resources>
-    <!-- Accent palette consumed by the Fluent theme (lime green, matches the logo) -->
     <Color x:Key="SystemAccentColor">#8FCC3B</Color>
     <Color x:Key="SystemAccentColorDark1">#79B22B</Color>
     <Color x:Key="SystemAccentColorDark2">#659622</Color>
@@ -18,7 +17,6 @@
     <Color x:Key="SystemAccentColorLight2">#B8E27E</Color>
     <Color x:Key="SystemAccentColorLight3">#CDEBA1</Color>
 
-    <!-- Application palette -->
     <SolidColorBrush x:Key="AccentBrush" Color="#8FCC3B" />
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#A4D95C" />
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#79B22B" />

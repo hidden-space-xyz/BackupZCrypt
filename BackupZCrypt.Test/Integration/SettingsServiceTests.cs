@@ -6,8 +6,6 @@ using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Integration;
 
-// SettingsService persisted against the real file system, rooted at a throwaway temp
-// directory (baseDirectoryPath) so nothing touches the user's LocalApplicationData.
 public sealed class SettingsServiceTests
 {
     [Test]
@@ -58,7 +56,6 @@ public sealed class SettingsServiceTests
 
         Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
 
-        // Self-healing rewrote the file with valid defaults, so a second read also succeeds.
         var reread = await service.GetOrCreateAsync<BackupCreationSettings>();
         Assert.That(reread, Is.EqualTo(BackupCreationSettings.DefaultValue));
     }

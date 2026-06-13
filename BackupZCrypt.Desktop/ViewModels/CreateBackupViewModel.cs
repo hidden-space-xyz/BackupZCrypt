@@ -15,6 +15,10 @@ using CommunityToolkit.Mvvm.Messaging;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
+/// <summary>
+/// ViewModel for the create-backup page: collects the source and destination, manages the password
+/// (entry, reveal, generation, copy and strength feedback) and reflects the algorithm defaults from settings.
+/// </summary>
 public sealed partial class CreateBackupViewModel : OperationViewModelBase
 {
     private const int GeneratedPasswordLength = 50;
@@ -30,8 +34,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     private readonly IReadOnlyDictionary<KeyDerivationAlgorithm, string> keyDerivationNames;
     private readonly IReadOnlyDictionary<CompressionMode, string> compressionNames;
 
-    // Effective configuration, owned by the Settings page and refreshed on every
-    // navigation to this page.
     private EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.Aes;
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
     private CompressionMode compressionMode = CompressionMode.None;
@@ -75,6 +77,17 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     [ObservableProperty]
     private bool showCopiedNotice;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.
+    /// </summary>
+    /// <param name="orchestrator">The orchestrator that executes the backup operation.</param>
+    /// <param name="settingsService">The service that reads and persists user settings.</param>
+    /// <param name="filePicker">The folder/file picker service.</param>
+    /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
+    /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
+    /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
+    /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
+    /// <param name="compressionStrategies">The available compression strategies.</param>
     public CreateBackupViewModel(
         IBackupOrchestrator orchestrator,
         ISettingsService settingsService,
@@ -106,17 +119,20 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
         UpdateConfigurationSummary();
     }
 
+    /// <summary>
+    /// Refreshes the displayed algorithm configuration from the latest settings defaults, unless an
+    /// operation is currently in flight.
+    /// </summary>
+    /// <returns>A task that completes once the configuration summary has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
     {
         await base.OnNavigatedToAsync();
 
-        // Don't change the configuration shown while an operation is in flight.
         if (IsRunning)
         {
             return;
         }
 
-        // Always reflect the latest defaults configured on the Settings page.
         try
         {
             var defaults = await SettingsService.GetOrCreateAsync<BackupCreationSettings>();
@@ -127,10 +143,13 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Keep the previously shown configuration when settings cannot be read.
         }
     }
 
+    /// <summary>
+    /// Seeds the source path from the most recently used source when it is still empty.
+    /// </summary>
+    /// <param name="recent">The recently used paths.</param>
     protected override void ApplyRecentPaths(RecentPathSettings recent)
     {
         if (string.IsNullOrWhiteSpace(SourcePath) && recent.LastSourcePath is not null)
@@ -139,6 +158,11 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
         }
     }
 
+    /// <summary>
+    /// Builds the create-backup request from the current source, destination, password and configured algorithms.
+    /// </summary>
+    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
+    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected override BackupRequest CreateRequest(bool proceedOnWarnings)
     {
         var encryptionEnabled = IsEncryptionEnabled;

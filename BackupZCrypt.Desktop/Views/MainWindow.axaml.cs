@@ -6,8 +6,14 @@ using Path = Avalonia.Controls.Shapes.Path;
 
 namespace BackupZCrypt.Desktop.Views;
 
+/// <summary>
+/// The application's main window, hosting the navigation shell and a custom title bar.
+/// </summary>
 public sealed partial class MainWindow : Window
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MainWindow"/> class.
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -47,6 +53,11 @@ public sealed partial class MainWindow : Window
             WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
+    /// <summary>
+    /// Reacts to window-state changes, padding the content in when maximized and swapping the
+    /// maximize/restore title-bar glyphs.
+    /// </summary>
+    /// <param name="change">The property change notification.</param>
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -55,8 +66,6 @@ public sealed partial class MainWindow : Window
         {
             var maximized = WindowState == WindowState.Maximized;
 
-            // The extended client area overflows the screen edges when maximized;
-            // pad the content back in by the off-screen margin.
             Padding = maximized ? OffScreenMargin : default;
 
             if (this.FindControl<Path>("MaximizeGlyph") is { } maximizeGlyph)

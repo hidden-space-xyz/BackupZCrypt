@@ -28,10 +28,6 @@ public sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
     {
-        // A path far beyond the OS limit makes normalization throw; the helper must
-        // catch it and surface InvalidPathFormat. (A NUL char can't be used here: on
-        // Windows ExpandEnvironmentVariables truncates the string at the first NUL
-        // before normalization ever sees it.)
         var tooLong = new string('a', 300_000);
 
         var result = PathNormalizationHelper.TryNormalize(tooLong, out var error);

@@ -10,6 +10,13 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
+/// <summary>
+/// Reads, writes, decrypts, and classifies backup manifests. Chunked manifests are stored as an
+/// unencrypted preamble (algorithm, key derivation, and master salt used as associated data)
+/// followed by an AEAD-encrypted document, and are written atomically via a temp file and rename.
+/// </summary>
+/// <param name="fileOperationsService">Service used to read and write manifest files.</param>
+/// <param name="encryptionStrategies">The available encryption strategies, indexed by their algorithm identifier.</param>
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,
     IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies
@@ -25,6 +32,14 @@ internal sealed class ManifestService(
         static strategy => strategy
     );
 
+    /// <summary>
+    /// Determines the on-disk format of the manifest for a backup by inspecting its first byte:
+    /// '{' denotes a plain JSON copy, 0 an unencrypted chunked manifest, and any other value an encrypted one.
+    /// </summary>
+    /// <param name="backupPath">A path to the backup directory or a file within it.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The detected manifest kind, or <see cref="ManifestKind.Missing"/> if none is found or readable.</returns>
+    /// <exception cref="ArgumentException"><paramref name="backupPath"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<ManifestKind> DetectManifestKindAsync(
         string backupPath,
         CancellationToken cancellationToken = default
@@ -69,9 +84,6 @@ internal sealed class ManifestService(
                 return ManifestKind.Missing;
             }
 
-            // The first byte identifies the manifest format: '{' is the plain JSON
-            // manifest written by plain copies, 0 is an unencrypted chunked manifest
-            // (EncryptionAlgorithm.None) and any other value an encrypted preamble.
             return firstByte[0] switch
             {
                 (byte)'{' => ManifestKind.PlainCopy,
@@ -89,6 +101,16 @@ internal sealed class ManifestService(
         }
     }
 
+    /// <summary>
+    /// Serializes the given entries to a plain JSON manifest and writes it atomically; a no-op when there are no entries.
+    /// </summary>
+    /// <param name="entries">The per-file manifest entries to persist.</param>
+    /// <param name="header">The algorithm and compression metadata to record.</param>
+    /// <param name="destinationRoot">The backup root directory the manifest is written into.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Localizable errors if the write failed; empty on success or when there are no entries.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="entries"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="destinationRoot"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<IReadOnlyList<LocalizableMessage>> TrySavePlainManifestAsync(
         IReadOnlyList<ManifestEntry> entries,
         ManifestHeader header,
@@ -137,6 +159,13 @@ internal sealed class ManifestService(
         return errors;
     }
 
+    /// <summary>
+    /// Reads and parses the unencrypted preamble of a chunked manifest, validating the algorithm identifiers.
+    /// </summary>
+    /// <param name="sourceRoot">The backup root directory containing the manifest.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The parsed preamble, or <see langword="null"/> if the manifest is missing, malformed, or unreadable.</returns>
+    /// <exception cref="ArgumentException"><paramref name="sourceRoot"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
         string sourceRoot,
         CancellationToken cancellationToken
@@ -182,6 +211,14 @@ internal sealed class ManifestService(
         }
     }
 
+    /// <summary>
+    /// Decrypts a chunked manifest payload and verifies that the embedded master salt matches the
+    /// preamble in constant time, guarding against tampering.
+    /// </summary>
+    /// <param name="preamble">The manifest preamble previously read from disk.</param>
+    /// <param name="encryptionKey">The derived manifest encryption key.</param>
+    /// <returns>The decrypted manifest data, or <see langword="null"/> if decryption or validation failed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="preamble"/> or <paramref name="encryptionKey"/> is <see langword="null"/>.</exception>
     public ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey)
     {
         ArgumentNullException.ThrowIfNull(preamble);
@@ -254,6 +291,18 @@ internal sealed class ManifestService(
         }
     }
 
+    /// <summary>
+    /// Serializes, encrypts, and atomically writes a chunked manifest, prefixing it with the preamble
+    /// header and a freshly generated nonce.
+    /// </summary>
+    /// <param name="manifestData">The manifest contents to serialize and encrypt.</param>
+    /// <param name="destinationRoot">The backup root directory the manifest is written into.</param>
+    /// <param name="encryptionKey">The derived manifest encryption key.</param>
+    /// <param name="algorithm">The encryption algorithm used to protect the manifest.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Localizable errors if the write failed; empty on success.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manifestData"/> or <paramref name="encryptionKey"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="destinationRoot"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<IReadOnlyList<LocalizableMessage>> SaveChunkManifestAsync(
         ChunkManifestData manifestData,
         string destinationRoot,
@@ -361,8 +410,6 @@ internal sealed class ManifestService(
         return errors;
     }
 
-    // The manifest is the single point of failure of a backup: a torn write would
-    // make every chunk unrecoverable, so it is replaced via temp file + rename.
     private async Task WriteFileAtomicallyAsync(
         string finalPath,
         byte[] payload,
@@ -387,7 +434,6 @@ internal sealed class ManifestService(
             }
             catch
             {
-                // Best-effort cleanup.
             }
 
             throw;

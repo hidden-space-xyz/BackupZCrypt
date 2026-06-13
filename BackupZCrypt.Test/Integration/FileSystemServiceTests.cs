@@ -3,8 +3,6 @@ using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Integration;
 
-// FileOperationsService and SystemStorageService exercised against the real file system
-// and the real temp drive.
 public sealed class FileSystemServiceTests
 {
     [Test]
@@ -35,11 +33,9 @@ public sealed class FileSystemServiceTests
         var hashACopy = await service.ComputeFileHashAsync(fileACopy);
         var hashB = await service.ComputeFileHashAsync(fileB);
 
-        // Same content -> same hash (also stable across two reads of the same file).
         Assert.That(hashACopy, Is.EqualTo(hashA));
         Assert.That(await service.ComputeFileHashAsync(fileA), Is.EqualTo(hashA));
 
-        // Different content -> different hash.
         Assert.That(hashB, Is.Not.EqualTo(hashA));
     }
 
@@ -73,7 +69,6 @@ public sealed class FileSystemServiceTests
 
         await service.CleanDirectoryAsync(dir.Path);
 
-        // The directory still exists but is now empty of any files or subdirectories.
         Assert.That(Directory.Exists(dir.Path), Is.True);
         Assert.That(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories), Is.Empty);
         Assert.That(Directory.GetDirectories(dir.Path), Is.Empty);
@@ -113,8 +108,6 @@ public sealed class FileSystemServiceTests
     {
         var service = new SystemStorageService();
 
-        // A drive root that almost certainly does not exist on the test machine. Whether
-        // DriveInfo treats it as not-ready or throws, the service must report unavailable.
         const string InvalidRoot = "Z:\\";
 
         Assert.That(service.IsDriveReady(InvalidRoot), Is.False);

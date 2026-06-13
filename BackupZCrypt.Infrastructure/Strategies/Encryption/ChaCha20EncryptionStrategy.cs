@@ -5,10 +5,27 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
+/// <summary>
+/// AEAD encryption strategy using ChaCha20-Poly1305 via the platform
+/// <see cref="ChaCha20Poly1305"/> primitive. The Poly1305 authentication tag is appended to
+/// the ciphertext, and intermediate plaintext/tag buffers are zeroed once the result is assembled.
+/// </summary>
 internal sealed class ChaCha20EncryptionStrategy : IEncryptionAlgorithmStrategy
 {
+    /// <summary>
+    /// Gets the algorithm identifier (<see cref="EncryptionAlgorithm.ChaCha20"/>) used to select this strategy.
+    /// </summary>
     public EncryptionAlgorithm Id => EncryptionAlgorithm.ChaCha20;
 
+    /// <summary>
+    /// Encrypts a single chunk with ChaCha20-Poly1305 and returns the ciphertext with the
+    /// authentication tag appended.
+    /// </summary>
+    /// <param name="plaintext">The chunk to encrypt.</param>
+    /// <param name="key">The encryption key.</param>
+    /// <param name="nonce">The unique per-chunk nonce.</param>
+    /// <param name="associatedData">Additional authenticated data bound to the ciphertext but not encrypted.</param>
+    /// <returns>The ciphertext followed by the authentication tag.</returns>
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
         byte[] key,
@@ -36,6 +53,18 @@ internal sealed class ChaCha20EncryptionStrategy : IEncryptionAlgorithmStrategy
         }
     }
 
+    /// <summary>
+    /// Verifies the appended Poly1305 tag and decrypts a single ChaCha20-Poly1305 chunk. On any
+    /// failure the plaintext buffer is zeroed before the exception propagates.
+    /// </summary>
+    /// <param name="ciphertext">The ciphertext with the authentication tag appended.</param>
+    /// <param name="key">The encryption key.</param>
+    /// <param name="nonce">The nonce used during encryption.</param>
+    /// <param name="associatedData">The additional authenticated data supplied during encryption.</param>
+    /// <returns>The recovered plaintext.</returns>
+    /// <exception cref="CryptographicException">
+    /// The ciphertext is shorter than the tag, or authentication/decryption fails (tampering or wrong key).
+    /// </exception>
     public byte[] DecryptChunk(
         ReadOnlySpan<byte> ciphertext,
         byte[] key,

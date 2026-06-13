@@ -10,6 +10,14 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
+/// <summary>
+/// ViewModel for the update page: re-scans the source path and updates the existing backup stored at
+/// the destination path.
+/// </summary>
+/// <param name="orchestrator">The orchestrator that executes the update operation.</param>
+/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="filePicker">The folder picker service.</param>
+/// <param name="manifestService">The service used to detect the kind of manifest at the backup path.</param>
 public sealed partial class UpdateBackupViewModel(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
@@ -17,9 +25,15 @@ public sealed partial class UpdateBackupViewModel(
     IManifestService manifestService
 ) : ExistingBackupViewModelBase(orchestrator, settingsService, filePicker, manifestService)
 {
-    // For an update, the backup is the destination.
+    /// <summary>
+    /// Gets the backup location, which for an update is the destination path.
+    /// </summary>
     protected override string BackupPath => DestinationPath;
 
+    /// <summary>
+    /// Seeds the source and destination paths from the most recently used values when they are still empty.
+    /// </summary>
+    /// <param name="recent">The recently used paths.</param>
     protected override void ApplyRecentPaths(RecentPathSettings recent)
     {
         if (string.IsNullOrWhiteSpace(SourcePath) && recent.LastSourcePath is not null)
@@ -33,10 +47,14 @@ public sealed partial class UpdateBackupViewModel(
         }
     }
 
+    /// <summary>
+    /// Builds the update request. The encryption and key-derivation values only signal whether a
+    /// password is involved; the actual algorithms are read from the existing manifest during the update.
+    /// </summary>
+    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
+    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected override BackupRequest CreateRequest(bool proceedOnWarnings)
     {
-        // The update reads algorithm and key derivation from the existing
-        // manifest; the values here only signal whether a password is involved.
         return new BackupRequest(
             SourcePath,
             DestinationPath,

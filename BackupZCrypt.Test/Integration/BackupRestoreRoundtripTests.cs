@@ -9,15 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
 
-// End-to-end coverage of the real wired pipeline (DI + real file system + real crypto):
-// a Create backup followed by a Restore must reproduce every source file byte-for-byte.
-// Drives the orchestrator exactly the way the desktop app does (by BackupOperation).
 public sealed class BackupRestoreRoundtripTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
-    // PBKDF2 for the cheap cases, exactly one Argon2id case (it allocates ~256 MB and is
-    // intentionally slow). Covers: plain copy, AES+Zstd, and a single Argon2id run.
     public static IEnumerable<TestCaseData> Configs()
     {
         yield return new TestCaseData(
@@ -53,7 +48,6 @@ public sealed class BackupRestoreRoundtripTests
 
         var expected = BuildSourceTree(source);
 
-        // --- Create ---
         var createProgress = new RecordingProgress<BackupStatus>();
         var createRequest = NewRequest(
             source.Path,
@@ -79,7 +73,6 @@ public sealed class BackupRestoreRoundtripTests
         Assert.That(File.Exists(manifestPath), Is.True, $"Manifest not written at '{manifestPath}'.");
         Assert.That(createProgress.Reports, Is.Not.Empty);
 
-        // --- Restore --- (the backup directory is the source of a Restore operation)
         var restoreProgress = new RecordingProgress<BackupStatus>();
         var restoreRequest = NewRequest(
             destination.Path,
@@ -146,10 +139,6 @@ public sealed class BackupRestoreRoundtripTests
             new RecordingProgress<BackupStatus>()
         );
 
-        // A wrong password fails AEAD verification of the manifest first, so the pipeline
-        // reports ManifestRequiredForDecryption (chunk-level InvalidPassword is only reached
-        // when the manifest happens to decrypt). Accept either: the contract is "did not
-        // succeed and surfaced a crypto-related error".
         var failed = (!restoreResult.IsSuccess) || (!restoreResult.Value.IsSuccess);
         Assert.That(failed, Is.True, "Restore with a wrong password unexpectedly succeeded.");
 
@@ -162,7 +151,6 @@ public sealed class BackupRestoreRoundtripTests
                 + string.Join(", ", codes)
         );
 
-        // Nothing usable must have been written: no restored file may equal its original.
         foreach (var (relativePath, content) in expected)
         {
             var restoredFile = Path.Combine(restored.Path, relativePath);
@@ -182,8 +170,6 @@ public sealed class BackupRestoreRoundtripTests
         using var backup = new TempDir();
         using var restored = new TempDir();
 
-        // A directory that exists but contains no manifest.bzc. Add a stray file so the
-        // request passes source-exists validation but restore still cannot find a manifest.
         backup.WriteText("stray.txt", "not a manifest");
 
         var result = await orchestrator.ExecuteAsync(
@@ -227,9 +213,6 @@ public sealed class BackupRestoreRoundtripTests
         );
     }
 
-    // Builds a varied tree: small text, a larger binary blob (forces multiple chunks),
-    // a nested subdirectory and an empty file. Returns relative-path -> bytes for later
-    // byte-for-byte comparison.
     private static Dictionary<string, byte[]> BuildSourceTree(TempDir source)
     {
         var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
@@ -262,7 +245,6 @@ public sealed class BackupRestoreRoundtripTests
         string restoredRoot
     )
     {
-        // Every source file is reproduced at the same relative path with identical bytes.
         foreach (var (relativePath, content) in expected)
         {
             var restoredFile = Path.Combine(restoredRoot, relativePath);
@@ -270,7 +252,6 @@ public sealed class BackupRestoreRoundtripTests
             Assert.That(File.ReadAllBytes(restoredFile), Is.EqualTo(content));
         }
 
-        // And the restore introduced no extra files beyond what was backed up.
         var restoredFiles = Directory
             .GetFiles(restoredRoot, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(restoredRoot, f))

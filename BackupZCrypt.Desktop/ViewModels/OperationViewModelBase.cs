@@ -15,9 +15,14 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
-// Shared engine for the create/update/restore pages: request execution with
-// progress reporting, cancellation, the warnings confirmation flow and the
-// final result panel. Subclasses only describe how to build the request.
+/// <summary>
+/// Shared engine for the create/update/restore pages: request execution with progress reporting,
+/// cancellation, the warnings confirmation flow and the final result panel. Subclasses only describe
+/// how to build the request.
+/// </summary>
+/// <param name="orchestrator">The orchestrator that executes backup operations.</param>
+/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="filePicker">The folder/file picker service.</param>
 public abstract partial class OperationViewModelBase(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
@@ -76,16 +81,35 @@ public abstract partial class OperationViewModelBase(
     [ObservableProperty]
     private bool showErrors;
 
+    /// <summary>
+    /// Gets the localized error messages produced by the last operation.
+    /// </summary>
     public ObservableCollection<string> Errors { get; } = [];
 
+    /// <summary>
+    /// Gets the localized warning messages produced by the last operation.
+    /// </summary>
     public ObservableCollection<string> Warnings { get; } = [];
 
+    /// <summary>
+    /// Gets a value indicating whether no operation is currently running.
+    /// </summary>
     public bool IsIdle => !IsRunning;
 
+    /// <summary>
+    /// Gets the folder/file picker service.
+    /// </summary>
     protected IFilePickerService FilePicker { get; } = filePicker;
 
+    /// <summary>
+    /// Gets the service that reads and persists user settings.
+    /// </summary>
     protected ISettingsService SettingsService { get; } = settingsService;
 
+    /// <summary>
+    /// Loads and applies the most recently used paths the first time the page is shown.
+    /// </summary>
+    /// <returns>A task that completes once the recent paths have been applied.</returns>
     public override async Task OnNavigatedToAsync()
     {
         if (recentPathsLoaded)
@@ -102,14 +126,27 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Recent paths are a convenience; never block the page on them.
         }
     }
 
+    /// <summary>
+    /// Builds the operation request for the current inputs.
+    /// </summary>
+    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
+    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected abstract BackupRequest CreateRequest(bool proceedOnWarnings);
 
+    /// <summary>
+    /// Applies the recently used paths to the page inputs. The default implementation does nothing.
+    /// </summary>
+    /// <param name="recent">The recently used paths.</param>
     protected virtual void ApplyRecentPaths(RecentPathSettings recent) { }
 
+    /// <summary>
+    /// Determines whether the operation can start, requiring that no operation is running and both
+    /// source and destination paths are set.
+    /// </summary>
+    /// <returns><see langword="true"/> when the operation may begin; otherwise <see langword="false"/>.</returns>
     protected virtual bool CanStart()
     {
         return !IsRunning
@@ -117,11 +154,17 @@ public abstract partial class OperationViewModelBase(
             && !string.IsNullOrWhiteSpace(DestinationPath);
     }
 
+    /// <summary>
+    /// Re-evaluates whether the start command can execute.
+    /// </summary>
     protected void NotifyStartCanExecuteChanged()
     {
         StartCommand.NotifyCanExecuteChanged();
     }
 
+    /// <summary>
+    /// Invoked when the source or destination path changes. The default implementation does nothing.
+    /// </summary>
     protected virtual void HandlePathChanged() { }
 
     partial void OnSourcePathChanged(string value)
@@ -173,8 +216,6 @@ public abstract partial class OperationViewModelBase(
             var request = CreateRequest(proceedOnWarnings);
             Progress<BackupStatus> progress = new(ReportProgress);
 
-            // The orchestrator performs CPU-heavy key derivation synchronously,
-            // so it runs on the thread pool to keep the UI responsive.
             var result = await Task.Run(
                 () => orchestrator.ExecuteAsync(request, progress, cts.Token)
             );
@@ -231,14 +272,12 @@ public abstract partial class OperationViewModelBase(
 
         var operation = result.Value;
 
-        // Validation failed before any processing happened.
         if (operation.HasErrors && operation.TotalFiles == 0 && operation.ProcessedFiles == 0)
         {
             ShowFailure(operation.Errors);
             return;
         }
 
-        // The orchestrator stops on warnings until the user confirms.
         if (operation.HasWarnings && !proceedOnWarnings && operation.ProcessedFiles == 0)
         {
             foreach (var warning in operation.Warnings)
@@ -336,7 +375,6 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Best-effort persistence of the path history.
         }
     }
 }

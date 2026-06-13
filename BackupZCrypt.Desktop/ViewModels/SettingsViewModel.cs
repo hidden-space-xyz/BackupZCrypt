@@ -11,6 +11,10 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
+/// <summary>
+/// ViewModel for the settings page: lets the user choose default encryption, key-derivation and
+/// compression algorithms plus the UI language, and persists those choices.
+/// </summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
     private readonly ISettingsService settingsService;
@@ -35,6 +39,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool showRestartNote;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SettingsViewModel"/> class, building the selectable
+    /// algorithm and language option lists from the registered strategies.
+    /// </summary>
+    /// <param name="settingsService">The service that reads and persists user settings.</param>
+    /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
+    /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
+    /// <param name="compressionStrategies">The available compression strategies.</param>
     public SettingsViewModel(
         ISettingsService settingsService,
         IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
@@ -103,16 +115,35 @@ public sealed partial class SettingsViewModel : ViewModelBase
         SettingsFilePath = settingsService.GetFilePath<BackupCreationSettings>();
     }
 
+    /// <summary>
+    /// Gets the selectable encryption algorithm options.
+    /// </summary>
     public ObservableCollection<EncryptionOption> EncryptionOptions { get; }
 
+    /// <summary>
+    /// Gets the selectable key-derivation algorithm options.
+    /// </summary>
     public ObservableCollection<KeyDerivationOption> KeyDerivationOptions { get; }
 
+    /// <summary>
+    /// Gets the selectable compression mode options.
+    /// </summary>
     public ObservableCollection<CompressionOption> CompressionOptions { get; }
 
+    /// <summary>
+    /// Gets the selectable UI language options.
+    /// </summary>
     public ObservableCollection<LanguageOption> LanguageOptions { get; }
 
+    /// <summary>
+    /// Gets the on-disk path of the settings file, shown to the user for reference.
+    /// </summary>
     public string SettingsFilePath { get; }
 
+    /// <summary>
+    /// Loads the persisted defaults and language preference the first time the page is shown.
+    /// </summary>
+    /// <returns>A task that completes once the settings have been loaded.</returns>
     public override async Task OnNavigatedToAsync()
     {
         if (loaded)
@@ -145,7 +176,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Leave the defaults selected when settings cannot be read.
         }
     }
 

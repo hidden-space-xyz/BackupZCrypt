@@ -8,6 +8,11 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
+/// <summary>
+/// Estimates password strength from character-pool entropy with penalties for repetition,
+/// sequences, common substrings, and years, and generates random passwords from selectable
+/// character classes using a cryptographic RNG.
+/// </summary>
 internal sealed partial class PasswordService : IPasswordService
 {
     private const double MaxEntropyBits = 120.0;
@@ -75,6 +80,11 @@ internal sealed partial class PasswordService : IPasswordService
         ['!'] = 'i',
     };
 
+    /// <summary>
+    /// Evaluates a password's effective entropy and maps it to a strength rating, score, and improvement tips.
+    /// </summary>
+    /// <param name="password">The password to analyze; leading and trailing whitespace is ignored.</param>
+    /// <returns>An analysis containing the strength rating, score, entropy, and localizable tips.</returns>
     public PasswordStrengthAnalysis AnalyzePasswordStrength(string password)
     {
         if (string.IsNullOrEmpty(password))
@@ -113,6 +123,15 @@ internal sealed partial class PasswordService : IPasswordService
         return new PasswordStrengthAnalysis(strength, Math.Round(score, 2), entropy, tips);
     }
 
+    /// <summary>
+    /// Generates a random password of the given length using rejection sampling over the selected
+    /// character classes to avoid modulo bias.
+    /// </summary>
+    /// <param name="length">The number of characters to generate; must be positive.</param>
+    /// <param name="options">Flags selecting which character classes to include and exclusions to apply.</param>
+    /// <returns>A cryptographically random password.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is zero or negative.</exception>
+    /// <exception cref="ArgumentException">No character class is selected, or the resulting character set is empty.</exception>
     public string GeneratePassword(int length, PasswordGenerationOptions options)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
@@ -194,7 +213,6 @@ internal sealed partial class PasswordService : IPasswordService
         }
         finally
         {
-            // The random bytes map directly to password characters.
             CryptographicOperations.ZeroMemory(randomBytes);
         }
     }

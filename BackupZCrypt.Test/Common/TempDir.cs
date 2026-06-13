@@ -2,9 +2,6 @@ using System.Text;
 
 namespace BackupZCrypt.Test.Common;
 
-// A unique throwaway directory under the OS temp path, recursively deleted on
-// Dispose. Use inside a `using` so backup/restore integration tests never leak
-// files between runs.
 public sealed class TempDir : IDisposable
 {
     public TempDir()
@@ -43,11 +40,9 @@ public sealed class TempDir : IDisposable
         }
         catch (IOException)
         {
-            // Best-effort cleanup; a locked file must not fail the test.
         }
         catch (UnauthorizedAccessException)
         {
-            // Same as above.
         }
     }
 }

@@ -32,7 +32,6 @@
             </Grid>
           </StackPanel>
 
-          <!-- Backup detection banner -->
           <StackPanel Orientation="Horizontal"
                       Spacing="10"
                       IsVisible="{Binding HasDetection}">

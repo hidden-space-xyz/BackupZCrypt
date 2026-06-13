@@ -3,11 +3,18 @@ using BackupZCrypt.Domain.Enums;
 
 namespace BackupZCrypt.Desktop.Services;
 
-// Maps each algorithm enum value to its localized display text. This replaces the
-// DisplayName/Description/Summary that used to live on the Infrastructure strategy
-// implementations: presentation text now belongs entirely to the Desktop layer.
+/// <summary>
+/// Maps each algorithm enum value to its localized display text. This replaces the
+/// display name/description/summary that used to live on the Infrastructure strategy implementations:
+/// presentation text now belongs entirely to the Desktop layer.
+/// </summary>
 internal static class AlgorithmMetadataProvider
 {
+    /// <summary>
+    /// Gets the localized display name for an encryption algorithm.
+    /// </summary>
+    /// <param name="id">The encryption algorithm.</param>
+    /// <returns>The localized name.</returns>
     public static string GetName(EncryptionAlgorithm id)
     {
         return id switch
@@ -21,6 +28,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized short summary for an encryption algorithm.
+    /// </summary>
+    /// <param name="id">The encryption algorithm.</param>
+    /// <returns>The localized summary.</returns>
     public static string GetSummary(EncryptionAlgorithm id)
     {
         return id switch
@@ -34,6 +46,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized full description for an encryption algorithm.
+    /// </summary>
+    /// <param name="id">The encryption algorithm.</param>
+    /// <returns>The localized description.</returns>
     public static string GetDescription(EncryptionAlgorithm id)
     {
         return id switch
@@ -47,6 +64,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized display name for a key-derivation algorithm.
+    /// </summary>
+    /// <param name="id">The key-derivation algorithm.</param>
+    /// <returns>The localized name.</returns>
     public static string GetName(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -58,6 +80,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized short summary for a key-derivation algorithm.
+    /// </summary>
+    /// <param name="id">The key-derivation algorithm.</param>
+    /// <returns>The localized summary.</returns>
     public static string GetSummary(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -69,6 +96,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized full description for a key-derivation algorithm.
+    /// </summary>
+    /// <param name="id">The key-derivation algorithm.</param>
+    /// <returns>The localized description.</returns>
     public static string GetDescription(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -80,6 +112,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized display name for a compression mode.
+    /// </summary>
+    /// <param name="id">The compression mode.</param>
+    /// <returns>The localized name.</returns>
     public static string GetName(CompressionMode id)
     {
         return id switch
@@ -91,6 +128,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized short summary for a compression mode.
+    /// </summary>
+    /// <param name="id">The compression mode.</param>
+    /// <returns>The localized summary.</returns>
     public static string GetSummary(CompressionMode id)
     {
         return id switch
@@ -102,6 +144,11 @@ internal static class AlgorithmMetadataProvider
         };
     }
 
+    /// <summary>
+    /// Gets the localized full description for a compression mode.
+    /// </summary>
+    /// <param name="id">The compression mode.</param>
+    /// <returns>The localized description.</returns>
     public static string GetDescription(CompressionMode id)
     {
         return id switch

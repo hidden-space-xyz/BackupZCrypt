@@ -6,11 +6,18 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Desktop.Services;
 
-// Builds the password-strength caption from the structured analysis the
-// Application layer produces (strength, entropy, tip codes). The string assembly
-// and its translation live here, in the presentation layer.
+/// <summary>
+/// Builds the password-strength caption from the structured analysis the Application layer produces
+/// (strength, entropy, tip codes). The string assembly and its translation live here, in the presentation layer.
+/// </summary>
 internal static class PasswordStrengthFormatter
 {
+    /// <summary>
+    /// Formats a password-strength analysis into a single localized caption combining the strength label,
+    /// entropy and up to three improvement suggestions.
+    /// </summary>
+    /// <param name="analysis">The structured strength analysis to format.</param>
+    /// <returns>The localized caption.</returns>
     public static string Format(PasswordStrengthAnalysis analysis)
     {
         var label = analysis.Strength switch

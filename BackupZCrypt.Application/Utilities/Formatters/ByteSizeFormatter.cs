@@ -1,9 +1,17 @@
 namespace BackupZCrypt.Application.Utilities.Formatters;
 
+/// <summary>
+/// Formats raw byte counts into human-readable strings using binary (1024-based) units.
+/// </summary>
 public static class ByteSizeFormatter
 {
     private static readonly string[] Suffixes = ["B", "KB", "MB", "GB", "TB"];
 
+    /// <summary>
+    /// Formats a byte count as a string scaled to the largest fitting unit (for example, "1.5 MB").
+    /// </summary>
+    /// <param name="bytes">The number of bytes to format; the magnitude is used for negative values.</param>
+    /// <returns>A formatted size string with one decimal place and a unit suffix.</returns>
     public static string Format(long bytes)
     {
         if (bytes == 0)

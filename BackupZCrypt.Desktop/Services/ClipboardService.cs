@@ -4,8 +4,13 @@ using BackupZCrypt.Desktop.Services.Interfaces;
 
 namespace BackupZCrypt.Desktop.Services;
 
+/// <summary>
+/// <see cref="IClipboardService"/> implementation that writes text to the main window's clipboard
+/// using Avalonia's data-transfer model.
+/// </summary>
 internal sealed class ClipboardService : IClipboardService
 {
+    /// <inheritdoc />
     public async Task SetTextAsync(string text)
     {
         if (
@@ -14,7 +19,6 @@ internal sealed class ClipboardService : IClipboardService
             && desktop.MainWindow?.Clipboard is { } clipboard
         )
         {
-            // Avalonia 12 replaced IClipboard.SetTextAsync with a data-transfer model.
             var dataTransfer = new DataTransfer();
             dataTransfer.Add(DataTransferItem.CreateText(text));
             await clipboard.SetDataAsync(dataTransfer);

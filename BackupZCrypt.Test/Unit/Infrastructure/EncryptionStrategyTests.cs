@@ -8,8 +8,6 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 
 public sealed class EncryptionStrategyTests
 {
-    // A fixed 32-byte key (256 bits) and 12-byte nonce shared across cases. Values are
-    // arbitrary but deterministic so failures reproduce.
     private static readonly byte[] Key =
     [
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -25,8 +23,6 @@ public sealed class EncryptionStrategyTests
 
     private static readonly byte[] AssociatedData = [0xDE, 0xAD, 0xBE, 0xEF];
 
-    // The 5 ciphers that actually transform data. Indexed only by their concrete type so
-    // each [Theory] case constructs a fresh instance (strategies are stateless).
     public static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers() =>
         [
             new AesEncryptionStrategy(),
@@ -46,7 +42,6 @@ public sealed class EncryptionStrategyTests
     [TestCaseSource(nameof(RealCiphers))]
     public void Roundtrip_RecoversPlaintext_AcrossSizes(IEncryptionAlgorithmStrategy cipher)
     {
-        // 0 bytes, 1 byte, 1 KiB, ~64 KiB.
         int[] sizes = [0, 1, 1024, 64 * 1024];
 
         foreach (var size in sizes)
@@ -69,8 +64,6 @@ public sealed class EncryptionStrategyTests
 
         Assert.That(ciphertext.Length, Is.EqualTo(plaintext.Length + EncryptionConstants.TagSize));
 
-        // The leading ciphertext bytes (excluding the appended tag) must not equal the
-        // plaintext: a real cipher transforms the data.
         var ciphertextBody = ciphertext[..plaintext.Length];
         Assert.That(ciphertextBody, Is.Not.EqualTo(plaintext));
     }
@@ -84,8 +77,6 @@ public sealed class EncryptionStrategyTests
         var wrongKey = (byte[])Key.Clone();
         wrongKey[0] ^= 0xFF;
 
-        // .NET's AesGcm/ChaCha20Poly1305 throw AuthenticationTagMismatchException (a
-        // CryptographicException subtype), so match the base type, not the exact type.
         Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, wrongKey, Nonce, AssociatedData)
         );
@@ -125,7 +116,6 @@ public sealed class EncryptionStrategyTests
         var plaintext = RandomBytes(512, seed: 14);
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
-        // Flip a bit in the body (not the appended tag) and expect AEAD verification to fail.
         ciphertext[0] ^= 0x01;
 
         Assert.Catch<CryptographicException>(

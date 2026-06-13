@@ -17,16 +17,13 @@
 
   <Grid RowDefinitions="38,*">
 
-    <!-- Custom title bar -->
     <Grid Grid.Row="0">
-      <!-- Background follows the sidebar / content column split for color continuity -->
       <Grid ColumnDefinitions="248,*" IsHitTestVisible="False">
         <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}" />
         <Border Grid.Column="1" Background="{StaticResource AppBackgroundBrush}" />
       </Grid>
 
       <Grid ColumnDefinitions="*,Auto">
-        <!-- Drag region: whole bar except the window buttons -->
         <Border Grid.Column="0"
                 Background="Transparent"
                 PointerPressed="OnTitleBarPressed"
@@ -54,10 +51,8 @@
       </Grid>
     </Grid>
 
-    <!-- Body -->
     <Grid Grid.Row="1" ColumnDefinitions="248,*">
 
-    <!-- Sidebar -->
     <Border Grid.Column="0"
             Background="{StaticResource SidebarBackgroundBrush}"
             BorderBrush="{StaticResource CardBorderBrush}"
@@ -103,7 +98,6 @@
       </Grid>
     </Border>
 
-    <!-- Active page -->
     <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
     </Grid>
   </Grid>

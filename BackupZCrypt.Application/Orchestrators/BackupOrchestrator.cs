@@ -10,6 +10,14 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Orchestrators;
 
+/// <summary>
+/// Orchestrates a backup, update, or restore: it validates the request, normalizes paths,
+/// prepares the destination directory, and dispatches to the file or directory backup service.
+/// </summary>
+/// <param name="backupRequestValidator">Validator producing blocking errors and advisory warnings.</param>
+/// <param name="fileOperationsService">Service used to inspect and prepare the file system.</param>
+/// <param name="fileBackupService">Service that handles single-file backups.</param>
+/// <param name="directoryBackupService">Service that handles directory backups.</param>
 internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
@@ -17,6 +25,16 @@ internal sealed class BackupOrchestrator(
     IDirectoryBackupService directoryBackupService
 ) : IBackupOrchestrator
 {
+    /// <summary>
+    /// Validates the request and, if it passes, runs the requested backup operation.
+    /// </summary>
+    /// <param name="request">The backup request describing the operation, paths, and options.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// A successful result whose value reports the outcome (including validation errors or warnings
+    /// surfaced as a non-success <see cref="BackupResult"/>), or a failure result for fatal errors.
+    /// </returns>
     public async Task<Result<BackupResult>> ExecuteAsync(
         BackupRequest request,
         IProgress<BackupStatus> progress,

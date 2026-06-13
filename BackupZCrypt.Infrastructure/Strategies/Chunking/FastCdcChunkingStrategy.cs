@@ -4,6 +4,13 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
 
+/// <summary>
+/// Content-defined chunking strategy implementing the FastCDC algorithm. A rolling Gear
+/// hash places cut points at data-dependent boundaries so that unchanged regions produce
+/// stable chunks (enabling deduplication), with chunk sizes constrained to a fixed
+/// minimum/target/maximum range. Reads are buffered through a pooled array to bound
+/// memory use.
+/// </summary>
 internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 {
     private const int ChunkTargetSize = 1 * 1024 * 1024;
@@ -276,6 +283,15 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 
     private static readonly ulong[] GearLs = CreateShiftedGearTable();
 
+    /// <summary>
+    /// Splits the source stream into content-defined chunks, yielding each chunk as it is
+    /// produced. Boundaries are chosen by the FastCDC rolling hash; the final chunk may be
+    /// shorter than the target size.
+    /// </summary>
+    /// <param name="source">The stream to chunk.</param>
+    /// <param name="cancellationToken">Token used to cancel the enumeration.</param>
+    /// <returns>An asynchronous sequence of chunk buffers covering the stream in order.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public async IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
         Stream source,
         [EnumeratorCancellation] CancellationToken cancellationToken = default

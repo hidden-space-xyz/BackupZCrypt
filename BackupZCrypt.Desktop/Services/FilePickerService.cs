@@ -5,8 +5,12 @@ using BackupZCrypt.Desktop.Services.Interfaces;
 
 namespace BackupZCrypt.Desktop.Services;
 
+/// <summary>
+/// <see cref="IFilePickerService"/> implementation backed by the Avalonia storage provider of the main window.
+/// </summary>
 internal sealed class FilePickerService : IFilePickerService
 {
+    /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string title)
     {
         var topLevel = GetTopLevel();
@@ -22,6 +26,7 @@ internal sealed class FilePickerService : IFilePickerService
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
+    /// <inheritdoc />
     public async Task<string?> PickFileAsync(string title)
     {
         var topLevel = GetTopLevel();

@@ -8,7 +8,6 @@ public sealed class ByteSizeFormatterTests
     [Test]
     public void Format_Zero_ReturnsZeroBytes()
     {
-        // Zero is culture-independent (no number formatting), so no culture override needed.
         Assert.That(ByteSizeFormatter.Format(0), Is.EqualTo("0 B"));
     }
 
@@ -36,13 +35,11 @@ public sealed class ByteSizeFormatterTests
     [Test]
     public void Format_PetabyteScaleStaysInTerabytes()
     {
-        // The suffix table tops out at TB, so larger values stay in TB rather than overflowing.
         var original = CultureInfo.CurrentCulture;
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
-            // 2 PB == 2048 TB.
             Assert.That(ByteSizeFormatter.Format(1_099_511_627_776L * 2048L), Is.EqualTo("2048.0 TB"));
         }
         finally

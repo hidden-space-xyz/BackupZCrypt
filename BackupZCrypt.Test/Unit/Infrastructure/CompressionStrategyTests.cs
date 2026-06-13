@@ -21,7 +21,6 @@ public sealed class CompressionStrategyTests
 
     private static byte[] CompressiblePattern(int length)
     {
-        // A short repeating pattern: highly compressible so the output is provably smaller.
         var data = new byte[length];
         for (var i = 0; i < length; i++)
         {
@@ -36,7 +35,6 @@ public sealed class CompressionStrategyTests
         byte[] input
     )
     {
-        // CompressAsync returns a fresh readable stream positioned at 0; drain it fully.
         await using var compressed = await strategy.CompressAsync(new MemoryStream(input));
         using MemoryStream collected = new();
         await compressed.CopyToAsync(collected);

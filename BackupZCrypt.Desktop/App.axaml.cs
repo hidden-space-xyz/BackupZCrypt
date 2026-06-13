@@ -13,13 +13,24 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Desktop;
 
+/// <summary>
+/// The Avalonia application root: loads XAML, builds the dependency-injection container, applies the
+/// language preference and shows the main window.
+/// </summary>
 public sealed class App : Avalonia.Application
 {
+    /// <summary>
+    /// Loads the application's XAML resources.
+    /// </summary>
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <summary>
+    /// Completes framework initialization by wiring up services, applying the saved language and
+    /// creating the main window for the classic desktop lifetime.
+    /// </summary>
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -64,9 +75,6 @@ public sealed class App : Avalonia.Application
         {
             var settingsService = services.GetRequiredService<ISettingsService>();
 
-            // The load runs on a thread-pool thread: blocking on the async call
-            // directly would deadlock, because its continuations would queue onto
-            // the Avalonia dispatcher that this method is blocking.
             var language = Task.Run(() => settingsService.GetOrCreateAsync<LanguageSettings>())
                 .GetAwaiter()
                 .GetResult();
@@ -80,7 +88,6 @@ public sealed class App : Avalonia.Application
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Fall back to the system culture when preferences cannot be read.
         }
     }
 }

@@ -48,7 +48,6 @@ public sealed class FastCdcChunkingTests
     [Test]
     public async Task SmallInput_YieldsSingleChunkEqualToInput()
     {
-        // ~10 KiB is below the 256 KiB minimum, so it cannot be split.
         var input = RandomBytes(10 * 1024, seed: 1);
 
         var chunks = await DrainAsync(input);
@@ -60,7 +59,6 @@ public sealed class FastCdcChunkingTests
     [Test]
     public async Task LargeInput_ReassemblesToOriginal_WithMultipleChunks()
     {
-        // ~10 MiB exceeds the 4 MiB max, so it must split into several chunks.
         var input = RandomBytes(10 * 1024 * 1024, seed: 2);
 
         var chunks = await DrainAsync(input);
@@ -98,12 +96,10 @@ public sealed class FastCdcChunkingTests
     {
         var strategy = new FastCdcChunkingStrategy();
 
-        // The guard lives in an async iterator, so it only fires once enumeration starts.
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
         {
             await foreach (var _ in strategy.ChunkAsync(null!))
             {
-                // Unreachable: the first MoveNextAsync throws.
             }
         });
     }

@@ -9,12 +9,27 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Validators;
 
+/// <summary>
+/// Validates backup requests against the file system and storage, collecting blocking errors
+/// (invalid paths, missing sources, weak passwords) and advisory warnings (low disk space,
+/// large operations, existing destination files).
+/// </summary>
+/// <param name="fileOperations">Service used to inspect files and directories.</param>
+/// <param name="systemStorage">Service used to query drive readiness and free space.</param>
+/// <param name="passwordService">Service used to assess password strength for warnings.</param>
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
     IPasswordService passwordService
 ) : IBackupRequestValidator
 {
+    /// <summary>
+    /// Analyzes a request for blocking errors such as invalid or missing paths, password problems,
+    /// and source/destination overlap.
+    /// </summary>
+    /// <param name="request">The backup request to validate.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The localizable errors found; empty when the request is valid.</returns>
     public async Task<IReadOnlyList<LocalizableMessage>> AnalyzeErrorsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
@@ -68,7 +83,7 @@ internal sealed class BackupRequestValidator(
                         fileSize = fileOperations.GetFileSize(sourcePath);
                     }
                     catch
-                    { /* ignore */
+                    {
                     }
 
                     if (fileSize == 0)
@@ -228,13 +243,20 @@ internal sealed class BackupRequestValidator(
                 }
             }
             catch
-            { /* ignore */
+            {
             }
         }
 
         return errors;
     }
 
+    /// <summary>
+    /// Analyzes a request for advisory warnings such as low disk space, large file counts,
+    /// existing destination files, and weak passwords.
+    /// </summary>
+    /// <param name="request">The backup request to inspect.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The localizable warnings found; empty when there are none.</returns>
     public async Task<IReadOnlyList<LocalizableMessage>> AnalyzeWarningsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
@@ -253,7 +275,6 @@ internal sealed class BackupRequestValidator(
         {
             if (fileOperations.DirectoryExists(sourcePath))
             {
-                // Enumerate the source tree once and reuse it for every warning check.
                 var sourceFiles = await fileOperations.GetFilesAsync(
                     sourcePath,
                     "*",
@@ -358,7 +379,7 @@ internal sealed class BackupRequestValidator(
             }
         }
         catch
-        { /* ignore */
+        {
         }
 
         return warnings;

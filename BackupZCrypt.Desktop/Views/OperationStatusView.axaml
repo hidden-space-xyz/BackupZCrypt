@@ -7,7 +7,6 @@
 
   <StackPanel Spacing="20">
 
-    <!-- Progress -->
     <Border Classes="card" IsVisible="{Binding IsRunning}">
       <StackPanel Spacing="14">
         <Grid ColumnDefinitions="*,Auto">
@@ -29,7 +28,6 @@
       </StackPanel>
     </Border>
 
-    <!-- Warnings confirmation -->
     <Border Classes="card"
             Background="{StaticResource WarningCardBrush}"
             IsVisible="{Binding ShowWarnings}">
@@ -60,7 +58,6 @@
       </StackPanel>
     </Border>
 
-    <!-- Result -->
     <Border Classes="card" IsVisible="{Binding HasResult}">
       <StackPanel Spacing="12">
         <StackPanel Orientation="Horizontal" Spacing="10">

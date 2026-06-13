@@ -5,6 +5,12 @@ using BackupZCrypt.Domain.Services.Interfaces;
 
 namespace BackupZCrypt.Application.Services;
 
+/// <summary>
+/// Persists strongly typed settings as indented JSON files under a per-user application data
+/// directory, recreating defaults when a file is missing or corrupted.
+/// </summary>
+/// <param name="fileOperationsService">Service used to read and write settings files.</param>
+/// <param name="baseDirectoryPath">An optional override for the settings directory; defaults to local application data.</param>
 internal sealed class SettingsService(
     IFileOperationsService fileOperationsService,
     string? baseDirectoryPath = null
@@ -18,9 +24,6 @@ internal sealed class SettingsService(
         Converters = { new JsonStringEnumConverter() },
     };
 
-    // LocalApplicationData instead of the temp directory: temp may be purged at any
-    // time and is world-readable on some platforms, while settings include recent
-    // backup paths.
     private string BaseDirectoryPath { get; } =
         baseDirectoryPath
         ?? Path.Combine(
@@ -31,10 +34,21 @@ internal sealed class SettingsService(
             SettingsDirectoryName
         );
 
+    /// <summary>
+    /// Resolves the absolute path of the file backing the given settings type.
+    /// </summary>
+    /// <typeparam name="T">The settings type whose file path is requested.</typeparam>
+    /// <returns>The absolute path to the settings file.</returns>
     public string GetFilePath<T>()
         where T : class, ISettings<T> =>
         Path.GetFullPath(Path.Combine(this.BaseDirectoryPath, T.FileName));
 
+    /// <summary>
+    /// Loads the persisted settings, recreating and saving the defaults when the file is absent or corrupted.
+    /// </summary>
+    /// <typeparam name="T">The settings type to load.</typeparam>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The loaded settings, or freshly created defaults.</returns>
     public async Task<T> GetOrCreateAsync<T>(CancellationToken cancellationToken = default)
         where T : class, ISettings<T>
     {
@@ -63,15 +77,22 @@ internal sealed class SettingsService(
         }
         catch (JsonException)
         {
-            // Fall through to self-healing below.
         }
 
-        // A corrupted settings file must not block the application: recreate defaults.
         var recreated = T.DefaultValue;
         await this.SaveAsync(recreated, cancellationToken);
         return recreated;
     }
 
+    /// <summary>
+    /// Serializes the given settings to indented JSON and writes them to disk, creating the directory if needed.
+    /// </summary>
+    /// <typeparam name="T">The settings type to save.</typeparam>
+    /// <param name="settings">The settings instance to persist.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the settings have been written.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="settings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The resolved settings path has no directory component.</exception>
     public async Task SaveAsync<T>(T settings, CancellationToken cancellationToken = default)
         where T : class, ISettings<T>
     {

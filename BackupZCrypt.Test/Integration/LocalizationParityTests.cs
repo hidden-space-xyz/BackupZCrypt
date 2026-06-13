@@ -3,9 +3,6 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Integration;
 
-// Guards the documented silent-fail footgun: a MessageCode with no matching resx entry, or
-// a key present in only one language, shows the raw key/enum name in the UI at runtime.
-// The Desktop resx files are copied to the test output under TestData/ by the csproj.
 public sealed class LocalizationParityTests
 {
     private static readonly string EnglishResxPath = Path.Combine(

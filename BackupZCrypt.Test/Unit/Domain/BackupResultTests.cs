@@ -57,10 +57,10 @@ public sealed class BackupResultTests
         Assert.That(result.SuccessRate, Is.EqualTo(0.25));
     }
 
-    [TestCase(0, 10, false)] // none processed
-    [TestCase(5, 10, true)] // strictly between
-    [TestCase(10, 10, false)] // all processed
-    [TestCase(0, 0, false)] // empty
+    [TestCase(0, 10, false)]
+    [TestCase(5, 10, true)]
+    [TestCase(10, 10, false)]
+    [TestCase(0, 0, false)]
     public void IsPartialSuccess_OnlyTrueWhenStrictlyBetweenZeroAndTotal(
         int processed,
         int total,
