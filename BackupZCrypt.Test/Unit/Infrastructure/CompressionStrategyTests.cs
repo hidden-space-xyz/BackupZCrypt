@@ -1,0 +1,94 @@
+using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Infrastructure.Strategies.Compression;
+
+namespace BackupZCrypt.Test.Unit.Infrastructure;
+
+public sealed class CompressionStrategyTests
+{
+    public static TheoryData<ICompressionStrategy> Levels() =>
+        [
+            new ZstdFastCompressionStrategy(),
+            new ZstdCompressionStrategy(),
+            new ZstdBestCompressionStrategy(),
+        ];
+
+    private static byte[] RandomBytes(int length, int seed)
+    {
+        var data = new byte[length];
+        new Random(seed).NextBytes(data);
+        return data;
+    }
+
+    private static byte[] CompressiblePattern(int length)
+    {
+        // A short repeating pattern: highly compressible so the output is provably smaller.
+        var data = new byte[length];
+        for (var i = 0; i < length; i++)
+        {
+            data[i] = (byte)(i % 16);
+        }
+
+        return data;
+    }
+
+    private static async Task<byte[]> CompressToBytesAsync(
+        ICompressionStrategy strategy,
+        byte[] input
+    )
+    {
+        // CompressAsync returns a fresh readable stream positioned at 0; drain it fully.
+        await using var compressed = await strategy.CompressAsync(new MemoryStream(input));
+        using MemoryStream collected = new();
+        await compressed.CopyToAsync(collected);
+        return collected.ToArray();
+    }
+
+    private static async Task<byte[]> DecompressToBytesAsync(
+        ICompressionStrategy strategy,
+        byte[] compressed
+    )
+    {
+        await using var decompressed = await strategy.DecompressAsync(new MemoryStream(compressed));
+        using MemoryStream collected = new();
+        await decompressed.CopyToAsync(collected);
+        return collected.ToArray();
+    }
+
+    [Theory]
+    [MemberData(nameof(Levels))]
+    public async Task Roundtrip_RecoversCompressibleData(ICompressionStrategy strategy)
+    {
+        var original = CompressiblePattern(200 * 1024);
+
+        var compressed = await CompressToBytesAsync(strategy, original);
+        var restored = await DecompressToBytesAsync(strategy, compressed);
+
+        Assert.Equal(original, restored);
+    }
+
+    [Theory]
+    [MemberData(nameof(Levels))]
+    public async Task Roundtrip_RecoversRandomData(ICompressionStrategy strategy)
+    {
+        var original = RandomBytes(64 * 1024, seed: 2024);
+
+        var compressed = await CompressToBytesAsync(strategy, original);
+        var restored = await DecompressToBytesAsync(strategy, compressed);
+
+        Assert.Equal(original, restored);
+    }
+
+    [Theory]
+    [MemberData(nameof(Levels))]
+    public async Task Compress_ShrinksCompressibleInput(ICompressionStrategy strategy)
+    {
+        var original = CompressiblePattern(200 * 1024);
+
+        var compressed = await CompressToBytesAsync(strategy, original);
+
+        Assert.True(
+            compressed.Length < original.Length,
+            $"Expected compressed length {compressed.Length} < original {original.Length}."
+        );
+    }
+}
