@@ -28,4 +28,8 @@
       <DependentUpon>Strings.resx</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Resources\CloudZCrypt.png" />
+  </ItemGroup>
 </Project>

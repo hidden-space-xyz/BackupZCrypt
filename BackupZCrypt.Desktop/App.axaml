@@ -9,19 +9,19 @@
   </Application.DataTemplates>
 
   <Application.Resources>
-    <!-- Accent palette consumed by the Fluent theme -->
-    <Color x:Key="SystemAccentColor">#7C66F2</Color>
-    <Color x:Key="SystemAccentColorDark1">#6B55E0</Color>
-    <Color x:Key="SystemAccentColorDark2">#5A46C8</Color>
-    <Color x:Key="SystemAccentColorDark3">#4938AB</Color>
-    <Color x:Key="SystemAccentColorLight1">#8F7BF5</Color>
-    <Color x:Key="SystemAccentColorLight2">#A492F7</Color>
-    <Color x:Key="SystemAccentColorLight3">#B9AAFA</Color>
+    <!-- Accent palette consumed by the Fluent theme (lime green, matches the logo) -->
+    <Color x:Key="SystemAccentColor">#8FCC3B</Color>
+    <Color x:Key="SystemAccentColorDark1">#79B22B</Color>
+    <Color x:Key="SystemAccentColorDark2">#659622</Color>
+    <Color x:Key="SystemAccentColorDark3">#527A1A</Color>
+    <Color x:Key="SystemAccentColorLight1">#A4D95C</Color>
+    <Color x:Key="SystemAccentColorLight2">#B8E27E</Color>
+    <Color x:Key="SystemAccentColorLight3">#CDEBA1</Color>
 
     <!-- Application palette -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#7C66F2" />
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#8F7BF5" />
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#6B55E0" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#8FCC3B" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#A4D95C" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#79B22B" />
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#12141B" />
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#181B24" />
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#1C1F2A" />

@@ -91,6 +91,9 @@
   <data name="VersionFormat" xml:space="preserve"><value>Version {0}</value></data>
   <data name="PickFolderTitle" xml:space="preserve"><value>Select a folder</value></data>
   <data name="PickFileTitle" xml:space="preserve"><value>Select a file</value></data>
+  <data name="WindowMinimize" xml:space="preserve"><value>Minimize</value></data>
+  <data name="WindowMaximize" xml:space="preserve"><value>Maximize</value></data>
+  <data name="WindowClose" xml:space="preserve"><value>Close</value></data>
   <!-- Algorithm display text (moved from Infrastructure) -->
   <data name="AesDisplayName" xml:space="preserve"><value>AES-256 GCM</value></data>
   <data name="AesDescription" xml:space="preserve"><value>The industry standard encryption used by governments, banks, and most secure applications worldwide. Very fast on modern computers and phones thanks to built-in hardware support. Recommended for most users.</value></data>

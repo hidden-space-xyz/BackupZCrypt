@@ -43,7 +43,7 @@
   <!-- Primary action button -->
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Padding" Value="22,11" />
     <Setter Property="CornerRadius" Value="8" />
@@ -51,12 +51,12 @@
 
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource AccentHoverBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
   </Style>
 
   <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
   </Style>
 
   <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
@@ -99,6 +99,34 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
     <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+  </Style>
+
+  <!-- Custom window chrome buttons (title bar) -->
+  <Style Selector="Button.chrome">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Width" Value="46" />
+    <Setter Property="Height" Value="38" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.chrome:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.chrome:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavSelectedBrush}" />
+  </Style>
+
+  <Style Selector="Button.chromeClose:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+  </Style>
+
+  <Style Selector="Button.chromeClose:pointerover Path">
+    <Setter Property="Stroke" Value="White" />
   </Style>
 
   <!-- Inputs stretch by default inside forms -->

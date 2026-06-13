@@ -171,6 +171,12 @@ internal static class Strings
 
     public static string PickFileTitle => Get();
 
+    public static string WindowMinimize => Get();
+
+    public static string WindowMaximize => Get();
+
+    public static string WindowClose => Get();
+
     // Algorithm display text (moved from Infrastructure). Resolved by name through
     // AlgorithmMetadataProvider, which maps each strategy enum value to these keys.
     public static string AesDisplayName => Get();
