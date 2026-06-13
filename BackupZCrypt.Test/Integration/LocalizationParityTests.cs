@@ -30,7 +30,7 @@ public sealed class LocalizationParityTests
         Assert.That(
             missing,
             Is.Empty,
-            $"MessageCode members with no key in Strings.resx (would show the raw enum name): "
+            "MessageCode members with no key in Strings.resx (would show the raw enum name): "
                 + string.Join(", ", missing)
         );
     }
@@ -77,7 +77,7 @@ public sealed class LocalizationParityTests
             .ToHashSet(StringComparer.Ordinal);
     }
 
-    private static string Describe(IReadOnlyCollection<string> keys)
+    private static string Describe(List<string> keys)
     {
         return keys.Count == 0 ? "(none)" : string.Join(", ", keys);
     }

@@ -434,6 +434,7 @@ internal sealed class ManifestService(
             }
             catch
             {
+                // Ignore
             }
 
             throw;
@@ -463,7 +464,7 @@ internal sealed class ManifestService(
 
     private static bool TryDecodeBase64(string value, int expectedLength, out byte[] decoded)
     {
-        decoded = [];
+        decoded = Array.Empty<byte>();
 
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -489,14 +490,14 @@ internal sealed class ManifestService(
             document.Compression
         );
 
-        List<ChunkManifestFileEntry> files = document
-            .Files.Select(static f => new ChunkManifestFileEntry(
+        var files = document
+            .Files.ConvertAll(static f => new ChunkManifestFileEntry(
                 f.OriginalPath,
                 f.FileHash,
                 f.TotalSize,
                 [.. f.Chunks]
             ))
-            .ToList();
+;
 
         return new ChunkManifestData(header, document.MasterSalt, files);
     }

@@ -22,22 +22,22 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private string? savedLanguageCode;
 
     [ObservableProperty]
-    private EncryptionOption selectedEncryption;
+    public partial EncryptionOption SelectedEncryption { get; set; }
 
     [ObservableProperty]
-    private KeyDerivationOption selectedKeyDerivation;
+    public partial KeyDerivationOption SelectedKeyDerivation { get; set; }
 
     [ObservableProperty]
-    private CompressionOption selectedCompression;
+    public partial CompressionOption SelectedCompression { get; set; }
 
     [ObservableProperty]
-    private LanguageOption selectedLanguage;
+    public partial LanguageOption SelectedLanguage { get; set; }
 
     [ObservableProperty]
-    private bool showSavedNotice;
+    public partial bool ShowSavedNotice { get; set; }
 
     [ObservableProperty]
-    private bool showRestartNote;
+    public partial bool ShowRestartNote { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SettingsViewModel"/> class, building the selectable
@@ -106,11 +106,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
             new LanguageOption("en", "English"),
             new LanguageOption("es", "Español"),
         ];
-
-        selectedEncryption = EncryptionOptions[0];
-        selectedKeyDerivation = KeyDerivationOptions[0];
-        selectedCompression = CompressionOptions[0];
-        selectedLanguage = LanguageOptions[0];
+        SelectedEncryption = EncryptionOptions[0];
+        SelectedKeyDerivation = KeyDerivationOptions[0];
+        SelectedCompression = CompressionOptions[0];
+        SelectedLanguage = LanguageOptions[0];
 
         SettingsFilePath = settingsService.GetFilePath<BackupCreationSettings>();
     }
@@ -176,6 +175,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // Ignore
         }
     }
 

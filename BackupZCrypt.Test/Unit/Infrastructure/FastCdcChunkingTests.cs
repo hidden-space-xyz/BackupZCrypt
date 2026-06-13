@@ -63,8 +63,11 @@ public sealed class FastCdcChunkingTests
 
         var chunks = await DrainAsync(input);
 
-        Assert.That(chunks.Count, Is.GreaterThan(1), $"Expected multiple chunks, got {chunks.Count}.");
-        Assert.That(Concat(chunks), Is.EqualTo(input));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(chunks, Has.Count.GreaterThan(1), $"Expected multiple chunks, got {chunks.Count}.");
+            Assert.That(Concat(chunks), Is.EqualTo(input));
+        }
     }
 
     [Test]

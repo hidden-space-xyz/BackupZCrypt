@@ -19,8 +19,11 @@ public sealed class SettingsServiceTests
 
         var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
 
-        Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
-        Assert.That(File.Exists(filePath), Is.True, "GetOrCreateAsync did not persist the defaults file.");
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
+            Assert.That(File.Exists(filePath), Is.True, "GetOrCreateAsync did not persist the defaults file.");
+        }
     }
 
     [Test]

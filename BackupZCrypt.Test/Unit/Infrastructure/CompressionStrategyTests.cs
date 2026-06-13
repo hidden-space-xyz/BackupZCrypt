@@ -5,7 +5,7 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 
 public sealed class CompressionStrategyTests
 {
-    public static IEnumerable<ICompressionStrategy> Levels() =>
+    private static IEnumerable<ICompressionStrategy> Levels() =>
         [
             new ZstdFastCompressionStrategy(),
             new ZstdCompressionStrategy(),
@@ -36,7 +36,7 @@ public sealed class CompressionStrategyTests
     )
     {
         await using var compressed = await strategy.CompressAsync(new MemoryStream(input));
-        using MemoryStream collected = new();
+        await using MemoryStream collected = new();
         await compressed.CopyToAsync(collected);
         return collected.ToArray();
     }
@@ -47,7 +47,7 @@ public sealed class CompressionStrategyTests
     )
     {
         await using var decompressed = await strategy.DecompressAsync(new MemoryStream(compressed));
-        using MemoryStream collected = new();
+        await using MemoryStream collected = new();
         await decompressed.CopyToAsync(collected);
         return collected.ToArray();
     }
@@ -82,8 +82,8 @@ public sealed class CompressionStrategyTests
         var compressed = await CompressToBytesAsync(strategy, original);
 
         Assert.That(
-            compressed.Length < original.Length,
-            Is.True,
+            compressed,
+            Has.Length.LessThan(original.Length),
             $"Expected compressed length {compressed.Length} < original {original.Length}."
         );
     }

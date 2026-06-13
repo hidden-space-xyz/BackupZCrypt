@@ -33,10 +33,13 @@ public sealed class FileSystemServiceTests
         var hashACopy = await service.ComputeFileHashAsync(fileACopy);
         var hashB = await service.ComputeFileHashAsync(fileB);
 
-        Assert.That(hashACopy, Is.EqualTo(hashA));
-        Assert.That(await service.ComputeFileHashAsync(fileA), Is.EqualTo(hashA));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(hashACopy, Is.EqualTo(hashA));
+            Assert.That(await service.ComputeFileHashAsync(fileA), Is.EqualTo(hashA));
 
-        Assert.That(hashB, Is.Not.EqualTo(hashA));
+            Assert.That(hashB, Is.Not.EqualTo(hashA));
+        }
     }
 
     [Test]
@@ -52,10 +55,13 @@ public sealed class FileSystemServiceTests
         var files = await service.GetFilesAsync(dir.Path);
 
         var asSet = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        Assert.That(files.Length, Is.EqualTo(3));
-        Assert.That(asSet.Contains(f1), Is.True);
-        Assert.That(asSet.Contains(f2), Is.True);
-        Assert.That(asSet.Contains(f3), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(files, Has.Length.EqualTo(3));
+            Assert.That(asSet, Does.Contain(f1));
+            Assert.That(asSet, Does.Contain(f2));
+            Assert.That(asSet, Does.Contain(f3));
+        }
     }
 
     [Test]
@@ -69,9 +75,12 @@ public sealed class FileSystemServiceTests
 
         await service.CleanDirectoryAsync(dir.Path);
 
-        Assert.That(Directory.Exists(dir.Path), Is.True);
-        Assert.That(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories), Is.Empty);
-        Assert.That(Directory.GetDirectories(dir.Path), Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(Directory.Exists(dir.Path), Is.True);
+            Assert.That(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories), Is.Empty);
+            Assert.That(Directory.GetDirectories(dir.Path), Is.Empty);
+        }
     }
 
     [Test]
@@ -93,14 +102,17 @@ public sealed class FileSystemServiceTests
         var service = new SystemStorageService();
 
         var root = service.GetPathRoot(dir.Path);
-        Assert.That(string.IsNullOrEmpty(root), Is.False, "Could not resolve the temp drive root.");
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(string.IsNullOrEmpty(root), Is.False, "Could not resolve the temp drive root.");
 
-        Assert.That(service.IsDriveReady(root!), Is.True, $"Temp drive '{root}' reported not ready.");
-        Assert.That(
-            service.GetAvailableFreeSpace(root!),
-            Is.GreaterThan(0),
-            $"Temp drive '{root}' reported no free space."
-        );
+            Assert.That(service.IsDriveReady(root!), Is.True, $"Temp drive '{root}' reported not ready.");
+            Assert.That(
+                service.GetAvailableFreeSpace(root!),
+                Is.GreaterThan(0),
+                $"Temp drive '{root}' reported no free space."
+            );
+        }
     }
 
     [Test]
@@ -110,7 +122,10 @@ public sealed class FileSystemServiceTests
 
         const string InvalidRoot = "Z:\\";
 
-        Assert.That(service.IsDriveReady(InvalidRoot), Is.False);
-        Assert.That(service.GetAvailableFreeSpace(InvalidRoot), Is.EqualTo(-1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(service.IsDriveReady(InvalidRoot), Is.False);
+            Assert.That(service.GetAvailableFreeSpace(InvalidRoot), Is.EqualTo(-1));
+        }
     }
 }

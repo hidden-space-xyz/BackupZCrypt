@@ -14,10 +14,13 @@ public sealed class PasswordServiceTests
     {
         var analysis = this.sut.AnalyzePasswordStrength(password!);
 
-        Assert.That(analysis.Strength, Is.EqualTo(PasswordStrength.VeryWeak));
-        Assert.That(analysis.Score, Is.EqualTo(0));
-        Assert.That(analysis.Entropy, Is.EqualTo(0));
-        Assert.That(analysis.Tips, Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(analysis.Strength, Is.EqualTo(PasswordStrength.VeryWeak));
+            Assert.That(analysis.Score, Is.Zero);
+            Assert.That(analysis.Entropy, Is.Zero);
+            Assert.That(analysis.Tips, Is.Empty);
+        }
     }
 
     [Test]
@@ -25,12 +28,15 @@ public sealed class PasswordServiceTests
     {
         var analysis = this.sut.AnalyzePasswordStrength("abc");
 
-        Assert.That(
-            analysis.Strength is PasswordStrength.VeryWeak or PasswordStrength.Weak,
-            Is.True,
-            $"Expected a weak strength but got {analysis.Strength}."
-        );
-        Assert.That(analysis.Tips, Does.Contain(MessageCode.TipIncreaseLength));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                    analysis.Strength,
+                    Is.EqualTo(PasswordStrength.VeryWeak).Or.EqualTo(PasswordStrength.Weak),
+                    $"Expected a weak strength but got {analysis.Strength}."
+                );
+            Assert.That(analysis.Tips, Does.Contain(MessageCode.TipIncreaseLength));
+        }
         Assert.That(analysis.Tips, Does.Contain(MessageCode.TipAddUppercase));
         Assert.That(analysis.Tips, Does.Contain(MessageCode.TipAddDigits));
         Assert.That(analysis.Tips, Does.Contain(MessageCode.TipAddSymbols));
@@ -42,16 +48,19 @@ public sealed class PasswordServiceTests
         var weak = this.sut.AnalyzePasswordStrength("abc");
         var strong = this.sut.AnalyzePasswordStrength("Gx7#tQ2!vR9@mZ4&pL6$");
 
-        Assert.That(
-            strong.Strength is PasswordStrength.Good or PasswordStrength.Strong,
-            Is.True,
-            $"Expected Good or Strong but got {strong.Strength}."
-        );
-        Assert.That(
-            strong.Score,
-            Is.GreaterThan(weak.Score),
-            $"Expected the strong password score ({strong.Score}) to exceed the weak one ({weak.Score})."
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                    strong.Strength,
+                    Is.EqualTo(PasswordStrength.Good).Or.EqualTo(PasswordStrength.Strong),
+                    $"Expected Good or Strong but got {strong.Strength}."
+                );
+            Assert.That(
+                strong.Score,
+                Is.GreaterThan(weak.Score),
+                $"Expected the strong password score ({strong.Score}) to exceed the weak one ({weak.Score})."
+            );
+        }
     }
 
     [Test]
@@ -89,7 +98,7 @@ public sealed class PasswordServiceTests
                 | PasswordGenerationOptions.IncludeSpecialCharacters
         );
 
-        Assert.That(password.Length, Is.EqualTo(24));
+        Assert.That(password, Has.Length.EqualTo(24));
     }
 
     [Test]

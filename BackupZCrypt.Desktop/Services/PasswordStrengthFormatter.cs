@@ -31,9 +31,9 @@ internal static class PasswordStrengthFormatter
         };
 
         StringBuilder sb = new();
-        sb.Append(MessageLocalizer.Localize(new LocalizableMessage(label)));
-        sb.Append(" // ");
-        sb.Append(
+        sb.Append(MessageLocalizer.Localize(new LocalizableMessage(label)))
+            .Append(" // ")
+            .Append(
             MessageLocalizer.Localize(
                 new LocalizableMessage(
                     MessageCode.EntropyFormat,
@@ -44,10 +44,10 @@ internal static class PasswordStrengthFormatter
 
         if (analysis.Tips.Count > 0)
         {
-            sb.Append(" // ");
-            sb.Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.Suggestions)));
-            sb.Append(' ');
-            sb.AppendJoin(
+            sb.Append(" // ")
+                .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.Suggestions)))
+                .Append(' ')
+                .AppendJoin(
                 ", ",
                 analysis
                     .Tips.Take(3)
@@ -56,8 +56,8 @@ internal static class PasswordStrengthFormatter
         }
         else if (analysis.Strength == PasswordStrength.Strong)
         {
-            sb.Append(" // ");
-            sb.Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.GoodJob)));
+            sb.Append(" // ")
+                .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.GoodJob)));
         }
 
         return sb.ToString();

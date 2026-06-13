@@ -42,7 +42,7 @@ internal sealed class FilePickerService : IFilePickerService
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
-    private static TopLevel? GetTopLevel()
+    private static Window? GetTopLevel()
     {
         return Avalonia.Application.Current?.ApplicationLifetime
             is IClassicDesktopStyleApplicationLifetime desktop

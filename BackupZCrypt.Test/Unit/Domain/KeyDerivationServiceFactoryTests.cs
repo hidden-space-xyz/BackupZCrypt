@@ -21,8 +21,11 @@ public sealed class KeyDerivationServiceFactoryTests
         var pbkdf2 = Stub(KeyDerivationAlgorithm.PBKDF2);
         var factory = new KeyDerivationServiceFactory([argon, pbkdf2]);
 
-        Assert.That(factory.Create(KeyDerivationAlgorithm.Argon2id), Is.SameAs(argon));
-        Assert.That(factory.Create(KeyDerivationAlgorithm.PBKDF2), Is.SameAs(pbkdf2));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(factory.Create(KeyDerivationAlgorithm.Argon2id), Is.SameAs(argon));
+            Assert.That(factory.Create(KeyDerivationAlgorithm.PBKDF2), Is.SameAs(pbkdf2));
+        }
     }
 
     [Test]

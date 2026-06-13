@@ -18,8 +18,11 @@ public sealed class BackupResultTests
             warnings: [new LocalizableMessage(MessageCode.WeakPasswordWarning)]
         );
 
-        Assert.That(result.HasErrors, Is.True);
-        Assert.That(result.HasWarnings, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.HasErrors, Is.True);
+            Assert.That(result.HasWarnings, Is.True);
+        }
     }
 
     [Test]
@@ -27,10 +30,13 @@ public sealed class BackupResultTests
     {
         var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
 
-        Assert.That(result.HasErrors, Is.False);
-        Assert.That(result.HasWarnings, Is.False);
-        Assert.That(result.Errors, Is.Empty);
-        Assert.That(result.Warnings, Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.HasErrors, Is.False);
+            Assert.That(result.HasWarnings, Is.False);
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(result.Warnings, Is.Empty);
+        }
     }
 
     [Test]
@@ -77,8 +83,11 @@ public sealed class BackupResultTests
     {
         var result = new BackupResult(true, TimeSpan.Zero, 1000, 5, 5);
 
-        Assert.That(result.BytesPerSecond, Is.EqualTo(0));
-        Assert.That(result.FilesPerSecond, Is.EqualTo(0));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.BytesPerSecond, Is.Zero);
+            Assert.That(result.FilesPerSecond, Is.Zero);
+        }
     }
 
     [Test]
@@ -86,8 +95,11 @@ public sealed class BackupResultTests
     {
         var result = new BackupResult(true, TimeSpan.FromSeconds(2), 1000, 4, 4);
 
-        Assert.That(result.BytesPerSecond, Is.EqualTo(500));
-        Assert.That(result.FilesPerSecond, Is.EqualTo(2));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.BytesPerSecond, Is.EqualTo(500));
+            Assert.That(result.FilesPerSecond, Is.EqualTo(2));
+        }
     }
 
     [Test]

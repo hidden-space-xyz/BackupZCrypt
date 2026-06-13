@@ -16,10 +16,10 @@ public sealed partial class MainWindowViewModel
         IRecipient<NavigateToPageMessage>
 {
     [ObservableProperty]
-    private NavigationItem selectedItem;
+    public partial NavigationItem SelectedItem { get; set; }
 
     [ObservableProperty]
-    private ViewModelBase currentPage;
+    public partial ViewModelBase CurrentPage { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindowViewModel"/> class, building the
@@ -48,9 +48,8 @@ public sealed partial class MainWindowViewModel
         ];
 
         VersionText = about.VersionText;
-
-        currentPage = createBackup;
-        selectedItem = NavigationItems[0];
+        CurrentPage = createBackup;
+        SelectedItem = NavigationItems[0];
         _ = createBackup.OnNavigatedToAsync();
 
         WeakReferenceMessenger.Default.Register(this);

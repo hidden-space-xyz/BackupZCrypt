@@ -16,7 +16,7 @@ public enum ManifestKind
     PlainCopy = 1,
 
     /// <summary>
-    /// A chunked manifest created without encryption (<see cref="BackupZCrypt.Domain.Enums.EncryptionAlgorithm.None"/>).
+    /// A chunked manifest created without encryption (<see cref="Domain.Enums.EncryptionAlgorithm.None"/>).
     /// </summary>
     UnencryptedChunked = 2,
 

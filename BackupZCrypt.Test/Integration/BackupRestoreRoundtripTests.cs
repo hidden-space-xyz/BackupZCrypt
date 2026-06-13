@@ -13,7 +13,7 @@ public sealed class BackupRestoreRoundtripTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
-    public static IEnumerable<TestCaseData> Configs()
+    private static IEnumerable<TestCaseData> Configs()
     {
         yield return new TestCaseData(
             EncryptionAlgorithm.None,
@@ -39,7 +39,7 @@ public sealed class BackupRestoreRoundtripTests
         KeyDerivationAlgorithm keyDerivation
     )
     {
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
         var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 
         using var source = new TempDir();
@@ -60,18 +60,24 @@ public sealed class BackupRestoreRoundtripTests
 
         var createResult = await orchestrator.ExecuteAsync(createRequest, createProgress);
 
-        Assert.That(createResult.IsSuccess, Is.True, DescribeErrors("Create failed", createResult.Errors));
-        Assert.That(
-            createResult.Value.IsSuccess,
-            Is.True,
-            DescribeErrors("Create inner result failed", createResult.Value.Errors)
-        );
-        Assert.That(createResult.Value.TotalFiles, Is.EqualTo(expected.Count));
-        Assert.That(createResult.Value.ProcessedFiles, Is.EqualTo(createResult.Value.TotalFiles));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(createResult.IsSuccess, Is.True, DescribeErrors("Create failed", createResult.Errors));
+            Assert.That(
+                createResult.Value.IsSuccess,
+                Is.True,
+                DescribeErrors("Create inner result failed", createResult.Value.Errors)
+            );
+            Assert.That(createResult.Value.TotalFiles, Is.EqualTo(expected.Count));
+            Assert.That(createResult.Value.ProcessedFiles, Is.EqualTo(createResult.Value.TotalFiles));
+        }
 
         var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
-        Assert.That(File.Exists(manifestPath), Is.True, $"Manifest not written at '{manifestPath}'.");
-        Assert.That(createProgress.Reports, Is.Not.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(File.Exists(manifestPath), Is.True, $"Manifest not written at '{manifestPath}'.");
+            Assert.That(createProgress.Reports, Is.Not.Empty);
+        }
 
         var restoreProgress = new RecordingProgress<BackupStatus>();
         var restoreRequest = NewRequest(
@@ -85,13 +91,16 @@ public sealed class BackupRestoreRoundtripTests
 
         var restoreResult = await orchestrator.ExecuteAsync(restoreRequest, restoreProgress);
 
-        Assert.That(restoreResult.IsSuccess, Is.True, DescribeErrors("Restore failed", restoreResult.Errors));
-        Assert.That(
-            restoreResult.Value.IsSuccess,
-            Is.True,
-            DescribeErrors("Restore inner result failed", restoreResult.Value.Errors)
-        );
-        Assert.That(restoreResult.Value.ProcessedFiles, Is.EqualTo(expected.Count));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(restoreResult.IsSuccess, Is.True, DescribeErrors("Restore failed", restoreResult.Errors));
+            Assert.That(
+                restoreResult.Value.IsSuccess,
+                Is.True,
+                DescribeErrors("Restore inner result failed", restoreResult.Value.Errors)
+            );
+            Assert.That(restoreResult.Value.ProcessedFiles, Is.EqualTo(expected.Count));
+        }
 
         AssertTreesByteIdentical(expected, restored.Path);
     }
@@ -99,7 +108,7 @@ public sealed class BackupRestoreRoundtripTests
     [Test]
     public async Task Restore_WithWrongPassword_FailsAndDoesNotReproduceOriginals()
     {
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
         var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 
         using var source = new TempDir();
@@ -147,7 +156,7 @@ public sealed class BackupRestoreRoundtripTests
             codes.Contains(MessageCode.ManifestRequiredForDecryption)
                 || codes.Contains(MessageCode.InvalidPassword),
             Is.True,
-            $"Expected ManifestRequiredForDecryption or InvalidPassword, got: "
+            "Expected ManifestRequiredForDecryption or InvalidPassword, got: "
                 + string.Join(", ", codes)
         );
 
@@ -156,7 +165,7 @@ public sealed class BackupRestoreRoundtripTests
             var restoredFile = Path.Combine(restored.Path, relativePath);
             if (File.Exists(restoredFile))
             {
-                Assert.That(File.ReadAllBytes(restoredFile), Is.Not.EqualTo(content));
+                Assert.That(await File.ReadAllBytesAsync(restoredFile), Is.Not.EqualTo(content));
             }
         }
     }
@@ -164,7 +173,7 @@ public sealed class BackupRestoreRoundtripTests
     [Test]
     public async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
     {
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
         var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 
         using var backup = new TempDir();
@@ -184,11 +193,14 @@ public sealed class BackupRestoreRoundtripTests
             new RecordingProgress<BackupStatus>()
         );
 
-        Assert.That(result.IsSuccess, Is.False, "Restore without a manifest unexpectedly succeeded.");
-        Assert.That(
-            result.Errors,
-            Has.Some.Matches<LocalizableMessage>(e => e.Code == MessageCode.ManifestRequiredForDecryption)
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False, "Restore without a manifest unexpectedly succeeded.");
+            Assert.That(
+                result.Errors,
+                Has.Some.Matches<LocalizableMessage>(e => e.Code == MessageCode.ManifestRequiredForDecryption)
+            );
+        }
     }
 
     private static BackupRequest NewRequest(
@@ -248,8 +260,11 @@ public sealed class BackupRestoreRoundtripTests
         foreach (var (relativePath, content) in expected)
         {
             var restoredFile = Path.Combine(restoredRoot, relativePath);
-            Assert.That(File.Exists(restoredFile), Is.True, $"Missing restored file '{relativePath}'.");
-            Assert.That(File.ReadAllBytes(restoredFile), Is.EqualTo(content));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(File.Exists(restoredFile), Is.True, $"Missing restored file '{relativePath}'.");
+                Assert.That(File.ReadAllBytes(restoredFile), Is.EqualTo(content));
+            }
         }
 
         var restoredFiles = Directory
@@ -257,7 +272,7 @@ public sealed class BackupRestoreRoundtripTests
             .Select(f => Path.GetRelativePath(restoredRoot, f))
             .ToHashSet(StringComparer.Ordinal);
 
-        Assert.That(restoredFiles.Count, Is.EqualTo(expected.Count));
+        Assert.That(restoredFiles, Has.Count.EqualTo(expected.Count));
     }
 
     private static HashSet<MessageCode> CollectCodes(Result<BackupResult> result)

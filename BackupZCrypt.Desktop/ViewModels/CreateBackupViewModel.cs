@@ -39,43 +39,43 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     private CompressionMode compressionMode = CompressionMode.None;
 
     [ObservableProperty]
-    private bool isEncryptionEnabled = true;
+    public partial bool IsEncryptionEnabled { get; set; } = true;
 
     [ObservableProperty]
-    private string encryptionSummary = string.Empty;
+    public partial string EncryptionSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string keyDerivationSummary = string.Empty;
+    public partial string KeyDerivationSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string compressionSummary = string.Empty;
+    public partial string CompressionSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string password = string.Empty;
+    public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string confirmPassword = string.Empty;
+    public partial string ConfirmPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool revealPassword;
+    public partial bool RevealPassword { get; set; }
 
     [ObservableProperty]
-    private double strengthScore;
+    public partial double StrengthScore { get; set; }
 
     [ObservableProperty]
-    private string strengthDescription = string.Empty;
+    public partial string StrengthDescription { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private IBrush strengthBrush = Brushes.Gray;
+    public partial IBrush StrengthBrush { get; set; } = Brushes.Gray;
 
     [ObservableProperty]
-    private bool hasStrength;
+    public partial bool HasStrength { get; set; }
 
     [ObservableProperty]
-    private bool showGeneratedNotice;
+    public partial bool ShowGeneratedNotice { get; set; }
 
     [ObservableProperty]
-    private bool showCopiedNotice;
+    public partial bool ShowCopiedNotice { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.

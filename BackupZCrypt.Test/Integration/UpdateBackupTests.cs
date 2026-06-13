@@ -13,7 +13,7 @@ public sealed class UpdateBackupTests
     [Test]
     public async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
         var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
 
         using var source = new TempDir();
@@ -30,50 +30,56 @@ public sealed class UpdateBackupTests
         );
         Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
 
-        var modifiedContent = "MODIFIED content that is clearly different from the original";
+        const string modifiedContent = "MODIFIED content that is clearly different from the original";
         source.WriteText("changing.txt", modifiedContent);
-        var addedContent = "freshly added file";
+        const string addedContent = "freshly added file";
         source.WriteText(Path.Combine("dir", "added.txt"), addedContent);
 
         var updateResult = await orchestrator.ExecuteAsync(
             NewRequest(source.Path, destination.Path, BackupOperation.Update),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.That(
-            updateResult.IsSuccess && updateResult.Value.IsSuccess,
-            Is.True,
-            "Update did not succeed."
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                    updateResult.IsSuccess && updateResult.Value.IsSuccess,
+                    Is.True,
+                    "Update did not succeed."
+                );
 
-        Assert.That(updateResult.Value.TotalFiles, Is.EqualTo(2));
-        Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(updateResult.Value.TotalFiles));
+            Assert.That(updateResult.Value.TotalFiles, Is.EqualTo(2));
+            Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(updateResult.Value.TotalFiles));
+        }
 
         var restoreResult = await orchestrator.ExecuteAsync(
             NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.That(
-            restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
-            Is.True,
-            "Restore of the updated backup did not succeed."
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                    restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                    Is.True,
+                    "Restore of the updated backup did not succeed."
+                );
 
-        Assert.That(
-            File.ReadAllText(Path.Combine(restored.Path, "unchanged.txt")),
-            Is.EqualTo("stays the same")
-        );
-        Assert.That(
-            File.ReadAllText(Path.Combine(restored.Path, "changing.txt")),
-            Is.EqualTo(modifiedContent)
-        );
-        Assert.That(
-            File.ReadAllText(Path.Combine(restored.Path, "dir", "keep.txt")),
-            Is.EqualTo("nested keep")
-        );
-        Assert.That(
-            File.ReadAllText(Path.Combine(restored.Path, "dir", "added.txt")),
-            Is.EqualTo(addedContent)
-        );
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(restored.Path, "unchanged.txt")),
+                Is.EqualTo("stays the same")
+            );
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(restored.Path, "changing.txt")),
+                Is.EqualTo(modifiedContent)
+            );
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "keep.txt")),
+                Is.EqualTo("nested keep")
+            );
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "added.txt")),
+                Is.EqualTo(addedContent)
+            );
+        }
     }
 
     private static BackupRequest NewRequest(

@@ -9,11 +9,14 @@ public sealed class BackupStatusTests
     {
         var status = new BackupStatus(3, 10, 300, 1000, TimeSpan.FromSeconds(2));
 
-        Assert.That(status.ProcessedFiles, Is.EqualTo(3));
-        Assert.That(status.TotalFiles, Is.EqualTo(10));
-        Assert.That(status.ProcessedBytes, Is.EqualTo(300));
-        Assert.That(status.TotalBytes, Is.EqualTo(1000));
-        Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(2)));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(status.ProcessedFiles, Is.EqualTo(3));
+            Assert.That(status.TotalFiles, Is.EqualTo(10));
+            Assert.That(status.ProcessedBytes, Is.EqualTo(300));
+            Assert.That(status.TotalBytes, Is.EqualTo(1000));
+            Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(2)));
+        }
     }
 
     [Test]

@@ -21,8 +21,11 @@ public sealed class CompressionServiceFactoryTests
         var zstd = Stub(CompressionMode.Zstd);
         var factory = new CompressionServiceFactory([none, zstd]);
 
-        Assert.That(factory.Create(CompressionMode.None), Is.SameAs(none));
-        Assert.That(factory.Create(CompressionMode.Zstd), Is.SameAs(zstd));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(factory.Create(CompressionMode.None), Is.SameAs(none));
+            Assert.That(factory.Create(CompressionMode.Zstd), Is.SameAs(zstd));
+        }
     }
 
     [Test]

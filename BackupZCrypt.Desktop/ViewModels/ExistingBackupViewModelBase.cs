@@ -31,25 +31,25 @@ public abstract partial class ExistingBackupViewModelBase(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    private string password = string.Empty;
+    public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private ManifestKind detectedKind = ManifestKind.Missing;
+    public partial ManifestKind DetectedKind { get; set; } = ManifestKind.Missing;
 
     [ObservableProperty]
-    private bool hasDetection;
+    public partial bool HasDetection { get; set; }
 
     [ObservableProperty]
-    private string detectionMessage = string.Empty;
+    public partial string DetectionMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private IBrush detectionBrush = new SolidColorBrush(Color.Parse("#9AA1B5"));
+    public partial IBrush DetectionBrush { get; set; } = new SolidColorBrush(Color.Parse("#9AA1B5"));
 
     [ObservableProperty]
-    private string detectionIcon = string.Empty;
+    public partial string DetectionIcon { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool isPasswordRequired;
+    public partial bool IsPasswordRequired { get; set; }
 
     /// <summary>
     /// Gets the path that points at the existing backup (the source for a restore, the destination for an update).

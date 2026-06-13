@@ -11,8 +11,11 @@ public sealed class PathNormalizationHelperTests
     {
         var result = PathNormalizationHelper.TryNormalize(rawPath, out var error);
 
-        Assert.That(result, Is.EqualTo(string.Empty));
-        Assert.That(error, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result, Is.EqualTo(string.Empty));
+            Assert.That(error, Is.Null);
+        }
     }
 
     [Test]
@@ -20,9 +23,12 @@ public sealed class PathNormalizationHelperTests
     {
         var result = PathNormalizationHelper.TryNormalize("some-relative-folder", out var error);
 
-        Assert.That(error, Is.Null);
-        Assert.That(result, Is.Not.Null);
-        Assert.That(Path.IsPathRooted(result), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(error, Is.Null);
+            Assert.That(result, Is.Not.Null);
+            Assert.That(Path.IsPathRooted(result), Is.True);
+        }
     }
 
     [Test]
@@ -32,8 +38,11 @@ public sealed class PathNormalizationHelperTests
 
         var result = PathNormalizationHelper.TryNormalize(tooLong, out var error);
 
-        Assert.That(result, Is.Null);
-        Assert.That(error, Is.Not.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result, Is.Null);
+            Assert.That(error, Is.Not.Null);
+        }
         Assert.That(error!.Code, Is.EqualTo(MessageCode.InvalidPathFormat));
     }
 }

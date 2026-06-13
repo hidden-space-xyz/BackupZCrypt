@@ -17,7 +17,7 @@ public sealed class KeyDerivationStrategyTests
         0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
     ];
 
-    public static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs() =>
+    private static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs() =>
         [
             new Argon2IdKeyDerivationStrategy(),
             new Pbkdf2KeyDerivationStrategy(),
@@ -31,7 +31,7 @@ public sealed class KeyDerivationStrategyTests
     {
         var key = kdf.DeriveKey(Password, Salt, KeySizeBits);
 
-        Assert.That(key.Length, Is.EqualTo(KeySizeBits / 8));
+        Assert.That(key, Has.Length.EqualTo(KeySizeBits / 8));
 
         var keyAgain = kdf.DeriveKey(Password, Salt, KeySizeBits);
         Assert.That(keyAgain, Is.EqualTo(key));

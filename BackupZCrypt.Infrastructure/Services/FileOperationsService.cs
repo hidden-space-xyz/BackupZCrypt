@@ -34,7 +34,7 @@ internal sealed class FileOperationsService : IFileOperationsService
             {
                 FileSystemEnumerable<string> enumerable = new(
                     directoryPath,
-                    static (ref FileSystemEntry entry) => entry.ToFullPath(),
+                    static (ref entry) => entry.ToFullPath(),
                     new EnumerationOptions
                     {
                         RecurseSubdirectories = true,
@@ -43,10 +43,10 @@ internal sealed class FileOperationsService : IFileOperationsService
                     }
                 )
                 {
-                    ShouldIncludePredicate = (ref FileSystemEntry entry) =>
+                    ShouldIncludePredicate = (ref entry) =>
                         !entry.IsDirectory
                         && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName),
-                    ShouldRecursePredicate = static (ref FileSystemEntry entry) =>
+                    ShouldRecursePredicate = static (ref entry) =>
                         (entry.Attributes & FileAttributes.ReparsePoint) == 0,
                 };
 

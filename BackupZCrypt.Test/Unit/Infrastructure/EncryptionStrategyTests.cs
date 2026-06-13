@@ -23,7 +23,7 @@ public sealed class EncryptionStrategyTests
 
     private static readonly byte[] AssociatedData = [0xDE, 0xAD, 0xBE, 0xEF];
 
-    public static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers() =>
+    private static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers() =>
         [
             new AesEncryptionStrategy(),
             new ChaCha20EncryptionStrategy(),
@@ -62,7 +62,7 @@ public sealed class EncryptionStrategyTests
 
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
-        Assert.That(ciphertext.Length, Is.EqualTo(plaintext.Length + EncryptionConstants.TagSize));
+        Assert.That(ciphertext, Has.Length.EqualTo(plaintext.Length + EncryptionConstants.TagSize));
 
         var ciphertextBody = ciphertext[..plaintext.Length];
         Assert.That(ciphertextBody, Is.Not.EqualTo(plaintext));

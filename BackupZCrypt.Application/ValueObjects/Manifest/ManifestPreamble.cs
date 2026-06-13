@@ -10,8 +10,8 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <param name="Nonce">The nonce used to encrypt the manifest payload.</param>
 /// <param name="EncryptedPayload">The AEAD-encrypted manifest document with its tag appended.</param>
 public sealed record ManifestPreamble(
-    BackupZCrypt.Domain.Enums.EncryptionAlgorithm Algorithm,
-    BackupZCrypt.Domain.Enums.KeyDerivationAlgorithm KeyDerivation,
+    Domain.Enums.EncryptionAlgorithm Algorithm,
+    Domain.Enums.KeyDerivationAlgorithm KeyDerivation,
     byte[] MasterSalt,
     byte[] Nonce,
     byte[] EncryptedPayload

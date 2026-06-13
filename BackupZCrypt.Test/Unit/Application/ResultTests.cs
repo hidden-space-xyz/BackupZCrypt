@@ -10,11 +10,17 @@ public sealed class ResultTests
     {
         var result = Result.Failure(MessageCode.PasswordTooShort, "extra", 42);
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors, Has.Count.EqualTo(1));
+        }
         var error = result.Errors[0];
-        Assert.That(error.Code, Is.EqualTo(MessageCode.PasswordTooShort));
-        Assert.That(error.Args, Is.EqualTo(new object[] { "extra", 42 }));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(error.Code, Is.EqualTo(MessageCode.PasswordTooShort));
+            Assert.That(error.Args, Is.EqualTo(new object[] { "extra", 42 }));
+        }
     }
 
     [Test]
@@ -25,11 +31,14 @@ public sealed class ResultTests
             new LocalizableMessage(MessageCode.PasswordRequired)
         );
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(
-            result.Errors.Select(e => e.Code),
-            Is.EqualTo(new[] { MessageCode.SourcePathEmpty, MessageCode.PasswordRequired })
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(
+                result.Errors.Select(e => e.Code),
+                Is.EqualTo([MessageCode.SourcePathEmpty, MessageCode.PasswordRequired])
+            );
+        }
     }
 
     [Test]
@@ -37,8 +46,11 @@ public sealed class ResultTests
     {
         Result result = MessageCode.InvalidPassword;
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors, Has.Count.EqualTo(1));
+        }
         Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.InvalidPassword));
     }
 
@@ -47,9 +59,12 @@ public sealed class ResultTests
     {
         var result = Result<int>.Success(7);
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo(7));
-        Assert.That(result.Errors, Is.Empty);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Is.EqualTo(7));
+            Assert.That(result.Errors, Is.Empty);
+        }
     }
 
     [Test]
@@ -57,8 +72,11 @@ public sealed class ResultTests
     {
         Result<string> result = "ok";
 
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value, Is.EqualTo("ok"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Is.EqualTo("ok"));
+        }
     }
 
     [Test]
@@ -66,8 +84,11 @@ public sealed class ResultTests
     {
         Result<string> result = MessageCode.InvalidPassword;
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.IsSuccess, Is.False);
+            Assert.That(result.Errors, Has.Count.EqualTo(1));
+        }
         Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.InvalidPassword));
     }
 

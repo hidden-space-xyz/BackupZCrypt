@@ -34,52 +34,52 @@ public abstract partial class OperationViewModelBase(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    private string sourcePath = string.Empty;
+    public partial string SourcePath { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    private string destinationPath = string.Empty;
+    public partial string DestinationPath { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool isRunning;
+    public partial bool IsRunning { get; set; }
 
     [ObservableProperty]
-    private double progressValue;
+    public partial double ProgressValue { get; set; }
 
     [ObservableProperty]
-    private string progressText = string.Empty;
+    public partial string ProgressText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string elapsedText = string.Empty;
+    public partial string ElapsedText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool hasResult;
+    public partial bool HasResult { get; set; }
 
     [ObservableProperty]
-    private bool resultIsSuccess;
+    public partial bool ResultIsSuccess { get; set; }
 
     [ObservableProperty]
-    private string resultTitle = string.Empty;
+    public partial string ResultTitle { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string resultFiles = string.Empty;
+    public partial string ResultFiles { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string resultDuration = string.Empty;
+    public partial string ResultDuration { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string resultSize = string.Empty;
+    public partial string ResultSize { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool hasResultDetails;
+    public partial bool HasResultDetails { get; set; }
 
     [ObservableProperty]
-    private bool showWarnings;
+    public partial bool ShowWarnings { get; set; }
 
     [ObservableProperty]
-    private bool showErrors;
+    public partial bool ShowErrors { get; set; }
 
     /// <summary>
     /// Gets the localized error messages produced by the last operation.
@@ -126,6 +126,7 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // Ignore
         }
     }
 
@@ -140,7 +141,9 @@ public abstract partial class OperationViewModelBase(
     /// Applies the recently used paths to the page inputs. The default implementation does nothing.
     /// </summary>
     /// <param name="recent">The recently used paths.</param>
-    protected virtual void ApplyRecentPaths(RecentPathSettings recent) { }
+    protected virtual void ApplyRecentPaths(RecentPathSettings recent)
+    {
+    }
 
     /// <summary>
     /// Determines whether the operation can start, requiring that no operation is running and both
@@ -165,7 +168,9 @@ public abstract partial class OperationViewModelBase(
     /// <summary>
     /// Invoked when the source or destination path changes. The default implementation does nothing.
     /// </summary>
-    protected virtual void HandlePathChanged() { }
+    protected virtual void HandlePathChanged()
+    {
+    }
 
     partial void OnSourcePathChanged(string value)
     {
@@ -375,6 +380,7 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // Ignore
         }
     }
 }

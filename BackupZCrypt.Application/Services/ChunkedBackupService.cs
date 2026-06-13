@@ -1343,12 +1343,14 @@ internal sealed class ChunkedBackupService(
                     }
                     catch
                     {
+                        // Ignore
                     }
                 }
             }
         }
         catch
         {
+            // Ignore
         }
     }
 
@@ -1539,6 +1541,7 @@ internal sealed class ChunkedBackupService(
             }
             catch
             {
+                // Ignore
             }
         }
 
@@ -1644,32 +1647,23 @@ internal sealed class ChunkedBackupService(
                 or UnauthorizedAccessException;
     }
 
-    private sealed class DerivedKeySet : IDisposable
+    private sealed class DerivedKeySet(
+        byte[] masterKey,
+        byte[] chunkEncryptionKey,
+        byte[] chunkNonceKey,
+        byte[] namingKey,
+        byte[] manifestEncryptionKey
+        ) : IDisposable
     {
-        public DerivedKeySet(
-            byte[] masterKey,
-            byte[] chunkEncryptionKey,
-            byte[] chunkNonceKey,
-            byte[] namingKey,
-            byte[] manifestEncryptionKey
-        )
-        {
-            MasterKey = masterKey;
-            ChunkEncryptionKey = chunkEncryptionKey;
-            ChunkNonceKey = chunkNonceKey;
-            NamingKey = namingKey;
-            ManifestEncryptionKey = manifestEncryptionKey;
-        }
+        public byte[] MasterKey { get; } = masterKey;
 
-        public byte[] MasterKey { get; }
+        public byte[] ChunkEncryptionKey { get; } = chunkEncryptionKey;
 
-        public byte[] ChunkEncryptionKey { get; }
+        public byte[] ChunkNonceKey { get; } = chunkNonceKey;
 
-        public byte[] ChunkNonceKey { get; }
+        public byte[] NamingKey { get; } = namingKey;
 
-        public byte[] NamingKey { get; }
-
-        public byte[] ManifestEncryptionKey { get; }
+        public byte[] ManifestEncryptionKey { get; } = manifestEncryptionKey;
 
         public void Dispose()
         {
