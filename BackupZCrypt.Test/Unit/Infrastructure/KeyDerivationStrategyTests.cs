@@ -20,15 +20,14 @@ public sealed class KeyDerivationStrategyTests
         0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
     ];
 
-    public static TheoryData<IKeyDerivationAlgorithmStrategy> Kdfs() =>
+    public static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs() =>
         [
             new Argon2IdKeyDerivationStrategy(),
             new Pbkdf2KeyDerivationStrategy(),
             new ScryptKeyDerivationStrategy(),
         ];
 
-    [Theory]
-    [MemberData(nameof(Kdfs))]
+    [TestCaseSource(nameof(Kdfs))]
     public void DeriveKey_DeterministicCorrectLength_AndSensitiveToSaltAndPassword(
         IKeyDerivationAlgorithmStrategy kdf
     )
@@ -36,20 +35,20 @@ public sealed class KeyDerivationStrategyTests
         var key = kdf.DeriveKey(Password, Salt, KeySizeBits);
 
         // Correct output length: keySize is in bits, the key is keySize/8 bytes.
-        Assert.Equal(KeySizeBits / 8, key.Length);
+        Assert.That(key.Length, Is.EqualTo(KeySizeBits / 8));
 
         // Determinism: identical inputs yield byte-identical output.
         var keyAgain = kdf.DeriveKey(Password, Salt, KeySizeBits);
-        Assert.Equal(key, keyAgain);
+        Assert.That(keyAgain, Is.EqualTo(key));
 
         // Salt sensitivity: flipping one salt byte changes the key.
         var otherSalt = (byte[])Salt.Clone();
         otherSalt[0] ^= 0xFF;
         var keyOtherSalt = kdf.DeriveKey(Password, otherSalt, KeySizeBits);
-        Assert.NotEqual(key, keyOtherSalt);
+        Assert.That(keyOtherSalt, Is.Not.EqualTo(key));
 
         // Password sensitivity: a different password changes the key.
         var keyOtherPassword = kdf.DeriveKey(Password + "!", Salt, KeySizeBits);
-        Assert.NotEqual(key, keyOtherPassword);
+        Assert.That(keyOtherPassword, Is.Not.EqualTo(key));
     }
 }

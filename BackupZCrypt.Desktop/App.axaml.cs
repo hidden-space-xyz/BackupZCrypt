@@ -1,7 +1,6 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -25,12 +24,6 @@ public sealed class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validation from both Avalonia and the MVVM toolkit.
-            if (BindingPlugins.DataValidators.Count > 0)
-            {
-                BindingPlugins.DataValidators.RemoveAt(0);
-            }
-
             var services = ConfigureServices();
             desktop.Exit += (_, _) => services.Dispose();
 

@@ -5,28 +5,27 @@ namespace BackupZCrypt.Test.Unit.Application;
 
 public sealed class PathNormalizationHelperTests
 {
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
+    [TestCase("")]
+    [TestCase("   ")]
     public void TryNormalize_EmptyOrWhitespace_ReturnsEmptyWithoutError(string rawPath)
     {
         var result = PathNormalizationHelper.TryNormalize(rawPath, out var error);
 
-        Assert.Equal(string.Empty, result);
-        Assert.Null(error);
+        Assert.That(result, Is.EqualTo(string.Empty));
+        Assert.That(error, Is.Null);
     }
 
-    [Fact]
+    [Test]
     public void TryNormalize_RelativePath_ReturnsRootedFullPathWithoutError()
     {
         var result = PathNormalizationHelper.TryNormalize("some-relative-folder", out var error);
 
-        Assert.Null(error);
-        Assert.NotNull(result);
-        Assert.True(Path.IsPathRooted(result));
+        Assert.That(error, Is.Null);
+        Assert.That(result, Is.Not.Null);
+        Assert.That(Path.IsPathRooted(result), Is.True);
     }
 
-    [Fact]
+    [Test]
     public void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
     {
         // A path far beyond the OS limit makes normalization throw; the helper must
@@ -37,8 +36,8 @@ public sealed class PathNormalizationHelperTests
 
         var result = PathNormalizationHelper.TryNormalize(tooLong, out var error);
 
-        Assert.Null(result);
-        Assert.NotNull(error);
-        Assert.Equal(MessageCode.InvalidPathFormat, error!.Code);
+        Assert.That(result, Is.Null);
+        Assert.That(error, Is.Not.Null);
+        Assert.That(error!.Code, Is.EqualTo(MessageCode.InvalidPathFormat));
     }
 }

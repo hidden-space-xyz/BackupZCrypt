@@ -47,7 +47,7 @@ public sealed class BackupRequestValidatorTests
     private static IReadOnlyList<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages) =>
         messages.Select(m => m.Code).ToList();
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
     {
         // Empty source normalizes to string.Empty (no normalize error), so the empty-path branch fires.
@@ -56,10 +56,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.SourcePathEmpty, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.SourcePathEmpty));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_SourceNeitherFileNorDirectory_ReportsNotExist()
     {
         this.fileOperations.FileExists(SourceDir).Returns(false);
@@ -70,10 +70,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.SourcePathNotExistFormat, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.SourcePathNotExistFormat));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_EmptyPassword_ReportsPasswordRequired()
     {
         this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -86,10 +86,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.PasswordRequired, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordRequired));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_ShortPassword_ReportsPasswordTooShort()
     {
         this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -103,10 +103,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.PasswordTooShort, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordTooShort));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_PasswordMismatch_ReportsMismatch()
     {
         this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -127,10 +127,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.PasswordMismatch, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordMismatch));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_SourceEqualsDestinationDirectory_ReportsSameDirectory()
     {
         this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
@@ -144,10 +144,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Contains(MessageCode.SourceDestinationSameDirectory, Codes(errors));
+        Assert.That(Codes(errors), Does.Contain(MessageCode.SourceDestinationSameDirectory));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeErrors_FullyValidRequest_ReturnsEmpty()
     {
         this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
@@ -165,10 +165,10 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
-        Assert.Empty(errors);
+        Assert.That(errors, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeWarnings_WeakPassword_ReportsWeakPasswordWarning()
     {
         // No source directory => the disk/file-count checks are skipped; only the
@@ -184,10 +184,10 @@ public sealed class BackupRequestValidatorTests
 
         var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
 
-        Assert.Contains(MessageCode.WeakPasswordWarning, Codes(warnings));
+        Assert.That(Codes(warnings), Does.Contain(MessageCode.WeakPasswordWarning));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeWarnings_StrongPassword_DoesNotReportWeakPasswordWarning()
     {
         this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
@@ -201,10 +201,10 @@ public sealed class BackupRequestValidatorTests
 
         var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
 
-        Assert.DoesNotContain(MessageCode.WeakPasswordWarning, Codes(warnings));
+        Assert.That(Codes(warnings), Does.Not.Contain(MessageCode.WeakPasswordWarning));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeWarnings_InsufficientDiskSpace_ReportsLowDiskSpace()
     {
         this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -231,10 +231,10 @@ public sealed class BackupRequestValidatorTests
 
         var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
 
-        Assert.Contains(MessageCode.LowDiskSpaceFormat, Codes(warnings));
+        Assert.That(Codes(warnings), Does.Contain(MessageCode.LowDiskSpaceFormat));
     }
 
-    [Fact]
+    [Test]
     public async Task AnalyzeWarnings_ManyFiles_ReportsLargeOperation()
     {
         this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -259,6 +259,6 @@ public sealed class BackupRequestValidatorTests
 
         var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
 
-        Assert.Contains(MessageCode.LargeOperationFormat, Codes(warnings));
+        Assert.That(Codes(warnings), Does.Contain(MessageCode.LargeOperationFormat));
     }
 }

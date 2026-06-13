@@ -20,7 +20,7 @@ public sealed class LocalizationParityTests
         "Strings.es.resx"
     );
 
-    [Fact]
+    [Test]
     public void EveryMessageCode_HasEnglishResxKey()
     {
         var englishKeys = ReadResxKeys(EnglishResxPath);
@@ -30,14 +30,15 @@ public sealed class LocalizationParityTests
             .OrderBy(code => code, StringComparer.Ordinal)
             .ToList();
 
-        Assert.True(
-            missing.Count == 0,
+        Assert.That(
+            missing,
+            Is.Empty,
             $"MessageCode members with no key in Strings.resx (would show the raw enum name): "
                 + string.Join(", ", missing)
         );
     }
 
-    [Fact]
+    [Test]
     public void EnglishAndSpanish_HaveIdenticalKeySets()
     {
         var englishKeys = ReadResxKeys(EnglishResxPath);
@@ -52,8 +53,9 @@ public sealed class LocalizationParityTests
             .OrderBy(k => k, StringComparer.Ordinal)
             .ToList();
 
-        Assert.True(
+        Assert.That(
             onlyInEnglish.Count == 0 && onlyInSpanish.Count == 0,
+            Is.True,
             "Strings.resx and Strings.es.resx must contain the identical set of keys.\n"
                 + $"Only in English: {Describe(onlyInEnglish)}\n"
                 + $"Only in Spanish: {Describe(onlyInSpanish)}"
@@ -62,8 +64,9 @@ public sealed class LocalizationParityTests
 
     private static HashSet<string> ReadResxKeys(string resxPath)
     {
-        Assert.True(
+        Assert.That(
             File.Exists(resxPath),
+            Is.True,
             $"Resx file not found at '{resxPath}'. Confirm it is copied to the test output."
         );
 

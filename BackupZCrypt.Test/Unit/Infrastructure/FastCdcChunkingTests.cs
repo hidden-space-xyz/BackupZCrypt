@@ -37,15 +37,15 @@ public sealed class FastCdcChunkingTests
         return stream.ToArray();
     }
 
-    [Fact]
+    [Test]
     public async Task EmptyInput_YieldsNoChunks()
     {
         var chunks = await DrainAsync([]);
 
-        Assert.Empty(chunks);
+        Assert.That(chunks, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public async Task SmallInput_YieldsSingleChunkEqualToInput()
     {
         // ~10 KiB is below the 256 KiB minimum, so it cannot be split.
@@ -53,11 +53,11 @@ public sealed class FastCdcChunkingTests
 
         var chunks = await DrainAsync(input);
 
-        Assert.Single(chunks);
-        Assert.Equal(input, chunks[0]);
+        Assert.That(chunks, Has.Count.EqualTo(1));
+        Assert.That(chunks[0], Is.EqualTo(input));
     }
 
-    [Fact]
+    [Test]
     public async Task LargeInput_ReassemblesToOriginal_WithMultipleChunks()
     {
         // ~10 MiB exceeds the 4 MiB max, so it must split into several chunks.
@@ -65,21 +65,21 @@ public sealed class FastCdcChunkingTests
 
         var chunks = await DrainAsync(input);
 
-        Assert.True(chunks.Count > 1, $"Expected multiple chunks, got {chunks.Count}.");
-        Assert.Equal(input, Concat(chunks));
+        Assert.That(chunks.Count, Is.GreaterThan(1), $"Expected multiple chunks, got {chunks.Count}.");
+        Assert.That(Concat(chunks), Is.EqualTo(input));
     }
 
-    [Fact]
+    [Test]
     public async Task EveryChunk_DoesNotExceedMaxSize()
     {
         var input = RandomBytes(10 * 1024 * 1024, seed: 3);
 
         var chunks = await DrainAsync(input);
 
-        Assert.All(chunks, chunk => Assert.True(chunk.Length <= ChunkMaxSize));
+        Assert.That(chunks, Has.All.Matches<byte[]>(chunk => chunk.Length <= ChunkMaxSize));
     }
 
-    [Fact]
+    [Test]
     public async Task Chunking_IsDeterministic_AcrossRuns()
     {
         var input = RandomBytes(10 * 1024 * 1024, seed: 4);
@@ -90,16 +90,16 @@ public sealed class FastCdcChunkingTests
         var firstLengths = first.Select(c => c.Length).ToArray();
         var secondLengths = second.Select(c => c.Length).ToArray();
 
-        Assert.Equal(firstLengths, secondLengths);
+        Assert.That(secondLengths, Is.EqualTo(firstLengths));
     }
 
-    [Fact]
-    public async Task ChunkAsync_NullSource_ThrowsArgumentNullException()
+    [Test]
+    public void ChunkAsync_NullSource_ThrowsArgumentNullException()
     {
         var strategy = new FastCdcChunkingStrategy();
 
         // The guard lives in an async iterator, so it only fires once enumeration starts.
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+        Assert.ThrowsAsync<ArgumentNullException>(async () =>
         {
             await foreach (var _ in strategy.ChunkAsync(null!))
             {

@@ -26,7 +26,7 @@
               <TextBox Grid.Column="0"
                        Classes="field"
                        Text="{Binding SourcePath}"
-                       Watermark="{x:Static res:Strings.SourceHint}" />
+                       PlaceholderText="{x:Static res:Strings.SourceHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
                       Content="{x:Static res:Strings.BrowseFolder}"
@@ -44,7 +44,7 @@
               <TextBox Grid.Column="0"
                        Classes="field"
                        Text="{Binding DestinationPath}"
-                       Watermark="{x:Static res:Strings.DestinationHint}" />
+                       PlaceholderText="{x:Static res:Strings.DestinationHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
                       Content="{x:Static res:Strings.BrowseFolder}"
@@ -107,7 +107,7 @@
                        Text="{Binding Password}"
                        PasswordChar="●"
                        RevealPassword="{Binding RevealPassword}"
-                       Watermark="{x:Static res:Strings.PasswordHint}" />
+                       PlaceholderText="{x:Static res:Strings.PasswordHint}" />
               <ToggleButton Grid.Column="1"
                             Margin="8,0,0,0"
                             Content="👁"
@@ -139,7 +139,7 @@
                      Text="{Binding ConfirmPassword}"
                      PasswordChar="●"
                      RevealPassword="{Binding RevealPassword}"
-                     Watermark="{x:Static res:Strings.ConfirmPasswordHint}" />
+                     PlaceholderText="{x:Static res:Strings.ConfirmPasswordHint}" />
           </StackPanel>
 
           <Border Background="{StaticResource InfoCardBrush}"

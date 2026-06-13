@@ -12,7 +12,7 @@ public sealed class UpdateBackupTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
-    [Fact]
+    [Test]
     public async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
         using var provider = TestHost.CreateProvider();
@@ -31,7 +31,7 @@ public sealed class UpdateBackupTests
             NewRequest(source.Path, destination.Path, BackupOperation.Create),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.True(createResult.IsSuccess && createResult.Value.IsSuccess);
+        Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
 
         // --- Mutate the source: modify one file, add a brand-new one ---
         var modifiedContent = "MODIFIED content that is clearly different from the original";
@@ -44,42 +44,44 @@ public sealed class UpdateBackupTests
             NewRequest(source.Path, destination.Path, BackupOperation.Update),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.True(
+        Assert.That(
             updateResult.IsSuccess && updateResult.Value.IsSuccess,
+            Is.True,
             "Update did not succeed."
         );
 
         // Update reports only the files it had to (re)process: the changed one + the new one.
-        Assert.Equal(2, updateResult.Value.TotalFiles);
-        Assert.Equal(updateResult.Value.TotalFiles, updateResult.Value.ProcessedFiles);
+        Assert.That(updateResult.Value.TotalFiles, Is.EqualTo(2));
+        Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(updateResult.Value.TotalFiles));
 
         // --- Restore the updated backup ---
         var restoreResult = await orchestrator.ExecuteAsync(
             NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.True(
+        Assert.That(
             restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+            Is.True,
             "Restore of the updated backup did not succeed."
         );
 
         // All four files (unchanged, modified, kept-nested, added-nested) are present and
         // carry the post-update content.
-        Assert.Equal(
-            "stays the same",
-            File.ReadAllText(Path.Combine(restored.Path, "unchanged.txt"))
+        Assert.That(
+            File.ReadAllText(Path.Combine(restored.Path, "unchanged.txt")),
+            Is.EqualTo("stays the same")
         );
-        Assert.Equal(
-            modifiedContent,
-            File.ReadAllText(Path.Combine(restored.Path, "changing.txt"))
+        Assert.That(
+            File.ReadAllText(Path.Combine(restored.Path, "changing.txt")),
+            Is.EqualTo(modifiedContent)
         );
-        Assert.Equal(
-            "nested keep",
-            File.ReadAllText(Path.Combine(restored.Path, "dir", "keep.txt"))
+        Assert.That(
+            File.ReadAllText(Path.Combine(restored.Path, "dir", "keep.txt")),
+            Is.EqualTo("nested keep")
         );
-        Assert.Equal(
-            addedContent,
-            File.ReadAllText(Path.Combine(restored.Path, "dir", "added.txt"))
+        Assert.That(
+            File.ReadAllText(Path.Combine(restored.Path, "dir", "added.txt")),
+            Is.EqualTo(addedContent)
         );
     }
 

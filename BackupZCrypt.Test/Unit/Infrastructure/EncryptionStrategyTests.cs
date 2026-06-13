@@ -27,7 +27,7 @@ public sealed class EncryptionStrategyTests
 
     // The 5 ciphers that actually transform data. Indexed only by their concrete type so
     // each [Theory] case constructs a fresh instance (strategies are stateless).
-    public static TheoryData<IEncryptionAlgorithmStrategy> RealCiphers() =>
+    public static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers() =>
         [
             new AesEncryptionStrategy(),
             new ChaCha20EncryptionStrategy(),
@@ -43,8 +43,7 @@ public sealed class EncryptionStrategyTests
         return data;
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Roundtrip_RecoversPlaintext_AcrossSizes(IEncryptionAlgorithmStrategy cipher)
     {
         // 0 bytes, 1 byte, 1 KiB, ~64 KiB.
@@ -57,28 +56,26 @@ public sealed class EncryptionStrategyTests
             var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
             var decrypted = cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData);
 
-            Assert.Equal(plaintext, decrypted);
+            Assert.That(decrypted, Is.EqualTo(plaintext));
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Ciphertext_AppendsTag_AndDiffersFromPlaintext(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(1024, seed: 7);
 
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
-        Assert.Equal(plaintext.Length + EncryptionConstants.TagSize, ciphertext.Length);
+        Assert.That(ciphertext.Length, Is.EqualTo(plaintext.Length + EncryptionConstants.TagSize));
 
         // The leading ciphertext bytes (excluding the appended tag) must not equal the
         // plaintext: a real cipher transforms the data.
         var ciphertextBody = ciphertext[..plaintext.Length];
-        Assert.NotEqual(plaintext, ciphertextBody);
+        Assert.That(ciphertextBody, Is.Not.EqualTo(plaintext));
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Decrypt_WithWrongKey_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 11);
@@ -89,13 +86,12 @@ public sealed class EncryptionStrategyTests
 
         // .NET's AesGcm/ChaCha20Poly1305 throw AuthenticationTagMismatchException (a
         // CryptographicException subtype), so match the base type, not the exact type.
-        Assert.ThrowsAny<CryptographicException>(
+        Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, wrongKey, Nonce, AssociatedData)
         );
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Decrypt_WithWrongNonce_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 12);
@@ -104,13 +100,12 @@ public sealed class EncryptionStrategyTests
         var wrongNonce = (byte[])Nonce.Clone();
         wrongNonce[0] ^= 0xFF;
 
-        Assert.ThrowsAny<CryptographicException>(
+        Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, wrongNonce, AssociatedData)
         );
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Decrypt_WithWrongAssociatedData_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 13);
@@ -119,13 +114,12 @@ public sealed class EncryptionStrategyTests
         var wrongAad = (byte[])AssociatedData.Clone();
         wrongAad[0] ^= 0xFF;
 
-        Assert.ThrowsAny<CryptographicException>(
+        Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, wrongAad)
         );
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Decrypt_WithTamperedCiphertext_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 14);
@@ -134,13 +128,12 @@ public sealed class EncryptionStrategyTests
         // Flip a bit in the body (not the appended tag) and expect AEAD verification to fail.
         ciphertext[0] ^= 0x01;
 
-        Assert.ThrowsAny<CryptographicException>(
+        Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData)
         );
     }
 
-    [Theory]
-    [MemberData(nameof(RealCiphers))]
+    [TestCaseSource(nameof(RealCiphers))]
     public void Encrypt_WithDifferentNonce_ProducesDifferentCiphertext(
         IEncryptionAlgorithmStrategy cipher
     )
@@ -153,25 +146,25 @@ public sealed class EncryptionStrategyTests
         otherNonce[0] ^= 0xFF;
         var second = cipher.EncryptChunk(plaintext, Key, otherNonce, AssociatedData);
 
-        Assert.NotEqual(first, second);
+        Assert.That(second, Is.Not.EqualTo(first));
     }
 
-    [Fact]
+    [Test]
     public void None_IsPassthroughForEncryptAndDecrypt()
     {
         var strategy = new NoneEncryptionStrategy();
         var plaintext = RandomBytes(777, seed: 99);
 
         var encrypted = strategy.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
-        Assert.Equal(plaintext, encrypted);
+        Assert.That(encrypted, Is.EqualTo(plaintext));
 
         var decrypted = strategy.DecryptChunk(encrypted, Key, Nonce, AssociatedData);
-        Assert.Equal(plaintext, decrypted);
+        Assert.That(decrypted, Is.EqualTo(plaintext));
     }
 
-    [Fact]
+    [Test]
     public void None_HasNoneId()
     {
-        Assert.Equal(EncryptionAlgorithm.None, new NoneEncryptionStrategy().Id);
+        Assert.That(new NoneEncryptionStrategy().Id, Is.EqualTo(EncryptionAlgorithm.None));
     }
 }

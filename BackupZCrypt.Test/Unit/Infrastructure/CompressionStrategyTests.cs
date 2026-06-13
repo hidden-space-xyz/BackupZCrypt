@@ -5,7 +5,7 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 
 public sealed class CompressionStrategyTests
 {
-    public static TheoryData<ICompressionStrategy> Levels() =>
+    public static IEnumerable<ICompressionStrategy> Levels() =>
         [
             new ZstdFastCompressionStrategy(),
             new ZstdCompressionStrategy(),
@@ -54,8 +54,7 @@ public sealed class CompressionStrategyTests
         return collected.ToArray();
     }
 
-    [Theory]
-    [MemberData(nameof(Levels))]
+    [TestCaseSource(nameof(Levels))]
     public async Task Roundtrip_RecoversCompressibleData(ICompressionStrategy strategy)
     {
         var original = CompressiblePattern(200 * 1024);
@@ -63,11 +62,10 @@ public sealed class CompressionStrategyTests
         var compressed = await CompressToBytesAsync(strategy, original);
         var restored = await DecompressToBytesAsync(strategy, compressed);
 
-        Assert.Equal(original, restored);
+        Assert.That(restored, Is.EqualTo(original));
     }
 
-    [Theory]
-    [MemberData(nameof(Levels))]
+    [TestCaseSource(nameof(Levels))]
     public async Task Roundtrip_RecoversRandomData(ICompressionStrategy strategy)
     {
         var original = RandomBytes(64 * 1024, seed: 2024);
@@ -75,19 +73,19 @@ public sealed class CompressionStrategyTests
         var compressed = await CompressToBytesAsync(strategy, original);
         var restored = await DecompressToBytesAsync(strategy, compressed);
 
-        Assert.Equal(original, restored);
+        Assert.That(restored, Is.EqualTo(original));
     }
 
-    [Theory]
-    [MemberData(nameof(Levels))]
+    [TestCaseSource(nameof(Levels))]
     public async Task Compress_ShrinksCompressibleInput(ICompressionStrategy strategy)
     {
         var original = CompressiblePattern(200 * 1024);
 
         var compressed = await CompressToBytesAsync(strategy, original);
 
-        Assert.True(
+        Assert.That(
             compressed.Length < original.Length,
+            Is.True,
             $"Expected compressed length {compressed.Length} < original {original.Length}."
         );
     }

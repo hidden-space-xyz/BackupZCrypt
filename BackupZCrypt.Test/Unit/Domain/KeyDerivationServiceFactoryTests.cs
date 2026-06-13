@@ -14,18 +14,18 @@ public sealed class KeyDerivationServiceFactoryTests
         return strategy;
     }
 
-    [Fact]
+    [Test]
     public void Create_RegisteredAlgorithm_ReturnsMatchingStrategy()
     {
         var argon = Stub(KeyDerivationAlgorithm.Argon2id);
         var pbkdf2 = Stub(KeyDerivationAlgorithm.PBKDF2);
         var factory = new KeyDerivationServiceFactory([argon, pbkdf2]);
 
-        Assert.Same(argon, factory.Create(KeyDerivationAlgorithm.Argon2id));
-        Assert.Same(pbkdf2, factory.Create(KeyDerivationAlgorithm.PBKDF2));
+        Assert.That(factory.Create(KeyDerivationAlgorithm.Argon2id), Is.SameAs(argon));
+        Assert.That(factory.Create(KeyDerivationAlgorithm.PBKDF2), Is.SameAs(pbkdf2));
     }
 
-    [Fact]
+    [Test]
     public void Create_UnregisteredAlgorithm_Throws()
     {
         var factory = new KeyDerivationServiceFactory([Stub(KeyDerivationAlgorithm.Argon2id)]);

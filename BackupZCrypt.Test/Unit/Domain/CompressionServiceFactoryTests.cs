@@ -14,18 +14,18 @@ public sealed class CompressionServiceFactoryTests
         return strategy;
     }
 
-    [Fact]
+    [Test]
     public void Create_RegisteredMode_ReturnsMatchingStrategy()
     {
         var none = Stub(CompressionMode.None);
         var zstd = Stub(CompressionMode.Zstd);
         var factory = new CompressionServiceFactory([none, zstd]);
 
-        Assert.Same(none, factory.Create(CompressionMode.None));
-        Assert.Same(zstd, factory.Create(CompressionMode.Zstd));
+        Assert.That(factory.Create(CompressionMode.None), Is.SameAs(none));
+        Assert.That(factory.Create(CompressionMode.Zstd), Is.SameAs(zstd));
     }
 
-    [Fact]
+    [Test]
     public void Create_UnregisteredMode_Throws()
     {
         var factory = new CompressionServiceFactory([Stub(CompressionMode.None)]);

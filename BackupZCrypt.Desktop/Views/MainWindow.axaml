@@ -11,8 +11,8 @@
         MinWidth="960" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
+        WindowDecorations="BorderOnly"
         Background="{StaticResource AppBackgroundBrush}">
 
   <Grid RowDefinitions="38,*">

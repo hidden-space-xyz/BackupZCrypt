@@ -24,7 +24,7 @@
               <TextBox Grid.Column="0"
                        Classes="field"
                        Text="{Binding SourcePath}"
-                       Watermark="{x:Static res:Strings.UpdateSourceHint}" />
+                       PlaceholderText="{x:Static res:Strings.UpdateSourceHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
                       Content="{x:Static res:Strings.BrowseFolder}"
@@ -38,7 +38,7 @@
               <TextBox Grid.Column="0"
                        Classes="field"
                        Text="{Binding DestinationPath}"
-                       Watermark="{x:Static res:Strings.BackupHint}" />
+                       PlaceholderText="{x:Static res:Strings.BackupHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
                       Content="{x:Static res:Strings.BrowseFolder}"
@@ -67,7 +67,7 @@
             <TextBox Classes="field"
                      Text="{Binding Password}"
                      PasswordChar="●"
-                     Watermark="{x:Static res:Strings.PasswordHint}" />
+                     PlaceholderText="{x:Static res:Strings.PasswordHint}" />
           </StackPanel>
         </StackPanel>
       </Border>

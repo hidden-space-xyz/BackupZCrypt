@@ -5,18 +5,19 @@ namespace BackupZCrypt.Test.Unit.Application;
 
 public sealed class ResultTests
 {
-    [Fact]
+    [Test]
     public void Failure_WithCodeAndArgs_CarriesSingleErrorWithCodeAndArgs()
     {
         var result = Result.Failure(MessageCode.PasswordTooShort, "extra", 42);
 
-        Assert.False(result.IsSuccess);
-        var error = Assert.Single(result.Errors);
-        Assert.Equal(MessageCode.PasswordTooShort, error.Code);
-        Assert.Equal(new object[] { "extra", 42 }, error.Args);
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        var error = result.Errors[0];
+        Assert.That(error.Code, Is.EqualTo(MessageCode.PasswordTooShort));
+        Assert.That(error.Args, Is.EqualTo(new object[] { "extra", 42 }));
     }
 
-    [Fact]
+    [Test]
     public void Failure_WithMessages_PreservesAllErrors()
     {
         var result = Result.Failure(
@@ -24,56 +25,58 @@ public sealed class ResultTests
             new LocalizableMessage(MessageCode.PasswordRequired)
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal(
-            new[] { MessageCode.SourcePathEmpty, MessageCode.PasswordRequired },
-            result.Errors.Select(e => e.Code)
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(
+            result.Errors.Select(e => e.Code),
+            Is.EqualTo(new[] { MessageCode.SourcePathEmpty, MessageCode.PasswordRequired })
         );
     }
 
-    [Fact]
+    [Test]
     public void ImplicitMessageCode_ConvertsToFailureResult()
     {
         Result result = MessageCode.InvalidPassword;
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal(MessageCode.InvalidPassword, Assert.Single(result.Errors).Code);
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.InvalidPassword));
     }
 
-    [Fact]
+    [Test]
     public void GenericSuccess_ExposesValueAndNoErrors()
     {
         var result = Result<int>.Success(7);
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal(7, result.Value);
-        Assert.Empty(result.Errors);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(7));
+        Assert.That(result.Errors, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public void GenericImplicitValue_ConvertsToSuccess()
     {
         Result<string> result = "ok";
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal("ok", result.Value);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo("ok"));
     }
 
-    [Fact]
+    [Test]
     public void GenericImplicitMessageCode_ConvertsToFailure()
     {
         Result<string> result = MessageCode.InvalidPassword;
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal(MessageCode.InvalidPassword, Assert.Single(result.Errors).Code);
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.Errors, Has.Count.EqualTo(1));
+        Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.InvalidPassword));
     }
 
-    [Fact]
+    [Test]
     public void GenericFailure_AccessingValue_Throws()
     {
         var result = Result<int>.Failure(MessageCode.UnexpectedErrorFormat, "boom");
 
-        Assert.False(result.IsSuccess);
-        Assert.Throws<InvalidOperationException>(() => result.Value);
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.Throws<InvalidOperationException>(() => _ = result.Value);
     }
 }

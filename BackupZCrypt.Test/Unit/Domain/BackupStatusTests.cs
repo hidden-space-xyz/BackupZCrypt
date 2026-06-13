@@ -4,19 +4,19 @@ namespace BackupZCrypt.Test.Unit.Domain;
 
 public sealed class BackupStatusTests
 {
-    [Fact]
+    [Test]
     public void Constructor_ValidInputs_StoresValues()
     {
         var status = new BackupStatus(3, 10, 300, 1000, TimeSpan.FromSeconds(2));
 
-        Assert.Equal(3, status.ProcessedFiles);
-        Assert.Equal(10, status.TotalFiles);
-        Assert.Equal(300, status.ProcessedBytes);
-        Assert.Equal(1000, status.TotalBytes);
-        Assert.Equal(TimeSpan.FromSeconds(2), status.Elapsed);
+        Assert.That(status.ProcessedFiles, Is.EqualTo(3));
+        Assert.That(status.TotalFiles, Is.EqualTo(10));
+        Assert.That(status.ProcessedBytes, Is.EqualTo(300));
+        Assert.That(status.TotalBytes, Is.EqualTo(1000));
+        Assert.That(status.Elapsed, Is.EqualTo(TimeSpan.FromSeconds(2)));
     }
 
-    [Fact]
+    [Test]
     public void Constructor_NegativeProcessedFiles_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -24,7 +24,7 @@ public sealed class BackupStatusTests
         );
     }
 
-    [Fact]
+    [Test]
     public void Constructor_NegativeElapsed_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -32,7 +32,7 @@ public sealed class BackupStatusTests
         );
     }
 
-    [Fact]
+    [Test]
     public void Constructor_ProcessedFilesGreaterThanTotal_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -40,7 +40,7 @@ public sealed class BackupStatusTests
         );
     }
 
-    [Fact]
+    [Test]
     public void Constructor_ProcessedBytesGreaterThanTotal_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(

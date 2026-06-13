@@ -10,22 +10,22 @@ namespace BackupZCrypt.Test.Integration;
 // directory (baseDirectoryPath) so nothing touches the user's LocalApplicationData.
 public sealed class SettingsServiceTests
 {
-    [Fact]
+    [Test]
     public async Task GetOrCreateAsync_WhenNoFile_ReturnsDefaultsAndCreatesFile()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
-        Assert.False(File.Exists(filePath));
+        Assert.That(File.Exists(filePath), Is.False);
 
         var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
 
-        Assert.Equal(BackupCreationSettings.DefaultValue, settings);
-        Assert.True(File.Exists(filePath), "GetOrCreateAsync did not persist the defaults file.");
+        Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
+        Assert.That(File.Exists(filePath), Is.True, "GetOrCreateAsync did not persist the defaults file.");
     }
 
-    [Fact]
+    [Test]
     public async Task SaveThenGetOrCreate_RoundtripsNonDefaultValue()
     {
         using var dir = new TempDir();
@@ -36,15 +36,15 @@ public sealed class SettingsServiceTests
             KeyDerivationAlgorithm.Scrypt,
             CompressionMode.ZstdBest
         );
-        Assert.NotEqual(BackupCreationSettings.DefaultValue, custom);
+        Assert.That(custom, Is.Not.EqualTo(BackupCreationSettings.DefaultValue));
 
         await service.SaveAsync(custom);
         var loaded = await service.GetOrCreateAsync<BackupCreationSettings>();
 
-        Assert.Equal(custom, loaded);
+        Assert.That(loaded, Is.EqualTo(custom));
     }
 
-    [Fact]
+    [Test]
     public async Task GetOrCreateAsync_WhenFileCorrupted_SelfHealsToDefaults()
     {
         using var dir = new TempDir();
@@ -56,10 +56,10 @@ public sealed class SettingsServiceTests
 
         var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
 
-        Assert.Equal(BackupCreationSettings.DefaultValue, settings);
+        Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
 
         // Self-healing rewrote the file with valid defaults, so a second read also succeeds.
         var reread = await service.GetOrCreateAsync<BackupCreationSettings>();
-        Assert.Equal(BackupCreationSettings.DefaultValue, reread);
+        Assert.That(reread, Is.EqualTo(BackupCreationSettings.DefaultValue));
     }
 }

@@ -7,7 +7,7 @@ namespace BackupZCrypt.Test.Integration;
 // and the real temp drive.
 public sealed class FileSystemServiceTests
 {
-    [Fact]
+    [Test]
     public async Task WriteThenReadBytes_Roundtrips()
     {
         using var dir = new TempDir();
@@ -18,10 +18,10 @@ public sealed class FileSystemServiceTests
         await service.WriteAllBytesAsync(path, content);
         var read = await service.ReadAllBytesAsync(path);
 
-        Assert.Equal(content, read);
+        Assert.That(read, Is.EqualTo(content));
     }
 
-    [Fact]
+    [Test]
     public async Task ComputeFileHashAsync_IsDeterministicAndContentSensitive()
     {
         using var dir = new TempDir();
@@ -36,14 +36,14 @@ public sealed class FileSystemServiceTests
         var hashB = await service.ComputeFileHashAsync(fileB);
 
         // Same content -> same hash (also stable across two reads of the same file).
-        Assert.Equal(hashA, hashACopy);
-        Assert.Equal(hashA, await service.ComputeFileHashAsync(fileA));
+        Assert.That(hashACopy, Is.EqualTo(hashA));
+        Assert.That(await service.ComputeFileHashAsync(fileA), Is.EqualTo(hashA));
 
         // Different content -> different hash.
-        Assert.NotEqual(hashA, hashB);
+        Assert.That(hashB, Is.Not.EqualTo(hashA));
     }
 
-    [Fact]
+    [Test]
     public async Task GetFilesAsync_ReturnsAllFilesIncludingNested()
     {
         using var dir = new TempDir();
@@ -56,13 +56,13 @@ public sealed class FileSystemServiceTests
         var files = await service.GetFilesAsync(dir.Path);
 
         var asSet = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(3, files.Length);
-        Assert.Contains(f1, asSet, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(f2, asSet, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(f3, asSet, StringComparer.OrdinalIgnoreCase);
+        Assert.That(files.Length, Is.EqualTo(3));
+        Assert.That(asSet.Contains(f1), Is.True);
+        Assert.That(asSet.Contains(f2), Is.True);
+        Assert.That(asSet.Contains(f3), Is.True);
     }
 
-    [Fact]
+    [Test]
     public async Task CleanDirectoryAsync_EmptiesPopulatedDirectory()
     {
         using var dir = new TempDir();
@@ -74,12 +74,12 @@ public sealed class FileSystemServiceTests
         await service.CleanDirectoryAsync(dir.Path);
 
         // The directory still exists but is now empty of any files or subdirectories.
-        Assert.True(Directory.Exists(dir.Path));
-        Assert.Empty(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories));
-        Assert.Empty(Directory.GetDirectories(dir.Path));
+        Assert.That(Directory.Exists(dir.Path), Is.True);
+        Assert.That(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories), Is.Empty);
+        Assert.That(Directory.GetDirectories(dir.Path), Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public void GetFileSize_MatchesWrittenLength()
     {
         using var dir = new TempDir();
@@ -88,26 +88,27 @@ public sealed class FileSystemServiceTests
         var content = new byte[12345];
         var path = dir.WriteFile("sized.bin", content);
 
-        Assert.Equal(content.Length, service.GetFileSize(path));
+        Assert.That(service.GetFileSize(path), Is.EqualTo(content.Length));
     }
 
-    [Fact]
+    [Test]
     public void SystemStorage_RealTempDrive_IsReadyAndReportsFreeSpace()
     {
         using var dir = new TempDir();
         var service = new SystemStorageService();
 
         var root = service.GetPathRoot(dir.Path);
-        Assert.False(string.IsNullOrEmpty(root), "Could not resolve the temp drive root.");
+        Assert.That(string.IsNullOrEmpty(root), Is.False, "Could not resolve the temp drive root.");
 
-        Assert.True(service.IsDriveReady(root!), $"Temp drive '{root}' reported not ready.");
-        Assert.True(
-            service.GetAvailableFreeSpace(root!) > 0,
+        Assert.That(service.IsDriveReady(root!), Is.True, $"Temp drive '{root}' reported not ready.");
+        Assert.That(
+            service.GetAvailableFreeSpace(root!),
+            Is.GreaterThan(0),
             $"Temp drive '{root}' reported no free space."
         );
     }
 
-    [Fact]
+    [Test]
     public void SystemStorage_InvalidRoot_IsNotReadyAndReportsNegativeSpace()
     {
         var service = new SystemStorageService();
@@ -116,7 +117,7 @@ public sealed class FileSystemServiceTests
         // DriveInfo treats it as not-ready or throws, the service must report unavailable.
         const string InvalidRoot = "Z:\\";
 
-        Assert.False(service.IsDriveReady(InvalidRoot));
-        Assert.Equal(-1, service.GetAvailableFreeSpace(InvalidRoot));
+        Assert.That(service.IsDriveReady(InvalidRoot), Is.False);
+        Assert.That(service.GetAvailableFreeSpace(InvalidRoot), Is.EqualTo(-1));
     }
 }
