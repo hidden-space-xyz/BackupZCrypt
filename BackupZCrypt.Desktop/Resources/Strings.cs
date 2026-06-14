@@ -211,16 +211,6 @@ internal static class Strings
     public static string RestoreDestinationHint => Get();
 
     /// <summary>
-    /// Gets the browse-folder button text.
-    /// </summary>
-    public static string BrowseFolder => Get();
-
-    /// <summary>
-    /// Gets the browse-file button text.
-    /// </summary>
-    public static string BrowseFile => Get();
-
-    /// <summary>
     /// Gets the encryption field label.
     /// </summary>
     public static string EncryptionLabel => Get();

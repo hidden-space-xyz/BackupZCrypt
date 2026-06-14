@@ -234,12 +234,6 @@
   <data name="RestoreDestinationHint" xml:space="preserve">
     <value>Folder where files will be restored…</value>
   </data>
-  <data name="BrowseFolder" xml:space="preserve">
-    <value>Folder…</value>
-  </data>
-  <data name="BrowseFile" xml:space="preserve">
-    <value>File…</value>
-  </data>
   <data name="EncryptionLabel" xml:space="preserve">
     <value>Encryption</value>
   </data>
@@ -322,7 +316,7 @@
     <value>Warnings</value>
   </data>
   <data name="ContinueAnyway" xml:space="preserve">
-    <value>Continue anyway</value>
+    <value>Continue</value>
   </data>
   <data name="DismissButton" xml:space="preserve">
     <value>Dismiss</value>

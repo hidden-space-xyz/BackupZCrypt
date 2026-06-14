@@ -71,13 +71,20 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-          <Button Content="{x:Static res:Strings.DismissButton}"
-                  Command="{Binding DismissWarningsCommand}" />
-          <Button Classes="primary"
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+          <Button Grid.Column="0"
+                  Content="{x:Static res:Strings.DismissButton}"
+                  Command="{Binding DismissWarningsCommand}"
+                  Padding="22,11"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+          <Button Grid.Column="1"
+                  Classes="primary"
                   Content="{x:Static res:Strings.ContinueAnyway}"
-                  Command="{Binding ContinueAnywayCommand}" />
-        </StackPanel>
+                  Command="{Binding ContinueAnywayCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+        </Grid>
       </StackPanel>
 
       <StackPanel Spacing="18" IsVisible="{Binding HasResult}">
@@ -105,9 +112,6 @@
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding ShowErrors}">
-          <TextBlock Classes="label"
-                     Foreground="{StaticResource DangerBrush}"
-                     Text="{x:Static res:Strings.ErrorsTitle}" />
           <ScrollViewer MaxHeight="240">
             <ItemsControl ItemsSource="{Binding Errors}">
               <ItemsControl.ItemTemplate>

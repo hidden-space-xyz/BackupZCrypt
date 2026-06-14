@@ -234,12 +234,6 @@
   <data name="RestoreDestinationHint" xml:space="preserve">
     <value>Carpeta donde se restaurarán los archivos…</value>
   </data>
-  <data name="BrowseFolder" xml:space="preserve">
-    <value>Carpeta…</value>
-  </data>
-  <data name="BrowseFile" xml:space="preserve">
-    <value>Archivo…</value>
-  </data>
   <data name="EncryptionLabel" xml:space="preserve">
     <value>Cifrado</value>
   </data>
@@ -322,7 +316,7 @@
     <value>Advertencias</value>
   </data>
   <data name="ContinueAnyway" xml:space="preserve">
-    <value>Continuar de todos modos</value>
+    <value>Continuar</value>
   </data>
   <data name="DismissButton" xml:space="preserve">
     <value>Descartar</value>
