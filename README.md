@@ -47,7 +47,7 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 BackupZCrypt is a modern, cross-platform desktop application built with Avalonia UI. Create, update, and restore encrypted backups through a polished graphical interface featuring live password strength analysis, a secure password generator, automatic detection of encrypted backups, and real-time progress reporting.
 
-- **🔐 Create Backup** — Select a source folder (or file), a destination, and a password to produce an encrypted backup
+- **🔐 Create Backup** — Select a source folder, a destination, and a password to produce an encrypted backup
 - **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
 - **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
 - **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language

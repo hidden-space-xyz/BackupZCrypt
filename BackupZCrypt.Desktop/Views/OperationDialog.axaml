@@ -4,7 +4,6 @@
         xmlns:res="using:BackupZCrypt.Desktop.Resources"
         x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
         x:DataType="vm:OperationViewModelBase"
-        SystemDecorations="None"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         SizeToContent="WidthAndHeight"
