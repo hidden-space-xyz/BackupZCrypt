@@ -146,16 +146,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     }
 
     [RelayCommand]
-    private async Task PickSourceFileAsync()
-    {
-        var path = await FilePicker.PickFileAsync(Strings.PickFileTitle);
-        if (path is not null)
-        {
-            SourcePath = path;
-        }
-    }
-
-    [RelayCommand]
     private async Task PickDestinationFolderAsync()
     {
         var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);

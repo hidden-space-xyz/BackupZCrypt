@@ -25,11 +25,6 @@ public enum MessageCode
     SourcePathNotExistFormat = 2,
 
     /// <summary>
-    /// The source file is empty.
-    /// </summary>
-    SourceFileEmpty = 3,
-
-    /// <summary>
     /// The source directory contains no files.
     /// </summary>
     SourceDirectoryEmpty = 4,
@@ -58,11 +53,6 @@ public enum MessageCode
     /// The destination path is invalid; formatted with the offending path.
     /// </summary>
     DestinationInvalidFormat = 9,
-
-    /// <summary>
-    /// The source and destination refer to the same file.
-    /// </summary>
-    SourceDestinationSameFile = 10,
 
     /// <summary>
     /// The source and destination refer to the same directory.
@@ -170,11 +160,6 @@ public enum MessageCode
     ManifestRequiredForDecryption = 31,
 
     /// <summary>
-    /// The update source must be a directory.
-    /// </summary>
-    UpdateSourceMustBeDirectory = 32,
-
-    /// <summary>
     /// The backup destination must already exist.
     /// </summary>
     BackupDestinationMustExist = 33,
@@ -273,4 +258,9 @@ public enum MessageCode
     /// Tip suggesting recognizable years be avoided.
     /// </summary>
     TipAvoidYears = 52,
+
+    /// <summary>
+    /// The source must be a directory rather than a single file.
+    /// </summary>
+    SourceMustBeDirectory = 53,
 }

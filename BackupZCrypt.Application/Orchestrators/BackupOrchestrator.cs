@@ -12,16 +12,14 @@ namespace BackupZCrypt.Application.Orchestrators;
 
 /// <summary>
 /// Orchestrates a backup, update, or restore: it validates the request, normalizes paths,
-/// prepares the destination directory, and dispatches to the file or directory backup service.
+/// prepares the destination directory, and dispatches to the directory backup service.
 /// </summary>
 /// <param name="backupRequestValidator">Validator producing blocking errors and advisory warnings.</param>
 /// <param name="fileOperationsService">Service used to inspect and prepare the file system.</param>
-/// <param name="fileBackupService">Service that handles single-file backups.</param>
 /// <param name="directoryBackupService">Service that handles directory backups.</param>
 internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
-    IFileBackupService fileBackupService,
     IDirectoryBackupService directoryBackupService
 ) : IBackupOrchestrator
 {
@@ -49,62 +47,35 @@ internal sealed class BackupOrchestrator(
 
         var (sourcePath, destinationPath) = NormalizePaths(request);
 
-        var isDirectory = fileOperationsService.DirectoryExists(sourcePath);
-        var isFile = fileOperationsService.FileExists(sourcePath);
-
-        if (!isDirectory && !isFile)
+        if (!fileOperationsService.DirectoryExists(sourcePath))
         {
-            return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
+            return Result<BackupResult>.Failure(
+                fileOperationsService.FileExists(sourcePath)
+                    ? MessageCode.SourceMustBeDirectory
+                    : MessageCode.SourcePathNotExist
+            );
         }
 
-        if (request.Operation == BackupOperation.Update)
+        if (
+            request.Operation == BackupOperation.Update
+            && !fileOperationsService.DirectoryExists(destinationPath)
+        )
         {
-            if (!isDirectory)
-            {
-                return Result<BackupResult>.Failure(MessageCode.UpdateSourceMustBeDirectory);
-            }
-
-            if (!fileOperationsService.DirectoryExists(destinationPath))
-            {
-                return Result<BackupResult>.Failure(MessageCode.BackupDestinationMustExist);
-            }
+            return Result<BackupResult>.Failure(MessageCode.BackupDestinationMustExist);
         }
 
         if (
             request.Operation == BackupOperation.Create
-            && isDirectory
             && fileOperationsService.DirectoryExists(destinationPath)
         )
         {
             await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
         }
 
-        await EnsureDestinationDirectoryAsync(sourcePath, destinationPath, cancellationToken);
+        await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
 
         try
         {
-            if (request.Operation == BackupOperation.Update)
-            {
-                return await directoryBackupService.ProcessAsync(
-                    sourcePath,
-                    destinationPath,
-                    request,
-                    progress,
-                    cancellationToken
-                );
-            }
-
-            if (isFile)
-            {
-                return await fileBackupService.ProcessAsync(
-                    sourcePath,
-                    destinationPath,
-                    request,
-                    progress,
-                    cancellationToken
-                );
-            }
-
             return await directoryBackupService.ProcessAsync(
                 sourcePath,
                 destinationPath,
@@ -141,26 +112,6 @@ internal sealed class BackupOrchestrator(
     )
     {
         await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
-    }
-
-    private async Task EnsureDestinationDirectoryAsync(
-        string sourcePath,
-        string destinationPath,
-        CancellationToken cancellationToken
-    )
-    {
-        if (fileOperationsService.DirectoryExists(sourcePath))
-        {
-            await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
-        }
-        else
-        {
-            var destDir = fileOperationsService.GetDirectoryName(destinationPath);
-            if (!string.IsNullOrEmpty(destDir))
-            {
-                await fileOperationsService.CreateDirectoryAsync(destDir, cancellationToken);
-            }
-        }
     }
 
     private async Task<Result<BackupResult>?> ValidateRequestAsync(

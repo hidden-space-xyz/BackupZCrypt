@@ -416,11 +416,6 @@ internal static class Strings
     public static string PickFolderTitle => Get();
 
     /// <summary>
-    /// Gets the file-picker dialog title.
-    /// </summary>
-    public static string PickFileTitle => Get();
-
-    /// <summary>
     /// Gets the minimize-window tooltip.
     /// </summary>
     public static string WindowMinimize => Get();

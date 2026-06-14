@@ -70,7 +70,6 @@ public static class DependencyInjection
     {
         services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
         services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
-        services.AddSingleton<IFileBackupService, FileBackupService>();
         services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
         services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         services.AddSingleton<IManifestService, ManifestService>();

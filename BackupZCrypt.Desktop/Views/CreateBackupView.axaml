@@ -20,7 +20,7 @@
 
 					<StackPanel Spacing="6">
 						<TextBlock Classes="label" Text="{x:Static res:Strings.SourceLabel}" />
-						<Grid ColumnDefinitions="*,Auto,Auto">
+						<Grid ColumnDefinitions="*,Auto">
 							<TextBox Grid.Column="0"
 									 Classes="field"
 									 Text="{Binding SourcePath}"
@@ -30,11 +30,6 @@
 									Content="📁"
 									ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
 									Command="{Binding PickSourceFolderCommand}" />
-							<Button Grid.Column="2"
-									Margin="8,0,0,0"
-									Content="📄"
-									ToolTip.Tip="{x:Static res:Strings.PickFileTitle}"
-									Command="{Binding PickSourceFileCommand}" />
 						</Grid>
 					</StackPanel>
 

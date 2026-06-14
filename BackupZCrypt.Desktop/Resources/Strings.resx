@@ -214,7 +214,7 @@
     <value>Source</value>
   </data>
   <data name="SourceHint" xml:space="preserve">
-    <value>Folder or file to back up…</value>
+    <value>Folder to back up…</value>
   </data>
   <data name="UpdateSourceHint" xml:space="preserve">
     <value>Folder with the current files…</value>
@@ -357,9 +357,6 @@
   <data name="PickFolderTitle" xml:space="preserve">
     <value>Select a folder</value>
   </data>
-  <data name="PickFileTitle" xml:space="preserve">
-    <value>Select a file</value>
-  </data>
   <data name="WindowMinimize" xml:space="preserve">
     <value>Minimize</value>
   </data>
@@ -477,8 +474,8 @@
   <data name="SourcePathNotExistFormat" xml:space="preserve">
     <value>The selected source path does not exist: {0}</value>
   </data>
-  <data name="SourceFileEmpty" xml:space="preserve">
-    <value>The selected file is empty and cannot be processed.</value>
+  <data name="SourceMustBeDirectory" xml:space="preserve">
+    <value>The source must be a folder, not a single file. Please choose a folder.</value>
   </data>
   <data name="SourceDirectoryEmpty" xml:space="preserve">
     <value>The selected directory is empty - no files to process.</value>
@@ -497,9 +494,6 @@
   </data>
   <data name="DestinationInvalidFormat" xml:space="preserve">
     <value>Invalid destination path: {0}</value>
-  </data>
-  <data name="SourceDestinationSameFile" xml:space="preserve">
-    <value>Source and destination files cannot be the same. Please choose a different destination.</value>
   </data>
   <data name="SourceDestinationSameDirectory" xml:space="preserve">
     <value>Source and destination directories cannot be the same. Please choose a different destination.</value>
@@ -563,9 +557,6 @@
   </data>
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
     <value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value>
-  </data>
-  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
-    <value>Update operation is only supported for directory backups.</value>
   </data>
   <data name="BackupDestinationMustExist" xml:space="preserve">
     <value>Backup destination directory does not exist. Cannot update a non-existent backup.</value>

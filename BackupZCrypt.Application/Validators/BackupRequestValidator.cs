@@ -65,9 +65,11 @@ internal sealed class BackupRequestValidator(
         {
             errors.Add(new LocalizableMessage(MessageCode.SourcePathEmpty));
         }
-        else if (
-            !fileOperations.FileExists(sourcePath) && !fileOperations.DirectoryExists(sourcePath)
-        )
+        else if (fileOperations.FileExists(sourcePath))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceMustBeDirectory));
+        }
+        else if (!fileOperations.DirectoryExists(sourcePath))
         {
             errors.Add(new LocalizableMessage(MessageCode.SourcePathNotExistFormat, sourcePath));
         }
@@ -75,33 +77,10 @@ internal sealed class BackupRequestValidator(
         {
             try
             {
-                if (fileOperations.FileExists(sourcePath))
+                var files = await fileOperations.GetFilesAsync(sourcePath, "*", cancellationToken);
+                if (files.Length == 0)
                 {
-                    long fileSize = 0;
-                    try
-                    {
-                        fileSize = fileOperations.GetFileSize(sourcePath);
-                    }
-                    catch
-                    {
-                    }
-
-                    if (fileSize == 0)
-                    {
-                        errors.Add(new LocalizableMessage(MessageCode.SourceFileEmpty));
-                    }
-                }
-                else if (fileOperations.DirectoryExists(sourcePath))
-                {
-                    var files = await fileOperations.GetFilesAsync(
-                        sourcePath,
-                        "*",
-                        cancellationToken
-                    );
-                    if (files.Length == 0)
-                    {
-                        errors.Add(new LocalizableMessage(MessageCode.SourceDirectoryEmpty));
-                    }
+                    errors.Add(new LocalizableMessage(MessageCode.SourceDirectoryEmpty));
                 }
             }
             catch (UnauthorizedAccessException)
@@ -122,23 +101,16 @@ internal sealed class BackupRequestValidator(
         {
             try
             {
-                var destinationDir = fileOperations.FileExists(sourcePath)
-                    ? fileOperations.GetDirectoryName(destinationPath)
-                    : destinationPath;
+                var drive = systemStorage.GetPathRoot(destinationPath);
 
-                if (!string.IsNullOrEmpty(destinationDir))
+                if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
                 {
-                    var drive = systemStorage.GetPathRoot(destinationDir);
-
-                    if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
-                    {
-                        errors.Add(
-                            new LocalizableMessage(
-                                MessageCode.DestinationDriveNotAccessibleFormat,
-                                drive
-                            )
-                        );
-                    }
+                    errors.Add(
+                        new LocalizableMessage(
+                            MessageCode.DestinationDriveNotAccessibleFormat,
+                            drive
+                        )
+                    );
                 }
             }
             catch (Exception ex)
@@ -189,20 +161,7 @@ internal sealed class BackupRequestValidator(
         {
             try
             {
-                if (fileOperations.FileExists(sourcePath))
-                {
-                    if (
-                        string.Equals(
-                            sourcePath,
-                            destinationPath,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
-                    {
-                        errors.Add(new LocalizableMessage(MessageCode.SourceDestinationSameFile));
-                    }
-                }
-                else if (fileOperations.DirectoryExists(sourcePath))
+                if (fileOperations.DirectoryExists(sourcePath))
                 {
                     if (
                         string.Equals(
@@ -331,12 +290,7 @@ internal sealed class BackupRequestValidator(
             var hasExistingFiles = false;
             var existingFileCount = 0;
 
-            if (fileOperations.FileExists(sourcePath) && fileOperations.FileExists(destinationPath))
-            {
-                hasExistingFiles = true;
-                existingFileCount = 1;
-            }
-            else if (fileOperations.DirectoryExists(destinationPath))
+            if (fileOperations.DirectoryExists(destinationPath))
             {
                 var existingFiles = await fileOperations.GetFilesAsync(
                     destinationPath,

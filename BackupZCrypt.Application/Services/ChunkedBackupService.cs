@@ -58,7 +58,7 @@ internal sealed class ChunkedBackupService(
     /// Creates a new chunked backup, processing files in parallel, deduplicating chunks by content,
     /// and persisting an encrypted manifest.
     /// </summary>
-    /// <param name="sourcePath">The file or directory to back up.</param>
+    /// <param name="sourcePath">The directory to back up.</param>
     /// <param name="destinationPath">The directory where the chunks directory and manifest are written.</param>
     /// <param name="request">The backup request carrying the password and algorithm choices.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
@@ -74,7 +74,7 @@ internal sealed class ChunkedBackupService(
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var source = await ResolveSourceAsync(sourcePath, allowSingleFile: true, cancellationToken)
+        var source = await ResolveSourceAsync(sourcePath, cancellationToken)
             .ConfigureAwait(false);
 
         if (source is null)
@@ -82,7 +82,7 @@ internal sealed class ChunkedBackupService(
             return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
         }
 
-        var (sourceFiles, sourceRoot, isFile) = source.Value;
+        var (sourceFiles, sourceRoot) = source.Value;
         if (sourceFiles.Length == 0)
         {
             stopwatch.Stop();
@@ -155,9 +155,10 @@ internal sealed class ChunkedBackupService(
                         {
                             try
                             {
-                                var relativePath = isFile
-                                    ? Path.GetFileName(file)
-                                    : fileOperationsService.GetRelativePath(sourceRoot, file);
+                                var relativePath = fileOperationsService.GetRelativePath(
+                                    sourceRoot,
+                                    file
+                                );
 
                                 ValidateRelativeManifestPath(relativePath);
                                 var fileSize = fileOperationsService.GetFileSize(file);
@@ -340,11 +341,7 @@ internal sealed class ChunkedBackupService(
 
             request = request with { Compression = existingManifest.Header.Compression };
 
-            var source = await ResolveSourceAsync(
-                    sourcePath,
-                    allowSingleFile: false,
-                    cancellationToken
-                )
+            var source = await ResolveSourceAsync(sourcePath, cancellationToken)
                 .ConfigureAwait(false);
 
             if (source is null)
@@ -352,7 +349,7 @@ internal sealed class ChunkedBackupService(
                 return Result<BackupResult>.Failure(MessageCode.SourcePathNotExist);
             }
 
-            var (sourceFiles, sourceRoot, _) = source.Value;
+            var (sourceFiles, sourceRoot) = source.Value;
 
             var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
             var compressionStrategy = CreateCompressionStrategy(request.Compression);
@@ -1358,33 +1355,14 @@ internal sealed class ChunkedBackupService(
         }
     }
 
-    private async Task<(
-        string[] SourceFiles,
-        string SourceRoot,
-        bool IsSingleFile
-    )?> ResolveSourceAsync(
+    private async Task<(string[] SourceFiles, string SourceRoot)?> ResolveSourceAsync(
         string sourcePath,
-        bool allowSingleFile,
         CancellationToken cancellationToken
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
 
-        var isFile = fileOperationsService.FileExists(sourcePath);
-        var isDirectory = fileOperationsService.DirectoryExists(sourcePath);
-
-        if (isFile)
-        {
-            if (!allowSingleFile)
-            {
-                return null;
-            }
-
-            var sourceRoot = fileOperationsService.GetDirectoryName(sourcePath) ?? string.Empty;
-            return ([sourcePath], sourceRoot, true);
-        }
-
-        if (!isDirectory)
+        if (!fileOperationsService.DirectoryExists(sourcePath))
         {
             return null;
         }
@@ -1394,7 +1372,7 @@ internal sealed class ChunkedBackupService(
             .ConfigureAwait(false);
 
         Array.Sort(sourceFiles, StringComparer.FromComparison(PathComparer));
-        return (sourceFiles, sourcePath, false);
+        return (sourceFiles, sourcePath);
     }
 
     private ICompressionStrategy? CreateCompressionStrategy(CompressionMode compressionMode)

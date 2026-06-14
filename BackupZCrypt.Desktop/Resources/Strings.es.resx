@@ -214,7 +214,7 @@
     <value>Origen</value>
   </data>
   <data name="SourceHint" xml:space="preserve">
-    <value>Carpeta o archivo a respaldar…</value>
+    <value>Carpeta a respaldar…</value>
   </data>
   <data name="UpdateSourceHint" xml:space="preserve">
     <value>Carpeta con los archivos actuales…</value>
@@ -357,9 +357,6 @@
   <data name="PickFolderTitle" xml:space="preserve">
     <value>Selecciona una carpeta</value>
   </data>
-  <data name="PickFileTitle" xml:space="preserve">
-    <value>Selecciona un archivo</value>
-  </data>
   <data name="WindowMinimize" xml:space="preserve">
     <value>Minimizar</value>
   </data>
@@ -477,8 +474,8 @@
   <data name="SourcePathNotExistFormat" xml:space="preserve">
     <value>La ruta de origen seleccionada no existe: {0}</value>
   </data>
-  <data name="SourceFileEmpty" xml:space="preserve">
-    <value>El archivo seleccionado está vacío y no se puede procesar.</value>
+  <data name="SourceMustBeDirectory" xml:space="preserve">
+    <value>El origen debe ser una carpeta, no un único archivo. Elige una carpeta.</value>
   </data>
   <data name="SourceDirectoryEmpty" xml:space="preserve">
     <value>El directorio seleccionado está vacío — no hay archivos para procesar.</value>
@@ -497,9 +494,6 @@
   </data>
   <data name="DestinationInvalidFormat" xml:space="preserve">
     <value>Ruta de destino no válida: {0}</value>
-  </data>
-  <data name="SourceDestinationSameFile" xml:space="preserve">
-    <value>Los archivos de origen y destino no pueden ser iguales. Elija un destino diferente.</value>
   </data>
   <data name="SourceDestinationSameDirectory" xml:space="preserve">
     <value>Los directorios de origen y destino no pueden ser iguales. Elija un destino diferente.</value>
@@ -563,9 +557,6 @@
   </data>
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
     <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación de origen. No se puede restaurar sin manifiesto.</value>
-  </data>
-  <data name="UpdateSourceMustBeDirectory" xml:space="preserve">
-    <value>La operación de actualización solo es compatible con copias de seguridad de directorios.</value>
   </data>
   <data name="BackupDestinationMustExist" xml:space="preserve">
     <value>El directorio de destino del backup no existe. No se puede actualizar un backup inexistente.</value>

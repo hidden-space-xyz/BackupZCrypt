@@ -26,22 +26,6 @@ internal sealed class FilePickerService : IFilePickerService
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
-    /// <inheritdoc />
-    public async Task<string?> PickFileAsync(string title)
-    {
-        var topLevel = GetTopLevel();
-        if (topLevel is null)
-        {
-            return null;
-        }
-
-        var result = await topLevel.StorageProvider.OpenFilePickerAsync(
-            new FilePickerOpenOptions { Title = title, AllowMultiple = false }
-        );
-
-        return result.Count > 0 ? result[0].TryGetLocalPath() : null;
-    }
-
     private static Window? GetTopLevel()
     {
         return Avalonia.Application.Current?.ApplicationLifetime
