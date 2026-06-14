@@ -618,4 +618,37 @@
   <data name="TipAvoidYears" xml:space="preserve">
     <value>Avoid years</value>
   </data>
+  <data name="BenchmarkSection" xml:space="preserve">
+    <value>Benchmark</value>
+  </data>
+  <data name="BenchmarkDescription" xml:space="preserve">
+    <value>Estimate how long backing up a given amount of data would take with the selected options, measured on your hardware.</value>
+  </data>
+  <data name="BenchmarkDataAmountLabel" xml:space="preserve">
+    <value>Amount of data</value>
+  </data>
+  <data name="BenchmarkDataAmountHint" xml:space="preserve">
+    <value>e.g. 100</value>
+  </data>
+  <data name="BenchmarkRunButton" xml:space="preserve">
+    <value>Estimate</value>
+  </data>
+  <data name="BenchmarkRunningText" xml:space="preserve">
+    <value>Measuring your hardware…</value>
+  </data>
+  <data name="BenchmarkResultDurationFormat" xml:space="preserve">
+    <value>Estimated time: ~{0}</value>
+  </data>
+  <data name="BenchmarkResultThroughputFormat" xml:space="preserve">
+    <value>Processing speed: ~{0}/s</value>
+  </data>
+  <data name="BenchmarkDisclaimer" xml:space="preserve">
+    <value>Rough estimate of processing time on your CPU. Actual time also depends on disk speed and is reduced by deduplication of repeated data.</value>
+  </data>
+  <data name="BenchmarkInvalidAmount" xml:space="preserve">
+    <value>Enter a valid amount of data greater than zero.</value>
+  </data>
+  <data name="BenchmarkFailed" xml:space="preserve">
+    <value>Could not complete the benchmark. Please try again.</value>
+  </data>
 </root>

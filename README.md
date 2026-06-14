@@ -39,6 +39,7 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **🔐 Single KDF Per Session** — One expensive key derivation produces a master key; sub-keys for encryption and chunk naming are derived via HKDF, eliminating per-file KDF overhead
 - **🕵️ HMAC-Based Chunk Naming** — Chunk filenames are HMAC-SHA256 of the plaintext hash, keyed with a naming sub-key, preventing content confirmation attacks
 - **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
+- **⏱️ Backup Time Estimator** — Benchmarks the selected algorithms on your own hardware to estimate how long backing up a given amount of data (MB/GB/TB) would take
 - **🌍 Localized Interface** — Available in English and Spanish
 - **💻 Local Processing Only** — Your files and passwords never leave your computer
 - **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
@@ -50,7 +51,7 @@ BackupZCrypt is a modern, cross-platform desktop application built with Avalonia
 - **🔐 Create Backup** — Select a source folder, a destination, and a password to produce an encrypted backup
 - **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
 - **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
-- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
+- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language.
 
 ## 🛠️ Building from Source
 

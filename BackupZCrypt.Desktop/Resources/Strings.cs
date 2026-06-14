@@ -595,6 +595,61 @@ internal static class Strings
     /// </summary>
     public static string ZstdBestSummary => Get();
 
+    /// <summary>
+    /// Gets the benchmark section heading.
+    /// </summary>
+    public static string BenchmarkSection => Get();
+
+    /// <summary>
+    /// Gets the benchmark section description.
+    /// </summary>
+    public static string BenchmarkDescription => Get();
+
+    /// <summary>
+    /// Gets the benchmark data-amount field label.
+    /// </summary>
+    public static string BenchmarkDataAmountLabel => Get();
+
+    /// <summary>
+    /// Gets the benchmark data-amount field hint.
+    /// </summary>
+    public static string BenchmarkDataAmountHint => Get();
+
+    /// <summary>
+    /// Gets the benchmark run-button text.
+    /// </summary>
+    public static string BenchmarkRunButton => Get();
+
+    /// <summary>
+    /// Gets the text shown while the benchmark is running.
+    /// </summary>
+    public static string BenchmarkRunningText => Get();
+
+    /// <summary>
+    /// Gets the format string for the estimated benchmark duration.
+    /// </summary>
+    public static string BenchmarkResultDurationFormat => Get();
+
+    /// <summary>
+    /// Gets the format string for the measured benchmark throughput.
+    /// </summary>
+    public static string BenchmarkResultThroughputFormat => Get();
+
+    /// <summary>
+    /// Gets the benchmark disclaimer note.
+    /// </summary>
+    public static string BenchmarkDisclaimer => Get();
+
+    /// <summary>
+    /// Gets the message shown when the entered data amount is invalid.
+    /// </summary>
+    public static string BenchmarkInvalidAmount => Get();
+
+    /// <summary>
+    /// Gets the message shown when the benchmark fails to complete.
+    /// </summary>
+    public static string BenchmarkFailed => Get();
+
     private static string Get([CallerMemberName] string name = "")
     {
         return ResourceManager.GetString(name, CultureInfo.CurrentUICulture) ?? name;

@@ -618,4 +618,37 @@
   <data name="TipAvoidYears" xml:space="preserve">
     <value>Evite años</value>
   </data>
+  <data name="BenchmarkSection" xml:space="preserve">
+    <value>Prueba de rendimiento</value>
+  </data>
+  <data name="BenchmarkDescription" xml:space="preserve">
+    <value>Estima cuánto tardaría en hacer una copia de seguridad de una cantidad de datos con las opciones seleccionadas, medido en tu hardware.</value>
+  </data>
+  <data name="BenchmarkDataAmountLabel" xml:space="preserve">
+    <value>Cantidad de datos</value>
+  </data>
+  <data name="BenchmarkDataAmountHint" xml:space="preserve">
+    <value>p. ej. 100</value>
+  </data>
+  <data name="BenchmarkRunButton" xml:space="preserve">
+    <value>Estimar</value>
+  </data>
+  <data name="BenchmarkRunningText" xml:space="preserve">
+    <value>Midiendo tu hardware…</value>
+  </data>
+  <data name="BenchmarkResultDurationFormat" xml:space="preserve">
+    <value>Tiempo estimado: ~{0}</value>
+  </data>
+  <data name="BenchmarkResultThroughputFormat" xml:space="preserve">
+    <value>Velocidad de procesamiento: ~{0}/s</value>
+  </data>
+  <data name="BenchmarkDisclaimer" xml:space="preserve">
+    <value>Estimación aproximada del tiempo de procesamiento en tu CPU. El tiempo real también depende de la velocidad del disco y se reduce por la deduplicación de datos repetidos.</value>
+  </data>
+  <data name="BenchmarkInvalidAmount" xml:space="preserve">
+    <value>Introduce una cantidad de datos válida mayor que cero.</value>
+  </data>
+  <data name="BenchmarkFailed" xml:space="preserve">
+    <value>No se pudo completar la prueba de rendimiento. Inténtalo de nuevo.</value>
+  </data>
 </root>

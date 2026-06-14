@@ -79,6 +79,66 @@
 
       <Border Classes="card">
         <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.BenchmarkSection}" />
+          <TextBlock Classes="dim"
+                     FontSize="12"
+                     TextWrapping="Wrap"
+                     Text="{x:Static res:Strings.BenchmarkDescription}" />
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.BenchmarkDataAmountLabel}" />
+            <Grid ColumnDefinitions="*,12,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding BenchmarkDataAmount}"
+                       PlaceholderText="{x:Static res:Strings.BenchmarkDataAmountHint}" />
+              <ComboBox Grid.Column="2"
+                        MinWidth="90"
+                        VerticalAlignment="Stretch"
+                        ItemsSource="{Binding DataUnitOptions}"
+                        SelectedItem="{Binding SelectedDataUnit}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="m:DataSizeUnitOption">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button Classes="primary"
+                    Content="{x:Static res:Strings.BenchmarkRunButton}"
+                    Command="{Binding RunBenchmarkCommand}" />
+            <TextBlock Classes="dim"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsBenchmarkRunning}"
+                       Text="{x:Static res:Strings.BenchmarkRunningText}" />
+          </StackPanel>
+
+          <StackPanel Spacing="4" IsVisible="{Binding ShowBenchmarkResult}">
+            <TextBlock FontWeight="SemiBold"
+                       Foreground="{StaticResource SuccessBrush}"
+                       Text="{Binding BenchmarkDurationText}" />
+            <TextBlock Classes="dim"
+                       FontSize="12"
+                       Text="{Binding BenchmarkThroughputText}" />
+            <TextBlock Classes="dim"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Text="{x:Static res:Strings.BenchmarkDisclaimer}" />
+          </StackPanel>
+
+          <TextBlock FontSize="12"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasBenchmarkError}"
+                     Foreground="{StaticResource DangerBrush}"
+                     Text="{Binding BenchmarkError}" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
           <TextBlock Classes="section" Text="{x:Static res:Strings.LanguageLabel}" />
           <ComboBox Classes="field"
                     ItemsSource="{Binding LanguageOptions}"

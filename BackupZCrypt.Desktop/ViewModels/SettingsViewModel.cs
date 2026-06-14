@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
@@ -20,6 +22,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 public sealed partial class SettingsViewModel : ViewModelBase
 {
     private readonly ISettingsService settingsService;
+    private readonly IBackupBenchmarkService benchmarkService;
     private bool loaded;
     private string? savedLanguageCode;
 
@@ -41,22 +44,50 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowRestartNote { get; set; }
 
+    [ObservableProperty]
+    public partial string BenchmarkDataAmount { get; set; }
+
+    [ObservableProperty]
+    public partial DataSizeUnitOption SelectedDataUnit { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunBenchmarkCommand))]
+    public partial bool IsBenchmarkRunning { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowBenchmarkResult { get; set; }
+
+    [ObservableProperty]
+    public partial string BenchmarkDurationText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string BenchmarkThroughputText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasBenchmarkError { get; set; }
+
+    [ObservableProperty]
+    public partial string BenchmarkError { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SettingsViewModel"/> class, building the selectable
     /// algorithm and language option lists from the registered strategies.
     /// </summary>
     /// <param name="settingsService">The service that reads and persists user settings.</param>
+    /// <param name="benchmarkService">The service that estimates backup processing time.</param>
     /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
     /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
     /// <param name="compressionStrategies">The available compression strategies.</param>
     public SettingsViewModel(
         ISettingsService settingsService,
+        IBackupBenchmarkService benchmarkService,
         IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
         IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
         IEnumerable<ICompressionStrategy> compressionStrategies
     )
     {
         this.settingsService = settingsService;
+        this.benchmarkService = benchmarkService;
 
         EncryptionOptions =
         [
@@ -102,10 +133,20 @@ public sealed partial class SettingsViewModel : ViewModelBase
             new LanguageOption("en", "English"),
             new LanguageOption("es", "Español"),
         ];
+
+        DataUnitOptions =
+        [
+            new DataSizeUnitOption("MB", 1024L * 1024L),
+            new DataSizeUnitOption("GB", 1024L * 1024L * 1024L),
+            new DataSizeUnitOption("TB", 1024L * 1024L * 1024L * 1024L),
+        ];
+
         SelectedEncryption = EncryptionOptions[0];
         SelectedKeyDerivation = KeyDerivationOptions[0];
         SelectedCompression = CompressionOptions[0];
         SelectedLanguage = LanguageOptions[0];
+        BenchmarkDataAmount = "100";
+        SelectedDataUnit = DataUnitOptions[1];
 
         SettingsFilePath = settingsService.GetFilePath<BackupCreationSettings>();
     }
@@ -129,6 +170,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// Gets the selectable UI language options.
     /// </summary>
     public ObservableCollection<LanguageOption> LanguageOptions { get; }
+
+    /// <summary>
+    /// Gets the selectable data-size units (MB, GB, TB) used by the benchmark.
+    /// </summary>
+    public ObservableCollection<DataSizeUnitOption> DataUnitOptions { get; }
 
     /// <summary>
     /// Gets the on-disk path of the settings file, shown to the user for reference.
@@ -203,5 +249,91 @@ public sealed partial class SettingsViewModel : ViewModelBase
         {
             ShowSavedNotice = false;
         }
+    }
+
+    private bool CanRunBenchmark()
+    {
+        return !IsBenchmarkRunning;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunBenchmark))]
+    private async Task RunBenchmarkAsync()
+    {
+        ShowBenchmarkResult = false;
+        HasBenchmarkError = false;
+        BenchmarkError = string.Empty;
+
+        if (!TryParseDataBytes(out var dataBytes))
+        {
+            BenchmarkError = Strings.BenchmarkInvalidAmount;
+            HasBenchmarkError = true;
+            return;
+        }
+
+        IsBenchmarkRunning = true;
+
+        try
+        {
+            BenchmarkRequest request = new(
+                SelectedEncryption.Id,
+                SelectedKeyDerivation.Id,
+                SelectedCompression.Id,
+                dataBytes
+            );
+
+            var estimate = await Task.Run(() => benchmarkService.EstimateAsync(request));
+
+            BenchmarkDurationText = string.Format(
+                CultureInfo.CurrentCulture,
+                Strings.BenchmarkResultDurationFormat,
+                DurationFormatter.Format(estimate.EstimatedDuration)
+            );
+
+            BenchmarkThroughputText = string.Format(
+                CultureInfo.CurrentCulture,
+                Strings.BenchmarkResultThroughputFormat,
+                ByteSizeFormatter.Format((long)estimate.ThroughputBytesPerSecond)
+            );
+
+            ShowBenchmarkResult = true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            BenchmarkError = Strings.BenchmarkFailed;
+            HasBenchmarkError = true;
+        }
+        finally
+        {
+            IsBenchmarkRunning = false;
+        }
+    }
+
+    private bool TryParseDataBytes(out long dataBytes)
+    {
+        dataBytes = 0;
+
+        if (
+            !double.TryParse(
+                BenchmarkDataAmount,
+                NumberStyles.Float | NumberStyles.AllowThousands,
+                CultureInfo.CurrentCulture,
+                out var amount
+            )
+            || amount <= 0
+            || double.IsNaN(amount)
+            || double.IsInfinity(amount)
+        )
+        {
+            return false;
+        }
+
+        var totalBytes = amount * SelectedDataUnit.BytesPerUnit;
+        if (totalBytes is < 1 or >= long.MaxValue)
+        {
+            return false;
+        }
+
+        dataBytes = (long)totalBytes;
+        return true;
     }
 }

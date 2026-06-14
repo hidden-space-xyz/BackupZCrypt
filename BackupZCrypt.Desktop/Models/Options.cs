@@ -34,6 +34,13 @@ public sealed record CompressionOption(CompressionMode Id, string Name, string D
 public sealed record LanguageOption(string? Code, string Name);
 
 /// <summary>
+/// A selectable data-size unit used by the benchmark to convert a user-entered amount into bytes.
+/// </summary>
+/// <param name="Name">The unit symbol shown to the user (for example, <c>MB</c>, <c>GB</c>, <c>TB</c>).</param>
+/// <param name="BytesPerUnit">The number of bytes in one unit, using binary (1024-based) multiples.</param>
+public sealed record DataSizeUnitOption(string Name, long BytesPerUnit);
+
+/// <summary>
 /// Display metadata for an algorithm, used on the help page.
 /// </summary>
 /// <param name="Name">The localized display name.</param>
