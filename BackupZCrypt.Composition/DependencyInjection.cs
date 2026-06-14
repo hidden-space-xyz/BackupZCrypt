@@ -72,7 +72,6 @@ public static class DependencyInjection
         _ = services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
         _ = services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
         _ = services.AddSingleton<IBackupBenchmarkService, BackupBenchmarkService>();
-        _ = services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
         _ = services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         _ = services.AddSingleton<IManifestService, ManifestService>();
         _ = services.AddSingleton<ISettingsService, SettingsService>();

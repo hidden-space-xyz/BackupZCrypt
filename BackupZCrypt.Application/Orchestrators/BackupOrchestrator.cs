@@ -12,16 +12,16 @@ namespace BackupZCrypt.Application.Orchestrators;
 
 /// <summary>
 /// Orchestrates a backup, update, restore, or verify: it validates the request, normalizes paths,
-/// prepares the destination directory, and dispatches to the directory backup service. Verification
+/// prepares the destination directory, and dispatches to the chunk-based backup service. Verification
 /// is read-only and takes a dedicated path that skips destination preparation.
 /// </summary>
 /// <param name="backupRequestValidator">Validator producing blocking errors and advisory warnings.</param>
 /// <param name="fileOperationsService">Service used to inspect and prepare the file system.</param>
-/// <param name="directoryBackupService">Service that handles directory backups.</param>
+/// <param name="chunkedBackupService">Service that performs the chunk-based backup, update, restore, and verify operations.</param>
 internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
-    IDirectoryBackupService directoryBackupService
+    IChunkedBackupService chunkedBackupService
 ) : IBackupOrchestrator
 {
     /// <summary>
@@ -82,7 +82,7 @@ internal sealed class BackupOrchestrator(
 
         try
         {
-            return await directoryBackupService.ProcessAsync(
+            return await RunBackupAsync(
                 sourcePath,
                 destinationPath,
                 request,
@@ -98,6 +98,41 @@ internal sealed class BackupOrchestrator(
         {
             return Result<BackupResult>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
         }
+    }
+
+    private Task<Result<BackupResult>> RunBackupAsync(
+        string sourcePath,
+        string destinationPath,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        return request.Operation switch
+        {
+            BackupOperation.Create => chunkedBackupService.CreateAsync(
+                sourcePath,
+                destinationPath,
+                request,
+                progress,
+                cancellationToken
+            ),
+            BackupOperation.Update => chunkedBackupService.UpdateAsync(
+                sourcePath,
+                destinationPath,
+                request,
+                progress,
+                cancellationToken
+            ),
+            BackupOperation.Restore => chunkedBackupService.RestoreAsync(
+                sourcePath,
+                destinationPath,
+                request,
+                progress,
+                cancellationToken
+            ),
+            _ => throw new ArgumentOutOfRangeException(nameof(request)),
+        };
     }
 
     private async Task<Result<BackupResult>> ExecuteVerifyAsync(
@@ -142,9 +177,8 @@ internal sealed class BackupOrchestrator(
 
         try
         {
-            return await directoryBackupService.ProcessAsync(
+            return await chunkedBackupService.VerifyAsync(
                 sourcePath,
-                string.Empty,
                 request,
                 progress,
                 cancellationToken

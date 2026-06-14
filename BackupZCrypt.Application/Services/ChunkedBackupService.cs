@@ -811,10 +811,6 @@ internal sealed class ChunkedBackupService(
 
             if (manifest is null)
             {
-                // The preamble was read, so the manifest file exists; a null here means it could not
-                // be decrypted, which is almost always a wrong password (or a corrupted manifest).
-                // Use a verify-specific code so the message does not tell the user to "verify file
-                // integrity" — which is exactly what they are already doing.
                 return Result<BackupResult>.Failure(MessageCode.VerifyInvalidPassword);
             }
 
@@ -1048,10 +1044,6 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        // Reads, decrypts, authenticates, decompresses, and hashes every chunk of a file, writing the
-        // reconstructed bytes to the destination and validating the reassembled size and hash against
-        // the manifest. Restore passes the destination file stream; verification passes Stream.Null
-        // so the same integrity checks run without producing any output.
         ValidateRelativeManifestPath(fileEntry.OriginalPath);
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
