@@ -333,7 +333,9 @@ internal sealed class ChunkedBackupService(
 
             if (existingManifest is null)
             {
-                return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForUpdate);
+                // The preamble was read, so the manifest file exists; a null here means it could not
+                // be decrypted, which is almost always a wrong password (or a corrupted manifest).
+                return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
             }
 
             request = request with { Compression = existingManifest.Header.Compression };
@@ -619,7 +621,9 @@ internal sealed class ChunkedBackupService(
 
             if (manifest is null)
             {
-                return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
+                // The preamble was read, so the manifest file exists; a null here means it could not
+                // be decrypted, which is almost always a wrong password (or a corrupted manifest).
+                return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
             }
 
             var encryptionStrategy = ResolveEncryptionStrategy(manifest.Header.EncryptionAlgorithm);

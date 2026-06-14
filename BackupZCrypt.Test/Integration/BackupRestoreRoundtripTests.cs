@@ -153,11 +153,9 @@ public sealed class BackupRestoreRoundtripTests
 
         var codes = CollectCodes(restoreResult);
         Assert.That(
-            codes.Contains(MessageCode.ManifestRequiredForDecryption)
-                || codes.Contains(MessageCode.InvalidPassword),
+            codes.Contains(MessageCode.InvalidPassword),
             Is.True,
-            "Expected ManifestRequiredForDecryption or InvalidPassword, got: "
-                + string.Join(", ", codes)
+            "Expected InvalidPassword, got: " + string.Join(", ", codes)
         );
 
         foreach (var (relativePath, content) in expected)
