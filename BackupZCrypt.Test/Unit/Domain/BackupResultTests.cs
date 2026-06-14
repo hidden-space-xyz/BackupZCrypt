@@ -105,7 +105,7 @@ public sealed class BackupResultTests
     [Test]
     public void Constructor_NegativeElapsed_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0)
         );
     }
@@ -113,7 +113,7 @@ public sealed class BackupResultTests
     [Test]
     public void Constructor_NegativeTotalBytes_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupResult(true, TimeSpan.Zero, -1, 0, 0)
         );
     }
@@ -121,7 +121,7 @@ public sealed class BackupResultTests
     [Test]
     public void Constructor_ProcessedGreaterThanTotal_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupResult(true, TimeSpan.Zero, 0, 5, 3)
         );
     }

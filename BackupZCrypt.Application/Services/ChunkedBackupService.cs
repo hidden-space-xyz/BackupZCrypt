@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
+
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -179,7 +180,7 @@ internal sealed class ChunkedBackupService(
                                     .ConfigureAwait(false);
 
                                 fileEntries.Add(entry);
-                                Interlocked.Increment(ref processedFiles);
+                                _ = Interlocked.Increment(ref processedFiles);
                                 var currentBytes = Interlocked.Add(ref processedBytes, fileSize);
 
                                 progress?.Report(
@@ -206,7 +207,7 @@ internal sealed class ChunkedBackupService(
                                 }
                                 else
                                 {
-                                    Interlocked.CompareExchange(
+                                    _ = Interlocked.CompareExchange(
                                         ref fatalError,
                                         new LocalizableMessage(
                                             MessageCode.UnexpectedErrorFormat,
@@ -398,7 +399,7 @@ internal sealed class ChunkedBackupService(
                         updatedEntries.Add(existing);
                         foreach (var chunk in existing.Chunks)
                         {
-                            referencedChunkHashes.TryAdd(chunk.Hash, 0);
+                            _ = referencedChunkHashes.TryAdd(chunk.Hash, 0);
                         }
 
                         continue;
@@ -462,10 +463,10 @@ internal sealed class ChunkedBackupService(
                                     updatedEntries.Add(entry);
                                     foreach (var chunk in entry.Chunks)
                                     {
-                                        referencedChunkHashes.TryAdd(chunk.Hash, 0);
+                                        _ = referencedChunkHashes.TryAdd(chunk.Hash, 0);
                                     }
 
-                                    Interlocked.Increment(ref processedFiles);
+                                    _ = Interlocked.Increment(ref processedFiles);
                                     var currentBytes = Interlocked.Add(
                                         ref processedBytes,
                                         fileItem.Size
@@ -495,7 +496,7 @@ internal sealed class ChunkedBackupService(
                                     }
                                     else
                                     {
-                                        Interlocked.CompareExchange(
+                                        _ = Interlocked.CompareExchange(
                                             ref fatalError,
                                             new LocalizableMessage(
                                                 MessageCode.UnexpectedErrorFormat,
@@ -685,7 +686,7 @@ internal sealed class ChunkedBackupService(
                                     )
                                     .ConfigureAwait(false);
 
-                                Interlocked.Increment(ref processedFiles);
+                                _ = Interlocked.Increment(ref processedFiles);
                                 var currentBytes = Interlocked.Add(
                                     ref processedBytes,
                                     fileEntry.TotalSize
@@ -703,7 +704,7 @@ internal sealed class ChunkedBackupService(
                             }
                             catch (CryptographicException)
                             {
-                                Interlocked.CompareExchange(
+                                _ = Interlocked.CompareExchange(
                                     ref fatalError,
                                     new LocalizableMessage(MessageCode.InvalidPassword),
                                     null
@@ -724,7 +725,7 @@ internal sealed class ChunkedBackupService(
                                 }
                                 else
                                 {
-                                    Interlocked.CompareExchange(
+                                    _ = Interlocked.CompareExchange(
                                         ref fatalError,
                                         new LocalizableMessage(
                                             MessageCode.UnexpectedErrorFormat,
@@ -1088,7 +1089,7 @@ internal sealed class ChunkedBackupService(
                 LazyThreadSafetyMode.ExecutionAndPublication
             );
 
-            storedChunks.TryAdd(chunkHashB64, storedChunk);
+            _ = storedChunks.TryAdd(chunkHashB64, storedChunk);
         }
 
         return storedChunks;
@@ -1246,7 +1247,7 @@ internal sealed class ChunkedBackupService(
         {
             if (ReferenceEquals(storedChunk, candidateChunk))
             {
-                storedChunks.TryRemove(
+                _ = storedChunks.TryRemove(
                     new KeyValuePair<string, Lazy<Task<string>>>(chunkHashB64, candidateChunk)
                 );
             }
@@ -1316,7 +1317,7 @@ internal sealed class ChunkedBackupService(
                     var fileName =
                         ComputeChunkFileName(namingKey, hashBytes)
                         + BackupConstants.AppFileExtension;
-                    expectedFileNames.Add(fileName);
+                    _ = expectedFileNames.Add(fileName);
                 }
                 finally
                 {
@@ -1602,12 +1603,9 @@ internal sealed class ChunkedBackupService(
         var destinationFullPath = Path.GetFullPath(Path.Combine(rootFullPath, relativePath));
         var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
 
-        if (!destinationFullPath.StartsWith(rootWithSeparator, PathComparer))
-        {
-            throw new InvalidDataException("Manifest entry path escapes the restore directory.");
-        }
-
-        return destinationFullPath;
+        return !destinationFullPath.StartsWith(rootWithSeparator, PathComparer)
+            ? throw new InvalidDataException("Manifest entry path escapes the restore directory.")
+            : destinationFullPath;
     }
 
     private static string EnsureTrailingDirectorySeparator(string path)

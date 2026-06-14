@@ -11,7 +11,7 @@ public sealed class TempDir : IDisposable
             "bzc-tests",
             Guid.NewGuid().ToString("N")
         );
-        Directory.CreateDirectory(Path);
+        _ = Directory.CreateDirectory(Path);
     }
 
     public string Path { get; }
@@ -21,7 +21,7 @@ public sealed class TempDir : IDisposable
     public string WriteFile(string relativePath, byte[] content)
     {
         var full = Combine(relativePath);
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
+        _ = Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
         File.WriteAllBytes(full, content);
         return full;
     }

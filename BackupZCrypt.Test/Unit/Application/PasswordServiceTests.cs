@@ -139,7 +139,7 @@ public sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_NoneOption_Throws()
     {
-        Assert.Throws<ArgumentException>(
+        _ = Assert.Throws<ArgumentException>(
             () => this.sut.GeneratePassword(16, PasswordGenerationOptions.None)
         );
     }
@@ -148,7 +148,7 @@ public sealed class PasswordServiceTests
     [TestCase(-1)]
     public void GeneratePassword_NonPositiveLength_Throws(int length)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => this.sut.GeneratePassword(length, PasswordGenerationOptions.IncludeLowercase)
         );
     }

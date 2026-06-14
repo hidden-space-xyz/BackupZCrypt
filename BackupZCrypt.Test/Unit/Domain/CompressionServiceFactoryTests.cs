@@ -1,6 +1,7 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
 using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Domain;
@@ -10,7 +11,7 @@ public sealed class CompressionServiceFactoryTests
     private static ICompressionStrategy Stub(CompressionMode id)
     {
         var strategy = Substitute.For<ICompressionStrategy>();
-        strategy.Id.Returns(id);
+        _ = strategy.Id.Returns(id);
         return strategy;
     }
 
@@ -33,6 +34,6 @@ public sealed class CompressionServiceFactoryTests
     {
         var factory = new CompressionServiceFactory([Stub(CompressionMode.None)]);
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => factory.Create(CompressionMode.ZstdBest));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => factory.Create(CompressionMode.ZstdBest));
     }
 }

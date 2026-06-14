@@ -70,8 +70,8 @@ public sealed class FileSystemServiceTests
         using var dir = new TempDir();
         var service = new FileOperationsService();
 
-        dir.WriteText("top.txt", "x");
-        dir.WriteText(Path.Combine("sub", "inner.txt"), "y");
+        _ = dir.WriteText("top.txt", "x");
+        _ = dir.WriteText(Path.Combine("sub", "inner.txt"), "y");
 
         await service.CleanDirectoryAsync(dir.Path);
 

@@ -14,5 +14,5 @@ public interface ICompressionServiceFactory
     /// <param name="mode">The compression mode to resolve.</param>
     /// <returns>The matching <see cref="ICompressionStrategy"/>.</returns>
     /// <exception cref="ArgumentOutOfRangeException">No strategy is registered for <paramref name="mode"/>.</exception>
-    ICompressionStrategy Create(CompressionMode mode);
+    public ICompressionStrategy Create(CompressionMode mode);
 }

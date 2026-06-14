@@ -10,7 +10,7 @@ public interface IEncryptionAlgorithmStrategy
     /// <summary>
     /// Gets the algorithm this strategy implements, used to select it by enum value.
     /// </summary>
-    EncryptionAlgorithm Id { get; }
+    public EncryptionAlgorithm Id { get; }
 
     /// <summary>
     /// Encrypts a chunk and appends the authentication tag to the ciphertext.
@@ -20,7 +20,7 @@ public interface IEncryptionAlgorithmStrategy
     /// <param name="nonce">The unique nonce for this chunk.</param>
     /// <param name="associatedData">Additional authenticated data bound to the ciphertext.</param>
     /// <returns>The ciphertext with the appended authentication tag.</returns>
-    byte[] EncryptChunk(
+    public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
         byte[] key,
         byte[] nonce,
@@ -35,7 +35,7 @@ public interface IEncryptionAlgorithmStrategy
     /// <param name="nonce">The nonce that was used to encrypt the chunk.</param>
     /// <param name="associatedData">The additional authenticated data that was bound to the ciphertext.</param>
     /// <returns>The recovered plaintext.</returns>
-    byte[] DecryptChunk(
+    public byte[] DecryptChunk(
         ReadOnlySpan<byte> ciphertext,
         byte[] key,
         byte[] nonce,

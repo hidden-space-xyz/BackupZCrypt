@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
+
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -48,7 +50,7 @@ internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStr
         try
         {
             passwordChars = password.ToCharArray();
-            argon2.GenerateBytes(passwordChars, key);
+            _ = argon2.GenerateBytes(passwordChars, key);
             return key;
         }
         catch (Exception ex)

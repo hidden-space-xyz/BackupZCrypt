@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
@@ -120,12 +121,9 @@ internal sealed class ManifestService(
             var algorithm = (EncryptionAlgorithm)rawFile[0];
             var keyDerivation = (KeyDerivationAlgorithm)rawFile[1];
 
-            if (!Enum.IsDefined(algorithm) || !Enum.IsDefined(keyDerivation))
-            {
-                return null;
-            }
-
-            return new ManifestPreamble(
+            return !Enum.IsDefined(algorithm) || !Enum.IsDefined(keyDerivation)
+                ? null
+                : new ManifestPreamble(
                 algorithm,
                 keyDerivation,
                 rawFile.AsSpan(2, EncryptionConstants.SaltSize).ToArray(),
@@ -188,8 +186,7 @@ internal sealed class ManifestService(
 
             var document = JsonSerializer.Deserialize<ChunkManifestDocument>(plaintext);
 
-            if (
-                document is null
+            return document is null
                 || document.EncryptionAlgorithm != preamble.Algorithm
                 || document.KeyDerivationAlgorithm != preamble.KeyDerivation
                 || !TryDecodeBase64(
@@ -198,12 +195,8 @@ internal sealed class ManifestService(
                     out documentMasterSalt
                 )
                 || !CryptographicOperations.FixedTimeEquals(documentMasterSalt, preamble.MasterSalt)
-            )
-            {
-                return null;
-            }
-
-            return ToChunkManifestData(document);
+                ? null
+                : ToChunkManifestData(document);
         }
         catch
         {

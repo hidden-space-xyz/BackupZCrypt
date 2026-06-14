@@ -52,7 +52,7 @@ public sealed class SettingsServiceTests
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
-        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
         await File.WriteAllTextAsync(filePath, "this is not valid json {{{");
 
         var settings = await service.GetOrCreateAsync<BackupCreationSettings>();

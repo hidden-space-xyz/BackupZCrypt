@@ -2,6 +2,7 @@ using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
@@ -20,9 +21,9 @@ public sealed class UpdateBackupTests
         using var destination = new TempDir();
         using var restored = new TempDir();
 
-        source.WriteText("unchanged.txt", "stays the same");
-        source.WriteText("changing.txt", "original content");
-        source.WriteText(Path.Combine("dir", "keep.txt"), "nested keep");
+        _ = source.WriteText("unchanged.txt", "stays the same");
+        _ = source.WriteText("changing.txt", "original content");
+        _ = source.WriteText(Path.Combine("dir", "keep.txt"), "nested keep");
 
         var createResult = await orchestrator.ExecuteAsync(
             NewRequest(source.Path, destination.Path, BackupOperation.Create),
@@ -31,9 +32,9 @@ public sealed class UpdateBackupTests
         Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
 
         const string modifiedContent = "MODIFIED content that is clearly different from the original";
-        source.WriteText("changing.txt", modifiedContent);
+        _ = source.WriteText("changing.txt", modifiedContent);
         const string addedContent = "freshly added file";
-        source.WriteText(Path.Combine("dir", "added.txt"), addedContent);
+        _ = source.WriteText(Path.Combine("dir", "added.txt"), addedContent);
 
         var updateResult = await orchestrator.ExecuteAsync(
             NewRequest(source.Path, destination.Path, BackupOperation.Update),

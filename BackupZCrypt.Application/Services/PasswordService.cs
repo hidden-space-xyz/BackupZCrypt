@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
@@ -148,22 +149,22 @@ internal sealed partial class PasswordService : IPasswordService
 
         if (options.HasFlag(PasswordGenerationOptions.IncludeUppercase))
         {
-            charSet.Append(UppercaseChars);
+            _ = charSet.Append(UppercaseChars);
         }
 
         if (options.HasFlag(PasswordGenerationOptions.IncludeLowercase))
         {
-            charSet.Append(LowercaseChars);
+            _ = charSet.Append(LowercaseChars);
         }
 
         if (options.HasFlag(PasswordGenerationOptions.IncludeNumbers))
         {
-            charSet.Append(NumberChars);
+            _ = charSet.Append(NumberChars);
         }
 
         if (options.HasFlag(PasswordGenerationOptions.IncludeSpecialCharacters))
         {
-            charSet.Append(SpecialChars);
+            _ = charSet.Append(SpecialChars);
         }
 
         var availableChars = charSet.ToString();
@@ -204,7 +205,7 @@ internal sealed partial class PasswordService : IPasswordService
 
                 if (value < maxValidByte)
                 {
-                    password.Append(availableChars[value % charCount]);
+                    _ = password.Append(availableChars[value % charCount]);
                     i++;
                 }
             }
@@ -355,13 +356,9 @@ internal sealed partial class PasswordService : IPasswordService
         {
             return Math.Min(20, password.Length * 2);
         }
-        else if (flags.CategoryCount == 2 && password.Length < 10)
-        {
-            return 10;
-        }
         else
         {
-            return 0;
+            return flags.CategoryCount == 2 && password.Length < 10 ? 10 : 0;
         }
     }
 
@@ -373,11 +370,11 @@ internal sealed partial class PasswordService : IPasswordService
         {
             if (LeetMap.TryGetValue(c, out var mapped))
             {
-                sb.Append(mapped);
+                _ = sb.Append(mapped);
             }
             else
             {
-                sb.Append(c);
+                _ = sb.Append(c);
             }
         }
 

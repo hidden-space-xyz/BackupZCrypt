@@ -10,7 +10,7 @@ public interface ISettingsService
     /// </summary>
     /// <typeparam name="T">The settings type whose file path is requested.</typeparam>
     /// <returns>The absolute path to the settings file.</returns>
-    string GetFilePath<T>()
+    public string GetFilePath<T>()
         where T : class, ISettings<T>;
 
     /// <summary>
@@ -19,7 +19,7 @@ public interface ISettingsService
     /// <typeparam name="T">The settings type to load.</typeparam>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The loaded settings, or freshly created defaults.</returns>
-    Task<T> GetOrCreateAsync<T>(CancellationToken cancellationToken = default)
+    public Task<T> GetOrCreateAsync<T>(CancellationToken cancellationToken = default)
         where T : class, ISettings<T>;
 
     /// <summary>
@@ -29,6 +29,6 @@ public interface ISettingsService
     /// <param name="settings">The settings instance to persist.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the settings have been written.</returns>
-    Task SaveAsync<T>(T settings, CancellationToken cancellationToken = default)
+    public Task SaveAsync<T>(T settings, CancellationToken cancellationToken = default)
         where T : class, ISettings<T>;
 }

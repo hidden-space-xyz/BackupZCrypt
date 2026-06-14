@@ -14,5 +14,5 @@ public interface IKeyDerivationServiceFactory
     /// <param name="algorithm">The key derivation algorithm to resolve.</param>
     /// <returns>The matching <see cref="IKeyDerivationAlgorithmStrategy"/>.</returns>
     /// <exception cref="ArgumentOutOfRangeException">No strategy is registered for <paramref name="algorithm"/>.</exception>
-    IKeyDerivationAlgorithmStrategy Create(KeyDerivationAlgorithm algorithm);
+    public IKeyDerivationAlgorithmStrategy Create(KeyDerivationAlgorithm algorithm);
 }

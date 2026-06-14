@@ -5,6 +5,7 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
@@ -148,8 +149,8 @@ public sealed class BackupRestoreRoundtripTests
 
         var codes = CollectCodes(restoreResult);
         Assert.That(
-            codes.Contains(MessageCode.InvalidPassword),
-            Is.True,
+            codes,
+            Does.Contain(MessageCode.InvalidPassword),
             "Expected InvalidPassword, got: " + string.Join(", ", codes)
         );
 
@@ -172,7 +173,7 @@ public sealed class BackupRestoreRoundtripTests
         using var backup = new TempDir();
         using var restored = new TempDir();
 
-        backup.WriteText("stray.txt", "not a manifest");
+        _ = backup.WriteText("stray.txt", "not a manifest");
 
         var result = await orchestrator.ExecuteAsync(
             NewRequest(
@@ -224,7 +225,7 @@ public sealed class BackupRestoreRoundtripTests
 
         void Add(string relativePath, byte[] content)
         {
-            source.WriteFile(relativePath, content);
+            _ = source.WriteFile(relativePath, content);
             files[relativePath] = content;
         }
 
@@ -275,7 +276,7 @@ public sealed class BackupRestoreRoundtripTests
         {
             foreach (var error in result.Value.Errors)
             {
-                codes.Add(error.Code);
+                _ = codes.Add(error.Code);
             }
         }
 

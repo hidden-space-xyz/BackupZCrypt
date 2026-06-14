@@ -99,7 +99,7 @@ public sealed class FastCdcChunkingTests
     {
         var strategy = new FastCdcChunkingStrategy();
 
-        Assert.ThrowsAsync<ArgumentNullException>(async () =>
+        _ = Assert.ThrowsAsync<ArgumentNullException>(async () =>
         {
             await foreach (var _ in strategy.ChunkAsync(null!))
             {

@@ -15,7 +15,7 @@ public interface IManifestService
     /// <param name="backupPath">A path to the backup directory or a file within it.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The detected manifest kind, or <see cref="ManifestKind.Missing"/> if none is found.</returns>
-    Task<ManifestKind> DetectManifestKindAsync(
+    public Task<ManifestKind> DetectManifestKindAsync(
         string backupPath,
         CancellationToken cancellationToken = default
     );
@@ -26,7 +26,7 @@ public interface IManifestService
     /// <param name="sourceRoot">The backup root directory containing the manifest.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The parsed preamble, or <see langword="null"/> if the manifest is missing or malformed.</returns>
-    Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
+    public Task<ManifestPreamble?> ReadChunkManifestPreambleAsync(
         string sourceRoot,
         CancellationToken cancellationToken
     );
@@ -37,7 +37,7 @@ public interface IManifestService
     /// <param name="preamble">The manifest preamble previously read from disk.</param>
     /// <param name="encryptionKey">The derived manifest encryption key.</param>
     /// <returns>The decrypted manifest data, or <see langword="null"/> if decryption or validation failed.</returns>
-    ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey);
+    public ChunkManifestData? DecryptChunkManifest(ManifestPreamble preamble, byte[] encryptionKey);
 
     /// <summary>
     /// Encrypts and writes a chunked manifest atomically to the destination root.
@@ -48,7 +48,7 @@ public interface IManifestService
     /// <param name="algorithm">The encryption algorithm used to protect the manifest.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>Localizable errors if the write failed; empty on success.</returns>
-    Task<IReadOnlyList<LocalizableMessage>> SaveChunkManifestAsync(
+    public Task<IReadOnlyList<LocalizableMessage>> SaveChunkManifestAsync(
         ChunkManifestData manifestData,
         string destinationRoot,
         byte[] encryptionKey,

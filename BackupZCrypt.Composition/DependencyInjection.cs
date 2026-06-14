@@ -13,6 +13,7 @@ using BackupZCrypt.Infrastructure.Strategies.Chunking;
 using BackupZCrypt.Infrastructure.Strategies.Compression;
 using BackupZCrypt.Infrastructure.Strategies.Encryption;
 using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Composition;
@@ -34,28 +35,28 @@ public static class DependencyInjection
     /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
     public static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
-        services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
-        services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
+        _ = services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
+        _ = services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
 
-        services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
-        services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();
-        services.AddSingleton<IKeyDerivationAlgorithmStrategy, ScryptKeyDerivationStrategy>();
+        _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
+        _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();
+        _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, ScryptKeyDerivationStrategy>();
 
-        services.AddSingleton<IEncryptionAlgorithmStrategy, AesEncryptionStrategy>();
-        services.AddSingleton<IEncryptionAlgorithmStrategy, TwofishEncryptionStrategy>();
-        services.AddSingleton<IEncryptionAlgorithmStrategy, SerpentEncryptionStrategy>();
-        services.AddSingleton<IEncryptionAlgorithmStrategy, ChaCha20EncryptionStrategy>();
-        services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
+        _ = services.AddSingleton<IEncryptionAlgorithmStrategy, AesEncryptionStrategy>();
+        _ = services.AddSingleton<IEncryptionAlgorithmStrategy, TwofishEncryptionStrategy>();
+        _ = services.AddSingleton<IEncryptionAlgorithmStrategy, SerpentEncryptionStrategy>();
+        _ = services.AddSingleton<IEncryptionAlgorithmStrategy, ChaCha20EncryptionStrategy>();
+        _ = services.AddSingleton<IEncryptionAlgorithmStrategy, CamelliaEncryptionStrategy>();
 
-        services.AddSingleton<ICompressionStrategy, ZstdFastCompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
-        services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
+        _ = services.AddSingleton<ICompressionStrategy, ZstdFastCompressionStrategy>();
+        _ = services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
+        _ = services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
 
-        services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
+        _ = services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
 
-        services.AddSingleton<IPasswordService, PasswordService>();
-        services.AddSingleton<IFileOperationsService, FileOperationsService>();
-        services.AddSingleton<ISystemStorageService, SystemStorageService>();
+        _ = services.AddSingleton<IPasswordService, PasswordService>();
+        _ = services.AddSingleton<IFileOperationsService, FileOperationsService>();
+        _ = services.AddSingleton<ISystemStorageService, SystemStorageService>();
 
         return services;
     }
@@ -68,12 +69,12 @@ public static class DependencyInjection
     /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
-        services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
-        services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
-        services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
-        services.AddSingleton<IManifestService, ManifestService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
+        _ = services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
+        _ = services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
+        _ = services.AddSingleton<IDirectoryBackupService, DirectoryBackupService>();
+        _ = services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
+        _ = services.AddSingleton<IManifestService, ManifestService>();
+        _ = services.AddSingleton<ISettingsService, SettingsService>();
 
         return services;
     }

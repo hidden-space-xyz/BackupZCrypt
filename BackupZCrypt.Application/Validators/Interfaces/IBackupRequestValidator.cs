@@ -14,7 +14,7 @@ public interface IBackupRequestValidator
     /// <param name="request">The backup request to validate.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The localizable errors found; empty when the request is valid.</returns>
-    Task<IReadOnlyList<LocalizableMessage>> AnalyzeErrorsAsync(
+    public Task<IReadOnlyList<LocalizableMessage>> AnalyzeErrorsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
     );
@@ -25,7 +25,7 @@ public interface IBackupRequestValidator
     /// <param name="request">The backup request to inspect.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The localizable warnings found; empty when there are none.</returns>
-    Task<IReadOnlyList<LocalizableMessage>> AnalyzeWarningsAsync(
+    public Task<IReadOnlyList<LocalizableMessage>> AnalyzeWarningsAsync(
         BackupRequest request,
         CancellationToken cancellationToken = default
     );

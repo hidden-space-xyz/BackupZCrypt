@@ -1,4 +1,5 @@
 using System.Globalization;
+
 using BackupZCrypt.Application.Utilities.Formatters;
 
 namespace BackupZCrypt.Test.Unit.Application;

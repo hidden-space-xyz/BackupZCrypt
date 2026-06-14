@@ -1,5 +1,5 @@
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackupZCrypt.Application.ValueObjects;
 
@@ -10,7 +10,6 @@ namespace BackupZCrypt.Application.ValueObjects;
 /// <typeparam name="T">The type of value produced on success.</typeparam>
 public class Result<T> : Result
 {
-    private readonly T? value;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Result{T}"/> class.
@@ -21,16 +20,17 @@ public class Result<T> : Result
     protected Result(T value, bool isSuccess, IReadOnlyList<LocalizableMessage> errors)
         : base(isSuccess, errors)
     {
-        this.value = value;
+        Value = value;
     }
 
     /// <summary>
     /// Gets the success value.
     /// </summary>
     /// <exception cref="InvalidOperationException">The result represents a failure.</exception>
+    [AllowNull]
     public T Value =>
         this.IsSuccess
-            ? this.value!
+            ? field!
             : throw new InvalidOperationException("Cannot access the value of a failed result.");
 
     /// <summary>

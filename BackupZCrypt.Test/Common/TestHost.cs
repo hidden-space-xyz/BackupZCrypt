@@ -1,4 +1,5 @@
 using BackupZCrypt.Composition;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Common;

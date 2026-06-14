@@ -5,6 +5,7 @@ using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
+
 using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Application;
@@ -49,7 +50,7 @@ public sealed class BackupRequestValidatorTests
     public async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
     {
         var request = ValidRequest(string.Empty, DestinationDir);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
 
@@ -59,9 +60,9 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_SourceNeitherFileNorDirectory_ReportsNotExist()
     {
-        this.fileOperations.FileExists(SourceDir).Returns(false);
-        this.fileOperations.DirectoryExists(SourceDir).Returns(false);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.fileOperations.FileExists(SourceDir).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(false);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
@@ -73,11 +74,11 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_EmptyPassword_ReportsPasswordRequired()
     {
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: string.Empty);
 
@@ -89,11 +90,11 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_ShortPassword_ReportsPasswordTooShort()
     {
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: "Ab1!xyz");
 
@@ -105,11 +106,11 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_PasswordMismatch_ReportsMismatch()
     {
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = new BackupRequest(
             SourceDir,
@@ -129,12 +130,12 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_SourceEqualsDestinationDirectory_ReportsSameDirectory()
     {
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, SourceDir);
 
@@ -146,15 +147,15 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_FullyValidRequest_ReturnsEmpty()
     {
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
-        this.fileOperations
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([Path.Combine(SourceDir, "a.txt")]);
 
-        this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("C:\\");
-        this.systemStorage.IsDriveReady("C:\\").Returns(true);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("C:\\");
+        _ = this.systemStorage.IsDriveReady("C:\\").Returns(true);
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
@@ -166,10 +167,10 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeWarnings_WeakPassword_ReportsWeakPasswordWarning()
     {
-        this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
-        this.passwordService
+        _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 10, []));
 
@@ -183,10 +184,10 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeWarnings_StrongPassword_DoesNotReportWeakPasswordWarning()
     {
-        this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
-        this.passwordService
+        _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
 
@@ -200,21 +201,21 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeWarnings_InsufficientDiskSpace_ReportsLowDiskSpace()
     {
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
         var sourceFile = Path.Combine(SourceDir, "big.bin");
-        this.fileOperations
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([sourceFile]);
-        this.fileOperations.GetFileSize(sourceFile).Returns(1_000_000L);
+        _ = this.fileOperations.GetFileSize(sourceFile).Returns(1_000_000L);
 
-        this.systemStorage.GetPathRoot(DestinationDir).Returns("C:\\");
-        this.systemStorage.IsDriveReady("C:\\").Returns(true);
-        this.systemStorage.GetAvailableFreeSpace("C:\\").Returns(500_000L);
+        _ = this.systemStorage.GetPathRoot(DestinationDir).Returns("C:\\");
+        _ = this.systemStorage.IsDriveReady("C:\\").Returns(true);
+        _ = this.systemStorage.GetAvailableFreeSpace("C:\\").Returns(500_000L);
 
-        this.passwordService
+        _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
 
@@ -228,20 +229,20 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeWarnings_ManyFiles_ReportsLargeOperation()
     {
-        this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
-        this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
         var files = Enumerable
             .Range(0, 10_001)
             .Select(i => Path.Combine(SourceDir, $"f{i}.txt"))
             .ToArray();
-        this.fileOperations
+        _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(files);
-        this.fileOperations.GetFileSize(Arg.Any<string>()).Returns(1L);
+        _ = this.fileOperations.GetFileSize(Arg.Any<string>()).Returns(1L);
 
-        this.passwordService
+        _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
 

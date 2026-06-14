@@ -1,4 +1,5 @@
 using System.Globalization;
+
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 

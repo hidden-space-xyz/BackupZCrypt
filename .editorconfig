@@ -132,8 +132,9 @@ roslynator_new_line_before_while_in_do_statement = true
 # Roslynator analyzers - baseline policy
 # ============================================================
 
-# Start from a moderate baseline for Roslynator analyzers enabled by default.
-dotnet_analyzer_diagnostic.category-roslynator.severity = suggestion
+# Hardened baseline: Roslynator analyzers enabled by default are treated as warnings so
+# maintainability/readability issues are surfaced and resolved rather than silently accrued.
+dotnet_analyzer_diagnostic.category-roslynator.severity = warning
 
 # ------------------------------------------------------------
 # Escalated maintainability and correctness-oriented rules
@@ -359,6 +360,124 @@ dotnet_diagnostic.rcs1250.severity = suggestion
 
 # Normalize usage of infinite loop
 dotnet_diagnostic.rcs1252.severity = none
+
+# ============================================================
+# Hardened quality gates
+# ------------------------------------------------------------
+# These raise the bar on correctness, modern C#, immutability, and naming. They reflect patterns
+# the codebase already follows, so they lock in current quality and block regressions rather than
+# forcing a large refactor.
+#
+# Severity note: the IDE-prefixed (IDExxxx) and dotnet_naming_* rules below are reported by the IDE
+# and by `dotnet format`. To also enforce them during `dotnet build`, set
+# <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> in a Directory.Build.props. The Roslynator
+# (RCS) and CA rules already run at build time.
+# ============================================================
+
+# ------------------------------------------------------------
+# Language and file shape
+# ------------------------------------------------------------
+
+# Require file-scoped namespaces (matches the whole codebase).
+csharp_style_namespace_declarations = file_scoped:warning
+
+# Keep using directives outside the namespace and folders aligned with namespaces.
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_style_namespace_match_folder = true:warning
+
+# Remove unnecessary using directives (ImplicitUsings is enabled, so leftovers are noise).
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Always require explicit accessibility modifiers (reinforces roslynator_accessibility_modifiers).
+dotnet_style_require_accessibility_modifiers = always:warning
+
+# ------------------------------------------------------------
+# Braces and blocks
+# ------------------------------------------------------------
+
+# Always use braces, even for single-line blocks (matches existing guard clauses).
+csharp_prefer_braces = true:warning
+
+# ------------------------------------------------------------
+# Modern pattern matching and null handling
+# ------------------------------------------------------------
+csharp_style_prefer_pattern_matching = true:warning
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_not_pattern = true:warning
+csharp_style_prefer_null_check_over_type_check = true:warning
+csharp_style_conditional_delegate_call = true:warning
+dotnet_style_null_propagation = true:warning
+dotnet_style_coalesce_expression = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+
+# ------------------------------------------------------------
+# Expression-level preferences
+# ------------------------------------------------------------
+dotnet_style_object_initializer = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_style_prefer_auto_properties = true:warning
+dotnet_style_prefer_compound_assignment = true:warning
+dotnet_style_prefer_simplified_boolean_expressions = true:warning
+csharp_prefer_simple_using_statement = true:warning
+csharp_style_inlined_variable_declaration = true:warning
+csharp_style_prefer_index_operator = true:warning
+csharp_style_prefer_range_operator = true:warning
+csharp_style_deconstructed_variable_declaration = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:suggestion
+dotnet_style_prefer_conditional_expression_over_return = true:suggestion
+
+# ------------------------------------------------------------
+# Immutability and encapsulation
+# ------------------------------------------------------------
+dotnet_style_readonly_field = true:warning
+csharp_prefer_static_local_functions = true:warning
+csharp_style_prefer_readonly_struct = true:warning
+csharp_style_prefer_readonly_struct_member = true:warning
+
+# ------------------------------------------------------------
+# Dead code
+# ------------------------------------------------------------
+dotnet_code_quality_unused_parameters = all:warning
+csharp_style_unused_value_expression_statement_preference = discard_variable:suggestion
+csharp_style_unused_value_assignment_preference = discard_variable:suggestion
+
+# ------------------------------------------------------------
+# Naming conventions (IDE1006)
+# Methods are intentionally excluded so test names like Method_Scenario_Expected stay valid.
+# ------------------------------------------------------------
+dotnet_diagnostic.IDE1006.severity = warning
+
+# Interfaces must be PascalCase prefixed with I.
+dotnet_naming_rule.interfaces_begin_with_i.severity = warning
+dotnet_naming_rule.interfaces_begin_with_i.symbols = interface_symbol
+dotnet_naming_rule.interfaces_begin_with_i.style = prefix_interface_with_i
+dotnet_naming_symbols.interface_symbol.applicable_kinds = interface
+dotnet_naming_symbols.interface_symbol.applicable_accessibilities = *
+dotnet_naming_style.prefix_interface_with_i.required_prefix = I
+dotnet_naming_style.prefix_interface_with_i.capitalization = pascal_case
+
+# Types must be PascalCase.
+dotnet_naming_rule.types_are_pascal_case.severity = warning
+dotnet_naming_rule.types_are_pascal_case.symbols = type_symbol
+dotnet_naming_rule.types_are_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.type_symbol.applicable_kinds = class, struct, enum, delegate
+dotnet_naming_symbols.type_symbol.applicable_accessibilities = *
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+# Properties, events, and constants must be PascalCase.
+dotnet_naming_rule.members_are_pascal_case.severity = warning
+dotnet_naming_rule.members_are_pascal_case.symbols = member_symbol
+dotnet_naming_rule.members_are_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.member_symbol.applicable_kinds = property, event
+dotnet_naming_symbols.member_symbol.applicable_accessibilities = *
+
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+dotnet_naming_rule.constants_are_pascal_case.symbols = constant_symbol
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.constant_symbol.applicable_kinds = field
+dotnet_naming_symbols.constant_symbol.applicable_accessibilities = *
+dotnet_naming_symbols.constant_symbol.required_modifiers = const
 
 # ------------------------------------------------------------
 # Optional: generated code exclusion

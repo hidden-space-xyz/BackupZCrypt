@@ -10,5 +10,5 @@ public interface IFilePickerService
     /// </summary>
     /// <param name="title">The dialog title.</param>
     /// <returns>The selected folder's local path, or <see langword="null"/> if the dialog was cancelled.</returns>
-    Task<string?> PickFolderAsync(string title);
+    public Task<string?> PickFolderAsync(string title);
 }

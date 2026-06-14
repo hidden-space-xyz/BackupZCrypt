@@ -131,13 +131,10 @@ internal sealed class BackupOrchestrator(
             request,
             cancellationToken
         );
-        if (warnings.Count > 0 && !request.ProceedOnWarnings)
-        {
-            return Result<BackupResult>.Success(
+        return warnings.Count > 0 && !request.ProceedOnWarnings
+            ? Result<BackupResult>.Success(
                 new BackupResult(false, TimeSpan.Zero, 0, 0, 0, warnings: warnings)
-            );
-        }
-
-        return null;
+            )
+            : null;
     }
 }

@@ -11,10 +11,10 @@ public interface ISettings<TSelf>
     /// <summary>
     /// Gets the default instance used when no persisted settings exist or the stored file is corrupted.
     /// </summary>
-    static abstract TSelf DefaultValue { get; }
+    public abstract static TSelf DefaultValue { get; }
 
     /// <summary>
     /// Gets the file name (without directory) under which this settings type is stored.
     /// </summary>
-    static abstract string FileName { get; }
+    public abstract static string FileName { get; }
 }

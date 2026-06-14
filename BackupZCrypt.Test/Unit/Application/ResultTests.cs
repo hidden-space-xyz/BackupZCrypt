@@ -98,6 +98,6 @@ public sealed class ResultTests
         var result = Result<int>.Failure(MessageCode.UnexpectedErrorFormat, "boom");
 
         Assert.That(result.IsSuccess, Is.False);
-        Assert.Throws<InvalidOperationException>(() => _ = result.Value);
+        _ = Assert.Throws<InvalidOperationException>(() => _ = result.Value);
     }
 }

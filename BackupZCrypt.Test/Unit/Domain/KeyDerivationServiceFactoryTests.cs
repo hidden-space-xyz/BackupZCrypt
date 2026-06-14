@@ -1,6 +1,7 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+
 using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Domain;
@@ -10,7 +11,7 @@ public sealed class KeyDerivationServiceFactoryTests
     private static IKeyDerivationAlgorithmStrategy Stub(KeyDerivationAlgorithm id)
     {
         var strategy = Substitute.For<IKeyDerivationAlgorithmStrategy>();
-        strategy.Id.Returns(id);
+        _ = strategy.Id.Returns(id);
         return strategy;
     }
 
@@ -33,7 +34,7 @@ public sealed class KeyDerivationServiceFactoryTests
     {
         var factory = new KeyDerivationServiceFactory([Stub(KeyDerivationAlgorithm.Argon2id)]);
 
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => factory.Create(KeyDerivationAlgorithm.Scrypt)
         );
     }

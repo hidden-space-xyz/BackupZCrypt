@@ -45,6 +45,13 @@ full rule set and rationale.
 
 ## NuGet dependencies — keep them current
 
+Versions are managed centrally with **Central Package Management (CPM)**. Every version lives in
+`Directory.Packages.props` at the repo root as a `<PackageVersion>`; each `.csproj` references a
+package with `<PackageReference Include="..." />` and **no `Version` attribute**. To add a package:
+add a `<PackageVersion>` to `Directory.Packages.props`, then a versionless `<PackageReference>` to
+the consuming project. To change a version, edit `Directory.Packages.props` only. Analyzer packages
+keep their `PrivateAssets`/`IncludeAssets` metadata in the `.csproj` — only the version moves out.
+
 Dependencies must stay on their **latest stable, compatible** versions. When touching package
 references or starting substantial work:
 
@@ -58,10 +65,10 @@ dotnet list BackupZCrypt.sln package --deprecated
 ```
 
 Update guidance:
-- Bump to the newest **stable** release compatible with **.NET 10**; avoid pre-release unless the
-  user asks.
-- Keep the **same version across all projects** for a shared package (e.g. the two `Roslynator.*`
-  analyzers, the Avalonia packages — currently aligned at one version each).
+- Bump versions in `Directory.Packages.props` to the newest **stable** release compatible with
+  **.NET 10**; avoid pre-release unless the user asks.
+- CPM guarantees one version per package solution-wide, so there is no drift to reconcile across
+  projects — keep it that way (one `<PackageVersion>` per package).
 - After any update: `dotnet build` and `dotnet test` must both pass with zero new warnings before the
   change is done.
 - Treat a security advisory on a dependency as a **priority-1 (security)** issue — see

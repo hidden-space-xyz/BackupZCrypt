@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -31,7 +32,7 @@ internal static class PasswordStrengthFormatter
         };
 
         StringBuilder sb = new();
-        sb.Append(MessageLocalizer.Localize(new LocalizableMessage(label)))
+        _ = sb.Append(MessageLocalizer.Localize(new LocalizableMessage(label)))
             .Append(" // ")
             .Append(
             MessageLocalizer.Localize(
@@ -44,7 +45,7 @@ internal static class PasswordStrengthFormatter
 
         if (analysis.Tips.Count > 0)
         {
-            sb.Append(" // ")
+            _ = sb.Append(" // ")
                 .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.Suggestions)))
                 .Append(' ')
                 .AppendJoin(
@@ -56,7 +57,7 @@ internal static class PasswordStrengthFormatter
         }
         else if (analysis.Strength == PasswordStrength.Strong)
         {
-            sb.Append(" // ")
+            _ = sb.Append(" // ")
                 .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.GoodJob)));
         }
 

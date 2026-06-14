@@ -17,7 +17,7 @@ public interface IDirectoryBackupService
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the operation outcome.</returns>
-    Task<Result<BackupResult>> ProcessAsync(
+    public Task<Result<BackupResult>> ProcessAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,

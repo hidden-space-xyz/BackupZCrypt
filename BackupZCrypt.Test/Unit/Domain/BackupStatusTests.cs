@@ -22,7 +22,7 @@ public sealed class BackupStatusTests
     [Test]
     public void Constructor_NegativeProcessedFiles_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupStatus(-1, 10, 0, 1000, TimeSpan.Zero)
         );
     }
@@ -30,7 +30,7 @@ public sealed class BackupStatusTests
     [Test]
     public void Constructor_NegativeElapsed_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupStatus(1, 10, 0, 1000, TimeSpan.FromSeconds(-1))
         );
     }
@@ -38,7 +38,7 @@ public sealed class BackupStatusTests
     [Test]
     public void Constructor_ProcessedFilesGreaterThanTotal_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupStatus(11, 10, 0, 1000, TimeSpan.Zero)
         );
     }
@@ -46,7 +46,7 @@ public sealed class BackupStatusTests
     [Test]
     public void Constructor_ProcessedBytesGreaterThanTotal_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new BackupStatus(1, 10, 2000, 1000, TimeSpan.Zero)
         );
     }

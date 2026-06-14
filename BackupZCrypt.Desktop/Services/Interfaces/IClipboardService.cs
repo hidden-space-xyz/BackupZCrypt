@@ -10,5 +10,5 @@ public interface IClipboardService
     /// </summary>
     /// <param name="text">The text to place on the clipboard.</param>
     /// <returns>A task that completes once the clipboard has been updated.</returns>
-    Task SetTextAsync(string text);
+    public Task SetTextAsync(string text);
 }

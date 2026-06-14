@@ -11,7 +11,7 @@ public interface IChunkingStrategy
     /// <param name="source">The stream to split into chunks.</param>
     /// <param name="cancellationToken">Token used to cancel the chunking enumeration.</param>
     /// <returns>An asynchronous sequence of chunk buffers in stream order.</returns>
-    IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
+    public IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
         Stream source,
         CancellationToken cancellationToken = default
     );

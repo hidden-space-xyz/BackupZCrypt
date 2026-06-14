@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
@@ -292,13 +293,23 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
     /// <param name="cancellationToken">Token used to cancel the enumeration.</param>
     /// <returns>An asynchronous sequence of chunk buffers covering the stream in order.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public async IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
+    public IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
         Stream source,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        // Delegate to the iterator only after validation, so a null source throws eagerly at the
+        // call site rather than being deferred until the consumer first enumerates.
+        return ChunkCoreAsync(source, cancellationToken);
+    }
+
+    private static async IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkCoreAsync(
+        Stream source,
+        [EnumeratorCancellation] CancellationToken cancellationToken
+    )
+    {
         var buffer = ArrayPool<byte>.Shared.Rent(ChunkMaxSize);
         var bufferedLength = 0;
         var eof = false;

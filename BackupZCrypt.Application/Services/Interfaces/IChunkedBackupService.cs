@@ -18,7 +18,7 @@ public interface IChunkedBackupService
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the backup outcome.</returns>
-    Task<Result<BackupResult>> CreateAsync(
+    public Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,
@@ -35,7 +35,7 @@ public interface IChunkedBackupService
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the update outcome.</returns>
-    Task<Result<BackupResult>> UpdateAsync(
+    public Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,
@@ -52,7 +52,7 @@ public interface IChunkedBackupService
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the restore outcome.</returns>
-    Task<Result<BackupResult>> RestoreAsync(
+    public Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
         BackupRequest request,

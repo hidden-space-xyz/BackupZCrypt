@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Strategies.Encryption;
@@ -76,7 +77,7 @@ public sealed class EncryptionStrategyTests
         var wrongKey = (byte[])Key.Clone();
         wrongKey[0] ^= 0xFF;
 
-        Assert.Catch<CryptographicException>(
+        _ = Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, wrongKey, Nonce, AssociatedData)
         );
     }
@@ -90,7 +91,7 @@ public sealed class EncryptionStrategyTests
         var wrongNonce = (byte[])Nonce.Clone();
         wrongNonce[0] ^= 0xFF;
 
-        Assert.Catch<CryptographicException>(
+        _ = Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, wrongNonce, AssociatedData)
         );
     }
@@ -104,7 +105,7 @@ public sealed class EncryptionStrategyTests
         var wrongAad = (byte[])AssociatedData.Clone();
         wrongAad[0] ^= 0xFF;
 
-        Assert.Catch<CryptographicException>(
+        _ = Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, wrongAad)
         );
     }
@@ -117,7 +118,7 @@ public sealed class EncryptionStrategyTests
 
         ciphertext[0] ^= 0x01;
 
-        Assert.Catch<CryptographicException>(
+        _ = Assert.Catch<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData)
         );
     }

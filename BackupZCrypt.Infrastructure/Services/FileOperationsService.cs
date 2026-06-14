@@ -1,5 +1,6 @@
 using System.IO.Enumeration;
 using System.Security.Cryptography;
+
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
 
@@ -82,7 +83,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// <param name="directoryPath">The directory path to create.</param>
     public void CreateDirectory(string directoryPath)
     {
-        Directory.CreateDirectory(directoryPath);
+        _ = Directory.CreateDirectory(directoryPath);
     }
 
     /// <summary>
@@ -96,7 +97,7 @@ internal sealed class FileOperationsService : IFileOperationsService
         CancellationToken cancellationToken = default
     )
     {
-        await Task.Run(() => Directory.CreateDirectory(directoryPath), cancellationToken);
+        _ = await Task.Run(() => Directory.CreateDirectory(directoryPath), cancellationToken);
     }
 
     /// <summary>

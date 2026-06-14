@@ -1,4 +1,3 @@
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.ValueObjects;

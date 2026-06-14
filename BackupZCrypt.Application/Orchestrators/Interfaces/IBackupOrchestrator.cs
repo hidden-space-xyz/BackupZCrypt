@@ -16,7 +16,7 @@ public interface IBackupOrchestrator
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result wrapping the backup outcome, or validation errors and warnings.</returns>
-    Task<Result<BackupResult>> ExecuteAsync(
+    public Task<Result<BackupResult>> ExecuteAsync(
         BackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken = default

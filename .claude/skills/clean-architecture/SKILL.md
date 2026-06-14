@@ -16,7 +16,7 @@ depend on inner ones; inner layers never know the outer ones exist.
 
 | Project | Contains | May reference |
 |---|---|---|
-| `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (`IEncryptionAlgorithmStrategy`, `IKeyDerivationAlgorithmStrategy`, `ICompressionStrategy`, `IChunkingStrategy`, `IFileOperationsService`, `ISystemStorageService`, factory interfaces). Pure contracts and domain types. | **BCL only.** No NuGet packages, no project references. |
+| `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (`IEncryptionAlgorithmStrategy`, `IKeyDerivationAlgorithmStrategy`, `ICompressionStrategy`, `IChunkingStrategy`, `IFileOperationsService`, `ISystemStorageService`, factory interfaces). Pure contracts and domain types. | **BCL only** at runtime. No project references and no runtime NuGet (dev-only analyzers with `PrivateAssets` are the sole exception). |
 | `BackupZCrypt.Application` | Use cases and orchestration (`BackupOrchestrator`), business services (`ChunkedBackupService`, `ManifestService`, `PasswordService`, `SettingsService`), validators, and the `Result` / `Result<T>` types. | Domain |
 | `BackupZCrypt.Infrastructure` | Concrete implementations of Domain interfaces: encryption, key derivation, compression, chunking strategies, and file/storage services. | Domain (+ `BouncyCastle.Cryptography`, `ZstdSharp.Port`) |
 | `BackupZCrypt.Composition` | The DI composition root (`DependencyInjection.cs`) wiring contracts to implementations. | Domain, Application, Infrastructure |
@@ -24,9 +24,10 @@ depend on inner ones; inner layers never know the outer ones exist.
 
 ## Hard rules
 
-1. **Domain depends on nothing.** No project references, no NuGet packages. If you reach for a
-   third-party type in Domain, the abstraction belongs there but the implementation belongs in
-   Infrastructure.
+1. **Domain depends on nothing at runtime.** No project references and no runtime NuGet packages
+   (dev-only analyzers with `PrivateAssets="all"` are the only allowed package references). If you
+   reach for a third-party type in Domain, the abstraction belongs there but the implementation
+   belongs in Infrastructure.
 2. **Dependencies flow inward.** Application may use Domain; Infrastructure may use Domain; never
    the reverse. Domain must not reference Application or Infrastructure.
 3. **Program to interfaces.** A Domain interface defines the contract; Infrastructure provides the
@@ -62,4 +63,5 @@ factory (`KeyDerivationServiceFactory`, `CompressionServiceFactory`). To add a v
 ## Before you finish
 
 - Confirm no inward type leaked outward and no new project/package reference points the wrong way.
-- A quick check: Domain `.csproj` still has **zero** `PackageReference`/`ProjectReference` entries.
+- A quick check: Domain `.csproj` still has **no** `ProjectReference` and no runtime
+  `PackageReference` (only `PrivateAssets="all"` analyzer packages).

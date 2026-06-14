@@ -1,7 +1,8 @@
 using System.Globalization;
-using Avalonia;
+
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Composition;
@@ -9,6 +10,7 @@ using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Desktop.Views;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Desktop;
@@ -53,18 +55,18 @@ public sealed class App : Avalonia.Application
     {
         ServiceCollection services = [];
 
-        services.AddDomainServices();
-        services.AddApplicationServices();
+        _ = services.AddDomainServices();
+        _ = services.AddApplicationServices();
 
-        services.AddSingleton<IFilePickerService, FilePickerService>();
-        services.AddSingleton<IClipboardService, ClipboardService>();
+        _ = services.AddSingleton<IFilePickerService, FilePickerService>();
+        _ = services.AddSingleton<IClipboardService, ClipboardService>();
 
-        services.AddSingleton<CreateBackupViewModel>();
-        services.AddSingleton<UpdateBackupViewModel>();
-        services.AddSingleton<RestoreBackupViewModel>();
-        services.AddSingleton<SettingsViewModel>();
-        services.AddSingleton<AboutViewModel>();
-        services.AddSingleton<MainWindowViewModel>();
+        _ = services.AddSingleton<CreateBackupViewModel>();
+        _ = services.AddSingleton<UpdateBackupViewModel>();
+        _ = services.AddSingleton<RestoreBackupViewModel>();
+        _ = services.AddSingleton<SettingsViewModel>();
+        _ = services.AddSingleton<AboutViewModel>();
+        _ = services.AddSingleton<MainWindowViewModel>();
 
         return services.BuildServiceProvider();
     }
