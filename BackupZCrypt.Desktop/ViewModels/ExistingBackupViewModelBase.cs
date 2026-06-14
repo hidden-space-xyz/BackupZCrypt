@@ -25,7 +25,6 @@ public abstract partial class ExistingBackupViewModelBase(
     IManifestService manifestService
 ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
-    private static readonly IBrush PositiveBrush = new SolidColorBrush(Color.Parse("#3FB68B"));
     private static readonly IBrush NegativeBrush = new SolidColorBrush(Color.Parse("#E5B458"));
 
     private int detectionVersion;
@@ -108,14 +107,15 @@ public abstract partial class ExistingBackupViewModelBase(
         }
 
         DetectedKind = kind;
-        HasDetection = true;
         IsPasswordRequired = kind == ManifestKind.Encrypted;
 
-        (DetectionMessage, DetectionBrush, DetectionIcon) = kind switch
+        HasDetection = kind != ManifestKind.Encrypted;
+        if (HasDetection)
         {
-            ManifestKind.Encrypted => (Strings.DetectEncrypted, PositiveBrush, "🔒"),
-            _ => (Strings.DetectMissing, NegativeBrush, "⚠"),
-        };
+            DetectionMessage = Strings.DetectMissing;
+            DetectionBrush = NegativeBrush;
+            DetectionIcon = "⚠";
+        }
 
         NotifyStartCanExecuteChanged();
     }

@@ -294,9 +294,6 @@
   <data name="ElapsedFormat" xml:space="preserve">
     <value>Elapsed: {0}</value>
   </data>
-  <data name="DetectEncrypted" xml:space="preserve">
-    <value>Encrypted backup detected — password required.</value>
-  </data>
   <data name="DetectMissing" xml:space="preserve">
     <value>No backup manifest found at this location.</value>
   </data>
@@ -527,12 +524,6 @@
   </data>
   <data name="LowDiskSpaceFormat" xml:space="preserve">
     <value>Low disk space: Available {0}, estimated need {1}</value>
-  </data>
-  <data name="LargeOperationFormat" xml:space="preserve">
-    <value>Large operation: {0} files will be processed. This may take considerable time.</value>
-  </data>
-  <data name="MediumOperationFormat" xml:space="preserve">
-    <value>Medium operation: {0} files will be processed.</value>
   </data>
   <data name="DestinationExistingFilesFormat" xml:space="preserve">
     <value>Destination contains {0} existing file(s) that may be overwritten.</value>

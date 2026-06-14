@@ -294,9 +294,6 @@
   <data name="ElapsedFormat" xml:space="preserve">
     <value>Transcurrido: {0}</value>
   </data>
-  <data name="DetectEncrypted" xml:space="preserve">
-    <value>Copia cifrada detectada: se requiere contraseña.</value>
-  </data>
   <data name="DetectMissing" xml:space="preserve">
     <value>No se encontró un manifiesto de copia en esta ubicación.</value>
   </data>
@@ -527,12 +524,6 @@
   </data>
   <data name="LowDiskSpaceFormat" xml:space="preserve">
     <value>Poco espacio en disco: Disponible {0}, necesario estimado {1}</value>
-  </data>
-  <data name="LargeOperationFormat" xml:space="preserve">
-    <value>Operación grande: se procesarán {0} archivos. Esto puede tomar un tiempo considerable.</value>
-  </data>
-  <data name="MediumOperationFormat" xml:space="preserve">
-    <value>Operación mediana: se procesarán {0} archivos.</value>
   </data>
   <data name="DestinationExistingFilesFormat" xml:space="preserve">
     <value>El destino contiene {0} archivo(s) existente(s) que pueden ser sobrescritos.</value>

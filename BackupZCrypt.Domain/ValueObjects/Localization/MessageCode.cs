@@ -110,16 +110,6 @@ public enum MessageCode
     LowDiskSpaceFormat = 21,
 
     /// <summary>
-    /// The operation involves a large amount of data; formatted with the size detail.
-    /// </summary>
-    LargeOperationFormat = 22,
-
-    /// <summary>
-    /// The operation involves a moderate amount of data; formatted with the size detail.
-    /// </summary>
-    MediumOperationFormat = 23,
-
-    /// <summary>
     /// The destination already contains files; formatted with the count or detail.
     /// </summary>
     DestinationExistingFilesFormat = 24,

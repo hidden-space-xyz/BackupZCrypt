@@ -265,26 +265,6 @@ internal sealed class BackupRequestValidator(
                         );
                     }
                 }
-
-                var fileCount = sourceFiles.Length;
-                if (fileCount > 10000)
-                {
-                    warnings.Add(
-                        new LocalizableMessage(
-                            MessageCode.LargeOperationFormat,
-                            fileCount.ToString("N0")
-                        )
-                    );
-                }
-                else if (fileCount > 1000)
-                {
-                    warnings.Add(
-                        new LocalizableMessage(
-                            MessageCode.MediumOperationFormat,
-                            fileCount.ToString("N0")
-                        )
-                    );
-                }
             }
 
             var hasExistingFiles = false;
@@ -304,7 +284,10 @@ internal sealed class BackupRequestValidator(
                 }
             }
 
-            if (hasExistingFiles && request.Operation == BackupOperation.Restore)
+            if (
+                hasExistingFiles
+                && request.Operation is BackupOperation.Create or BackupOperation.Restore
+            )
             {
                 warnings.Add(
                     new LocalizableMessage(

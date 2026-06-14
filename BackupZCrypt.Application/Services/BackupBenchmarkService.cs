@@ -209,7 +209,6 @@ internal sealed class BackupBenchmarkService(
                 )
                 .ConfigureAwait(false);
 
-            // A single chunk is enough to JIT the whole pipeline before timing begins.
             break;
         }
     }
@@ -390,7 +389,6 @@ internal sealed class BackupBenchmarkService(
         var state = 0x9E3779B97F4A7C15UL;
         var offset = 0;
 
-        // size is a multiple of sizeof(ulong), so the whole buffer is filled with no remainder.
         while (offset + sizeof(ulong) <= size)
         {
             state ^= state << 13;
@@ -400,8 +398,6 @@ internal sealed class BackupBenchmarkService(
             offset += sizeof(ulong);
         }
 
-        // Overwrite the second half with a repeating block so the sample is partially compressible,
-        // approximating mixed real-world content rather than purely incompressible data.
         var half = size / 2;
         for (var i = half; i < size; i++)
         {

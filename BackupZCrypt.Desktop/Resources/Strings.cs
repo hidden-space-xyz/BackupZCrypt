@@ -311,11 +311,6 @@ internal static class Strings
     public static string ElapsedFormat => Get();
 
     /// <summary>
-    /// Gets the message describing a detected encrypted backup.
-    /// </summary>
-    public static string DetectEncrypted => Get();
-
-    /// <summary>
     /// Gets the message describing a missing backup.
     /// </summary>
     public static string DetectMissing => Get();

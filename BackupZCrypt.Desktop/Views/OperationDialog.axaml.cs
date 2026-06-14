@@ -49,8 +49,6 @@ public sealed partial class OperationDialog : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Defer the decision so transient transitions (e.g. "continue anyway" clears the warnings
-        // flag just before the next run sets IsRunning) don't momentarily close the dialog.
         Dispatcher.UIThread.Post(CloseWhenIdle);
     }
 

@@ -299,9 +299,6 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
     )
     {
         ArgumentNullException.ThrowIfNull(source);
-
-        // Delegate to the iterator only after validation, so a null source throws eagerly at the
-        // call site rather than being deferred until the consumer first enumerates.
         return ChunkCoreAsync(source, cancellationToken);
     }
 

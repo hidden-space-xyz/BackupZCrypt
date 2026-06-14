@@ -226,30 +226,30 @@ public sealed class BackupRequestValidatorTests
         Assert.That(Codes(warnings), Does.Contain(MessageCode.LowDiskSpaceFormat));
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_ManyFiles_ReportsLargeOperation()
+    [TestCase(BackupOperation.Create, true)]
+    [TestCase(BackupOperation.Restore, true)]
+    [TestCase(BackupOperation.Update, false)]
+    public async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForCreateAndRestoreOnly(
+        BackupOperation operation,
+        bool expectedWarning
+    )
     {
-        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(false);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
-
-        var files = Enumerable
-            .Range(0, 10_001)
-            .Select(i => Path.Combine(SourceDir, $"f{i}.txt"))
-            .ToArray();
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(files);
-        _ = this.fileOperations.GetFileSize(Arg.Any<string>()).Returns(1L);
+            .GetFilesAsync(DestinationDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([Path.Combine(DestinationDir, "existing.bin")]);
 
         _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
 
-        var request = ValidRequest(SourceDir, DestinationDir);
+        var request = ValidRequest(SourceDir, DestinationDir, operation: operation);
 
         var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
 
-        Assert.That(Codes(warnings), Does.Contain(MessageCode.LargeOperationFormat));
+        var hasWarning = Codes(warnings).Contains(MessageCode.DestinationExistingFilesFormat);
+        Assert.That(hasWarning, Is.EqualTo(expectedWarning));
     }
 }
