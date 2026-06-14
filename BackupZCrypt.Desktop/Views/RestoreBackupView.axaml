@@ -33,16 +33,6 @@
             </Grid>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal"
-                      Spacing="10"
-                      IsVisible="{Binding HasDetection}">
-            <TextBlock Text="{Binding DetectionIcon}" FontSize="14" />
-            <TextBlock Text="{Binding DetectionMessage}"
-                       TextWrapping="Wrap"
-                       FontSize="13"
-                       Foreground="{Binding DetectionBrush}" />
-          </StackPanel>
-
           <StackPanel Spacing="6">
             <TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
             <Grid ColumnDefinitions="*,Auto">
@@ -57,6 +47,16 @@
                       Command="{Binding PickDestinationFolderCommand}" />
             </Grid>
           </StackPanel>
+
+			<StackPanel Orientation="Horizontal"
+                      Spacing="10"
+                      IsVisible="{Binding HasDetection}">
+				<TextBlock Text="{Binding DetectionIcon}" FontSize="14" />
+				<TextBlock Text="{Binding DetectionMessage}"
+						   TextWrapping="Wrap"
+						   FontSize="13"
+						   Foreground="{Binding DetectionBrush}" />
+			</StackPanel>
         </StackPanel>
       </Border>
 
