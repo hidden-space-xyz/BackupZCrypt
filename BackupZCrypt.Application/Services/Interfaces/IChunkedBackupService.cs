@@ -59,4 +59,21 @@ public interface IChunkedBackupService
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Verifies the integrity of a chunked backup without writing any files: it decrypts the
+    /// manifest, then decrypts, authenticates, and re-hashes every chunk of every file, reporting
+    /// any file whose chunks are missing, corrupted, or do not match the manifest.
+    /// </summary>
+    /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
+    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
+    public Task<Result<BackupResult>> VerifyAsync(
+        string sourcePath,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    );
 }

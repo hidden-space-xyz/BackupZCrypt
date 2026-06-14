@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:views="using:BackupZCrypt.Desktop.Views"
+             xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             x:Class="BackupZCrypt.Desktop.Views.VerifyBackupView"
+             x:DataType="vm:VerifyBackupViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+
+      <StackPanel Spacing="6">
+        <TextBlock Classes="h1" Text="{x:Static res:Strings.VerifyTitle}" />
+        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.VerifySubtitle}" />
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionLocations}" />
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.BackupLabel}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding SourcePath}"
+                       PlaceholderText="{x:Static res:Strings.BackupHint}" />
+              <Button Grid.Column="1"
+                      Margin="8,0,0,0"
+                      Content="📁"
+                      ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
+                      Command="{Binding PickBackupFolderCommand}" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal"
+                      Spacing="10"
+                      IsVisible="{Binding HasDetection}">
+            <TextBlock Text="{Binding DetectionIcon}" FontSize="14" />
+            <TextBlock Text="{Binding DetectionMessage}"
+                       TextWrapping="Wrap"
+                       FontSize="13"
+                       Foreground="{Binding DetectionBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding IsPasswordRequired}">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
+            <TextBox Classes="field"
+                     Text="{Binding Password}"
+                     PasswordChar="●"
+                     PlaceholderText="{x:Static res:Strings.PasswordHint}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Button Classes="primary"
+              HorizontalAlignment="Left"
+              Content="{x:Static res:Strings.StartVerify}"
+              Command="{Binding StartCommand}" />
+
+      <views:OperationStatusView />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -186,6 +186,12 @@
   <data name="HelpRestoreText" xml:space="preserve">
     <value>Pick the backup folder (the one containing manifest.bzc) and the folder where you want the files restored. You will be asked for the backup password.</value>
   </data>
+  <data name="HelpVerifyTitle" xml:space="preserve">
+    <value>Verify a backup</value>
+  </data>
+  <data name="HelpVerifyText" xml:space="preserve">
+    <value>Pick the backup folder (the one containing manifest.bzc) and enter its password. BackupZCrypt checks every chunk and tells you whether the backup is intact — without restoring anything.</value>
+  </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Password &amp; security</value>
   </data>
@@ -641,5 +647,32 @@
   </data>
   <data name="BenchmarkFailed" xml:space="preserve">
     <value>Could not complete the benchmark. Please try again.</value>
+  </data>
+  <data name="NavVerify" xml:space="preserve">
+    <value>Verify</value>
+  </data>
+  <data name="VerifyTitle" xml:space="preserve">
+    <value>Verify Integrity</value>
+  </data>
+  <data name="VerifySubtitle" xml:space="preserve">
+    <value>Check that a backup is complete and undamaged, without restoring it.</value>
+  </data>
+  <data name="StartVerify" xml:space="preserve">
+    <value>Verify integrity</value>
+  </data>
+  <data name="IntegrityErrorFormat" xml:space="preserve">
+    <value>Integrity check failed for: {0} — {1}</value>
+  </data>
+  <data name="VerifyInvalidPassword" xml:space="preserve">
+    <value>Could not open the backup: the password is incorrect or the manifest is damaged.</value>
+  </data>
+  <data name="VerifySuccessTitle" xml:space="preserve">
+    <value>Backup is intact</value>
+  </data>
+  <data name="VerifyPartialTitle" xml:space="preserve">
+    <value>Integrity check failed</value>
+  </data>
+  <data name="VerifyFailureTitle" xml:space="preserve">
+    <value>Verification failed</value>
   </data>
 </root>

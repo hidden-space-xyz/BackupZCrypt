@@ -11,8 +11,9 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 namespace BackupZCrypt.Application.Orchestrators;
 
 /// <summary>
-/// Orchestrates a backup, update, or restore: it validates the request, normalizes paths,
-/// prepares the destination directory, and dispatches to the directory backup service.
+/// Orchestrates a backup, update, restore, or verify: it validates the request, normalizes paths,
+/// prepares the destination directory, and dispatches to the directory backup service. Verification
+/// is read-only and takes a dedicated path that skips destination preparation.
 /// </summary>
 /// <param name="backupRequestValidator">Validator producing blocking errors and advisory warnings.</param>
 /// <param name="fileOperationsService">Service used to inspect and prepare the file system.</param>
@@ -39,6 +40,11 @@ internal sealed class BackupOrchestrator(
         CancellationToken cancellationToken = default
     )
     {
+        if (request.Operation == BackupOperation.Verify)
+        {
+            return await ExecuteVerifyAsync(request, progress, cancellationToken);
+        }
+
         var validationResult = await ValidateRequestAsync(request, cancellationToken);
         if (validationResult is not null)
         {
@@ -79,6 +85,66 @@ internal sealed class BackupOrchestrator(
             return await directoryBackupService.ProcessAsync(
                 sourcePath,
                 destinationPath,
+                request,
+                progress,
+                cancellationToken
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Result<BackupResult>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
+        }
+    }
+
+    private async Task<Result<BackupResult>> ExecuteVerifyAsync(
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            return Result<BackupResult>.Success(
+                new BackupResult(
+                    false,
+                    TimeSpan.Zero,
+                    0,
+                    0,
+                    0,
+                    errors: [new LocalizableMessage(MessageCode.PasswordRequired)]
+                )
+            );
+        }
+
+        var sourcePath =
+            PathNormalizationHelper.TryNormalize(request.SourcePath, out var normalizeError)
+            ?? request.SourcePath;
+
+        if (normalizeError is not null)
+        {
+            return Result<BackupResult>.Success(
+                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: [normalizeError])
+            );
+        }
+
+        if (!fileOperationsService.DirectoryExists(sourcePath))
+        {
+            return Result<BackupResult>.Failure(
+                fileOperationsService.FileExists(sourcePath)
+                    ? MessageCode.SourceMustBeDirectory
+                    : MessageCode.SourcePathNotExist
+            );
+        }
+
+        try
+        {
+            return await directoryBackupService.ProcessAsync(
+                sourcePath,
+                string.Empty,
                 request,
                 progress,
                 cancellationToken

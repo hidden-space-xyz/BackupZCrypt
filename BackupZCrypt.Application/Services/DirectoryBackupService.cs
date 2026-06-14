@@ -53,6 +53,12 @@ internal sealed class DirectoryBackupService(IChunkedBackupService chunkedBackup
                 progress,
                 cancellationToken
             ),
+            BackupOperation.Verify => chunkedBackupService.VerifyAsync(
+                sourcePath,
+                request,
+                progress,
+                cancellationToken
+            ),
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
     }

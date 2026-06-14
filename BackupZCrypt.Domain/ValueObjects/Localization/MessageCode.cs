@@ -253,4 +253,16 @@ public enum MessageCode
     /// The source must be a directory rather than a single file.
     /// </summary>
     SourceMustBeDirectory = 53,
+
+    /// <summary>
+    /// A file failed its integrity check during verification; formatted with the path and reason.
+    /// </summary>
+    IntegrityErrorFormat = 54,
+
+    /// <summary>
+    /// The backup could not be opened for verification because the password is wrong or the manifest
+    /// is damaged. Phrased for the verify flow, where asking the user to check file integrity would
+    /// be circular.
+    /// </summary>
+    VerifyInvalidPassword = 55,
 }

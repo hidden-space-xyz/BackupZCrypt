@@ -131,6 +131,16 @@ internal static class Strings
     public static string HelpRestoreText => Get();
 
     /// <summary>
+    /// Gets the verify-backup help title.
+    /// </summary>
+    public static string HelpVerifyTitle => Get();
+
+    /// <summary>
+    /// Gets the verify-backup help text.
+    /// </summary>
+    public static string HelpVerifyText => Get();
+
+    /// <summary>
     /// Gets the password help title.
     /// </summary>
     public static string HelpPasswordTitle => Get();
@@ -644,6 +654,41 @@ internal static class Strings
     /// Gets the message shown when the benchmark fails to complete.
     /// </summary>
     public static string BenchmarkFailed => Get();
+
+    /// <summary>
+    /// Gets the verify-backup navigation label.
+    /// </summary>
+    public static string NavVerify => Get();
+
+    /// <summary>
+    /// Gets the verify-backup page title.
+    /// </summary>
+    public static string VerifyTitle => Get();
+
+    /// <summary>
+    /// Gets the verify-backup page subtitle.
+    /// </summary>
+    public static string VerifySubtitle => Get();
+
+    /// <summary>
+    /// Gets the verify-backup start button text.
+    /// </summary>
+    public static string StartVerify => Get();
+
+    /// <summary>
+    /// Gets the result title shown when a backup passes verification intact.
+    /// </summary>
+    public static string VerifySuccessTitle => Get();
+
+    /// <summary>
+    /// Gets the result title shown when some files fail verification.
+    /// </summary>
+    public static string VerifyPartialTitle => Get();
+
+    /// <summary>
+    /// Gets the result title shown when a backup could not be verified at all.
+    /// </summary>
+    public static string VerifyFailureTitle => Get();
 
     private static string Get([CallerMemberName] string name = "")
     {

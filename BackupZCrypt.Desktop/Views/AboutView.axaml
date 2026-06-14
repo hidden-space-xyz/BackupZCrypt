@@ -70,6 +70,16 @@
 
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
+                <TextBlock Text="🛡️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Classes="label" Text="{x:Static res:Strings.HelpVerifyTitle}" />
+                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpVerifyText}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Grid.Column="0" Classes="helpBadge">
                 <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">

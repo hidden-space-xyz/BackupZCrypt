@@ -4,7 +4,7 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 namespace BackupZCrypt.Application.Orchestrators.Interfaces;
 
 /// <summary>
-/// Coordinates a backup, update, or restore operation end to end, including validation,
+/// Coordinates a backup, update, restore, or verify operation end to end, including validation,
 /// destination preparation, and dispatch to the appropriate backup service.
 /// </summary>
 public interface IBackupOrchestrator

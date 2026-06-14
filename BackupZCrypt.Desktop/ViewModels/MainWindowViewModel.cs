@@ -30,12 +30,14 @@ public sealed partial class MainWindowViewModel
     /// <param name="createBackup">The create-backup page ViewModel.</param>
     /// <param name="updateBackup">The update-backup page ViewModel.</param>
     /// <param name="restoreBackup">The restore-backup page ViewModel.</param>
+    /// <param name="verifyBackup">The verify-backup page ViewModel.</param>
     /// <param name="settings">The settings page ViewModel.</param>
     /// <param name="about">The about page ViewModel.</param>
     public MainWindowViewModel(
         CreateBackupViewModel createBackup,
         UpdateBackupViewModel updateBackup,
         RestoreBackupViewModel restoreBackup,
+        VerifyBackupViewModel verifyBackup,
         SettingsViewModel settings,
         AboutViewModel about
     )
@@ -45,6 +47,7 @@ public sealed partial class MainWindowViewModel
             new NavigationItem("🔐", Strings.NavCreate, createBackup),
             new NavigationItem("🔄", Strings.NavUpdate, updateBackup),
             new NavigationItem("📦", Strings.NavRestore, restoreBackup),
+            new NavigationItem("🛡️", Strings.NavVerify, verifyBackup),
             new NavigationItem("⚙️", Strings.NavSettings, settings),
             new NavigationItem("❓", Strings.NavAbout, about),
         ];

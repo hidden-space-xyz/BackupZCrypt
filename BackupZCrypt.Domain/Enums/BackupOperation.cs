@@ -19,4 +19,9 @@ public enum BackupOperation
     /// Update an existing backup with changes from the source.
     /// </summary>
     Update = 2,
+
+    /// <summary>
+    /// Verify the integrity of an existing backup without restoring it.
+    /// </summary>
+    Verify = 3,
 }

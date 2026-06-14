@@ -186,6 +186,12 @@
   <data name="HelpRestoreText" xml:space="preserve">
     <value>Elige la carpeta de la copia (la que contiene manifest.bzc) y la carpeta donde quieres recuperar los archivos. Se te pedirá la contraseña de la copia.</value>
   </data>
+  <data name="HelpVerifyTitle" xml:space="preserve">
+    <value>Verificar una copia</value>
+  </data>
+  <data name="HelpVerifyText" xml:space="preserve">
+    <value>Elige la carpeta de la copia (la que contiene manifest.bzc) e introduce su contraseña. BackupZCrypt comprueba cada fragmento y te dice si la copia está intacta, sin restaurar nada.</value>
+  </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Contraseña y seguridad</value>
   </data>
@@ -641,5 +647,32 @@
   </data>
   <data name="BenchmarkFailed" xml:space="preserve">
     <value>No se pudo completar la prueba de rendimiento. Inténtalo de nuevo.</value>
+  </data>
+  <data name="NavVerify" xml:space="preserve">
+    <value>Verificar</value>
+  </data>
+  <data name="VerifyTitle" xml:space="preserve">
+    <value>Verificar integridad</value>
+  </data>
+  <data name="VerifySubtitle" xml:space="preserve">
+    <value>Comprueba que una copia está completa e intacta, sin restaurarla.</value>
+  </data>
+  <data name="StartVerify" xml:space="preserve">
+    <value>Verificar integridad</value>
+  </data>
+  <data name="IntegrityErrorFormat" xml:space="preserve">
+    <value>Fallo de integridad en: {0} — {1}</value>
+  </data>
+  <data name="VerifyInvalidPassword" xml:space="preserve">
+    <value>No se pudo abrir la copia: la contraseña es incorrecta o el manifiesto está dañado.</value>
+  </data>
+  <data name="VerifySuccessTitle" xml:space="preserve">
+    <value>La copia está intacta</value>
+  </data>
+  <data name="VerifyPartialTitle" xml:space="preserve">
+    <value>Fallo de integridad</value>
+  </data>
+  <data name="VerifyFailureTitle" xml:space="preserve">
+    <value>Verificación fallida</value>
   </data>
 </root>

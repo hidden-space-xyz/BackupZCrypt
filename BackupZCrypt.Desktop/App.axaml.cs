@@ -64,6 +64,7 @@ public sealed class App : Avalonia.Application
         _ = services.AddSingleton<CreateBackupViewModel>();
         _ = services.AddSingleton<UpdateBackupViewModel>();
         _ = services.AddSingleton<RestoreBackupViewModel>();
+        _ = services.AddSingleton<VerifyBackupViewModel>();
         _ = services.AddSingleton<SettingsViewModel>();
         _ = services.AddSingleton<AboutViewModel>();
         _ = services.AddSingleton<MainWindowViewModel>();

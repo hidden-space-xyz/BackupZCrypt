@@ -275,6 +275,22 @@ public abstract partial class OperationViewModelBase(
         );
     }
 
+    /// <summary>
+    /// Gets the result title shown when the operation completes successfully. Overridable so each
+    /// page can phrase success in its own terms (for example, "Backup is intact" for verification).
+    /// </summary>
+    protected virtual string SuccessResultTitle => Strings.ResultSuccessTitle;
+
+    /// <summary>
+    /// Gets the result title shown when the operation finishes but some items failed.
+    /// </summary>
+    protected virtual string PartialResultTitle => Strings.ResultPartialTitle;
+
+    /// <summary>
+    /// Gets the result title shown when the operation could not be performed.
+    /// </summary>
+    protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
+
     private void HandleResult(Result<BackupResult> result, bool proceedOnWarnings)
     {
         if (!result.IsSuccess)
@@ -304,7 +320,7 @@ public abstract partial class OperationViewModelBase(
 
         HasResult = true;
         ResultIsSuccess = operation.IsSuccess;
-        ResultTitle = operation.IsSuccess ? Strings.ResultSuccessTitle : Strings.ResultPartialTitle;
+        ResultTitle = operation.IsSuccess ? SuccessResultTitle : PartialResultTitle;
 
         ResultFiles = string.Format(
             CultureInfo.CurrentCulture,
@@ -344,7 +360,7 @@ public abstract partial class OperationViewModelBase(
     {
         HasResult = true;
         ResultIsSuccess = false;
-        ResultTitle = Strings.ResultErrorTitle;
+        ResultTitle = FailureResultTitle;
 
         foreach (var error in errors)
         {
@@ -372,19 +388,29 @@ public abstract partial class OperationViewModelBase(
         ElapsedText = string.Empty;
     }
 
+    /// <summary>
+    /// Builds the recent-path settings to persist after a successful operation. The default records
+    /// both the source and destination; pages without a destination (such as verification) can
+    /// override this to avoid clearing a remembered path.
+    /// </summary>
+    /// <param name="current">The currently persisted recent paths.</param>
+    /// <returns>The recent paths to save.</returns>
+    protected virtual RecentPathSettings BuildRecentPaths(RecentPathSettings current)
+    {
+        return current with
+        {
+            LastSourcePath = SourcePath,
+            LastDestinationPath = DestinationPath,
+        };
+    }
+
     private async Task SaveRecentPathsAsync()
     {
         try
         {
             var recent = await SettingsService.GetOrCreateAsync<RecentPathSettings>();
 
-            await SettingsService.SaveAsync(
-                recent with
-                {
-                    LastSourcePath = SourcePath,
-                    LastDestinationPath = DestinationPath,
-                }
-            );
+            await SettingsService.SaveAsync(BuildRecentPaths(recent));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

@@ -767,6 +767,158 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Verifies the integrity of a chunked backup without writing any files. After the manifest is
+    /// decrypted (a wrong password surfaces as a failure), every file is processed in parallel: its
+    /// chunks are decrypted, authenticated, decompressed, and re-hashed against the manifest, with
+    /// the reconstructed bytes discarded to <see cref="Stream.Null"/>. Per-file failures (missing or
+    /// corrupted chunks, size or hash mismatches) are collected rather than aborting the run, so the
+    /// result reports every affected file.
+    /// </summary>
+    /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
+    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
+    public async Task<Result<BackupResult>> VerifyAsync(
+        string sourcePath,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        var preamble = await manifestService
+            .ReadChunkManifestPreambleAsync(sourcePath, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (preamble is null)
+        {
+            return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
+        }
+
+        DerivedKeySet? keys = null;
+
+        try
+        {
+            keys = DeriveKeySet(request.Password, preamble.MasterSalt, preamble.KeyDerivation);
+
+            var manifest = manifestService.DecryptChunkManifest(
+                preamble,
+                keys.ManifestEncryptionKey
+            );
+
+            if (manifest is null)
+            {
+                // The preamble was read, so the manifest file exists; a null here means it could not
+                // be decrypted, which is almost always a wrong password (or a corrupted manifest).
+                // Use a verify-specific code so the message does not tell the user to "verify file
+                // integrity" — which is exactly what they are already doing.
+                return Result<BackupResult>.Failure(MessageCode.VerifyInvalidPassword);
+            }
+
+            var encryptionStrategy = ResolveEncryptionStrategy(manifest.Header.EncryptionAlgorithm);
+            var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
+
+            var chunksDir = fileOperationsService.CombinePath(
+                sourcePath,
+                BackupConstants.ChunksDirectoryName
+            );
+
+            var storedChunkNonces = BuildStoredChunkNonceCache(
+                manifest.Files,
+                chunksDir,
+                keys.ChunkEncryptionKey,
+                keys.NamingKey,
+                encryptionStrategy,
+                cancellationToken
+            );
+
+            var totalFiles = manifest.Files.Count;
+            var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
+            progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
+
+            ConcurrentBag<LocalizableMessage> errors = [];
+            long processedBytes = 0;
+            var processedFiles = 0;
+
+            await Parallel
+                .ForEachAsync(
+                    manifest.Files,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+                        CancellationToken = cancellationToken,
+                    },
+                    async (fileEntry, token) =>
+                    {
+                        try
+                        {
+                            await VerifyFileChunksAsync(
+                                    fileEntry,
+                                    chunksDir,
+                                    keys.ChunkEncryptionKey,
+                                    keys.NamingKey,
+                                    encryptionStrategy,
+                                    storedChunkNonces,
+                                    compressionStrategy,
+                                    Stream.Null,
+                                    token
+                                )
+                                .ConfigureAwait(false);
+
+                            _ = Interlocked.Increment(ref processedFiles);
+                            var currentBytes = Interlocked.Add(
+                                ref processedBytes,
+                                fileEntry.TotalSize
+                            );
+
+                            progress?.Report(
+                                new BackupStatus(
+                                    Volatile.Read(ref processedFiles),
+                                    totalFiles,
+                                    currentBytes,
+                                    totalBytes,
+                                    stopwatch.Elapsed
+                                )
+                            );
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            errors.Add(
+                                new LocalizableMessage(
+                                    MessageCode.IntegrityErrorFormat,
+                                    fileEntry.OriginalPath,
+                                    ex.Message
+                                )
+                            );
+                        }
+                    }
+                )
+                .ConfigureAwait(false);
+
+            List<LocalizableMessage> errorList = [.. errors];
+            stopwatch.Stop();
+            var isSuccess = errorList.Count == 0 && processedFiles == totalFiles;
+
+            return Result<BackupResult>.Success(
+                new BackupResult(
+                    isSuccess,
+                    stopwatch.Elapsed,
+                    totalBytes,
+                    processedFiles,
+                    totalFiles,
+                    errors: errorList
+                )
+            );
+        }
+        finally
+        {
+            keys?.Dispose();
+        }
+    }
+
     private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
         string filePath,
         string relativePath,
@@ -855,8 +1007,6 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        ValidateRelativeManifestPath(fileEntry.OriginalPath);
-
         var destFilePath = ResolveSafeDestinationPath(destinationPath, fileEntry.OriginalPath);
         var destDir = fileOperationsService.GetDirectoryName(destFilePath);
 
@@ -872,8 +1022,40 @@ internal sealed class ChunkedBackupService(
             StreamConstants.CopyBufferSize
         );
 
+        await VerifyFileChunksAsync(
+                fileEntry,
+                chunksDir,
+                encryptionKey,
+                namingKey,
+                encryptionStrategy,
+                storedChunkNonces,
+                compressionStrategy,
+                destStream,
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+    }
+
+    private async Task VerifyFileChunksAsync(
+        ChunkManifestFileEntry fileEntry,
+        string chunksDir,
+        byte[] encryptionKey,
+        byte[] namingKey,
+        IEncryptionAlgorithmStrategy encryptionStrategy,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunkNonces,
+        ICompressionStrategy? compressionStrategy,
+        Stream destination,
+        CancellationToken cancellationToken
+    )
+    {
+        // Reads, decrypts, authenticates, decompresses, and hashes every chunk of a file, writing the
+        // reconstructed bytes to the destination and validating the reassembled size and hash against
+        // the manifest. Restore passes the destination file stream; verification passes Stream.Null
+        // so the same integrity checks run without producing any output.
+        ValidateRelativeManifestPath(fileEntry.OriginalPath);
+
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        long restoredBytes = 0;
+        long processedBytes = 0;
 
         foreach (var chunkRef in fileEntry.Chunks)
         {
@@ -918,11 +1100,11 @@ internal sealed class ChunkedBackupService(
                         .DecompressAsync(compressedStream, cancellationToken)
                         .ConfigureAwait(false);
 
-                    restoredBytes += await CopyToWithHashAsync(
+                    processedBytes += await CopyToWithHashAsync(
                             decompressedStream,
-                            destStream,
+                            destination,
                             fileHasher,
-                            fileEntry.TotalSize - restoredBytes,
+                            fileEntry.TotalSize - processedBytes,
                             cancellationToken
                         )
                         .ConfigureAwait(false);
@@ -930,10 +1112,10 @@ internal sealed class ChunkedBackupService(
                 else
                 {
                     fileHasher.AppendData(decryptedData);
-                    await destStream
+                    await destination
                         .WriteAsync(decryptedData, cancellationToken)
                         .ConfigureAwait(false);
-                    restoredBytes += decryptedData.Length;
+                    processedBytes += decryptedData.Length;
                 }
             }
             finally
@@ -946,9 +1128,9 @@ internal sealed class ChunkedBackupService(
             }
         }
 
-        if (restoredBytes != fileEntry.TotalSize)
+        if (processedBytes != fileEntry.TotalSize)
         {
-            throw new CryptographicException("Restored file size does not match the manifest.");
+            throw new CryptographicException("File size does not match the manifest.");
         }
 
         var expectedFileHash = DecodeBase64FixedLength(
@@ -962,7 +1144,7 @@ internal sealed class ChunkedBackupService(
         {
             if (!CryptographicOperations.FixedTimeEquals(expectedFileHash, actualFileHash))
             {
-                throw new CryptographicException("Restored file hash does not match the manifest.");
+                throw new CryptographicException("File hash does not match the manifest.");
             }
         }
         finally
