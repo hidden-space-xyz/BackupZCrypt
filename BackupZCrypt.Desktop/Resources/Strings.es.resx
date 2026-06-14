@@ -172,7 +172,7 @@
     <value>Crear una copia</value>
   </data>
   <data name="HelpCreateText" xml:space="preserve">
-    <value>Elige el origen (carpeta o archivo) y la carpeta de destino. Con el cifrado activado, escribe una contraseña fuerte —o pulsa Generar— y confírmala. Después pulsa «Iniciar copia».</value>
+    <value>Elige la carpeta de origen y la carpeta de destino. Escribe una contraseña fuerte —o pulsa Generar— y confírmala. Después pulsa «Iniciar copia».</value>
   </data>
   <data name="HelpUpdateTitle" xml:space="preserve">
     <value>Actualizar una copia</value>
@@ -184,7 +184,7 @@
     <value>Restaurar una copia</value>
   </data>
   <data name="HelpRestoreText" xml:space="preserve">
-    <value>Elige la carpeta de la copia (la que contiene manifest.bzc) y la carpeta donde quieres recuperar los archivos. Si la copia está cifrada, se te pedirá la contraseña.</value>
+    <value>Elige la carpeta de la copia (la que contiene manifest.bzc) y la carpeta donde quieres recuperar los archivos. Se te pedirá la contraseña de la copia.</value>
   </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Contraseña y seguridad</value>
@@ -466,7 +466,7 @@
     <value>Archivos más pequeños, compresión más lenta</value>
   </data>
   <data name="SourcePathEmpty" xml:space="preserve">
-    <value>Seleccione un archivo o directorio de origen para procesar.</value>
+    <value>Seleccione una carpeta de origen para procesar.</value>
   </data>
   <data name="SourcePathNotExist" xml:space="preserve">
     <value>La ruta de origen no existe.</value>

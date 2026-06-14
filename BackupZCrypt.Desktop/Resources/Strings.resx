@@ -172,7 +172,7 @@
     <value>Create a backup</value>
   </data>
   <data name="HelpCreateText" xml:space="preserve">
-    <value>Pick the source (folder or file) and the destination folder. With encryption on, type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
+    <value>Pick the source folder and the destination folder. Type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
   </data>
   <data name="HelpUpdateTitle" xml:space="preserve">
     <value>Update a backup</value>
@@ -184,7 +184,7 @@
     <value>Restore a backup</value>
   </data>
   <data name="HelpRestoreText" xml:space="preserve">
-    <value>Pick the backup folder (the one containing manifest.bzc) and the folder where you want the files restored. If the backup is encrypted, you will be asked for the password.</value>
+    <value>Pick the backup folder (the one containing manifest.bzc) and the folder where you want the files restored. You will be asked for the backup password.</value>
   </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Password &amp; security</value>
@@ -466,7 +466,7 @@
     <value>Smallest files, slowest compression</value>
   </data>
   <data name="SourcePathEmpty" xml:space="preserve">
-    <value>Please select a source file or directory to process.</value>
+    <value>Please select a source folder to process.</value>
   </data>
   <data name="SourcePathNotExist" xml:space="preserve">
     <value>Source path does not exist.</value>
