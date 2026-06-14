@@ -33,9 +33,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     private CompressionMode compressionMode = CompressionMode.None;
 
     [ObservableProperty]
-    public partial bool IsEncryptionEnabled { get; set; } = true;
-
-    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CopyPasswordCommand))]
     public partial string Password { get; set; } = string.Empty;
 
@@ -76,8 +73,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     {
         this.passwordService = passwordService;
         this.clipboardService = clipboardService;
-
-        UpdateEncryptionState();
     }
 
     /// <summary>
@@ -97,10 +92,11 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
         try
         {
             var defaults = await SettingsService.GetOrCreateAsync<BackupCreationSettings>();
-            encryptionAlgorithm = defaults.EncryptionAlgorithm;
+            encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
+                ? defaults.EncryptionAlgorithm
+                : EncryptionAlgorithm.Aes;
             keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
             compressionMode = defaults.CompressionMode;
-            UpdateEncryptionState();
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -126,13 +122,11 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected override BackupRequest CreateRequest(bool proceedOnWarnings)
     {
-        var encryptionEnabled = IsEncryptionEnabled;
-
         return new BackupRequest(
             SourcePath,
             DestinationPath,
-            encryptionEnabled ? Password : string.Empty,
-            encryptionEnabled ? ConfirmPassword : string.Empty,
+            Password,
+            ConfirmPassword,
             encryptionAlgorithm,
             keyDerivationAlgorithm,
             BackupOperation.Create,
@@ -193,11 +187,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     private async Task CopyPasswordAsync()
     {
         await clipboardService.SetTextAsync(Password);
-    }
-
-    private void UpdateEncryptionState()
-    {
-        IsEncryptionEnabled = encryptionAlgorithm != EncryptionAlgorithm.None;
     }
 
     partial void OnPasswordChanged(string value)

@@ -58,13 +58,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
         EncryptionOptions =
         [
-            new EncryptionOption(
-                EncryptionAlgorithm.None,
-                Strings.NoneEncryptionName,
-                Strings.NoneEncryptionDescription
-            ),
             .. encryptionStrategies
-                .Where(static s => s.Id != EncryptionAlgorithm.None)
                 .OrderBy(static s => s.Id)
                 .Select(static s => new EncryptionOption(
                     s.Id,

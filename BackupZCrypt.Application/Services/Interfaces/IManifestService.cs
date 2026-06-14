@@ -21,21 +21,6 @@ public interface IManifestService
     );
 
     /// <summary>
-    /// Writes a plain (non-chunked) JSON manifest atomically to the destination root.
-    /// </summary>
-    /// <param name="entries">The per-file manifest entries to persist.</param>
-    /// <param name="header">The algorithm and compression metadata to record.</param>
-    /// <param name="destinationRoot">The backup root directory the manifest is written into.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>Localizable errors if the write failed; empty on success or when there are no entries.</returns>
-    Task<IReadOnlyList<LocalizableMessage>> TrySavePlainManifestAsync(
-        IReadOnlyList<ManifestEntry> entries,
-        ManifestHeader header,
-        string destinationRoot,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
     /// Reads the unencrypted preamble of a chunked manifest, exposing the parameters needed to derive keys.
     /// </summary>
     /// <param name="sourceRoot">The backup root directory containing the manifest.</param>

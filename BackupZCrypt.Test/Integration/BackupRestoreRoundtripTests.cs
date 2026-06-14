@@ -16,11 +16,6 @@ public sealed class BackupRestoreRoundtripTests
     private static IEnumerable<TestCaseData> Configs()
     {
         yield return new TestCaseData(
-            EncryptionAlgorithm.None,
-            CompressionMode.None,
-            KeyDerivationAlgorithm.PBKDF2
-        );
-        yield return new TestCaseData(
             EncryptionAlgorithm.Aes,
             CompressionMode.Zstd,
             KeyDerivationAlgorithm.PBKDF2

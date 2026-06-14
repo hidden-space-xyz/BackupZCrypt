@@ -53,9 +53,9 @@ public sealed partial class RestoreBackupViewModel(
         return new BackupRequest(
             SourcePath,
             DestinationPath,
-            IsPasswordRequired ? Password : string.Empty,
-            IsPasswordRequired ? Password : string.Empty,
-            IsPasswordRequired ? EncryptionAlgorithm.Aes : EncryptionAlgorithm.None,
+            Password,
+            Password,
+            EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.Argon2id,
             BackupOperation.Restore,
             CompressionMode.None,

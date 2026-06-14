@@ -243,12 +243,6 @@
   <data name="CompressionLabel" xml:space="preserve">
     <value>Compresión</value>
   </data>
-  <data name="NoneEncryptionName" xml:space="preserve">
-    <value>Ninguno</value>
-  </data>
-  <data name="NoneEncryptionDescription" xml:space="preserve">
-    <value>Los archivos se almacenan sin cifrar.</value>
-  </data>
   <data name="NoneCompressionName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
@@ -302,12 +296,6 @@
   </data>
   <data name="DetectEncrypted" xml:space="preserve">
     <value>Copia cifrada detectada: se requiere contraseña.</value>
-  </data>
-  <data name="DetectUnencrypted" xml:space="preserve">
-    <value>Copia sin cifrar detectada: no se necesita contraseña.</value>
-  </data>
-  <data name="DetectPlain" xml:space="preserve">
-    <value>Esta copia es una copia simple: sus archivos están sin transformar y pueden copiarse directamente desde la carpeta.</value>
   </data>
   <data name="DetectMissing" xml:space="preserve">
     <value>No se encontró un manifiesto de copia en esta ubicación.</value>

@@ -33,8 +33,8 @@ internal sealed class ManifestService(
     );
 
     /// <summary>
-    /// Determines the on-disk format of the manifest for a backup by inspecting its first byte:
-    /// '{' denotes a plain JSON copy, 0 an unencrypted chunked manifest, and any other value an encrypted one.
+    /// Determines whether a readable backup manifest is present: a non-empty manifest is reported as
+    /// an encrypted backup, since encryption is the only supported format.
     /// </summary>
     /// <param name="backupPath">A path to the backup directory or a file within it.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -79,17 +79,7 @@ internal sealed class ManifestService(
                 .ReadAsync(firstByte.AsMemory(0, 1), cancellationToken)
                 .ConfigureAwait(false);
 
-            if (read == 0)
-            {
-                return ManifestKind.Missing;
-            }
-
-            return firstByte[0] switch
-            {
-                (byte)'{' => ManifestKind.PlainCopy,
-                0 => ManifestKind.UnencryptedChunked,
-                _ => ManifestKind.Encrypted,
-            };
+            return read == 0 ? ManifestKind.Missing : ManifestKind.Encrypted;
         }
         catch (OperationCanceledException)
         {
@@ -99,64 +89,6 @@ internal sealed class ManifestService(
         {
             return ManifestKind.Missing;
         }
-    }
-
-    /// <summary>
-    /// Serializes the given entries to a plain JSON manifest and writes it atomically; a no-op when there are no entries.
-    /// </summary>
-    /// <param name="entries">The per-file manifest entries to persist.</param>
-    /// <param name="header">The algorithm and compression metadata to record.</param>
-    /// <param name="destinationRoot">The backup root directory the manifest is written into.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>Localizable errors if the write failed; empty on success or when there are no entries.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="entries"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="destinationRoot"/> is <see langword="null"/> or whitespace.</exception>
-    public async Task<IReadOnlyList<LocalizableMessage>> TrySavePlainManifestAsync(
-        IReadOnlyList<ManifestEntry> entries,
-        ManifestHeader header,
-        string destinationRoot,
-        CancellationToken cancellationToken
-    )
-    {
-        ArgumentNullException.ThrowIfNull(entries);
-        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
-
-        List<LocalizableMessage> errors = [];
-        if (entries.Count == 0)
-        {
-            return errors;
-        }
-
-        byte[]? manifestBytes = null;
-
-        try
-        {
-            ManifestDocument document = new(
-                header.EncryptionAlgorithm,
-                header.KeyDerivationAlgorithm,
-                header.Compression,
-                [.. entries]
-            );
-
-            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
-            var manifestPath = Path.Combine(destinationRoot, BackupConstants.ManifestFileName);
-
-            await WriteFileAtomicallyAsync(manifestPath, manifestBytes, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            errors.Add(new LocalizableMessage(MessageCode.ManifestWriteFailedFormat, ex.Message));
-        }
-        finally
-        {
-            if (manifestBytes is not null)
-            {
-                CryptographicOperations.ZeroMemory(manifestBytes);
-            }
-        }
-
-        return errors;
     }
 
     /// <summary>

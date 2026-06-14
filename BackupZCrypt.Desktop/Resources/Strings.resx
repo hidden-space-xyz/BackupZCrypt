@@ -243,12 +243,6 @@
   <data name="CompressionLabel" xml:space="preserve">
     <value>Compression</value>
   </data>
-  <data name="NoneEncryptionName" xml:space="preserve">
-    <value>None</value>
-  </data>
-  <data name="NoneEncryptionDescription" xml:space="preserve">
-    <value>Files are stored without encryption.</value>
-  </data>
   <data name="NoneCompressionName" xml:space="preserve">
     <value>None</value>
   </data>
@@ -302,12 +296,6 @@
   </data>
   <data name="DetectEncrypted" xml:space="preserve">
     <value>Encrypted backup detected — password required.</value>
-  </data>
-  <data name="DetectUnencrypted" xml:space="preserve">
-    <value>Unencrypted backup detected — no password needed.</value>
-  </data>
-  <data name="DetectPlain" xml:space="preserve">
-    <value>This backup is a plain copy: its files are stored as-is and can be copied directly from the backup folder.</value>
   </data>
   <data name="DetectMissing" xml:space="preserve">
     <value>No backup manifest found at this location.</value>

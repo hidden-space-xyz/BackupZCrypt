@@ -55,7 +55,7 @@
 				</StackPanel>
 			</Border>
 
-			<Border Classes="card" IsVisible="{Binding IsEncryptionEnabled}">
+			<Border Classes="card">
 				<StackPanel Spacing="16">
 					<TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
 

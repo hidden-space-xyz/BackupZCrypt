@@ -24,7 +24,7 @@ internal static class AlgorithmMetadataProvider
             EncryptionAlgorithm.Serpent => Strings.SerpentDisplayName,
             EncryptionAlgorithm.ChaCha20 => Strings.ChaCha20DisplayName,
             EncryptionAlgorithm.Camellia => Strings.CamelliaDisplayName,
-            _ => Strings.NoneEncryptionName,
+            _ => string.Empty,
         };
     }
 
@@ -42,7 +42,7 @@ internal static class AlgorithmMetadataProvider
             EncryptionAlgorithm.Serpent => Strings.SerpentSummary,
             EncryptionAlgorithm.ChaCha20 => Strings.ChaCha20Summary,
             EncryptionAlgorithm.Camellia => Strings.CamelliaSummary,
-            _ => Strings.NoneEncryptionDescription,
+            _ => string.Empty,
         };
     }
 
@@ -60,7 +60,7 @@ internal static class AlgorithmMetadataProvider
             EncryptionAlgorithm.Serpent => Strings.SerpentDescription,
             EncryptionAlgorithm.ChaCha20 => Strings.ChaCha20Description,
             EncryptionAlgorithm.Camellia => Strings.CamelliaDescription,
-            _ => Strings.NoneEncryptionDescription,
+            _ => string.Empty,
         };
     }
 

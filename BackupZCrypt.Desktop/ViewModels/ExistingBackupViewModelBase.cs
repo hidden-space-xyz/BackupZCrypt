@@ -24,7 +24,6 @@ public abstract partial class ExistingBackupViewModelBase(
 ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
     private static readonly IBrush PositiveBrush = new SolidColorBrush(Color.Parse("#3FB68B"));
-    private static readonly IBrush NeutralBrush = new SolidColorBrush(Color.Parse("#9AA1B5"));
     private static readonly IBrush NegativeBrush = new SolidColorBrush(Color.Parse("#E5B458"));
 
     private int detectionVersion;
@@ -64,7 +63,7 @@ public abstract partial class ExistingBackupViewModelBase(
     protected override bool CanStart()
     {
         return base.CanStart()
-            && DetectedKind is ManifestKind.Encrypted or ManifestKind.UnencryptedChunked
+            && DetectedKind is ManifestKind.Encrypted
             && (!IsPasswordRequired || Password.Length > 0);
     }
 
@@ -113,8 +112,6 @@ public abstract partial class ExistingBackupViewModelBase(
         (DetectionMessage, DetectionBrush, DetectionIcon) = kind switch
         {
             ManifestKind.Encrypted => (Strings.DetectEncrypted, PositiveBrush, "🔒"),
-            ManifestKind.UnencryptedChunked => (Strings.DetectUnencrypted, NeutralBrush, "🔓"),
-            ManifestKind.PlainCopy => (Strings.DetectPlain, NegativeBrush, "📄"),
             _ => (Strings.DetectMissing, NegativeBrush, "⚠"),
         };
 

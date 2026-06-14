@@ -226,16 +226,6 @@ internal static class Strings
     public static string CompressionLabel => Get();
 
     /// <summary>
-    /// Gets the display name for the "no encryption" option.
-    /// </summary>
-    public static string NoneEncryptionName => Get();
-
-    /// <summary>
-    /// Gets the description for the "no encryption" option.
-    /// </summary>
-    public static string NoneEncryptionDescription => Get();
-
-    /// <summary>
     /// Gets the display name for the "no compression" option.
     /// </summary>
     public static string NoneCompressionName => Get();
@@ -324,16 +314,6 @@ internal static class Strings
     /// Gets the message describing a detected encrypted backup.
     /// </summary>
     public static string DetectEncrypted => Get();
-
-    /// <summary>
-    /// Gets the message describing a detected unencrypted chunked backup.
-    /// </summary>
-    public static string DetectUnencrypted => Get();
-
-    /// <summary>
-    /// Gets the message describing a detected plain copy.
-    /// </summary>
-    public static string DetectPlain => Get();
 
     /// <summary>
     /// Gets the message describing a missing backup.

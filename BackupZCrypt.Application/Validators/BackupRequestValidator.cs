@@ -149,14 +149,11 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (
-            request.EncryptionAlgorithm != EncryptionAlgorithm.None
-            && string.IsNullOrWhiteSpace(request.Password)
-        )
+        if (string.IsNullOrWhiteSpace(request.Password))
         {
             errors.Add(new LocalizableMessage(MessageCode.PasswordRequired));
         }
-        else if (request.EncryptionAlgorithm != EncryptionAlgorithm.None)
+        else
         {
             if (request.Password.Length < 8)
             {
@@ -174,10 +171,7 @@ internal sealed class BackupRequestValidator(
             }
         }
 
-        if (
-            request.EncryptionAlgorithm != EncryptionAlgorithm.None
-            && request.Operation == BackupOperation.Create
-        )
+        if (request.Operation == BackupOperation.Create)
         {
             if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             {
@@ -366,10 +360,7 @@ internal sealed class BackupRequestValidator(
                 );
             }
 
-            if (
-                request.EncryptionAlgorithm != EncryptionAlgorithm.None
-                && request.Operation == BackupOperation.Create
-            )
+            if (request.Operation == BackupOperation.Create)
             {
                 var strength = passwordService.AnalyzePasswordStrength(request.Password);
                 if (strength.Score < 60)

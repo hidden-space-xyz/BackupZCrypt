@@ -4,7 +4,6 @@ using System.Reflection;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Desktop.ViewModels;
@@ -31,7 +30,6 @@ public sealed class AboutViewModel : ViewModelBase
         EncryptionAlgorithms =
         [
             .. encryptionStrategies
-                .Where(static s => s.Id != EncryptionAlgorithm.None)
                 .OrderBy(static s => s.Id)
                 .Select(static s => new AlgorithmInfo(
                     AlgorithmMetadataProvider.GetName(s.Id),

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Strategies.Encryption;
 
@@ -139,22 +138,4 @@ public sealed class EncryptionStrategyTests
         Assert.That(second, Is.Not.EqualTo(first));
     }
 
-    [Test]
-    public void None_IsPassthroughForEncryptAndDecrypt()
-    {
-        var strategy = new NoneEncryptionStrategy();
-        var plaintext = RandomBytes(777, seed: 99);
-
-        var encrypted = strategy.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
-        Assert.That(encrypted, Is.EqualTo(plaintext));
-
-        var decrypted = strategy.DecryptChunk(encrypted, Key, Nonce, AssociatedData);
-        Assert.That(decrypted, Is.EqualTo(plaintext));
-    }
-
-    [Test]
-    public void None_HasNoneId()
-    {
-        Assert.That(new NoneEncryptionStrategy().Id, Is.EqualTo(EncryptionAlgorithm.None));
-    }
 }
