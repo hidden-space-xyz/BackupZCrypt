@@ -8,7 +8,7 @@
 
  # 🔐 BackupZCrypt
 
-**BackupZCrypt is a chunk-based encrypted backup tool that protects your files with military-grade encryption. When a file changes, only the affected chunks are re-encrypted — not the entire file.**
+**BackupZCrypt is a chunk-based encrypted backup tool that protects your files with military-grade encryption.**
 
 ## 📋 What BackupZCrypt Does For You
 
@@ -20,34 +20,21 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **🔒 Control Your Privacy** — Keep your data private, even when sharing devices or storage
 - **✅ Peace of Mind** — Industry-standard authenticated encryption means your files stay private and tamper-proof
 
-## ❓ Why Choose BackupZCrypt?
-
-- **🧩 Chunk-Based Architecture** — Files are split into variable-size chunks using content-defined chunking (FastCDC), so small edits don't require re-encrypting entire files
-- **🖱️ Simple Interface** — No cryptography knowledge needed — just select files, choose a password, and encrypt
-- **🏦 Military-Grade Security** — Uses the same encryption standards trusted by financial institutions
-- **🔌 No Internet Required** — Works completely offline, keeping your sensitive data off the network
-- **🛠️ Multiple Security Options** — Choose from multiple proven encryption and key derivation methods
-- **💯 Completely Free** — Open-source and free to use, forever
-
 ## ⭐ Features
 
 - **🧩 Content-Defined Chunking** — Files are split into variable-size chunks using a gear-hash algorithm (FastCDC)
 - **🔄 Multiple Encryption Algorithms** — AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM — all in authenticated encryption (AEAD) mode
-- **🔑 Multiple Key Derivation Algorithms** — Argon2id (default), Scrypt, and PBKDF2
-- **🗜️ Optional Zstandard Compression** — Three compression presets (Fast, Normal, Best) applied per-chunk before encryption. Disabled by default
-- **📄 Encrypted Manifest** — A single encrypted manifest file stores all metadata (file paths, chunk references, hashes) needed for restoration
-- **🔐 Single KDF Per Session** — One expensive key derivation produces a master key; sub-keys for encryption and chunk naming are derived via HKDF, eliminating per-file KDF overhead
-- **🕵️ HMAC-Based Chunk Naming** — Chunk filenames are HMAC-SHA256 of the plaintext hash, keyed with a naming sub-key, preventing content confirmation attacks
+- **🔑 Multiple Key Derivation Algorithms** — Argon2id, Scrypt, and PBKDF2
+- **🗜️ Optional Zstandard Compression** — Three compression presets (Fast, Normal, Best) applied per-chunk before encryption.
 - **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
-- **🛡️ Integrity Verification** — Check that a backup is complete and undamaged without restoring it: every chunk is decrypted, authenticated, and re-hashed against the manifest, and any missing or corrupted file is reported
-- **⏱️ Backup Time Estimator** — Benchmarks the selected algorithms on your own hardware to estimate how long backing up a given amount of data (MB/GB/TB) would take
+- **🛡️ Integrity Verification** — Check that a backup is complete and undamaged without restoring it
+- **⏱️ Backup Time Estimator** — Benchmarks the selected algorithms on your own hardware
 - **🌍 Localized Interface** — Available in English and Spanish
 - **💻 Local Processing Only** — Your files and passwords never leave your computer
 - **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
+- **💯 Completely Free** — Open-source and free to use, forever
 
 ## 🚀 Usage
-
-BackupZCrypt is a modern, cross-platform desktop application built with Avalonia UI. Create, update, and restore encrypted backups through a polished graphical interface featuring live password strength analysis, a secure password generator, automatic detection of encrypted backups, and real-time progress reporting.
 
 - **🔐 Create Backup** — Select a source folder, a destination, and a password to produce an encrypted backup
 - **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
@@ -84,16 +71,14 @@ dotnet run --project BackupZCrypt.Desktop
 
 BackupZCrypt is constantly evolving. Here's what we're planning for future releases:
 
-- **🎨 Enhanced User Interface** — Upcoming UI improvements for better usability and aesthetics
-- **⚙️ Advanced Parameter Configuration** — Expert mode allowing customization of encryption parameters for advanced users
 - **👥 Community-Driven Development** — We highly value community suggestions and contributions to guide the project's future
-
-We're committed to continuously improving BackupZCrypt based on user feedback and security best practices. Your suggestions are always welcome and will help shape the application's future.
 
 ## 📸 Screenshots
 
 <p align="center">
-<img width="995" height="598" alt="image" src="https://github.com/user-attachments/assets/690b7637-0aac-4605-9a12-132c26e12158" />
+  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/9ca7d357-7b6b-4ae0-9d9e-e26d221f8185" />
+  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/f1629057-b395-40cb-a7d8-e76e168e9edc" />
+  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/e0c659c2-b0cc-4547-96d8-1aa20902472a" />
 </p>
 
 ## 🔍 Security Notes
