@@ -68,7 +68,7 @@
             <TextBox Classes="field"
                      Text="{Binding Password}"
                      PasswordChar="●"
-                     PlaceholderText="{x:Static res:Strings.PasswordHint}" />
+                     PlaceholderText="{x:Static res:Strings.BackupPasswordHint}" />
           </StackPanel>
         </StackPanel>
       </Border>

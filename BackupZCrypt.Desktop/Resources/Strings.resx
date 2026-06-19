@@ -261,6 +261,9 @@
   <data name="PasswordHint" xml:space="preserve">
     <value>Enter a strong password…</value>
   </data>
+  <data name="BackupPasswordHint" xml:space="preserve">
+    <value>Enter the backup password…</value>
+  </data>
   <data name="ConfirmPasswordLabel" xml:space="preserve">
     <value>Confirm password</value>
   </data>

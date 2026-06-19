@@ -251,9 +251,14 @@ internal static class Strings
     public static string PasswordLabel => Get();
 
     /// <summary>
-    /// Gets the password field hint.
+    /// Gets the password field hint shown when creating a backup (a new password).
     /// </summary>
     public static string PasswordHint => Get();
+
+    /// <summary>
+    /// Gets the password field hint shown when opening an existing backup (its current password).
+    /// </summary>
+    public static string BackupPasswordHint => Get();
 
     /// <summary>
     /// Gets the confirm-password field label.

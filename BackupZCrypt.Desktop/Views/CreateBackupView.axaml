@@ -3,6 +3,7 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:conv="using:BackupZCrypt.Desktop.Converters"
              x:Class="BackupZCrypt.Desktop.Views.CreateBackupView"
              x:DataType="vm:CreateBackupViewModel">
 
@@ -60,7 +61,7 @@
 							<TextBox Grid.Column="0"
 									 Classes="field"
 									 Text="{Binding Password}"
-									 PasswordChar="●"
+									 PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
 									 RevealPassword="{Binding RevealPassword}"
 									 PlaceholderText="{x:Static res:Strings.PasswordHint}" />
 							<ToggleButton Grid.Column="1"
@@ -98,7 +99,7 @@
 						<TextBlock Classes="label" Text="{x:Static res:Strings.ConfirmPasswordLabel}" />
 						<TextBox Classes="field"
 								 Text="{Binding ConfirmPassword}"
-								 PasswordChar="●"
+								 PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
 								 RevealPassword="{Binding RevealPassword}"
 								 PlaceholderText="{x:Static res:Strings.ConfirmPasswordHint}" />
 					</StackPanel>

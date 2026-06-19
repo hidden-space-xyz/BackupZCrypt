@@ -22,6 +22,9 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 {
     private const int GeneratedPasswordLength = 50;
 
+    private const int MinPasswordLength = 8;
+    private const int MaxPasswordLength = 1000;
+
     private static readonly IBrush WeakBrush = new SolidColorBrush(Color.Parse("#E2606C"));
     private static readonly IBrush FairBrush = new SolidColorBrush(Color.Parse("#E5B458"));
     private static readonly IBrush GoodBrush = new SolidColorBrush(Color.Parse("#7CB46B"));
@@ -36,9 +39,11 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CopyPasswordCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -135,6 +140,24 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
             compressionMode,
             proceedOnWarnings
         );
+    }
+
+    /// <summary>
+    /// Determines whether the backup can start, additionally requiring a valid, confirmed password so
+    /// the user cannot start a backup that would immediately fail password validation.
+    /// </summary>
+    /// <returns><see langword="true"/> when the backup may begin; otherwise <see langword="false"/>.</returns>
+    protected override bool CanStart()
+    {
+        return base.CanStart() && IsPasswordValid();
+    }
+
+    private bool IsPasswordValid()
+    {
+        return Password.Length >= MinPasswordLength
+            && Password.Length <= MaxPasswordLength
+            && string.Equals(Password.Trim(), Password, StringComparison.Ordinal)
+            && string.Equals(Password, ConfirmPassword, StringComparison.Ordinal);
     }
 
     [RelayCommand]
