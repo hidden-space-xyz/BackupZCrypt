@@ -356,10 +356,8 @@ internal sealed partial class PasswordService : IPasswordService
         {
             return Math.Min(20, password.Length * 2);
         }
-        else
-        {
-            return flags.CategoryCount == 2 && password.Length < 10 ? 10 : 0;
-        }
+
+        return flags.CategoryCount == 2 && password.Length < 10 ? 10 : 0;
     }
 
     private static string NormalizeLeet(string input)

@@ -6,7 +6,7 @@
         x:Class="BackupZCrypt.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="BackupZCrypt"
-        Icon="avares://BackupZCrypt.Desktop/Resources/CloudZCrypt.png"
+        Icon="avares://BackupZCrypt.Desktop/Resources/BackupZCrypt.png"
         Width="1120" Height="760"
         MinWidth="960" MinHeight="640"
         WindowStartupLocation="CenterScreen"
@@ -60,7 +60,7 @@
       <Grid RowDefinitions="Auto,*,Auto">
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10,0,0,10" Spacing="14">
-          <Image Source="avares://BackupZCrypt.Desktop/Resources/CloudZCrypt.png"
+          <Image Source="avares://BackupZCrypt.Desktop/Resources/BackupZCrypt.png"
                  Width="44" Height="44"
                  VerticalAlignment="Center" />
           <StackPanel Spacing="4" VerticalAlignment="Center">
