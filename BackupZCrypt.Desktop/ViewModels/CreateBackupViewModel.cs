@@ -18,7 +18,21 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the create-backup page: collects the source and destination, manages the password
 /// (entry, reveal, generation, copy and strength feedback) and reflects the algorithm defaults from settings.
 /// </summary>
-public sealed partial class CreateBackupViewModel : OperationViewModelBase
+/// <remarks>
+/// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.
+/// </remarks>
+/// <param name="orchestrator">The orchestrator that executes the backup operation.</param>
+/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="filePicker">The folder/file picker service.</param>
+/// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
+/// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
+public sealed partial class CreateBackupViewModel(
+    IBackupOrchestrator orchestrator,
+    ISettingsService settingsService,
+    IFilePickerService filePicker,
+    IClipboardService clipboardService,
+    IPasswordService passwordService
+    ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
     private const int GeneratedPasswordLength = 50;
 
@@ -29,10 +43,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
     private static readonly IBrush FairBrush = new SolidColorBrush(Color.Parse("#E5B458"));
     private static readonly IBrush GoodBrush = new SolidColorBrush(Color.Parse("#7CB46B"));
     private static readonly IBrush StrongBrush = new SolidColorBrush(Color.Parse("#3FB68B"));
-
-    private readonly IPasswordService passwordService;
-    private readonly IClipboardService clipboardService;
-
     private EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.Aes;
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
     private CompressionMode compressionMode = CompressionMode.None;
@@ -60,27 +70,6 @@ public sealed partial class CreateBackupViewModel : OperationViewModelBase
 
     [ObservableProperty]
     public partial bool HasStrength { get; set; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.
-    /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the backup operation.</param>
-    /// <param name="settingsService">The service that reads and persists user settings.</param>
-    /// <param name="filePicker">The folder/file picker service.</param>
-    /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
-    /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
-    public CreateBackupViewModel(
-        IBackupOrchestrator orchestrator,
-        ISettingsService settingsService,
-        IFilePickerService filePicker,
-        IClipboardService clipboardService,
-        IPasswordService passwordService
-    )
-        : base(orchestrator, settingsService, filePicker)
-    {
-        this.passwordService = passwordService;
-        this.clipboardService = clipboardService;
-    }
 
     /// <summary>
     /// Refreshes the encryption state from the latest settings defaults, unless an operation is

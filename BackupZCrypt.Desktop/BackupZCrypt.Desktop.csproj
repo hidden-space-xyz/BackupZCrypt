@@ -7,6 +7,8 @@
     <NeutralLanguage>en</NeutralLanguage>
     <AnalysisLevel>latest</AnalysisLevel>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AssemblyName>BackupZCrypt</AssemblyName>
+    <ApplicationIcon>Resources\BackupZCrypt.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

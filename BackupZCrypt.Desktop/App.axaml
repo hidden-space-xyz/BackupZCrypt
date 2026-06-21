@@ -40,6 +40,6 @@
 
   <Application.Styles>
     <FluentTheme />
-    <StyleInclude Source="avares://BackupZCrypt.Desktop/Styles/AppStyles.axaml" />
+    <StyleInclude Source="avares://BackupZCrypt/Styles/AppStyles.axaml" />
   </Application.Styles>
 </Application>
