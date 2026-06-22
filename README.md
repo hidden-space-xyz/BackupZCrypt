@@ -51,7 +51,7 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 ### Build and Run
 
 ```bash
-git clone https://github.com/your-username/BackupZCrypt.git
+git clone https://github.com/hidden-space-xyz/BackupZCrypt.git
 cd BackupZCrypt
 dotnet build BackupZCrypt.sln
 dotnet run --project BackupZCrypt.Desktop
