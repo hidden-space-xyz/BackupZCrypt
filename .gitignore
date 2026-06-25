@@ -419,3 +419,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 example
+
+# Claude Code: personal/local agent settings (the shared .claude/settings.json IS versioned)
+.claude/settings.local.json

@@ -14,9 +14,11 @@ The solution enforces quality through **Roslynator analyzers** plus a strict `.e
 
 ## Formatting — the analyzer is the source of truth
 
-Run `dotnet format BackupZCrypt.sln` before committing, then `dotnet build` and fix every warning.
-Do not hand-tune style against the rules below — let the tooling normalize it. The conventions that
-matter most here:
+Run `dotnet format` before committing, then `dotnet build` and fix every warning. **Scope it to the
+files you changed** (`dotnet format BackupZCrypt.sln --include <paths>`): formatting the whole
+solution can churn unrelated, pre-existing files, since the repo uses `autocrlf=true` and has no
+`.gitattributes`. Do not hand-tune style against the rules below — let the tooling normalize it. The
+conventions that matter most here:
 
 - **`var` always** for local declarations (`roslynator_use_var = always`).
 - **Explicit accessibility modifiers** on every declaration (`public`/`internal`/`private`…).
