@@ -1,132 +1,133 @@
 # CLAUDE.md
 
-Guidance for AI agents working in this repository. This file is **always in context** — it is
-deliberately short. Detailed, step-by-step procedures live in **Skills** (see below) and load on
-demand, so read this first and let the relevant skill load when you act.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Project
 
-## 1. Project
+**BackupZCrypt** is a cross-platform desktop app (.NET 10, Avalonia 12 / MVVM) that produces
+**chunk-based encrypted backups**. Files are split into content-defined chunks (FastCDC),
+deduplicated by content hash, optionally compressed (Zstandard), and individually encrypted with
+authenticated encryption under a key derived from the user's password.
 
-**BackupZCrypt** is a cross-platform, chunk-based **encrypted backup** desktop application
-(.NET 10, Avalonia UI / MVVM). It splits files into content-defined chunks (FastCDC), compresses
-them optionally (Zstandard), and encrypts each chunk with authenticated encryption (AES-GCM,
-ChaCha20-Poly1305, Twofish/Serpent/Camellia-GCM) under a key derived from the user's password
-(Argon2id / Scrypt / PBKDF2).
+This is **security-critical** software handling passwords, key material, and the only copy of a
+user's encrypted data. **There is no password recovery** — a bug can cause irreversible data loss.
+When a change forces a trade-off, resolve it **security first, performance second, everything else
+after**. Never weaken a cryptographic guarantee or leak key material for convenience.
 
-> This is a **security-critical** application. It handles passwords, key material, and the only
-> copy of a user's encrypted data. **There is no password recovery.** Treat every change as
-> security-sensitive and assume mistakes can cause irreversible data loss.
+## Commands
 
----
+```bash
+dotnet build BackupZCrypt.sln            # build (analyzers run during build; keep warnings at zero)
+dotnet run --project BackupZCrypt.Desktop # run the desktop app
+dotnet test BackupZCrypt.sln             # run the full test suite
+dotnet format BackupZCrypt.sln           # auto-format to .editorconfig
 
-## 2. The two non-negotiable priorities — in this order, ALWAYS
+# Run a single test class or method (NUnit filter):
+dotnet test --filter "FullyQualifiedName~BackupRestoreRoundtripTests"
+dotnet test --filter "Name=EveryMessageCode_HasEnglishResxKey"
+```
 
-1. **Security first.** Never weaken a cryptographic guarantee, leak key material, or trade safety
-   for convenience. When unsure, choose the safer option and say so.
-2. **Performance second.** This tool processes large datasets; favor streaming, spans, and
-   bounded memory. Optimize only without compromising priority #1.
+A **Release** build of `BackupZCrypt.Desktop` additionally runs the `GeneratePortablePackages`
+MSBuild target, which `dotnet publish`es self-contained single-file bundles for `win-x64`,
+`linux-x64`, `osx-x64`, and `osx-arm64` into `dist/`. This is slow — use Debug for normal iteration.
 
-Everything else (clean code, architecture, docs, tests, localization) is mandatory too, but when a
-genuine trade-off forces a choice, resolve it in the order **Security → Performance → the rest**.
-Never ship code that is incorrect, untested, or that breaks the build to satisfy any priority.
-
----
-
-## 3. Architecture — Clean Architecture + DDD
-
-Dependencies point **inward only**. The Domain knows nothing about the outer layers.
+## Architecture — Clean Architecture, dependencies point inward
 
 ```
-            ┌─────────────┐
- Desktop ──>│             │
-            │ Composition │──> Application ──> Domain
- Infra ────>│             │                      ▲
-            └─────────────┘  Infrastructure ─────┘
+Desktop ─┐
+         ├─> Composition ─> Application ─> Domain
+Infra ───┘        (Composition also ─> Infrastructure ─> Domain)
 ```
 
 | Project | Role | May reference |
 |---|---|---|
-| `BackupZCrypt.Domain` | Enums, constants, value objects, **interfaces** (strategies, services, factories). The contracts. | BCL only — **no NuGet, no other project** |
-| `BackupZCrypt.Application` | Use cases / orchestration, business services, validators, `Result`/`Result<T>`. | Domain |
-| `BackupZCrypt.Infrastructure` | Concrete strategy & service implementations (crypto, KDF, compression, chunking, file I/O). | Domain (+ BouncyCastle, ZstdSharp) |
-| `BackupZCrypt.Composition` | DI composition root wiring contracts → implementations. | Domain, Application, Infrastructure |
-| `BackupZCrypt.Desktop` | Avalonia MVVM UI; **owns all localized text**. | Application, Composition (+ Avalonia, CommunityToolkit.Mvvm) |
-| `BackupZCrypt.Test` | NUnit + NSubstitute test suite. | all of the above |
+| `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (strategies, services, factories). Two factory *implementations* also live here (`CompressionServiceFactory`, `KeyDerivationServiceFactory`). | **BCL only** — no NuGet, no other project |
+| `BackupZCrypt.Application` | Use-case orchestration and business services, validators, `Result`/`Result<T>`, manifest value objects. | Domain |
+| `BackupZCrypt.Infrastructure` | Concrete encryption / KDF / compression / chunking strategies + file & storage services. | Domain (+ BouncyCastle, ZstdSharp.Port) |
+| `BackupZCrypt.Composition` | DI composition root wiring contracts → implementations. | Application, Infrastructure |
+| `BackupZCrypt.Desktop` | Avalonia MVVM UI. **Owns all localized text.** | Application, Composition (+ Avalonia, CommunityToolkit.Mvvm) |
+| `BackupZCrypt.Test` | NUnit + NSubstitute suite. | all of the above |
 
-Hard rules (full detail → **clean-architecture** skill):
-- Domain must never reference another project or a NuGet package.
-- Implementations are `internal sealed` and exposed only via `InternalsVisibleTo` (Composition, Test).
-  Register them in `BackupZCrypt.Composition/DependencyInjection.cs`, never new them up across layers.
-- No user-facing English/Spanish strings below the Desktop layer — lower layers emit a language-neutral
-  `MessageCode` carried by `LocalizableMessage`; the Desktop layer translates.
+Non-negotiable boundary rules:
+- **Domain references nothing** — no NuGet package, no other project (BCL only).
+- Concrete implementations are `internal sealed`, exposed to `Composition` and `Test` via
+  `InternalsVisibleTo`. **Never `new` an implementation across a layer** — register it in
+  `BackupZCrypt.Composition/DependencyInjection.cs` and resolve it through DI.
+- **No user-facing English/Spanish text below the Desktop layer** (see Localization below).
 
----
+## Cross-cutting patterns (read these before adding code)
 
-## 4. Definition of Done
+**Strategy + factory selection.** Every encryption / KDF / compression / chunking algorithm is a
+strategy carrying an enum `Id`. All implementations are registered as singletons against the same
+interface (`services.AddSingleton<IEncryptionAlgorithmStrategy, ...>()`), then consumers inject the
+full `IEnumerable<T>` and index it by `Id` into a dictionary. **To add an algorithm:** add an enum
+member, implement an `internal sealed` strategy in Infrastructure, and register it in
+`DependencyInjection.AddDomainServices`. Nothing else selects strategies.
 
-A change is complete only when **every** box holds. Each maps to a skill that explains how.
+**Result over exceptions across layers.** Application operations return `Result` / `Result<T>`
+(in `BackupZCrypt.Application/ValueObjects/`) carrying `LocalizableMessage` errors — they do not
+throw across layer boundaries. Implicit conversions make this terse: returning a `T` yields success,
+returning a `MessageCode` yields failure. Exceptions inside the engine are caught and mapped to
+`MessageCode.UnexpectedErrorFormat` (fatal) or per-file error messages.
 
-- [ ] **Architecture** boundaries respected; dependencies still point inward. → `clean-architecture`
-- [ ] **Security & performance** reviewed against the checklist; no regression in either. → `security-and-performance`
-- [ ] **Build is clean**: zero new analyzer/Roslynator warnings, code matches `.editorconfig`. → `clean-code`
-- [ ] **NuGet** packages are on their latest stable, compatible versions. → `clean-code`
-- [ ] **Docs**: every non-`private` member has XML doc comments; `README.md` updated if behavior/usage changed. → `documentation`
-- [ ] **Tests** cover the change and pass; **100% coverage** is maintained. → `testing`
-- [ ] **Localization**: any user-facing text exists in **both** `Strings.resx` (en) and `Strings.es.resx` (es) with identical keys. → `localization`
+**Localization via message codes.** Lower layers never produce translated strings. They emit a
+`MessageCode` (enum) wrapped in `LocalizableMessage` (code + format args). The Desktop
+`MessageLocalizer` resolves the code to a resx key **of the same name** in `Strings.resx`. Codes
+whose name ends in `Format` take `string.Format` arguments.
+- Adding or changing a `MessageCode` requires the matching key in **both**
+  `BackupZCrypt.Desktop/Resources/Strings.resx` (en) and `Strings.es.resx` (es).
+- `LocalizationParityTests` enforces this: every `MessageCode` must have an English key, and the
+  en/es key sets must be identical. These tests fail the build if you forget a translation.
 
----
+**Request flow.** A Desktop ViewModel builds a `BackupRequest` and calls
+`IBackupOrchestrator.ExecuteAsync`. The orchestrator validates (blocking errors vs. advisory
+warnings gated by `ProceedOnWarnings`), normalizes paths, prepares the destination, then dispatches
+by `BackupOperation` to `IChunkedBackupService.{Create,Update,Restore,Verify}Async`. Each op
+processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) reporting through
+`IProgress<BackupStatus>`. Verify is read-only — it reconstructs into `Stream.Null`.
 
-## 5. Commands
+## Cryptographic design (do not change casually)
 
-```bash
-# Build (analyzers run during build; warnings must be zero)
-dotnet build BackupZCrypt.sln --nologo
+`ChunkedBackupService` and `ManifestService` implement the on-disk format. Constants live in
+`BackupZCrypt.Domain/Constants/EncryptionConstants.cs` (256-bit keys, 32-byte salt, 12-byte nonce,
+128-bit tag).
 
-# Run the desktop app
-dotnet run --project BackupZCrypt.Desktop
+- **Key hierarchy.** `password + 32-byte random salt` → 256-bit master key via the chosen KDF
+  (Argon2id / Scrypt / PBKDF2). `HKDF.Expand(SHA-256)` then derives four purpose-bound sub-keys from
+  the master with the context labels `chunk-encryption`, `chunk-nonce`, `chunk-naming`,
+  `manifest-encryption`.
+- **Chunks.** Content-defined (FastCDC), deduplicated by SHA-256 content hash. Per-chunk
+  nonce = `HMAC-SHA256(chunkNonceKey, chunkHash)[:12]` (deterministic, so identical content
+  dedupes, but key-dependent). On-disk chunk filename = `HMAC-SHA256(namingKey, chunkHash)` hex +
+  `.bzc`, so filenames never leak the content hash. Optional Zstd compression is applied **before**
+  encryption. AEAD associated data = `chunkHash ‖ nonce`.
+- **Manifest.** `manifest.bzc` = unencrypted 34-byte preamble (`algo` byte, `kdf` byte, 32-byte
+  salt) + 12-byte nonce + AEAD-encrypted JSON document. The preamble is the AEAD associated data;
+  the master salt is echoed inside the encrypted document and `FixedTimeEquals`-checked against the
+  preamble to detect tampering. Written atomically (temp file + rename).
+- **Hardening already in place** — preserve it: key material is wiped with
+  `CryptographicOperations.ZeroMemory`, hashes/salts compared with
+  `CryptographicOperations.FixedTimeEquals`, manifest paths validated by
+  `ValidateRelativeManifestPath` and restore paths confined by `ResolveSafeDestinationPath`
+  (no traversal / no escaping the destination), and decompression is bounded to the manifest's
+  declared size. Restore and verify re-check each file's total size and SHA-256 against the manifest.
 
-# Run the full test suite
-dotnet test BackupZCrypt.sln --nologo
+## Conventions & build gates
 
-# Auto-format to .editorconfig before committing
-dotnet format BackupZCrypt.sln
-```
-
----
-
-## 6. Skills
-
-These project skills auto-load from `.claude/skills/` when their trigger matches. Invoke one
-explicitly with `/<name>` if it does not fire on its own.
-
-| Skill | Use it when… |
-|---|---|
-| `clean-architecture` | adding/moving a type, choosing a layer, wiring DI, or reviewing dependency direction |
-| `clean-code` | writing/refactoring C#, fixing analyzer warnings, or updating NuGet packages |
-| `documentation` | adding/changing any non-`private` member, or shipping a user-visible change |
-| `testing` | adding/changing code that needs tests, or checking coverage |
-| `localization` | touching any user-facing string or adding a `MessageCode` |
-| `security-and-performance` | touching crypto, key handling, I/O, or any hot path — and before finishing any change |
-
----
-
-## 7. Token efficiency
-
-Keep interactions lean. The biggest wins are **structural**, not stylistic:
-
-1. **Progressive disclosure** (primary technique). This CLAUDE.md stays small; depth lives in skills
-   that load only when relevant. Don't paste large procedures inline — point to the skill.
-2. **Scoped tool use.** Prefer `Grep`/`Glob` and targeted, ranged `Read`s over reading whole files
-   or trees. Don't re-read a file you just edited.
-3. **Fan-out to subagents** for broad searches/exploration so raw results stay out of the main
-   context; act on the conclusion they return.
-4. **Concise output.** No preamble/postamble; answer, then stop. Report failures plainly.
-
----
-
-## 8. Conventions
-
+- **Central package management** — all versions live in `Directory.Packages.props`; project files
+  reference packages without versions. Keep packages on their latest stable compatible versions.
+- **Analyzers are gates.** Every project sets `AnalysisMode=All` and includes Roslynator; the
+  `.editorconfig` is strict (file-scoped namespaces, `var` always, explicit accessibility modifiers,
+  underscore-prefixed private fields, trailing commas, `I`-prefixed interfaces, braces always,
+  140-col lines). A clean change adds **zero** new analyzer/format warnings.
+- **Docs.** Every non-`private` member has an XML doc comment (the existing code is thorough — match
+  it). Update `README.md` when user-facing behavior or usage changes.
+- **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming (the naming
+  analyzer intentionally excludes methods to allow this). `Test/Common/TestHost.cs` builds a real DI
+  provider (`AddDomainServices().AddApplicationServices()`) — integration tests exercise the real
+  crypto/chunking stack against temp directories rather than mocking it.
+- **Settings** persist as indented JSON under `%LocalAppData%/BackupZCrypt` (platform equivalent
+  elsewhere), one file per settings type; defaults are recreated if a file is missing or corrupt.
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
-- **Branching**: feature branches off `develop`; PRs target `master` only for releases.
-- Commit or push **only when asked**.
+  Feature branches off `develop`; PRs target `master` only for releases. Commit or push **only when
+  asked**.
