@@ -1,7 +1,6 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
@@ -60,17 +59,10 @@ public sealed partial class VerifyBackupViewModel(
     }
 
     /// <summary>
-    /// Determines whether verification can start. Unlike the create/restore pages, no destination is
-    /// required: only a backup path with a detected encrypted manifest and its password.
+    /// Gets a value indicating that verification needs no destination path: only a backup location with
+    /// a detected encrypted manifest and its password are required, which the base start gate enforces.
     /// </summary>
-    /// <returns><see langword="true"/> when verification may begin; otherwise <see langword="false"/>.</returns>
-    protected override bool CanStart()
-    {
-        return !IsRunning
-            && !string.IsNullOrWhiteSpace(SourcePath)
-            && DetectedKind is ManifestKind.Encrypted
-            && (!IsPasswordRequired || Password.Length > 0);
-    }
+    protected override bool RequiresDestination => false;
 
     /// <summary>
     /// Records the verified backup location as the most recent backup path without clearing the
@@ -105,12 +97,8 @@ public sealed partial class VerifyBackupViewModel(
     }
 
     [RelayCommand]
-    private async Task PickBackupFolderAsync()
+    private Task PickBackupFolderAsync()
     {
-        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
-        if (path is not null)
-        {
-            SourcePath = path;
-        }
+        return PickFolderIntoAsync(path => SourcePath = path);
     }
 }

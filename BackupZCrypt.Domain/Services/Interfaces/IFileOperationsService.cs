@@ -34,12 +34,6 @@ public interface IFileOperationsService
     public bool FileExists(string filePath);
 
     /// <summary>
-    /// Creates the specified directory, including any missing parent directories.
-    /// </summary>
-    /// <param name="directoryPath">The directory path to create.</param>
-    public void CreateDirectory(string directoryPath);
-
-    /// <summary>
     /// Asynchronously creates the specified directory, including any missing parent directories.
     /// </summary>
     /// <param name="directoryPath">The directory path to create.</param>
@@ -62,19 +56,6 @@ public interface IFileOperationsService
     public void MoveFile(string sourcePath, string destinationPath, bool overwrite);
 
     /// <summary>
-    /// Asynchronously deletes a directory, optionally including its contents.
-    /// </summary>
-    /// <param name="directoryPath">The directory to delete.</param>
-    /// <param name="recursive">Whether to delete subdirectories and files within the directory.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A task that completes when the directory has been deleted.</returns>
-    public Task DeleteDirectoryAsync(
-        string directoryPath,
-        bool recursive,
-        CancellationToken cancellationToken = default
-    );
-
-    /// <summary>
     /// Asynchronously removes all files and subdirectories from a directory while keeping the directory itself.
     /// </summary>
     /// <param name="directoryPath">The directory to clean.</param>
@@ -88,13 +69,6 @@ public interface IFileOperationsService
     /// <param name="filePath">The path of the file to measure.</param>
     /// <returns>The file size in bytes.</returns>
     public long GetFileSize(string filePath);
-
-    /// <summary>
-    /// Resolves the specified path to an absolute path.
-    /// </summary>
-    /// <param name="filePath">The path to resolve.</param>
-    /// <returns>The fully qualified absolute path.</returns>
-    public string GetFullPath(string filePath);
 
     /// <summary>
     /// Computes the path of a target relative to a base path.

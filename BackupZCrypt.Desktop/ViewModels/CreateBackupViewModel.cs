@@ -3,7 +3,6 @@ using Avalonia.Media;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
@@ -150,23 +149,15 @@ public sealed partial class CreateBackupViewModel(
     }
 
     [RelayCommand]
-    private async Task PickSourceFolderAsync()
+    private Task PickSourceFolderAsync()
     {
-        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
-        if (path is not null)
-        {
-            SourcePath = path;
-        }
+        return PickFolderIntoAsync(path => SourcePath = path);
     }
 
     [RelayCommand]
-    private async Task PickDestinationFolderAsync()
+    private Task PickDestinationFolderAsync()
     {
-        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
-        if (path is not null)
-        {
-            DestinationPath = path;
-        }
+        return PickFolderIntoAsync(path => DestinationPath = path);
     }
 
     [RelayCommand]

@@ -2,100 +2,45 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 /// <summary>
 /// AEAD encryption strategy using AES in Galois/Counter Mode (AES-GCM) via the platform
-/// <see cref="AesGcm"/> primitive. The authentication tag is appended to the ciphertext,
-/// and intermediate plaintext/tag buffers are zeroed once the result is assembled.
+/// <see cref="AesGcm"/> primitive. The authentication tag is appended to the ciphertext.
 /// </summary>
-internal sealed class AesEncryptionStrategy : IEncryptionAlgorithmStrategy
+internal sealed class AesEncryptionStrategy : PlatformAeadEncryptionStrategyBase
 {
     /// <summary>
     /// Gets the algorithm identifier (<see cref="EncryptionAlgorithm.Aes"/>) used to select this strategy.
     /// </summary>
-    public EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;
+    public override EncryptionAlgorithm Id => EncryptionAlgorithm.Aes;
 
-    /// <summary>
-    /// Encrypts a single chunk with AES-GCM and returns the ciphertext with the authentication
-    /// tag appended.
-    /// </summary>
-    /// <param name="plaintext">The chunk to encrypt.</param>
-    /// <param name="key">The encryption key.</param>
-    /// <param name="nonce">The unique per-chunk nonce.</param>
-    /// <param name="associatedData">Additional authenticated data bound to the ciphertext but not encrypted.</param>
-    /// <returns>The ciphertext followed by the authentication tag.</returns>
-    public byte[] EncryptChunk(
-        ReadOnlySpan<byte> plaintext,
+    /// <inheritdoc/>
+    protected override void EncryptCore(
         byte[] key,
         byte[] nonce,
+        ReadOnlySpan<byte> plaintext,
+        Span<byte> ciphertext,
+        Span<byte> tag,
         byte[] associatedData
     )
     {
-        var ciphertext = new byte[plaintext.Length];
-        var tag = new byte[EncryptionConstants.TagSize];
-
-        try
-        {
-            using AesGcm aes = new(key, tag.Length);
-            aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData);
-
-            var result = new byte[ciphertext.Length + tag.Length];
-            ciphertext.CopyTo(result.AsSpan());
-            tag.CopyTo(result.AsSpan(ciphertext.Length));
-            return result;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(ciphertext);
-            CryptographicOperations.ZeroMemory(tag);
-        }
+        using AesGcm aes = new(key, EncryptionConstants.TagSize);
+        aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData);
     }
 
-    /// <summary>
-    /// Verifies the appended authentication tag and decrypts a single AES-GCM chunk. On any
-    /// failure the plaintext buffer is zeroed before the exception propagates.
-    /// </summary>
-    /// <param name="ciphertext">The ciphertext with the authentication tag appended.</param>
-    /// <param name="key">The encryption key.</param>
-    /// <param name="nonce">The nonce used during encryption.</param>
-    /// <param name="associatedData">The additional authenticated data supplied during encryption.</param>
-    /// <returns>The recovered plaintext.</returns>
-    /// <exception cref="CryptographicException">
-    /// The ciphertext is shorter than the tag, or authentication/decryption fails (tampering or wrong key).
-    /// </exception>
-    public byte[] DecryptChunk(
-        ReadOnlySpan<byte> ciphertext,
+    /// <inheritdoc/>
+    protected override void DecryptCore(
         byte[] key,
         byte[] nonce,
+        ReadOnlySpan<byte> ciphertext,
+        ReadOnlySpan<byte> tag,
+        Span<byte> plaintext,
         byte[] associatedData
     )
     {
-        if (ciphertext.Length < EncryptionConstants.TagSize)
-        {
-            throw new CryptographicException();
-        }
-
-        var dataLength = ciphertext.Length - EncryptionConstants.TagSize;
-        var plaintext = new byte[dataLength];
-        var tag = ciphertext[dataLength..].ToArray();
-
-        try
-        {
-            using AesGcm aes = new(key, EncryptionConstants.TagSize);
-            aes.Decrypt(nonce, ciphertext[..dataLength], tag, plaintext, associatedData);
-            return plaintext;
-        }
-        catch
-        {
-            CryptographicOperations.ZeroMemory(plaintext);
-            throw;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(tag);
-        }
+        using AesGcm aes = new(key, EncryptionConstants.TagSize);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext, associatedData);
     }
 }

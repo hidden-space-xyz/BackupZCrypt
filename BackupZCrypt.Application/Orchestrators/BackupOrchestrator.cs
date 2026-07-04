@@ -75,7 +75,7 @@ internal sealed class BackupOrchestrator(
             && fileOperationsService.DirectoryExists(destinationPath)
         )
         {
-            await CleanDestinationDirectoryAsync(destinationPath, cancellationToken);
+            await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
         }
 
         await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
@@ -204,14 +204,6 @@ internal sealed class BackupOrchestrator(
             ?? request.DestinationPath;
 
         return (sourcePath, destinationPath);
-    }
-
-    private async Task CleanDestinationDirectoryAsync(
-        string destinationPath,
-        CancellationToken cancellationToken
-    )
-    {
-        await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
     }
 
     private async Task<Result<BackupResult>?> ValidateRequestAsync(

@@ -148,15 +148,35 @@ public abstract partial class OperationViewModelBase(
     }
 
     /// <summary>
-    /// Determines whether the operation can start, requiring that no operation is running and both
-    /// source and destination paths are set.
+    /// Gets a value indicating whether a destination path is required in addition to a source. Pages
+    /// without a destination (such as verification) override this to return <see langword="false"/>.
+    /// </summary>
+    protected virtual bool RequiresDestination => true;
+
+    /// <summary>
+    /// Determines whether the operation can start, requiring that no operation is running, the source
+    /// path is set, and the destination path is set when <see cref="RequiresDestination"/> is <see langword="true"/>.
     /// </summary>
     /// <returns><see langword="true"/> when the operation may begin; otherwise <see langword="false"/>.</returns>
     protected virtual bool CanStart()
     {
         return !IsRunning
             && !string.IsNullOrWhiteSpace(SourcePath)
-            && !string.IsNullOrWhiteSpace(DestinationPath);
+            && (!RequiresDestination || !string.IsNullOrWhiteSpace(DestinationPath));
+    }
+
+    /// <summary>
+    /// Prompts the user to pick a folder and, when one is chosen, passes it to <paramref name="assign"/>.
+    /// </summary>
+    /// <param name="assign">Receives the selected folder path when the user picks one.</param>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
+    protected async Task PickFolderIntoAsync(Action<string> assign)
+    {
+        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
+        if (path is not null)
+        {
+            assign(path);
+        }
     }
 
     /// <summary>

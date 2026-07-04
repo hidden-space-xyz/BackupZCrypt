@@ -267,7 +267,6 @@ internal sealed class BackupRequestValidator(
                 }
             }
 
-            var hasExistingFiles = false;
             var existingFileCount = 0;
 
             if (fileOperations.DirectoryExists(destinationPath))
@@ -277,15 +276,11 @@ internal sealed class BackupRequestValidator(
                     "*",
                     cancellationToken
                 );
-                if (existingFiles.Length > 0)
-                {
-                    hasExistingFiles = true;
-                    existingFileCount = existingFiles.Length;
-                }
+                existingFileCount = existingFiles.Length;
             }
 
             if (
-                hasExistingFiles
+                existingFileCount > 0
                 && request.Operation is BackupOperation.Create or BackupOperation.Restore
             )
             {

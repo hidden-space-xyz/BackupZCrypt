@@ -37,6 +37,7 @@ public static class DependencyInjection
     {
         _ = services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
         _ = services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
+        _ = services.AddSingleton<IEncryptionServiceFactory, EncryptionServiceFactory>();
 
         _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
         _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();

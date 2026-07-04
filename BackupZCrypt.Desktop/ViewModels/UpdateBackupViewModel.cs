@@ -1,7 +1,6 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -69,22 +68,14 @@ public sealed partial class UpdateBackupViewModel(
     }
 
     [RelayCommand]
-    private async Task PickSourceFolderAsync()
+    private Task PickSourceFolderAsync()
     {
-        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
-        if (path is not null)
-        {
-            SourcePath = path;
-        }
+        return PickFolderIntoAsync(path => SourcePath = path);
     }
 
     [RelayCommand]
-    private async Task PickBackupFolderAsync()
+    private Task PickBackupFolderAsync()
     {
-        var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
-        if (path is not null)
-        {
-            DestinationPath = path;
-        }
+        return PickFolderIntoAsync(path => DestinationPath = path);
     }
 }

@@ -5,8 +5,8 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
@@ -17,21 +17,13 @@ namespace BackupZCrypt.Application.Services;
 /// followed by an AEAD-encrypted document, and are written atomically via a temp file and rename.
 /// </summary>
 /// <param name="fileOperationsService">Service used to read and write manifest files.</param>
-/// <param name="encryptionStrategies">The available encryption strategies, indexed by their algorithm identifier.</param>
+/// <param name="encryptionServiceFactory">Factory producing encryption strategies for an algorithm.</param>
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies
+    IEncryptionServiceFactory encryptionServiceFactory
 ) : IManifestService
 {
     private const int ChunkPreambleHeaderSize = 34;
-
-    private readonly Dictionary<
-        EncryptionAlgorithm,
-        IEncryptionAlgorithmStrategy
-    > encryptionStrategiesById = encryptionStrategies.ToDictionary(
-        static strategy => strategy.Id,
-        static strategy => strategy
-    );
 
     /// <summary>
     /// Determines whether a readable backup manifest is present: a non-empty manifest is reported as
@@ -170,7 +162,7 @@ internal sealed class ManifestService(
                 return null;
             }
 
-            var encryptionStrategy = ResolveEncryptionStrategy(preamble.Algorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(preamble.Algorithm);
             var associatedData = BuildChunkPreambleHeader(
                 preamble.Algorithm,
                 preamble.KeyDerivation,
@@ -291,7 +283,7 @@ internal sealed class ManifestService(
                 masterSalt
             );
 
-            var encryptionStrategy = ResolveEncryptionStrategy(algorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(algorithm);
             encryptedBytes = encryptionStrategy.EncryptChunk(
                 manifestBytes,
                 encryptionKey,
@@ -425,15 +417,5 @@ internal sealed class ManifestService(
 ;
 
         return new ChunkManifestData(header, document.MasterSalt, files);
-    }
-
-    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(EncryptionAlgorithm algorithm)
-    {
-        return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
-            ? throw new ArgumentOutOfRangeException(
-                nameof(algorithm),
-                $"Encryption algorithm '{algorithm}' is not registered."
-            )
-            : strategy;
     }
 }

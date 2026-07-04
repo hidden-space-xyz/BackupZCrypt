@@ -335,10 +335,9 @@ internal sealed partial class PasswordService : IPasswordService
 
     private static double PatternPenalty(string password)
     {
-        double penalty = 0;
         var lower = password.ToLowerInvariant();
 
-        penalty = CommonSubstrings.Where(lower.Contains).Sum(_ => 6);
+        double penalty = CommonSubstrings.Where(lower.Contains).Sum(_ => 6);
         var canon = NormalizeLeet(lower);
         penalty += CommonSubstrings.Where(canon.Contains).Sum(_ => 6);
 

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -18,12 +19,12 @@ namespace BackupZCrypt.Application.Services;
 /// never written to disk and all key material is zeroed after use; deduplication is deliberately not
 /// applied so the measured throughput reflects unique (worst-case) data.
 /// </summary>
-/// <param name="encryptionStrategies">The available encryption strategies, indexed by their algorithm identifier.</param>
+/// <param name="encryptionServiceFactory">Factory producing encryption strategies for an algorithm.</param>
 /// <param name="compressionServiceFactory">Factory producing compression strategies for a compression mode.</param>
 /// <param name="chunkingStrategy">Strategy used to split the synthetic stream into content-defined chunks.</param>
 /// <param name="keyDerivationServiceFactory">Factory producing key derivation services for an algorithm.</param>
 internal sealed class BackupBenchmarkService(
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
+    IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
     IChunkingStrategy chunkingStrategy,
     IKeyDerivationServiceFactory keyDerivationServiceFactory
@@ -36,14 +37,6 @@ internal sealed class BackupBenchmarkService(
 
     private static readonly TimeSpan MeasureWindow = TimeSpan.FromMilliseconds(500);
     private static readonly double MaxEstimateSeconds = TimeSpan.MaxValue.TotalSeconds;
-
-    private readonly Dictionary<
-        EncryptionAlgorithm,
-        IEncryptionAlgorithmStrategy
-    > encryptionStrategiesById = encryptionStrategies.ToDictionary(
-        static strategy => strategy.Id,
-        static strategy => strategy
-    );
 
     /// <summary>
     /// Runs the benchmark for the requested options and extrapolates the result to the requested
@@ -65,7 +58,7 @@ internal sealed class BackupBenchmarkService(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.DataBytes);
 
-        var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
+        var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
         var compressionStrategy =
             request.Compression == CompressionMode.None
                 ? null
@@ -311,7 +304,7 @@ internal sealed class BackupBenchmarkService(
 
         try
         {
-            nonce = ComputeNonce(nonceKey, chunkHash);
+            nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
 
             if (compressionStrategy is not null)
             {
@@ -319,7 +312,7 @@ internal sealed class BackupBenchmarkService(
                     .ConfigureAwait(false);
             }
 
-            associatedData = BuildAssociatedData(chunkHash, nonce);
+            associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
             encrypted = compressed is not null
                 ? encryptionStrategy.EncryptChunk(compressed, encryptionKey, nonce, associatedData)
                 : encryptionStrategy.EncryptChunk(
@@ -372,16 +365,6 @@ internal sealed class BackupBenchmarkService(
         return buffer.ToArray();
     }
 
-    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(EncryptionAlgorithm algorithm)
-    {
-        return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
-            ? throw new ArgumentOutOfRangeException(
-                nameof(algorithm),
-                $"Encryption algorithm '{algorithm}' is not registered."
-            )
-            : strategy;
-    }
-
     private static byte[] CreateSampleData(int size)
     {
         var data = GC.AllocateUninitializedArray<byte>(size);
@@ -405,29 +388,5 @@ internal sealed class BackupBenchmarkService(
         }
 
         return data;
-    }
-
-    private static byte[] ComputeNonce(byte[] nonceKey, byte[] chunkHash)
-    {
-        var hmac = HMACSHA256.HashData(nonceKey, chunkHash);
-        var nonce = new byte[EncryptionConstants.NonceSize];
-
-        try
-        {
-            Buffer.BlockCopy(hmac, 0, nonce, 0, EncryptionConstants.NonceSize);
-            return nonce;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(hmac);
-        }
-    }
-
-    private static byte[] BuildAssociatedData(byte[] chunkHash, byte[] nonce)
-    {
-        var associatedData = new byte[chunkHash.Length + nonce.Length];
-        chunkHash.CopyTo(associatedData, 0);
-        nonce.CopyTo(associatedData, chunkHash.Length);
-        return associatedData;
     }
 }

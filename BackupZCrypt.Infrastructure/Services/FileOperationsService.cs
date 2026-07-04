@@ -78,15 +78,6 @@ internal sealed class FileOperationsService : IFileOperationsService
     }
 
     /// <summary>
-    /// Creates the specified directory and any missing parent directories.
-    /// </summary>
-    /// <param name="directoryPath">The directory path to create.</param>
-    public void CreateDirectory(string directoryPath)
-    {
-        _ = Directory.CreateDirectory(directoryPath);
-    }
-
-    /// <summary>
     /// Creates the specified directory (and any missing parents) on a background thread.
     /// </summary>
     /// <param name="directoryPath">The directory path to create.</param>
@@ -118,22 +109,6 @@ internal sealed class FileOperationsService : IFileOperationsService
     public void MoveFile(string sourcePath, string destinationPath, bool overwrite)
     {
         File.Move(sourcePath, destinationPath, overwrite);
-    }
-
-    /// <summary>
-    /// Deletes the specified directory on a background thread.
-    /// </summary>
-    /// <param name="directoryPath">The directory path to delete.</param>
-    /// <param name="recursive"><see langword="true"/> to delete the directory and all its contents.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A task that completes when the directory has been deleted.</returns>
-    public async Task DeleteDirectoryAsync(
-        string directoryPath,
-        bool recursive,
-        CancellationToken cancellationToken = default
-    )
-    {
-        await Task.Run(() => Directory.Delete(directoryPath, recursive), cancellationToken);
     }
 
     /// <summary>
@@ -175,16 +150,6 @@ internal sealed class FileOperationsService : IFileOperationsService
     public long GetFileSize(string filePath)
     {
         return new FileInfo(filePath).Length;
-    }
-
-    /// <summary>
-    /// Resolves the supplied path to an absolute, fully qualified path.
-    /// </summary>
-    /// <param name="filePath">The path to resolve.</param>
-    /// <returns>The absolute path.</returns>
-    public string GetFullPath(string filePath)
-    {
-        return Path.GetFullPath(filePath);
     }
 
     /// <summary>

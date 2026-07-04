@@ -25,14 +25,4 @@ internal static class MessageLocalizer
             ? format
             : string.Format(CultureInfo.CurrentUICulture, format, [.. message.Args]);
     }
-
-    /// <summary>
-    /// Localizes a sequence of messages.
-    /// </summary>
-    /// <param name="messages">The language-neutral messages to localize.</param>
-    /// <returns>The localized strings, one per input message.</returns>
-    public static IEnumerable<string> Localize(IEnumerable<LocalizableMessage> messages)
-    {
-        return messages.Select(Localize);
-    }
 }

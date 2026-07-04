@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
@@ -23,14 +24,14 @@ namespace BackupZCrypt.Application.Services;
 /// naming, and the manifest are derived from the password-derived master key via HKDF.
 /// </summary>
 /// <param name="compressionServiceFactory">Factory producing compression strategies for a compression mode.</param>
-/// <param name="encryptionStrategies">The available encryption strategies, indexed by their algorithm identifier.</param>
+/// <param name="encryptionServiceFactory">Factory producing encryption strategies for an algorithm.</param>
 /// <param name="fileOperationsService">Service used to read, write, and enumerate files.</param>
 /// <param name="manifestService">Service used to read and write the encrypted backup manifest.</param>
 /// <param name="chunkingStrategy">Strategy used to split file streams into content-defined chunks.</param>
 /// <param name="keyDerivationServiceFactory">Factory producing key derivation services for an algorithm.</param>
 internal sealed class ChunkedBackupService(
     ICompressionServiceFactory compressionServiceFactory,
-    IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
+    IEncryptionServiceFactory encryptionServiceFactory,
     IFileOperationsService fileOperationsService,
     IManifestService manifestService,
     IChunkingStrategy chunkingStrategy,
@@ -46,14 +47,6 @@ internal sealed class ChunkedBackupService(
     private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
 
     private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
-
-    private readonly Dictionary<
-        EncryptionAlgorithm,
-        IEncryptionAlgorithmStrategy
-    > encryptionStrategiesById = encryptionStrategies.ToDictionary(
-        static strategy => strategy.Id,
-        static strategy => strategy
-    );
 
     /// <summary>
     /// Creates a new chunked backup, processing files in parallel, deduplicating chunks by content,
@@ -120,7 +113,7 @@ internal sealed class ChunkedBackupService(
             masterSalt = GenerateSalt();
             keys = DeriveKeySet(request.Password, masterSalt, request.KeyDerivationAlgorithm);
 
-            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
             var compressionStrategy = CreateCompressionStrategy(request.Compression);
 
             var totalFiles = sourceFiles.Length;
@@ -350,7 +343,7 @@ internal sealed class ChunkedBackupService(
 
             var (sourceFiles, sourceRoot) = source.Value;
 
-            var encryptionStrategy = ResolveEncryptionStrategy(request.EncryptionAlgorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
             var compressionStrategy = CreateCompressionStrategy(request.Compression);
 
             var chunksDir = fileOperationsService.CombinePath(
@@ -620,7 +613,7 @@ internal sealed class ChunkedBackupService(
                 return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
             }
 
-            var encryptionStrategy = ResolveEncryptionStrategy(manifest.Header.EncryptionAlgorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
 
             var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
 
@@ -814,7 +807,7 @@ internal sealed class ChunkedBackupService(
                 return Result<BackupResult>.Failure(MessageCode.VerifyInvalidPassword);
             }
 
-            var encryptionStrategy = ResolveEncryptionStrategy(manifest.Header.EncryptionAlgorithm);
+            var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
             var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
 
             var chunksDir = fileOperationsService.CombinePath(
@@ -1074,7 +1067,7 @@ internal sealed class ChunkedBackupService(
                 .ReadAllBytesAsync(chunkFilePath, cancellationToken)
                 .ConfigureAwait(false);
 
-            var associatedData = BuildChunkAssociatedData(chunkHash, nonce);
+            var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
             var decryptedData = encryptionStrategy.DecryptChunk(
                 encryptedData,
                 encryptionKey,
@@ -1157,7 +1150,7 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        var nonce = ComputeChunkNonce(nonceKey, chunkHash);
+        var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
         var nonceB64 = Convert.ToBase64String(nonce);
         byte[]? dataToEncrypt = null;
         byte[]? encrypted = null;
@@ -1188,7 +1181,7 @@ internal sealed class ChunkedBackupService(
                 }
             }
 
-            associatedData = BuildChunkAssociatedData(chunkHash, nonce);
+            associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
             encrypted = dataToEncrypt is not null
                 ? encryptionStrategy.EncryptChunk(
                     dataToEncrypt,
@@ -1311,7 +1304,7 @@ internal sealed class ChunkedBackupService(
                         EncryptionConstants.NonceSize,
                         "Invalid chunk nonce."
                     );
-                    associatedData = BuildChunkAssociatedData(chunkHash, nonce);
+                    associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
                     decryptedData = encryptionStrategy.DecryptChunk(
                         encryptedData,
                         encryptionKey,
@@ -1459,16 +1452,6 @@ internal sealed class ChunkedBackupService(
         return canonicalEntries;
     }
 
-    private IEncryptionAlgorithmStrategy ResolveEncryptionStrategy(EncryptionAlgorithm algorithm)
-    {
-        return !encryptionStrategiesById.TryGetValue(algorithm, out var strategy)
-            ? throw new ArgumentOutOfRangeException(
-                nameof(algorithm),
-                $"Encryption algorithm '{algorithm}' is not registered."
-            )
-            : strategy;
-    }
-
     private async Task DeleteOrphanedChunksAsync(
         string chunksDir,
         IEnumerable<string> referencedChunkHashes,
@@ -1596,22 +1579,6 @@ internal sealed class ChunkedBackupService(
         return salt;
     }
 
-    private static byte[] ComputeChunkNonce(byte[] nonceKey, byte[] chunkHash)
-    {
-        var hmac = HMACSHA256.HashData(nonceKey, chunkHash);
-        var nonce = new byte[EncryptionConstants.NonceSize];
-
-        try
-        {
-            Buffer.BlockCopy(hmac, 0, nonce, 0, EncryptionConstants.NonceSize);
-            return nonce;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(hmac);
-        }
-    }
-
     private static string ComputeChunkFileName(byte[] namingKey, byte[] chunkHash)
     {
         var hmac = HMACSHA256.HashData(namingKey, chunkHash);
@@ -1623,14 +1590,6 @@ internal sealed class ChunkedBackupService(
         {
             CryptographicOperations.ZeroMemory(hmac);
         }
-    }
-
-    private static byte[] BuildChunkAssociatedData(byte[] chunkHash, byte[] nonce)
-    {
-        var ad = new byte[chunkHash.Length + nonce.Length];
-        chunkHash.CopyTo(ad, 0);
-        nonce.CopyTo(ad, chunkHash.Length);
-        return ad;
     }
 
     private static async Task<long> CopyToWithHashAsync(
