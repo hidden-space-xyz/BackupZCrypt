@@ -46,27 +46,48 @@ public sealed partial class CreateBackupViewModel(
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
     private CompressionMode compressionMode = CompressionMode.None;
 
+    /// <summary>
+    /// Gets or sets the password used to encrypt the backup.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CopyPasswordCommand))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string Password { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the repeated password used to confirm the entry matches.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the password is shown in clear text.
+    /// </summary>
     [ObservableProperty]
     public partial bool RevealPassword { get; set; }
 
+    /// <summary>
+    /// Gets or sets the estimated strength score of the current password, shown by the strength meter.
+    /// </summary>
     [ObservableProperty]
     public partial double StrengthScore { get; set; }
 
+    /// <summary>
+    /// Gets or sets the human-readable description of the current password's strength.
+    /// </summary>
     [ObservableProperty]
     public partial string StrengthDescription { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the brush that colours the strength indicator according to the password's strength.
+    /// </summary>
     [ObservableProperty]
     public partial IBrush StrengthBrush { get; set; } = Brushes.Gray;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether password-strength feedback is currently shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool HasStrength { get; set; }
 
@@ -95,6 +116,7 @@ public sealed partial class CreateBackupViewModel(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // If the defaults cannot be read, keep the built-in algorithm defaults set above.
         }
     }
 

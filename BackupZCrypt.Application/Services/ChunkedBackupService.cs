@@ -1498,14 +1498,16 @@ internal sealed class ChunkedBackupService(
                     }
                     catch
                     {
-                        // Ignore
+                        // Best-effort deletion; a chunk that cannot be removed (locked or access
+                        // denied) is left as a harmless orphan rather than failing the update.
                     }
                 }
             }
         }
         catch
         {
-            // Ignore
+            // Orphan-chunk pruning is best-effort cleanup performed only after the manifest is
+            // saved; a failure here must never fail an already-completed update.
         }
     }
 
@@ -1653,7 +1655,8 @@ internal sealed class ChunkedBackupService(
             }
             catch
             {
-                // Ignore
+                // The sum only feeds the progress total; skip any file whose size cannot be read
+                // (removed, locked, or overflowing) rather than failing the backup.
             }
         }
 

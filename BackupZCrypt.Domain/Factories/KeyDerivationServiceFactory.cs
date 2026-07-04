@@ -7,6 +7,7 @@ namespace BackupZCrypt.Domain.Factories;
 /// <summary>
 /// Resolves registered key derivation strategies by their algorithm identifier.
 /// </summary>
+/// <param name="strategies">The registered key derivation strategies to resolve by algorithm.</param>
 internal sealed class KeyDerivationServiceFactory(
     IEnumerable<IKeyDerivationAlgorithmStrategy> strategies
 ) : IKeyDerivationServiceFactory

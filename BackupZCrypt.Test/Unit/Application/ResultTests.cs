@@ -3,6 +3,9 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the result value objects.
+/// </summary>
 public sealed class ResultTests
 {
     [Test]

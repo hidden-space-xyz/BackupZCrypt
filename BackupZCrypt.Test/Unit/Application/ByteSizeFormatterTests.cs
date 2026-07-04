@@ -4,6 +4,9 @@ using BackupZCrypt.Application.Utilities.Formatters;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the byte-size formatter.
+/// </summary>
 public sealed class ByteSizeFormatterTests
 {
     [Test]

@@ -10,6 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Integration tests covering the full backup-then-restore round trip across algorithm combinations.
+/// </summary>
 public sealed class BackupRestoreRoundtripTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";

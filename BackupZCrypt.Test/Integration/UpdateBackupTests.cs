@@ -7,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Integration tests for the incremental update operation and restoring the updated backup.
+/// </summary>
 public sealed class UpdateBackupTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";

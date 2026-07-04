@@ -2,6 +2,9 @@ using System.Text;
 
 namespace BackupZCrypt.Test.Common;
 
+/// <summary>
+/// Disposable temporary directory, created on construction and recursively deleted on dispose.
+/// </summary>
 public sealed class TempDir : IDisposable
 {
     public TempDir()

@@ -3,6 +3,9 @@ using BackupZCrypt.Infrastructure.Strategies.Compression;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
+/// <summary>
+/// Unit tests for the Zstandard compression strategies.
+/// </summary>
 public sealed class CompressionStrategyTests
 {
     private static IEnumerable<ICompressionStrategy> Levels() =>

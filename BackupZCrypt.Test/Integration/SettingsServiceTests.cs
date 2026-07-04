@@ -6,6 +6,9 @@ using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Integration tests for loading, creating and persisting settings through the settings service.
+/// </summary>
 public sealed class SettingsServiceTests
 {
     [Test]

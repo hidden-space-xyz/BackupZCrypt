@@ -4,6 +4,9 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the password service's strength analysis and password generation.
+/// </summary>
 public sealed class PasswordServiceTests
 {
     private readonly PasswordService sut = new();

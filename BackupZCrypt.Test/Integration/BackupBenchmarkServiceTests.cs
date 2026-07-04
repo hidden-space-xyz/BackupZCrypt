@@ -7,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Integration tests for the backup benchmark service's duration estimates.
+/// </summary>
 public sealed class BackupBenchmarkServiceTests
 {
     private const long OneGigabyte = 1024L * 1024L * 1024L;

@@ -78,6 +78,7 @@ internal sealed class SettingsService(
         }
         catch (JsonException)
         {
+            // A corrupt or incompatible settings file is not fatal; fall through to recreate it from defaults.
         }
 
         var recreated = T.DefaultValue;

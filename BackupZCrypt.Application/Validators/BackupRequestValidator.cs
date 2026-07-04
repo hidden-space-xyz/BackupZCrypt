@@ -197,6 +197,8 @@ internal sealed class BackupRequestValidator(
             }
             catch
             {
+                // The source/destination relationship checks are best-effort; if the paths cannot be
+                // probed, skip them rather than block the backup with a spurious error.
             }
         }
 
@@ -248,6 +250,7 @@ internal sealed class BackupRequestValidator(
                         }
                         catch
                         {
+                            // A file whose size cannot be read contributes nothing to the estimate.
                             return 0;
                         }
                     });
@@ -303,6 +306,8 @@ internal sealed class BackupRequestValidator(
         }
         catch
         {
+            // Warnings are advisory only; if any probe fails, return whatever was gathered so far
+            // rather than failing the operation.
         }
 
         return warnings;

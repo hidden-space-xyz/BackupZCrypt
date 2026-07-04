@@ -3,6 +3,9 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the path normalization helper.
+/// </summary>
 public sealed class PathNormalizationHelperTests
 {
     [TestCase("")]

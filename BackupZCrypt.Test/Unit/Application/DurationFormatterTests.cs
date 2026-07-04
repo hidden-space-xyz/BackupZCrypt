@@ -4,6 +4,9 @@ using BackupZCrypt.Application.Utilities.Formatters;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the duration formatter.
+/// </summary>
 public sealed class DurationFormatterTests
 {
     [Test]

@@ -6,6 +6,9 @@ using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Domain;
 
+/// <summary>
+/// Unit tests for the compression service factory's strategy resolution.
+/// </summary>
 public sealed class CompressionServiceFactoryTests
 {
     private static ICompressionStrategy Stub(CompressionMode id)

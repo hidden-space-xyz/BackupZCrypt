@@ -91,6 +91,7 @@ public sealed class App : Avalonia.Application
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // If the saved language cannot be read or applied, fall back to the system default UI culture.
         }
     }
 }

@@ -29,25 +29,47 @@ public abstract partial class ExistingBackupViewModelBase(
 
     private int detectionVersion;
 
+    /// <summary>
+    /// Gets or sets the password used to open the existing backup.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string Password { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the kind of manifest detected at the backup path.
+    /// </summary>
     [ObservableProperty]
     public partial ManifestKind DetectedKind { get; set; } = ManifestKind.Missing;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a detection message is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool HasDetection { get; set; }
 
+    /// <summary>
+    /// Gets or sets the message describing the outcome of backup detection.
+    /// </summary>
     [ObservableProperty]
     public partial string DetectionMessage { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the brush that colours the detection message.
+    /// </summary>
     [ObservableProperty]
     public partial IBrush DetectionBrush { get; set; } = new SolidColorBrush(Color.Parse("#9AA1B5"));
 
+    /// <summary>
+    /// Gets or sets the icon shown alongside the detection message.
+    /// </summary>
     [ObservableProperty]
     public partial string DetectionIcon { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a password is required to proceed, which is the case
+    /// when the detected manifest is encrypted.
+    /// </summary>
     [ObservableProperty]
     public partial bool IsPasswordRequired { get; set; }
 

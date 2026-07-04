@@ -18,7 +18,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// Shared engine for the create/update/restore pages: request execution with progress reporting,
+/// Shared engine for the create/update/restore/verify pages: request execution with progress reporting,
 /// cancellation, the warnings confirmation flow and the final result panel. Subclasses only describe
 /// how to build the request.
 /// </summary>
@@ -34,52 +34,97 @@ public abstract partial class OperationViewModelBase(
     private CancellationTokenSource? operationCts;
     private bool recentPathsLoaded;
 
+    /// <summary>
+    /// Gets or sets the source path of the operation.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string SourcePath { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the destination path of the operation.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string DestinationPath { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether an operation is currently running.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
     public partial bool IsRunning { get; set; }
 
+    /// <summary>
+    /// Gets or sets the completion percentage (0–100) of the running operation.
+    /// </summary>
     [ObservableProperty]
     public partial double ProgressValue { get; set; }
 
+    /// <summary>
+    /// Gets or sets the progress text, such as the number of files processed so far.
+    /// </summary>
     [ObservableProperty]
     public partial string ProgressText { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the formatted elapsed time of the running operation.
+    /// </summary>
     [ObservableProperty]
     public partial string ElapsedText { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the result panel is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool HasResult { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the completed operation succeeded.
+    /// </summary>
     [ObservableProperty]
     public partial bool ResultIsSuccess { get; set; }
 
+    /// <summary>
+    /// Gets or sets the title shown in the result panel.
+    /// </summary>
     [ObservableProperty]
     public partial string ResultTitle { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the processed/total files summary shown in the result panel.
+    /// </summary>
     [ObservableProperty]
     public partial string ResultFiles { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the duration summary shown in the result panel.
+    /// </summary>
     [ObservableProperty]
     public partial string ResultDuration { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the total-size summary shown in the result panel.
+    /// </summary>
     [ObservableProperty]
     public partial string ResultSize { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the result detail rows are shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool HasResultDetails { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the warnings confirmation panel is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool ShowWarnings { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the error list is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool ShowErrors { get; set; }
 
@@ -128,7 +173,8 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Ignore
+            // Recent paths are a convenience only; if they cannot be read the page simply starts
+            // with empty inputs.
         }
     }
 
@@ -434,7 +480,8 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Ignore
+            // Remembering the last-used paths is a best-effort convenience; a failure here must not
+            // affect the already-completed operation.
         }
     }
 }

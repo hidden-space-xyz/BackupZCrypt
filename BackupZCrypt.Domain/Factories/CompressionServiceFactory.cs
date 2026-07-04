@@ -7,6 +7,7 @@ namespace BackupZCrypt.Domain.Factories;
 /// <summary>
 /// Resolves registered compression strategies by their compression mode.
 /// </summary>
+/// <param name="strategies">The registered compression strategies to resolve by mode.</param>
 internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
 {

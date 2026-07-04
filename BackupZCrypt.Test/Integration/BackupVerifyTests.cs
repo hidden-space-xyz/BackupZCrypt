@@ -10,6 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Integration tests for the backup verify operation.
+/// </summary>
 public sealed class BackupVerifyTests
 {
     private const string Password = "Correct-Horse-Battery-Staple-42";

@@ -2,6 +2,9 @@ using BackupZCrypt.Application.Services;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the benchmark service's estimated-duration computation.
+/// </summary>
 public sealed class BackupBenchmarkServiceComputeTests
 {
     [TestCase(0d)]

@@ -10,6 +10,9 @@ using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
+/// <summary>
+/// Unit tests for the backup request validator's blocking errors and advisory warnings.
+/// </summary>
 public sealed class BackupRequestValidatorTests
 {
     private static readonly string SourceDir = Path.GetFullPath(

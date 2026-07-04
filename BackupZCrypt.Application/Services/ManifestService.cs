@@ -351,7 +351,8 @@ internal sealed class ManifestService(
             }
             catch
             {
-                // Ignore
+                // Best-effort removal of the temp file; the original write failure is rethrown
+                // below, so a cleanup failure must not mask it.
             }
 
             throw;

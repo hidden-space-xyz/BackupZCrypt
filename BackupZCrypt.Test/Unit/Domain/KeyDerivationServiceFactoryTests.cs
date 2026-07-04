@@ -6,6 +6,9 @@ using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Domain;
 
+/// <summary>
+/// Unit tests for the key-derivation service factory's strategy resolution.
+/// </summary>
 public sealed class KeyDerivationServiceFactoryTests
 {
     private static IKeyDerivationAlgorithmStrategy Stub(KeyDerivationAlgorithm id)

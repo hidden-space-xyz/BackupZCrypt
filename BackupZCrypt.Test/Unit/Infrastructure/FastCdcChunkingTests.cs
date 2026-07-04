@@ -2,6 +2,9 @@ using BackupZCrypt.Infrastructure.Strategies.Chunking;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
+/// <summary>
+/// Unit tests for the FastCDC content-defined chunking strategy.
+/// </summary>
 public sealed class FastCdcChunkingTests
 {
     private const int ChunkMaxSize = 4 * 1024 * 1024;

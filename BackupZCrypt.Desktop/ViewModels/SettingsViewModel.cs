@@ -26,46 +26,88 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private bool loaded;
     private string? savedLanguageCode;
 
+    /// <summary>
+    /// Gets or sets the selected default encryption algorithm.
+    /// </summary>
     [ObservableProperty]
     public partial EncryptionOption SelectedEncryption { get; set; }
 
+    /// <summary>
+    /// Gets or sets the selected default key-derivation algorithm.
+    /// </summary>
     [ObservableProperty]
     public partial KeyDerivationOption SelectedKeyDerivation { get; set; }
 
+    /// <summary>
+    /// Gets or sets the selected default compression mode.
+    /// </summary>
     [ObservableProperty]
     public partial CompressionOption SelectedCompression { get; set; }
 
+    /// <summary>
+    /// Gets or sets the selected UI language.
+    /// </summary>
     [ObservableProperty]
     public partial LanguageOption SelectedLanguage { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the "settings saved" notice is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool ShowSavedNotice { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the "restart required" note is shown after a language change.
+    /// </summary>
     [ObservableProperty]
     public partial bool ShowRestartNote { get; set; }
 
+    /// <summary>
+    /// Gets or sets the data amount, as entered by the user, used to size the benchmark.
+    /// </summary>
     [ObservableProperty]
     public partial string BenchmarkDataAmount { get; set; }
 
+    /// <summary>
+    /// Gets or sets the data-size unit applied to the benchmark amount.
+    /// </summary>
     [ObservableProperty]
     public partial DataSizeUnitOption SelectedDataUnit { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a benchmark is currently running.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunBenchmarkCommand))]
     public partial bool IsBenchmarkRunning { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the benchmark result is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool ShowBenchmarkResult { get; set; }
 
+    /// <summary>
+    /// Gets or sets the formatted estimated duration produced by the benchmark.
+    /// </summary>
     [ObservableProperty]
     public partial string BenchmarkDurationText { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the formatted estimated throughput produced by the benchmark.
+    /// </summary>
     [ObservableProperty]
     public partial string BenchmarkThroughputText { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a benchmark error message is shown.
+    /// </summary>
     [ObservableProperty]
     public partial bool HasBenchmarkError { get; set; }
 
+    /// <summary>
+    /// Gets or sets the benchmark error message shown to the user.
+    /// </summary>
     [ObservableProperty]
     public partial string BenchmarkError { get; set; } = string.Empty;
 
@@ -217,7 +259,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Ignore
+            // If the persisted settings cannot be read, keep the defaults selected in the constructor.
         }
     }
 

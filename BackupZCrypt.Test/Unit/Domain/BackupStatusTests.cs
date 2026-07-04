@@ -2,6 +2,9 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Test.Unit.Domain;
 
+/// <summary>
+/// Unit tests for the backup status value object.
+/// </summary>
 public sealed class BackupStatusTests
 {
     [Test]

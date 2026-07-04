@@ -17,9 +17,15 @@ public sealed partial class MainWindowViewModel
     : ViewModelBase,
         IRecipient<NavigateToPageMessage>
 {
+    /// <summary>
+    /// Gets or sets the navigation item currently selected in the sidebar.
+    /// </summary>
     [ObservableProperty]
     public partial NavigationItem SelectedItem { get; set; }
 
+    /// <summary>
+    /// Gets or sets the ViewModel of the page currently shown in the content area.
+    /// </summary>
     [ObservableProperty]
     public partial ViewModelBase CurrentPage { get; set; }
 

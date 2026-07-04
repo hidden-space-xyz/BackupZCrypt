@@ -4,6 +4,9 @@ using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
+/// <summary>
+/// Unit tests for the key-derivation strategies (Argon2id, PBKDF2 and scrypt).
+/// </summary>
 public sealed class KeyDerivationStrategyTests
 {
     private const string Password = "correct horse battery staple";

@@ -7,6 +7,7 @@ namespace BackupZCrypt.Domain.Factories;
 /// <summary>
 /// Resolves registered encryption strategies by their algorithm identifier.
 /// </summary>
+/// <param name="strategies">The registered encryption strategies to resolve by algorithm.</param>
 internal sealed class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy> strategies)
     : IEncryptionServiceFactory
 {

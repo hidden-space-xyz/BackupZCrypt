@@ -6,6 +6,9 @@ using BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
+/// <summary>
+/// Unit tests for the authenticated encryption strategies.
+/// </summary>
 public sealed class EncryptionStrategyTests
 {
     private static readonly byte[] Key =

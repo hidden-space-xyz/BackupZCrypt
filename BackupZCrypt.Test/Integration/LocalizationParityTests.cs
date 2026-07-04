@@ -4,6 +4,9 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Integration;
 
+/// <summary>
+/// Verifies that every message code has an English resx key and that the English and Spanish keys match.
+/// </summary>
 public sealed class LocalizationParityTests
 {
     private static readonly string EnglishResxPath = Path.Combine(
