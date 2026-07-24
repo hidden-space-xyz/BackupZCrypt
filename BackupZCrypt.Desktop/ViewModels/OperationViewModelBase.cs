@@ -63,6 +63,13 @@ public abstract partial class OperationViewModelBase(
     public partial double ProgressValue { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether progress is indeterminate because the total size of
+    /// the operation is not known yet (the initial scan phase).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsProgressIndeterminate { get; set; }
+
+    /// <summary>
     /// Gets or sets the progress text, such as the number of files processed so far.
     /// </summary>
     [ObservableProperty]
@@ -285,6 +292,7 @@ public abstract partial class OperationViewModelBase(
     private async Task RunAsync(bool proceedOnWarnings)
     {
         ResetState();
+        IsProgressIndeterminate = true;
         IsRunning = true;
 
         using CancellationTokenSource cts = new();
@@ -324,6 +332,7 @@ public abstract partial class OperationViewModelBase(
 
     private void ReportProgress(BackupStatus status)
     {
+        IsProgressIndeterminate = status.TotalBytes == 0;
         ProgressValue =
             status.TotalBytes > 0 ? (double)status.ProcessedBytes / status.TotalBytes * 100 : 0;
 
@@ -450,6 +459,7 @@ public abstract partial class OperationViewModelBase(
         ResultDuration = string.Empty;
         ResultSize = string.Empty;
         ProgressValue = 0;
+        IsProgressIndeterminate = false;
         ProgressText = string.Empty;
         ElapsedText = string.Empty;
     }

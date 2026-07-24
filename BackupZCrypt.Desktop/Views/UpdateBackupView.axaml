@@ -3,13 +3,14 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.UpdateBackupView"
              x:DataType="vm:UpdateBackupViewModel">
 
   <ScrollViewer>
     <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
-      <StackPanel Spacing="6">
+      <StackPanel Spacing="6" Margin="0,0,0,8">
         <TextBlock Classes="h1" Text="{x:Static res:Strings.UpdateTitle}" />
         <TextBlock Classes="subtitle" Text="{x:Static res:Strings.UpdateSubtitle}" />
       </StackPanel>
@@ -27,9 +28,12 @@
                        PlaceholderText="{x:Static res:Strings.UpdateSourceHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
-                      Content="📁"
+                      Classes="iconBtn"
                       ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
-                      Command="{Binding PickSourceFolderCommand}" />
+                      AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
+                      Command="{Binding PickSourceFolderCommand}">
+                <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+              </Button>
             </Grid>
           </StackPanel>
 
@@ -42,21 +46,30 @@
                        PlaceholderText="{x:Static res:Strings.BackupHint}" />
               <Button Grid.Column="1"
                       Margin="8,0,0,0"
-                      Content="📁"
+                      Classes="iconBtn"
                       ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
-                      Command="{Binding PickBackupFolderCommand}" />
+                      AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
+                      Command="{Binding PickBackupFolderCommand}">
+                <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+              </Button>
             </Grid>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal"
-                      Spacing="10"
-                      IsVisible="{Binding HasDetection}">
-            <TextBlock Text="{Binding DetectionIcon}" FontSize="14" />
-            <TextBlock Text="{Binding DetectionMessage}"
-                       TextWrapping="Wrap"
-                       FontSize="13"
-                       Foreground="{Binding DetectionBrush}" />
-          </StackPanel>
+          <Border Classes="warningBanner" IsVisible="{Binding HasDetection}">
+            <Grid ColumnDefinitions="Auto,*">
+              <PathIcon Grid.Column="0"
+                        Data="{x:Static local:Icons.Warning}"
+                        Width="16" Height="16"
+                        Margin="0,1,10,0"
+                        VerticalAlignment="Top"
+                        Foreground="{StaticResource WarningBrush}" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding DetectionMessage}"
+                         TextWrapping="Wrap"
+                         FontSize="13"
+                         Foreground="{StaticResource WarningBrush}" />
+            </Grid>
+          </Border>
         </StackPanel>
       </Border>
 
@@ -75,6 +88,7 @@
 
       <Button Classes="primary"
               HorizontalAlignment="Left"
+              IsDefault="{Binding IsActivePage}"
               Content="{x:Static res:Strings.StartUpdate}"
               Command="{Binding StartCommand}" />
 

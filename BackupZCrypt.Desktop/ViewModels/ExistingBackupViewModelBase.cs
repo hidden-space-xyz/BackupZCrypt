@@ -1,5 +1,3 @@
-using Avalonia.Media;
-
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -25,8 +23,6 @@ public abstract partial class ExistingBackupViewModelBase(
     IManifestService manifestService
 ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
-    private static readonly IBrush NegativeBrush = new SolidColorBrush(Color.Parse("#E5B458"));
-
     private int detectionVersion;
 
     /// <summary>
@@ -53,18 +49,6 @@ public abstract partial class ExistingBackupViewModelBase(
     /// </summary>
     [ObservableProperty]
     public partial string DetectionMessage { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the brush that colours the detection message.
-    /// </summary>
-    [ObservableProperty]
-    public partial IBrush DetectionBrush { get; set; } = new SolidColorBrush(Color.Parse("#9AA1B5"));
-
-    /// <summary>
-    /// Gets or sets the icon shown alongside the detection message.
-    /// </summary>
-    [ObservableProperty]
-    public partial string DetectionIcon { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether a password is required to proceed, which is the case
@@ -135,8 +119,6 @@ public abstract partial class ExistingBackupViewModelBase(
         if (HasDetection)
         {
             DetectionMessage = Strings.DetectMissing;
-            DetectionBrush = NegativeBrush;
-            DetectionIcon = "⚠";
         }
 
         NotifyStartCanExecuteChanged();

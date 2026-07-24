@@ -9,7 +9,7 @@
   <ScrollViewer>
     <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
-      <StackPanel Spacing="6">
+      <StackPanel Spacing="6" Margin="0,0,0,8">
         <TextBlock Classes="h1" Text="{x:Static res:Strings.SettingsTitle}" />
         <TextBlock Classes="subtitle" Text="{x:Static res:Strings.SettingsSubtitle}" />
       </StackPanel>
@@ -171,10 +171,11 @@
 
       <StackPanel Spacing="4">
         <TextBlock Classes="section" Text="{x:Static res:Strings.SettingsFileLabel}" />
-        <TextBlock Classes="dim"
-                   FontSize="12"
-                   TextWrapping="Wrap"
-                   Text="{Binding SettingsFilePath}" />
+        <SelectableTextBlock Classes="mono"
+                             TextWrapping="Wrap"
+                             Foreground="{StaticResource DimTextBrush}"
+                             SelectionBrush="{StaticResource AccentBrush}"
+                             Text="{Binding SettingsFilePath}" />
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

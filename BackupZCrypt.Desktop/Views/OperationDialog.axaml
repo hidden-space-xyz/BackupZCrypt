@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
         xmlns:res="using:BackupZCrypt.Desktop.Resources"
+        xmlns:local="using:BackupZCrypt.Desktop"
         x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
         x:DataType="vm:OperationViewModelBase"
         Background="Transparent"
@@ -11,19 +12,77 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner">
 
-  <Border Background="{StaticResource CardBackgroundBrush}"
+  <Window.Styles>
+    <!-- Entry: fade in while scaling up from 96%. Runs once when the dialog attaches. -->
+    <Style Selector="Border.dialogCard">
+      <Style.Animations>
+        <Animation Duration="0:0:0.18" FillMode="Forward" Easing="CubicEaseOut">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransform" Value="scale(0.96) translateY(8px)" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="RenderTransform" Value="scale(1) translateY(0px)" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Gentle breathing of the in-progress icon so the dialog never looks frozen. -->
+    <Style Selector="PathIcon.pulse">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="Infinite" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="Opacity" Value="0.45" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Tinted circular container for the status icon of each panel. -->
+    <Style Selector="Border.statusBadge">
+      <Setter Property="Width" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="CornerRadius" Value="20" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.statusBadge PathIcon">
+      <Setter Property="Width" Value="20" />
+      <Setter Property="Height" Value="20" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
+  <!-- The margin leaves room for the drop shadow inside the transparent window bounds; the
+       code-behind removes margin and shadow when per-pixel transparency is not granted. -->
+  <Border x:Name="DialogCard"
+          Classes="dialogCard"
+          Background="{StaticResource CardBackgroundBrush}"
           BorderBrush="{StaticResource CardBorderBrush}"
           BorderThickness="1"
           CornerRadius="12"
           Width="470"
-          Padding="28">
+          Margin="48"
+          Padding="28"
+          BoxShadow="{StaticResource DialogShadow}">
     <Panel>
 
       <StackPanel Spacing="18" IsVisible="{Binding IsRunning}">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Text="⏳"
-                     FontSize="20"
-                     VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Classes="statusBadge" Background="{StaticResource InfoCardBrush}">
+            <PathIcon Classes="pulse"
+                      Data="{x:Static local:Icons.Hourglass}"
+                      Foreground="{StaticResource AccentBrush}" />
+          </Border>
           <TextBlock Classes="section"
                      VerticalAlignment="Center"
                      Foreground="{StaticResource PrimaryTextBrush}"
@@ -31,10 +90,19 @@
         </StackPanel>
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="label" Text="{Binding ProgressText}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="label" Text="{Binding ProgressText}" />
+              <TextBlock Classes="dim"
+                         FontSize="12"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding !IsProgressIndeterminate}"
+                         Text="{Binding ProgressValue, StringFormat={}{0:0}%}" />
+            </StackPanel>
             <TextBlock Classes="dim" FontSize="12" Text="{Binding ElapsedText}" />
           </StackPanel>
           <Button Grid.Column="1"
+                  Classes="secondary"
+                  IsCancel="True"
                   Content="{x:Static res:Strings.CancelButton}"
                   Command="{Binding CancelOperationCommand}"
                   VerticalAlignment="Center" />
@@ -43,16 +111,16 @@
                      CornerRadius="4"
                      Minimum="0"
                      Maximum="100"
-                     Value="{Binding ProgressValue}"
-                     Foreground="{StaticResource AccentBrush}" />
+                     IsIndeterminate="{Binding IsProgressIndeterminate}"
+                     Value="{Binding ProgressValue}" />
       </StackPanel>
 
       <StackPanel Spacing="18" IsVisible="{Binding ShowWarnings}">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Text="⚠"
-                     FontSize="20"
-                     VerticalAlignment="Center"
-                     Foreground="{StaticResource WarningBrush}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Classes="statusBadge" Background="{StaticResource WarningCardBrush}">
+            <PathIcon Data="{x:Static local:Icons.Warning}"
+                      Foreground="{StaticResource WarningBrush}" />
+          </Border>
           <TextBlock Classes="section"
                      VerticalAlignment="Center"
                      Foreground="{StaticResource WarningBrush}"
@@ -72,13 +140,15 @@
         </ScrollViewer>
         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
           <Button Grid.Column="0"
+                  Classes="secondary"
+                  IsCancel="True"
                   Content="{x:Static res:Strings.DismissButton}"
                   Command="{Binding DismissWarningsCommand}"
-                  Padding="22,11"
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Center" />
           <Button Grid.Column="1"
                   Classes="primary"
+                  IsDefault="True"
                   Content="{x:Static res:Strings.ContinueAnyway}"
                   Command="{Binding ContinueAnywayCommand}"
                   HorizontalAlignment="Stretch"
@@ -87,17 +157,19 @@
       </StackPanel>
 
       <StackPanel Spacing="18" IsVisible="{Binding HasResult}">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Text="✔"
-                     FontSize="20"
-                     VerticalAlignment="Center"
-                     Foreground="{StaticResource SuccessBrush}"
-                     IsVisible="{Binding ResultIsSuccess}" />
-          <TextBlock Text="✘"
-                     FontSize="20"
-                     VerticalAlignment="Center"
-                     Foreground="{StaticResource DangerBrush}"
-                     IsVisible="{Binding !ResultIsSuccess}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Classes="statusBadge"
+                  Background="{StaticResource SuccessCardBrush}"
+                  IsVisible="{Binding ResultIsSuccess}">
+            <PathIcon Data="{x:Static local:Icons.CheckCircle}"
+                      Foreground="{StaticResource SuccessBrush}" />
+          </Border>
+          <Border Classes="statusBadge"
+                  Background="{StaticResource DangerCardBrush}"
+                  IsVisible="{Binding !ResultIsSuccess}">
+            <PathIcon Data="{x:Static local:Icons.ErrorCircle}"
+                      Foreground="{StaticResource DangerBrush}" />
+          </Border>
           <TextBlock Classes="section"
                      VerticalAlignment="Center"
                      Foreground="{StaticResource PrimaryTextBrush}"
@@ -126,6 +198,8 @@
         </StackPanel>
 
         <Button Classes="primary"
+                IsDefault="True"
+                IsCancel="True"
                 HorizontalAlignment="Right"
                 Content="{x:Static res:Strings.CloseButton}"
                 Command="{Binding DismissResultCommand}" />

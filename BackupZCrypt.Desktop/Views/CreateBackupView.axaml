@@ -4,114 +4,142 @@
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:conv="using:BackupZCrypt.Desktop.Converters"
+             xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.CreateBackupView"
              x:DataType="vm:CreateBackupViewModel">
 
-	<ScrollViewer>
-		<StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+  <ScrollViewer>
+    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
-			<StackPanel Spacing="6">
-				<TextBlock Classes="h1" Text="{x:Static res:Strings.CreateTitle}" />
-				<TextBlock Classes="subtitle" Text="{x:Static res:Strings.CreateSubtitle}" />
-			</StackPanel>
+      <StackPanel Spacing="6" Margin="0,0,0,8">
+        <TextBlock Classes="h1" Text="{x:Static res:Strings.CreateTitle}" />
+        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.CreateSubtitle}" />
+      </StackPanel>
 
-			<Border Classes="card">
-				<StackPanel Spacing="16">
-					<TextBlock Classes="section" Text="{x:Static res:Strings.SectionLocations}" />
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionLocations}" />
 
-					<StackPanel Spacing="6">
-						<TextBlock Classes="label" Text="{x:Static res:Strings.SourceLabel}" />
-						<Grid ColumnDefinitions="*,Auto">
-							<TextBox Grid.Column="0"
-									 Classes="field"
-									 Text="{Binding SourcePath}"
-									 PlaceholderText="{x:Static res:Strings.SourceHint}" />
-							<Button Grid.Column="1"
-									Margin="8,0,0,0"
-									Content="📁"
-									ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
-									Command="{Binding PickSourceFolderCommand}" />
-						</Grid>
-					</StackPanel>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.SourceLabel}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding SourcePath}"
+                       PlaceholderText="{x:Static res:Strings.SourceHint}" />
+              <Button Grid.Column="1"
+                      Margin="8,0,0,0"
+                      Classes="iconBtn"
+                      ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
+                      AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
+                      Command="{Binding PickSourceFolderCommand}">
+                <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+              </Button>
+            </Grid>
+          </StackPanel>
 
-					<StackPanel Spacing="6">
-						<TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
-						<Grid ColumnDefinitions="*,Auto">
-							<TextBox Grid.Column="0"
-									 Classes="field"
-									 Text="{Binding DestinationPath}"
-									 PlaceholderText="{x:Static res:Strings.DestinationHint}" />
-							<Button Grid.Column="1"
-									Margin="8,0,0,0"
-									Content="📁"
-									ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
-									Command="{Binding PickDestinationFolderCommand}" />
-						</Grid>
-					</StackPanel>
-				</StackPanel>
-			</Border>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding DestinationPath}"
+                       PlaceholderText="{x:Static res:Strings.DestinationHint}" />
+              <Button Grid.Column="1"
+                      Margin="8,0,0,0"
+                      Classes="iconBtn"
+                      ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
+                      AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
+                      Command="{Binding PickDestinationFolderCommand}">
+                <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+              </Button>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
 
-			<Border Classes="card">
-				<StackPanel Spacing="16">
-					<TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
+      <Border Classes="card">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
 
-					<StackPanel Spacing="6">
-						<TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
-						<Grid ColumnDefinitions="*,Auto,Auto,Auto">
-							<TextBox Grid.Column="0"
-									 Classes="field"
-									 Text="{Binding Password}"
-									 PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
-									 RevealPassword="{Binding RevealPassword}"
-									 PlaceholderText="{x:Static res:Strings.PasswordHint}" />
-							<ToggleButton Grid.Column="1"
-										  Margin="8,0,0,0"
-										  Content="👁"
-										  IsChecked="{Binding RevealPassword}"
-										  ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}" />
-							<Button Grid.Column="2"
-								  Margin="8,0,0,0"
-								  Content="🎲"
-								  Command="{Binding GeneratePasswordCommand}"
-								  ToolTip.Tip="{x:Static res:Strings.GenerateButton}" />
-							<Button Grid.Column="3"
-									Margin="8,0,0,0"
-									Content="📋"
-									Command="{Binding CopyPasswordCommand}"
-									ToolTip.Tip="{x:Static res:Strings.CopyButton}" />
-						</Grid>
-					</StackPanel>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+              <TextBox Grid.Column="0"
+                       Classes="field"
+                       Text="{Binding Password}"
+                       PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
+                       RevealPassword="{Binding RevealPassword}"
+                       PlaceholderText="{x:Static res:Strings.PasswordHint}" />
+              <ToggleButton Grid.Column="1"
+                            Margin="8,0,0,0"
+                            Classes="iconBtn"
+                            IsChecked="{Binding RevealPassword}"
+                            ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}"
+                            AutomationProperties.Name="{x:Static res:Strings.RevealPasswordTooltip}">
+                <PathIcon Data="{x:Static local:Icons.Eye}" />
+              </ToggleButton>
+              <Button Grid.Column="2"
+                      Margin="8,0,0,0"
+                      Classes="iconBtn"
+                      Command="{Binding GeneratePasswordCommand}"
+                      ToolTip.Tip="{x:Static res:Strings.GenerateButton}"
+                      AutomationProperties.Name="{x:Static res:Strings.GenerateButton}">
+                <PathIcon Data="{x:Static local:Icons.Sparkle}" />
+              </Button>
+              <Button Grid.Column="3"
+                      Margin="8,0,0,0"
+                      Classes="iconBtn"
+                      Command="{Binding CopyPasswordCommand}"
+                      ToolTip.Tip="{x:Static res:Strings.CopyButton}"
+                      AutomationProperties.Name="{x:Static res:Strings.CopyButton}">
+                <PathIcon Data="{x:Static local:Icons.Clipboard}" />
+              </Button>
+            </Grid>
+          </StackPanel>
 
-					<StackPanel Spacing="6" IsVisible="{Binding HasStrength}">
-						<ProgressBar Height="6"
-									 CornerRadius="3"
-									 Minimum="0"
-									 Maximum="100"
-									 Value="{Binding StrengthScore}"
-									 Foreground="{Binding StrengthBrush}" />
-						<TextBlock Classes="dim"
-								   FontSize="12"
-								   TextWrapping="Wrap"
-								   Text="{Binding StrengthDescription}" />
-					</StackPanel>
+          <StackPanel Spacing="6" IsVisible="{Binding HasStrength}">
+            <ProgressBar Height="6"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="{Binding StrengthScore}"
+                         Foreground="{Binding StrengthBrush}">
+              <ProgressBar.Transitions>
+                <Transitions>
+                  <DoubleTransition Property="Value" Duration="0:0:0.25" Easing="SineEaseOut" />
+                  <BrushTransition Property="Foreground" Duration="0:0:0.25" Easing="SineEaseOut" />
+                </Transitions>
+              </ProgressBar.Transitions>
+            </ProgressBar>
+            <TextBlock Classes="dim"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Text="{Binding StrengthDescription}" />
+          </StackPanel>
 
-					<StackPanel Spacing="6">
-						<TextBlock Classes="label" Text="{x:Static res:Strings.ConfirmPasswordLabel}" />
-						<TextBox Classes="field"
-								 Text="{Binding ConfirmPassword}"
-								 PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
-								 RevealPassword="{Binding RevealPassword}"
-								 PlaceholderText="{x:Static res:Strings.ConfirmPasswordHint}" />
-					</StackPanel>
-				</StackPanel>
-			</Border>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="{x:Static res:Strings.ConfirmPasswordLabel}" />
+            <TextBox Classes="field"
+                     Text="{Binding ConfirmPassword}"
+                     PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
+                     RevealPassword="{Binding RevealPassword}"
+                     PlaceholderText="{x:Static res:Strings.ConfirmPasswordHint}" />
+            <TextBlock FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource DangerBrush}"
+                       IsVisible="{Binding ShowPasswordMismatch}"
+                       Text="{x:Static res:Strings.PasswordMismatch}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
 
-			<Button Classes="primary"
-					HorizontalAlignment="Left"
-					Content="{x:Static res:Strings.StartBackup}"
-					Command="{Binding StartCommand}" />
+      <Button Classes="primary"
+              HorizontalAlignment="Left"
+              IsDefault="{Binding IsActivePage}"
+              Content="{x:Static res:Strings.StartBackup}"
+              Command="{Binding StartCommand}" />
 
-			<views:OperationStatusView />
-		</StackPanel>
-	</ScrollViewer>
+      <views:OperationStatusView />
+    </StackPanel>
+  </ScrollViewer>
 </UserControl>

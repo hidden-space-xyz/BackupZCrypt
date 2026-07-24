@@ -50,12 +50,12 @@ public sealed partial class MainWindowViewModel
     {
         NavigationItems =
         [
-            new NavigationItem("🔐", Strings.NavCreate, createBackup),
-            new NavigationItem("🔄", Strings.NavUpdate, updateBackup),
-            new NavigationItem("📦", Strings.NavRestore, restoreBackup),
-            new NavigationItem("🛡️", Strings.NavVerify, verifyBackup),
-            new NavigationItem("⚙️", Strings.NavSettings, settings),
-            new NavigationItem("❓", Strings.NavAbout, about),
+            new NavigationItem(Icons.ShieldLock, Strings.NavCreate, createBackup),
+            new NavigationItem(Icons.ArrowSync, Strings.NavUpdate, updateBackup),
+            new NavigationItem(Icons.BoxArrowDown, Strings.NavRestore, restoreBackup),
+            new NavigationItem(Icons.ShieldCheck, Strings.NavVerify, verifyBackup),
+            new NavigationItem(Icons.Settings, Strings.NavSettings, settings),
+            new NavigationItem(Icons.Info, Strings.NavAbout, about),
         ];
 
         VersionText = about.VersionText;
@@ -99,6 +99,8 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        CurrentPage.IsActivePage = false;
+        value.Page.IsActivePage = true;
         CurrentPage = value.Page;
         _ = value.Page.OnNavigatedToAsync();
     }

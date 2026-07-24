@@ -38,10 +38,6 @@ public sealed partial class CreateBackupViewModel(
     private const int MinPasswordLength = 8;
     private const int MaxPasswordLength = 1000;
 
-    private static readonly IBrush WeakBrush = new SolidColorBrush(Color.Parse("#E2606C"));
-    private static readonly IBrush FairBrush = new SolidColorBrush(Color.Parse("#E5B458"));
-    private static readonly IBrush GoodBrush = new SolidColorBrush(Color.Parse("#7CB46B"));
-    private static readonly IBrush StrongBrush = new SolidColorBrush(Color.Parse("#3FB68B"));
     private EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.Aes;
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
     private CompressionMode compressionMode = CompressionMode.None;
@@ -90,6 +86,13 @@ public sealed partial class CreateBackupViewModel(
     /// </summary>
     [ObservableProperty]
     public partial bool HasStrength { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the confirmation entry does not match the password,
+    /// which is the most common reason the start button is disabled.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowPasswordMismatch { get; set; }
 
     /// <summary>
     /// Refreshes the encryption state from the latest settings defaults, unless an operation is
@@ -208,6 +211,8 @@ public sealed partial class CreateBackupViewModel(
 
     partial void OnPasswordChanged(string value)
     {
+        UpdatePasswordMismatch();
+
         if (string.IsNullOrEmpty(value))
         {
             HasStrength = false;
@@ -223,10 +228,32 @@ public sealed partial class CreateBackupViewModel(
         StrengthDescription = PasswordStrengthFormatter.Format(analysis);
         StrengthBrush = analysis.Strength switch
         {
-            PasswordStrength.VeryWeak or PasswordStrength.Weak => WeakBrush,
-            PasswordStrength.Fair => FairBrush,
-            PasswordStrength.Good => GoodBrush,
-            _ => StrongBrush,
+            PasswordStrength.VeryWeak or PasswordStrength.Weak => ResolveBrush("DangerBrush"),
+            PasswordStrength.Fair => ResolveBrush("WarningBrush"),
+            PasswordStrength.Good => ResolveBrush("StrengthGoodBrush"),
+            _ => ResolveBrush("SuccessBrush"),
         };
+    }
+
+    private static IBrush ResolveBrush(string key)
+    {
+        return
+            Avalonia.Application.Current is { } app
+            && app.TryGetResource(key, app.ActualThemeVariant, out var value)
+            && value is IBrush brush
+            ? brush
+            : Brushes.Gray;
+    }
+
+    partial void OnConfirmPasswordChanged(string value)
+    {
+        UpdatePasswordMismatch();
+    }
+
+    private void UpdatePasswordMismatch()
+    {
+        ShowPasswordMismatch =
+            ConfirmPassword.Length > 0
+            && !string.Equals(Password, ConfirmPassword, StringComparison.Ordinal);
     }
 }

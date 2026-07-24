@@ -1,23 +1,28 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+  <!-- ============================== Typography ============================== -->
+
   <Style Selector="TextBlock.h1">
-    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+    <Setter Property="LineHeight" Value="30" />
     <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
   </Style>
 
   <Style Selector="TextBlock.subtitle">
     <Setter Property="FontSize" Value="14" />
+    <Setter Property="LineHeight" Value="21" />
     <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
   <Style Selector="TextBlock.section">
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-    <Setter Property="LetterSpacing" Value="1.2" />
+    <Setter Property="LetterSpacing" Value="1.4" />
   </Style>
 
   <Style Selector="TextBlock.label">
@@ -30,44 +35,134 @@
     <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
   </Style>
 
+  <Style Selector="TextBlock.mono, SelectableTextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <!-- ============================== Surfaces ============================== -->
+
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="24" />
+    <Setter Property="BoxShadow" Value="{StaticResource CardShadow}" />
   </Style>
 
   <Style Selector="Border.helpBadge">
     <Setter Property="Width" Value="36" />
     <Setter Property="Height" Value="36" />
-    <Setter Property="CornerRadius" Value="9" />
-    <Setter Property="Background" Value="{StaticResource InfoCardBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{StaticResource AccentSubtleBrush}" />
     <Setter Property="VerticalAlignment" Value="Top" />
   </Style>
 
-  <Style Selector="Button, ToggleButton">
-    <Setter Property="CornerRadius" Value="8" />
+  <Style Selector="Border.helpBadge PathIcon">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
+  <!-- Inline warning banner used by the backup-detection message. -->
+  <Style Selector="Border.warningBanner">
+    <Setter Property="Background" Value="{StaticResource WarningCardBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WarningBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <!-- ============================== Buttons ============================== -->
+
+  <Style Selector="Button, ToggleButton">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="2"
+                CornerRadius="10"
+                Margin="-3" />
+      </FocusAdornerTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBoxItem">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="2"
+                CornerRadius="10"
+                Margin="-3" />
+      </FocusAdornerTemplate>
+    </Setter>
+  </Style>
+
+  <!-- Hover/pressed brushes change on the template presenter, so transitions live there. -->
+  <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" Easing="SineEaseOut" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- Primary: retemplated with a shadow-hosting Border because BoxShadow only exists on
+       Border. PART_ContentPresenter is preserved so the shared presenter styles still match. -->
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Padding" Value="22,11" />
     <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="Button">
+        <Border x:Name="ShadowHost"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                BoxShadow="{StaticResource PrimaryButtonShadow}">
+          <Border.Transitions>
+            <Transitions>
+              <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" Easing="SineEaseOut" />
+            </Transitions>
+          </Border.Transitions>
+          <ContentPresenter x:Name="PART_ContentPresenter"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}"
+                            Padding="{TemplateBinding Padding}"
+                            RecognizesAccessKey="True"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
   </Style>
 
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource AccentHoverBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover /template/ Border#ShadowHost">
+    <Setter Property="BoxShadow" Value="{StaticResource PrimaryButtonHoverShadow}" />
   </Style>
 
   <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.primary:pressed /template/ Border#ShadowHost">
+    <Setter Property="BoxShadow" Value="{StaticResource PrimaryButtonPressedShadow}" />
   </Style>
 
   <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
@@ -75,53 +170,109 @@
     <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
   </Style>
 
-  <Style Selector="ListBox.nav">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Padding" Value="12,0" />
+  <Style Selector="Button.primary:disabled /template/ Border#ShadowHost">
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000, 0 0 0 0 #00000000" />
   </Style>
 
-  <Style Selector="ListBox.nav ListBoxItem">
-    <Setter Property="Padding" Value="14,11" />
-    <Setter Property="Margin" Value="0,2" />
+  <!-- Secondary: outline. Padding 22,10 + 1px border = same height as primary (22,11, no border). -->
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrongBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Padding" Value="22,10" />
     <Setter Property="CornerRadius" Value="8" />
   </Style>
 
-  <Style Selector="ListBox.nav ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource NavHoverBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
-  </Style>
-
-  <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource NavSelectedBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-    <Setter Property="BorderThickness" Value="3,0,0,0" />
-    <Setter Property="CornerRadius" Value="8" />
-  </Style>
-
-  <Style Selector="ListBox.nav ListBoxItem TextBlock">
+    <Setter Property="BorderBrush" Value="{StaticResource FieldBorderHoverBrush}" />
     <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
   </Style>
 
-  <Style Selector="ListBox.nav ListBoxItem:selected TextBlock">
+  <Style Selector="Button.secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.secondary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DisabledButtonBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
+  </Style>
+
+  <!-- Icon button: 32x32 matches the Fluent TextControlThemeMinHeight, so it lines up
+       exactly with the TextBox it sits next to. -->
+  <Style Selector="Button.iconBtn, ToggleButton.iconBtn">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="{StaticResource FieldBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrongBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.iconBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.iconBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource FieldBackgroundHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource FieldBorderHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.iconBtn:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.iconBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource FieldBackgroundHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.iconBtn:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.iconBtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource FieldBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.iconBtn:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.iconBtn:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.iconBtn PathIcon, ToggleButton.iconBtn PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.12" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.iconBtn:pointerover PathIcon, ToggleButton.iconBtn:pointerover PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.iconBtn:checked PathIcon">
     <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
   </Style>
 
-  <Style Selector="Button.link">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Padding" Value="4,2" />
-    <Setter Property="FontSize" Value="13" />
-  </Style>
-
-  <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
+  <Style Selector="ToggleButton.iconBtn:checked:pointerover PathIcon">
     <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
-    <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+  </Style>
+
+  <Style Selector="Button.iconBtn:disabled PathIcon, ToggleButton.iconBtn:disabled PathIcon">
+    <Setter Property="Opacity" Value="0.45" />
   </Style>
 
   <Style Selector="Button.chrome">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Width" Value="46" />
@@ -147,13 +298,140 @@
     <Setter Property="Stroke" Value="White" />
   </Style>
 
+  <!-- ============================== Navigation ============================== -->
+
+  <Style Selector="ListBox.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="12,0" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem">
+    <Setter Property="Padding" Value="14,11" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
+  <!-- The 3px indicator is always reserved (transparent) so selecting never shifts layout.
+       Rest states are colour-matched transparents, not Brushes.Transparent, so the hover and
+       selection fades never flash a pale wash (see the token comment in App.axaml). -->
+  <Style Selector="ListBox.nav ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentTransparentBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" Easing="SineEaseOut" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavHoverBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource NavSelectedHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.15" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.15" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:pointerover PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:selected PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav ListBoxItem:selected TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- ============================== Inputs ============================== -->
+
   <Style Selector="TextBox.field">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.field /template/ Border#PART_BorderElement">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" Easing="SineEaseOut" />
+        <BrushTransition Property="Background" Duration="0:0:0.12" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
   </Style>
 
   <Style Selector="ComboBox.field">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="ComboBox.field /template/ Border#Background">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" Easing="SineEaseOut" />
+        <BrushTransition Property="Background" Duration="0:0:0.12" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ComboBox.field:dropdownopen /template/ Border#Background">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox.field /template/ PathIcon#DropDownGlyph">
+    <Setter Property="RenderTransform" Value="rotate(0deg)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ComboBox.field:dropdownopen /template/ PathIcon#DropDownGlyph">
+    <Setter Property="RenderTransform" Value="rotate(180deg)" />
+  </Style>
+
+  <!-- ============================== Progress ============================== -->
+
+  <Style Selector="ProgressBar">
+    <Setter Property="MinHeight" Value="6" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{StaticResource ProgressTrackBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Value" Duration="0:0:0.25" Easing="SineEaseOut" />
+      </Transitions>
+    </Setter>
   </Style>
 </Styles>

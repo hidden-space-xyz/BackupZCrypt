@@ -3,12 +3,13 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:m="using:BackupZCrypt.Desktop.Models"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.AboutView"
              x:DataType="vm:AboutViewModel">
 
   <UserControl.Resources>
     <DataTemplate x:Key="AlgorithmTemplate" x:DataType="m:AlgorithmInfo">
-      <StackPanel Spacing="3" Margin="0,8">
+      <StackPanel Spacing="3" Margin="0,4,0,8">
         <TextBlock Text="{Binding Name}"
                    FontWeight="SemiBold"
                    Foreground="{StaticResource PrimaryTextBrush}" />
@@ -28,7 +29,7 @@
   <ScrollViewer>
     <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
 
-      <StackPanel Spacing="6">
+      <StackPanel Spacing="6" Margin="0,0,0,8">
         <TextBlock Classes="h1" Text="{x:Static res:Strings.AboutTitle}" />
         <TextBlock Classes="subtitle" Text="{x:Static res:Strings.AboutSubtitle}" />
       </StackPanel>
@@ -40,7 +41,7 @@
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <TextBlock Text="🔐" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <PathIcon Data="{x:Static local:Icons.ShieldLock}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpCreateTitle}" />
@@ -50,7 +51,7 @@
 
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <TextBlock Text="🔄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <PathIcon Data="{x:Static local:Icons.ArrowSync}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpUpdateTitle}" />
@@ -60,7 +61,7 @@
 
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <TextBlock Text="📦" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <PathIcon Data="{x:Static local:Icons.BoxArrowDown}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpRestoreTitle}" />
@@ -70,7 +71,7 @@
 
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <TextBlock Text="🛡️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <PathIcon Data="{x:Static local:Icons.ShieldCheck}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpVerifyTitle}" />
@@ -80,7 +81,7 @@
 
             <Grid ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <PathIcon Data="{x:Static local:Icons.Settings}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpSettingsTitle}" />

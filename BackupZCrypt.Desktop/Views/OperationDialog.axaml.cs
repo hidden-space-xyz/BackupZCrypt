@@ -1,5 +1,6 @@
 using System.ComponentModel;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
@@ -27,6 +28,17 @@ public sealed partial class OperationDialog : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+
+        // Without per-pixel transparency (e.g. X11 without a compositor) the window background
+        // paints opaque, so the shadow margin would show as a solid band around the card.
+        if (
+            ActualTransparencyLevel != WindowTransparencyLevel.Transparent
+            && this.FindControl<Border>("DialogCard") is { } dialogCard
+        )
+        {
+            dialogCard.Margin = new Thickness(0);
+            dialogCard.BoxShadow = default;
+        }
 
         if (DataContext is OperationViewModelBase vm)
         {

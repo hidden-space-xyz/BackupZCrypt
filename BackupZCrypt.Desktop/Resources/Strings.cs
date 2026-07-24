@@ -271,6 +271,11 @@ internal static class Strings
     public static string ConfirmPasswordHint => Get();
 
     /// <summary>
+    /// Gets the inline error shown when the password confirmation does not match.
+    /// </summary>
+    public static string PasswordMismatch => Get();
+
+    /// <summary>
     /// Gets the reveal-password toggle tooltip.
     /// </summary>
     public static string RevealPasswordTooltip => Get();
