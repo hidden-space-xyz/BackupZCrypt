@@ -5,25 +5,34 @@
         xmlns:local="using:BackupZCrypt.Desktop"
         x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
         x:DataType="vm:OperationViewModelBase"
+        Title="BackupZCrypt"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         SizeToContent="WidthAndHeight"
         CanResize="False"
         ShowInTaskbar="False"
+        WindowDecorations="None"
         WindowStartupLocation="CenterOwner">
 
   <Window.Styles>
-    <!-- Entry: fade in while scaling up from 96%. Runs once when the dialog attaches. -->
+    <!-- Entry: fade in while scaling up from 96%. Runs once when the dialog attaches.
+         Keyframes target the individual transform properties rather than RenderTransform itself:
+         only properties owned by a Transform have a registered animator, and the animator builds
+         the backing TransformGroup on the card for us. -->
     <Style Selector="Border.dialogCard">
       <Style.Animations>
         <Animation Duration="0:0:0.18" FillMode="Forward" Easing="CubicEaseOut">
           <KeyFrame Cue="0%">
             <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform" Value="scale(0.96) translateY(8px)" />
+            <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
+            <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
+            <Setter Property="TranslateTransform.Y" Value="8" />
           </KeyFrame>
           <KeyFrame Cue="100%">
             <Setter Property="Opacity" Value="1" />
-            <Setter Property="RenderTransform" Value="scale(1) translateY(0px)" />
+            <Setter Property="ScaleTransform.ScaleX" Value="1" />
+            <Setter Property="ScaleTransform.ScaleY" Value="1" />
+            <Setter Property="TranslateTransform.Y" Value="0" />
           </KeyFrame>
         </Animation>
       </Style.Animations>
@@ -63,9 +72,11 @@
   </Window.Styles>
 
   <!-- The margin leaves room for the drop shadow inside the transparent window bounds; the
-       code-behind removes margin and shadow when per-pixel transparency is not granted. -->
+       code-behind removes margin and shadow when per-pixel transparency is not granted.
+       The card is also the drag handle, since the window has no system title bar. -->
   <Border x:Name="DialogCard"
           Classes="dialogCard"
+          PointerPressed="OnCardPressed"
           Background="{StaticResource CardBackgroundBrush}"
           BorderBrush="{StaticResource CardBorderBrush}"
           BorderThickness="1"

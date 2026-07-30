@@ -2,6 +2,7 @@ using System.ComponentModel;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 
 using BackupZCrypt.Desktop.ViewModels;
@@ -56,6 +57,17 @@ public sealed partial class OperationDialog : Window
         {
             viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             viewModel = null;
+        }
+    }
+
+    private void OnCardPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // The window is undecorated, so the card itself has to provide the move affordance the
+        // system title bar would normally give. Buttons and other interactive content mark the
+        // event handled before it bubbles up here, so this never steals a click from them.
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            BeginMoveDrag(e);
         }
     }
 
