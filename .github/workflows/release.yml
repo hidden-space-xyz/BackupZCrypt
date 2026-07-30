@@ -1,0 +1,424 @@
+name: Release
+
+# Publishes a GitHub Release every time master receives a commit that is worth releasing.
+#
+# The version is derived from the commit history (Conventional Commits) since the previous
+# `v*` tag: a breaking change bumps MAJOR, `feat:` bumps MINOR and `fix:` / `refactor:` /
+# `bump:` bump PATCH. Pushes that only carry `docs:`, `chore:`, `test:`, ... are skipped.
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit version to publish (e.g. 1.2.0). Leave empty to derive it from the commit history."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  SOLUTION: BackupZCrypt.sln
+  DESKTOP_PROJECT: BackupZCrypt.Desktop/BackupZCrypt.Desktop.csproj
+
+jobs:
+  prepare:
+    name: Analyse commits
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.analyse.outputs.should_release }}
+      version: ${{ steps.analyse.outputs.version }}
+      tag: ${{ steps.analyse.outputs.tag }}
+      previous_tag: ${{ steps.analyse.outputs.previous_tag }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute version and build release notes
+        id: analyse
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          work="$(mktemp -d)"
+          for section in feat fix refactor bump; do
+            : > "$work/$section"
+          done
+
+          # ---------------------------------------------------------------- commit range
+          previous_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+          if [ -n "$previous_tag" ]; then
+            range="${previous_tag}..HEAD"
+          else
+            range="HEAD"
+          fi
+          echo "Previous tag : ${previous_tag:-<none>}"
+          echo "Commit range : $range"
+
+          # ---------------------------------------------------------------- classify commits
+          breaking=false
+          commit_base="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit"
+          # type(scope)!: subject  —  ';' is accepted as separator because it has been typoed before.
+          subject_re='^([a-zA-Z]+)(\(([^)]*)\))?(!)?[:;][[:space:]]*(.+)$'
+
+          while IFS=$'\t' read -r sha subject; do
+            [ -n "${sha:-}" ] || continue
+            [[ "$subject" =~ $subject_re ]] || continue
+
+            type="${BASH_REMATCH[1],,}"
+            scope="${BASH_REMATCH[3]}"
+            text="${BASH_REMATCH[5]}"
+
+            if [ -n "${BASH_REMATCH[4]}" ]; then
+              breaking=true
+            fi
+
+            case "$type" in
+              feat|fix|refactor|bump) ;;
+              *) continue ;;
+            esac
+
+            prefix=""
+            if [ -n "$scope" ]; then
+              prefix="**${scope}**: "
+            fi
+            printf -- '- %s%s ([`%s`](%s/%s))\n' "$prefix" "$text" "${sha:0:7}" "$commit_base" "$sha" >> "$work/$type"
+          done < <(git log --no-merges --format='%H%x09%s' "$range")
+
+          git log --no-merges --format='%B' "$range" > "$work/bodies.txt"
+          if grep -qE '^BREAKING[ -]CHANGE:' "$work/bodies.txt"; then
+            breaking=true
+          fi
+
+          # ---------------------------------------------------------------- next version
+          first_release=false
+          if [ -n "$previous_tag" ]; then
+            base="${previous_tag#v}"
+            base="${base%%-*}"
+            IFS='.' read -r major minor patch <<< "$base"
+            major="${major:-0}"; minor="${minor:-0}"; patch="${patch:-0}"
+          else
+            first_release=true
+            major=1; minor=0; patch=0
+          fi
+
+          level="none"
+          if [ "$first_release" = "true" ]; then
+            level="initial"
+          elif [ "$breaking" = "true" ]; then
+            major=$((major + 1)); minor=0; patch=0; level="major"
+          elif [ -s "$work/feat" ]; then
+            minor=$((minor + 1)); patch=0; level="minor"
+          elif [ -s "$work/fix" ] || [ -s "$work/refactor" ] || [ -s "$work/bump" ]; then
+            patch=$((patch + 1)); level="patch"
+          fi
+
+          manual="${MANUAL_VERSION:-}"
+          manual="${manual//[[:space:]]/}"
+          manual="${manual#v}"
+          if [ -n "$manual" ]; then
+            if [[ ! "$manual" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Invalid version '$manual'. Expected MAJOR.MINOR.PATCH."
+              exit 1
+            fi
+            version="$manual"
+            level="manual"
+          else
+            # A manual run always publishes something, even without releasable commits.
+            if [ "$level" = "none" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              patch=$((patch + 1)); level="patch"
+            fi
+            version="${major}.${minor}.${patch}"
+          fi
+          tag="v${version}"
+
+          # ---------------------------------------------------------------- release gate
+          should_release=true
+          if [ "$level" = "none" ]; then
+            echo "::notice::No feat/fix/refactor/bump commits since ${previous_tag:-the first commit}. Nothing to release."
+            should_release=false
+          elif git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
+            if [ "$level" = "manual" ]; then
+              echo "::error::Tag ${tag} already exists."
+              exit 1
+            fi
+            echo "::warning::Tag ${tag} already exists. Nothing to release."
+            should_release=false
+          fi
+
+          echo "Bump level   : $level"
+          echo "Next version : $version ($tag)"
+          echo "Release      : $should_release"
+
+          # ---------------------------------------------------------------- release notes
+          emit() {
+            local title="$1" file="$2"
+            if [ -s "$work/$file" ]; then
+              printf '## %s\n\n' "$title"
+              cat "$work/$file"
+              printf '\n'
+            fi
+          }
+
+          notes="release-notes.md"
+          {
+            if [ "$breaking" = "true" ]; then
+              printf '> [!WARNING]\n> This release contains breaking changes. Read the notes before updating.\n\n'
+            fi
+            emit "🚀 Features" feat
+            emit "🐛 Fixes" fix
+            emit "♻️ Refactoring" refactor
+            emit "⬆️ Dependencies" bump
+          } > "$notes"
+
+          if [ ! -s "$notes" ]; then
+            printf 'Maintenance release — no user-facing changes recorded.\n\n' > "$notes"
+          fi
+
+          cat >> "$notes" <<'MARKDOWN'
+          ## 📦 Downloads
+
+          | Platform | Asset |
+          | --- | --- |
+          | 🪟 Windows x64 | `BackupZCrypt-__TAG__-win-x64.zip` |
+          | 🐧 Linux x64 | `BackupZCrypt-__TAG__-linux-x64.tar.gz` |
+          | 🍎 macOS Intel | `BackupZCrypt-__TAG__-osx-x64.tar.gz` |
+          | 🍎 macOS Apple Silicon | `BackupZCrypt-__TAG__-osx-arm64.tar.gz` |
+
+          Every asset is a self-contained single-file build — no .NET runtime required.
+          On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
+
+          ## 🔒 Verify your download
+
+          ```sh
+          sha256sum --check --ignore-missing SHA256SUMS.txt
+          ```
+          MARKDOWN
+
+          sed -i "s/__TAG__/${tag}/g" "$notes"
+
+          if [ -n "$previous_tag" ]; then
+            printf '\n**Full Changelog**: %s/%s/compare/%s...%s\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$previous_tag" "$tag" >> "$notes"
+          fi
+
+          {
+            echo "should_release=$should_release"
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "previous_tag=$previous_tag"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            printf '# %s\n\n' "$tag"
+            cat "$notes"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release notes
+        if: steps.analyse.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          retention-days: 7
+          if-no-files-found: error
+
+  test:
+    name: Test
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore "$SOLUTION"
+
+      # -p:BuildingPortablePackage=true stops the Desktop GeneratePortablePackages target
+      # from publishing all four runtimes while the solution is built in Release.
+      - name: Test
+        run: |
+          dotnet test "$SOLUTION" \
+            --configuration Release \
+            --no-restore \
+            -p:BuildingPortablePackage=true \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory "$GITHUB_WORKSPACE/test-results"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Publish ${{ matrix.rid }}
+    needs: [prepare, test]
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - rid: win-x64
+            archive: zip
+          - rid: linux-x64
+            archive: tar.gz
+          - rid: osx-x64
+            archive: tar.gz
+          - rid: osx-arm64
+            archive: tar.gz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      # Mirrors the GeneratePortablePackages target in BackupZCrypt.Desktop.csproj;
+      # BuildingPortablePackage=true prevents that target from recursing into itself.
+      - name: Publish self-contained single file
+        env:
+          RID: ${{ matrix.rid }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          dotnet publish "$DESKTOP_PROJECT" \
+            --configuration Release \
+            --runtime "$RID" \
+            --self-contained true \
+            --output publish \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=embedded \
+            -p:BuildingPortablePackage=true \
+            -p:ContinuousIntegrationBuild=true \
+            -p:Version="$VERSION"
+
+      - name: Package
+        env:
+          RID: ${{ matrix.rid }}
+          ARCHIVE: ${{ matrix.archive }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          name="BackupZCrypt-${TAG}-${RID}"
+          rm -rf staging
+          mkdir -p "staging/${name}" artifacts
+
+          cp -R publish/. "staging/${name}/"
+          cp LICENSE README.md "staging/${name}/"
+          rm -f "staging/${name}"/*.pdb
+
+          if [ "$ARCHIVE" = "zip" ]; then
+            (cd staging && zip -q -r -X "../artifacts/${name}.zip" "$name")
+          else
+            chmod +x "staging/${name}/BackupZCrypt"
+            tar --owner=0 --group=0 -czf "artifacts/${name}.tar.gz" -C staging "$name"
+          fi
+
+          ls -lh artifacts
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-${{ matrix.rid }}
+          path: artifacts/*
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download portable packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: portable-*
+          merge-multiple: true
+          path: assets
+
+      - name: Download release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: notes
+
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(assets/*.zip assets/*.tar.gz)
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "::error::No release assets were produced."
+            exit 1
+          fi
+          (cd assets && sha256sum -- "${packages[@]#assets/}") > SHA256SUMS.txt
+          mv SHA256SUMS.txt assets/
+          cat assets/SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "BackupZCrypt $TAG" \
+            --notes-file notes/release-notes.md \
+            --latest \
+            assets/*
+          echo "Released $TAG -> ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"

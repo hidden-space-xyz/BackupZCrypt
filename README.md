@@ -1,4 +1,5 @@
 <p align="center">
+<a href="https://github.com/hidden-space-xyz/BackupZCrypt/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2ea043" /></a>
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
@@ -41,6 +42,25 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
 - **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without writing any files
 - **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language.
+
+## ⬇️ Download
+
+Grab the build for your platform from the [latest release](https://github.com/hidden-space-xyz/BackupZCrypt/releases/latest).
+Every asset is a self-contained single-file executable — no .NET runtime required:
+
+| Platform | Asset |
+| --- | --- |
+| 🪟 Windows x64 | `BackupZCrypt-<version>-win-x64.zip` |
+| 🐧 Linux x64 | `BackupZCrypt-<version>-linux-x64.tar.gz` |
+| 🍎 macOS Intel | `BackupZCrypt-<version>-osx-x64.tar.gz` |
+| 🍎 macOS Apple Silicon | `BackupZCrypt-<version>-osx-arm64.tar.gz` |
+
+On Linux and macOS run `chmod +x BackupZCrypt` after extracting. Every release also publishes a
+`SHA256SUMS.txt` — verify your download before running it:
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS.txt
+```
 
 ## 🛠️ Building from Source
 
@@ -107,5 +127,10 @@ You can make valuable contributions too:
 2. Create a feature branch from `develop`
 3. Implement your changes with documentation and tests
 4. Submit a pull request
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). Landing them on
+`master` publishes a release automatically: `feat:` raises the minor version, `fix:` / `refactor:` /
+`bump:` raise the patch version, and a `!` marker or a `BREAKING CHANGE:` footer raises the major
+one. Those four prefixes are also what the generated release notes are built from.
 
 We especially welcome contributions for UI and security improvements.
