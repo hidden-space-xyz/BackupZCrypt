@@ -61,11 +61,8 @@ public sealed partial class OperationDialog : Window
     {
         base.OnClosed(e);
 
-        if (viewModel is not null)
-        {
-            viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-            viewModel = null;
-        }
+        viewModel?.PropertyChanged -= OnViewModelPropertyChanged;
+        viewModel = null;
     }
 
     /// <summary>

@@ -66,17 +66,11 @@ public sealed partial class OperationStatusView : UserControl
             return;
         }
 
-        if (viewModel is not null)
-        {
-            viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
+        viewModel?.PropertyChanged -= OnViewModelPropertyChanged;
 
         viewModel = vm;
 
-        if (viewModel is not null)
-        {
-            viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        }
+        viewModel?.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     /// <summary>

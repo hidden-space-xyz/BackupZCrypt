@@ -304,7 +304,7 @@ internal sealed partial class PasswordService : IPasswordService
 
         try
         {
-            for (var i = 0; i < length; )
+            for (var i = 0; i < length;)
             {
                 if (bufferIndex >= randomBytes.Length)
                 {

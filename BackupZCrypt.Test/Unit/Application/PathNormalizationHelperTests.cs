@@ -37,9 +37,9 @@ public sealed class PathNormalizationHelperTests
     [Test]
     public void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
     {
-        var tooLong = new string('a', 300_000);
+        var invalid = OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
 
-        var result = PathNormalizationHelper.TryNormalize(tooLong, out var error);
+        var result = PathNormalizationHelper.TryNormalize(invalid, out var error);
 
         using (Assert.EnterMultipleScope())
         {

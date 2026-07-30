@@ -251,7 +251,13 @@ internal sealed class ManifestService(
             var masterSalt = Convert.FromBase64String(manifestData.MasterSalt);
             if (masterSalt.Length != EncryptionConstants.SaltSize)
             {
-                throw new FormatException("Manifest master salt must be exactly 32 bytes.");
+                errors.Add(
+                    new LocalizableMessage(
+                        MessageCode.ManifestWriteFailedFormat,
+                        "Manifest master salt must be exactly 32 bytes."
+                    )
+                );
+                return errors;
             }
 
             if (
@@ -260,9 +266,13 @@ internal sealed class ManifestService(
                 || !Enum.IsDefined(manifestData.Header.Compression)
             )
             {
-                throw new InvalidDataException(
-                    "Manifest contains an unsupported algorithm identifier."
+                errors.Add(
+                    new LocalizableMessage(
+                        MessageCode.ManifestWriteFailedFormat,
+                        "Manifest contains an unsupported algorithm identifier."
+                    )
                 );
+                return errors;
             }
 
             ChunkManifestDocument document = new(
