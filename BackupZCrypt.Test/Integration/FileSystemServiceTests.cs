@@ -4,7 +4,8 @@ using BackupZCrypt.Test.Common;
 namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
-/// Integration tests for the file operations service, covering byte read/write and content hashing.
+/// Integration tests exercising the file operations and system storage services against a real
+/// temporary directory and the drive that hosts it.
 /// </summary>
 public sealed class FileSystemServiceTests
 {

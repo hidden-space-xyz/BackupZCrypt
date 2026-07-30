@@ -9,20 +9,21 @@ namespace BackupZCrypt.Infrastructure.Services;
 /// <summary>
 /// File-system implementation of <see cref="IFileOperationsService"/> backed by
 /// <see cref="System.IO"/>. Stream factory methods open files asynchronously with
-/// sequential-scan hints, and hashing/reads use the shared <see cref="StreamConstants"/>
-/// buffer sizes.
+/// sequential-scan hints, and <see cref="ComputeFileHashAsync"/> streams through the shared
+/// <see cref="StreamConstants.CopyBufferSize"/>.
 /// </summary>
 internal sealed class FileOperationsService : IFileOperationsService
 {
     /// <summary>
-    /// Recursively enumerates files under <paramref name="directoryPath"/> that match
-    /// <paramref name="searchPattern"/>, skipping inaccessible entries. Directory reparse
-    /// points (symlinks/junctions) are never followed, preventing cycles or inclusion of
-    /// content outside the source tree.
+    /// Enumerates files recursively under <paramref name="directoryPath"/> that match
+    /// <paramref name="searchPattern"/>, skipping inaccessible entries. Recursion stops at
+    /// directory reparse points (symlinks/junctions), so traversal cannot cycle or descend
+    /// outside the source tree; file reparse points are still returned and resolve to their
+    /// targets when opened.
     /// </summary>
     /// <param name="directoryPath">The root directory to enumerate.</param>
     /// <param name="searchPattern">A simple wildcard expression matched against file names; defaults to all files.</param>
-    /// <param name="cancellationToken">Token used to cancel the enumeration.</param>
+    /// <param name="cancellationToken">A token to cancel the enumeration.</param>
     /// <returns>The full paths of the matching files.</returns>
     public async Task<string[]> GetFilesAsync(
         string directoryPath,
@@ -57,21 +58,13 @@ internal sealed class FileOperationsService : IFileOperationsService
         );
     }
 
-    /// <summary>
-    /// Determines whether the specified directory exists.
-    /// </summary>
-    /// <param name="directoryPath">The directory path to test.</param>
-    /// <returns><see langword="true"/> if the directory exists; otherwise <see langword="false"/>.</returns>
+    /// <inheritdoc/>
     public bool DirectoryExists(string directoryPath)
     {
         return Directory.Exists(directoryPath);
     }
 
-    /// <summary>
-    /// Determines whether the specified file exists.
-    /// </summary>
-    /// <param name="filePath">The file path to test.</param>
-    /// <returns><see langword="true"/> if the file exists; otherwise <see langword="false"/>.</returns>
+    /// <inheritdoc/>
     public bool FileExists(string filePath)
     {
         return File.Exists(filePath);
@@ -81,7 +74,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// Creates the specified directory (and any missing parents) on a background thread.
     /// </summary>
     /// <param name="directoryPath">The directory path to create.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the directory has been created.</returns>
     public async Task CreateDirectoryAsync(
         string directoryPath,
@@ -91,10 +84,7 @@ internal sealed class FileOperationsService : IFileOperationsService
         _ = await Task.Run(() => Directory.CreateDirectory(directoryPath), cancellationToken);
     }
 
-    /// <summary>
-    /// Deletes the specified file.
-    /// </summary>
-    /// <param name="filePath">The path of the file to delete.</param>
+    /// <inheritdoc/>
     public void DeleteFile(string filePath)
     {
         File.Delete(filePath);
@@ -105,7 +95,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// </summary>
     /// <param name="sourcePath">The current path of the file.</param>
     /// <param name="destinationPath">The target path to move the file to.</param>
-    /// <param name="overwrite"><see langword="true"/> to overwrite an existing destination file.</param>
+    /// <param name="overwrite">Whether to overwrite an existing destination file.</param>
     public void MoveFile(string sourcePath, string destinationPath, bool overwrite)
     {
         File.Move(sourcePath, destinationPath, overwrite);
@@ -116,7 +106,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// directory itself in place. Runs on a background thread.
     /// </summary>
     /// <param name="directoryPath">The directory whose contents are removed.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the directory has been cleaned.</returns>
     public async Task CleanDirectoryAsync(
         string directoryPath,
@@ -227,7 +217,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// Computes the SHA-256 hash of a file's contents and returns it as a Base64 string.
     /// </summary>
     /// <param name="filePath">The path of the file to hash.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The Base64-encoded SHA-256 digest of the file.</returns>
     public async Task<string> ComputeFileHashAsync(
         string filePath,
@@ -251,7 +241,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// Reads the entire contents of a file into a byte array.
     /// </summary>
     /// <param name="filePath">The path of the file to read.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The file's contents.</returns>
     public async Task<byte[]> ReadAllBytesAsync(
         string filePath,
@@ -266,7 +256,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// </summary>
     /// <param name="filePath">The path of the file to write.</param>
     /// <param name="bytes">The contents to write.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the bytes have been written.</returns>
     public async Task WriteAllBytesAsync(
         string filePath,

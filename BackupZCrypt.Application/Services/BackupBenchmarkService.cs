@@ -13,16 +13,16 @@ using BackupZCrypt.Domain.Strategies.Interfaces;
 namespace BackupZCrypt.Application.Services;
 
 /// <summary>
-/// Estimates backup processing time by running the real chunking, hashing, compression, encryption
+/// Estimates backup processing time by running the real chunking, hashing, compression, encryption,
 /// and key-derivation strategies against synthetic, partially compressible data on the current
 /// machine, then extrapolating the measured throughput to the requested amount of data. The data is
 /// never written to disk and all key material is zeroed after use; deduplication is deliberately not
 /// applied so the measured throughput reflects unique (worst-case) data.
 /// </summary>
-/// <param name="encryptionServiceFactory">Factory producing encryption strategies for an algorithm.</param>
-/// <param name="compressionServiceFactory">Factory producing compression strategies for a compression mode.</param>
-/// <param name="chunkingStrategy">Strategy used to split the synthetic stream into content-defined chunks.</param>
-/// <param name="keyDerivationServiceFactory">Factory producing key derivation services for an algorithm.</param>
+/// <param name="encryptionServiceFactory">The factory producing encryption strategies for an algorithm.</param>
+/// <param name="compressionServiceFactory">The factory producing compression strategies for a compression mode.</param>
+/// <param name="chunkingStrategy">The strategy used to split the synthetic stream into content-defined chunks.</param>
+/// <param name="keyDerivationServiceFactory">The factory producing key derivation services for an algorithm.</param>
 internal sealed class BackupBenchmarkService(
     IEncryptionServiceFactory encryptionServiceFactory,
     ICompressionServiceFactory compressionServiceFactory,
@@ -30,12 +30,35 @@ internal sealed class BackupBenchmarkService(
     IKeyDerivationServiceFactory keyDerivationServiceFactory
 ) : IBackupBenchmarkService
 {
+    /// <summary>
+    /// The length in bytes of the throwaway keys used by the benchmark, converted from the configured key size in bits.
+    /// </summary>
     private const int KeySizeBytes = EncryptionConstants.KeySize / 8;
+
+    /// <summary>
+    /// The size of the synthetic sample buffer, large enough that a single pass yields several content-defined chunks.
+    /// </summary>
     private const int SampleSizeBytes = 8 * 1024 * 1024;
+
+    /// <summary>
+    /// The length of the block repeated through the second half of the sample, which makes the data partially
+    /// compressible instead of incompressible noise.
+    /// </summary>
     private const int RepeatBlockSize = 4096;
+
+    /// <summary>
+    /// The throwaway password fed to the key derivation strategy; it never protects real data.
+    /// </summary>
     private const string SamplePassword = "benchmark-sample-password";
 
+    /// <summary>
+    /// How long the timed pass runs before the workers stop, kept short so the estimate stays responsive.
+    /// </summary>
     private static readonly TimeSpan MeasureWindow = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// The largest duration a <see cref="TimeSpan"/> can represent, in seconds, used as the clamp for estimates.
+    /// </summary>
     private static readonly double MaxEstimateSeconds = TimeSpan.MaxValue.TotalSeconds;
 
     /// <summary>
@@ -161,6 +184,12 @@ internal sealed class BackupBenchmarkService(
             : TimeSpan.FromSeconds(seconds);
     }
 
+    /// <summary>
+    /// Times a single master-key derivation with the selected algorithm and zeroes the derived key.
+    /// </summary>
+    /// <param name="keyDerivationStrategy">The key derivation strategy to exercise.</param>
+    /// <param name="salt">The random salt handed to the derivation.</param>
+    /// <returns>The elapsed time of the one-time key derivation.</returns>
     private static TimeSpan MeasureKeyDerivation(
         IKeyDerivationAlgorithmStrategy keyDerivationStrategy,
         byte[] salt
@@ -173,6 +202,17 @@ internal sealed class BackupBenchmarkService(
         return stopwatch.Elapsed;
     }
 
+    /// <summary>
+    /// Runs the pipeline over a single chunk so that JIT compilation and first-use allocations do not
+    /// distort the timed measurement that follows.
+    /// </summary>
+    /// <param name="sample">The synthetic sample data to chunk.</param>
+    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
+    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
+    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
+    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="cancellationToken">A token to cancel the warm-up.</param>
+    /// <returns>A task that completes once one chunk has been processed.</returns>
     private async Task WarmUpAsync(
         byte[] sample,
         byte[] encryptionKey,
@@ -206,6 +246,17 @@ internal sealed class BackupBenchmarkService(
         }
     }
 
+    /// <summary>
+    /// Saturates every logical processor with the chunk pipeline for the measure window and reports the
+    /// aggregate rate at which source bytes were consumed.
+    /// </summary>
+    /// <param name="sample">The synthetic sample data each worker reads from.</param>
+    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
+    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
+    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
+    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="cancellationToken">A token to cancel the measurement.</param>
+    /// <returns>The measured throughput in source bytes per second.</returns>
     private async Task<double> MeasureThroughputAsync(
         byte[] sample,
         byte[] encryptionKey,
@@ -243,6 +294,18 @@ internal sealed class BackupBenchmarkService(
         return totalProcessed / stopwatch.Elapsed.TotalSeconds;
     }
 
+    /// <summary>
+    /// Replays the sample through the chunk pipeline until the shared stopwatch passes the measure window,
+    /// counting the source bytes this worker consumed.
+    /// </summary>
+    /// <param name="sample">The synthetic sample data to chunk.</param>
+    /// <param name="stopwatch">The stopwatch shared by all workers that bounds the measure window.</param>
+    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
+    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
+    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
+    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="cancellationToken">A token to cancel the worker.</param>
+    /// <returns>The number of source bytes this worker processed.</returns>
     private async Task<long> MeasureWorkerAsync(
         byte[] sample,
         Stopwatch stopwatch,
@@ -284,6 +347,22 @@ internal sealed class BackupBenchmarkService(
         return processed;
     }
 
+    /// <summary>
+    /// Runs one chunk through the full production pipeline — file hashing, chunk hashing, nonce derivation,
+    /// optional compression, and authenticated encryption — then discards the ciphertext.
+    /// </summary>
+    /// <remarks>
+    /// Every intermediate buffer, including the chunk hash, nonce, associated data, and ciphertext, is zeroed
+    /// in a <c>finally</c> block so the benchmark leaves no derived material in memory.
+    /// </remarks>
+    /// <param name="chunk">The chunk produced by the chunking strategy.</param>
+    /// <param name="fileHasher">The running whole-file hash the chunk is appended to.</param>
+    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
+    /// <param name="nonceKey">The throwaway key used to derive the per-chunk nonce.</param>
+    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
+    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="cancellationToken">A token to cancel the compression step.</param>
+    /// <returns>A task that completes when the chunk has been processed and its buffers cleared.</returns>
     private static async Task ProcessChunkAsync(
         ReadOnlyMemory<byte> chunk,
         IncrementalHash fileHasher,
@@ -348,6 +427,13 @@ internal sealed class BackupBenchmarkService(
         }
     }
 
+    /// <summary>
+    /// Compresses a chunk entirely in memory and returns the compressed bytes.
+    /// </summary>
+    /// <param name="compressionStrategy">The compression strategy under test.</param>
+    /// <param name="chunk">The chunk to compress.</param>
+    /// <param name="cancellationToken">A token to cancel the compression.</param>
+    /// <returns>The compressed representation of the chunk.</returns>
     private static async Task<byte[]> CompressChunkAsync(
         ICompressionStrategy compressionStrategy,
         ReadOnlyMemory<byte> chunk,
@@ -365,6 +451,12 @@ internal sealed class BackupBenchmarkService(
         return buffer.ToArray();
     }
 
+    /// <summary>
+    /// Builds a synthetic buffer whose first half is filled by a fast xorshift generator and whose second half
+    /// repeats a fixed block of those bytes, giving data that compresses partially rather than not at all.
+    /// </summary>
+    /// <param name="size">The length of the buffer to create, in bytes.</param>
+    /// <returns>The synthetic sample data.</returns>
     private static byte[] CreateSampleData(int size)
     {
         var data = GC.AllocateUninitializedArray<byte>(size);

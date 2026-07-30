@@ -1,8 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- ============================== Typography ============================== -->
-
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="Bold" />
@@ -40,8 +38,6 @@
     <Setter Property="FontSize" Value="12" />
   </Style>
 
-  <!-- ============================== Surfaces ============================== -->
-
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
@@ -67,7 +63,6 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- Inline warning banner used by the backup-detection message. -->
   <Style Selector="Border.warningBanner">
     <Setter Property="Background" Value="{StaticResource WarningCardBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource WarningBorderBrush}" />
@@ -75,8 +70,6 @@
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,10" />
   </Style>
-
-  <!-- ============================== Buttons ============================== -->
 
   <Style Selector="Button, ToggleButton">
     <Setter Property="CornerRadius" Value="8" />
@@ -101,7 +94,6 @@
     </Setter>
   </Style>
 
-  <!-- Hover/pressed brushes change on the template presenter, so transitions live there. -->
   <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter,
                    ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Transitions">
@@ -112,8 +104,6 @@
     </Setter>
   </Style>
 
-  <!-- Primary: retemplated with a shadow-hosting Border because BoxShadow only exists on
-       Border. PART_ContentPresenter is preserved so the shared presenter styles still match. -->
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{StaticResource AccentBrush}" />
     <Setter Property="Foreground" Value="{StaticResource AccentForegroundBrush}" />
@@ -174,7 +164,6 @@
     <Setter Property="BoxShadow" Value="0 0 0 0 #00000000, 0 0 0 0 #00000000" />
   </Style>
 
-  <!-- Secondary: outline. Padding 22,10 + 1px border = same height as primary (22,11, no border). -->
   <Style Selector="Button.secondary">
     <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource StrongBorderBrush}" />
@@ -202,8 +191,6 @@
     <Setter Property="Foreground" Value="{StaticResource DimTextBrush}" />
   </Style>
 
-  <!-- Icon button: 32x32 matches the Fluent TextControlThemeMinHeight, so it lines up
-       exactly with the TextBox it sits next to. -->
   <Style Selector="Button.iconBtn, ToggleButton.iconBtn">
     <Setter Property="Width" Value="32" />
     <Setter Property="Height" Value="32" />
@@ -298,8 +285,6 @@
     <Setter Property="Stroke" Value="White" />
   </Style>
 
-  <!-- ============================== Navigation ============================== -->
-
   <Style Selector="ListBox.nav">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="12,0" />
@@ -311,9 +296,6 @@
     <Setter Property="CornerRadius" Value="8" />
   </Style>
 
-  <!-- The 3px indicator is always reserved (transparent) so selecting never shifts layout.
-       Rest states are colour-matched transparents, not Brushes.Transparent, so the hover and
-       selection fades never flash a pale wash (see the token comment in App.axaml). -->
   <Style Selector="ListBox.nav ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource NavHoverTransparentBrush}" />
     <Setter Property="CornerRadius" Value="8" />
@@ -373,8 +355,6 @@
     <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
   </Style>
 
-  <!-- ============================== Inputs ============================== -->
-
   <Style Selector="TextBox.field">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="CornerRadius" Value="6" />
@@ -420,8 +400,6 @@
   <Style Selector="ComboBox.field:dropdownopen /template/ PathIcon#DropDownGlyph">
     <Setter Property="RenderTransform" Value="rotate(180deg)" />
   </Style>
-
-  <!-- ============================== Progress ============================== -->
 
   <Style Selector="ProgressBar">
     <Setter Property="MinHeight" Value="6" />

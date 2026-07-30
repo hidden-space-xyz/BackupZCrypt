@@ -2,8 +2,9 @@ namespace BackupZCrypt.Application.Utilities.Formatters;
 
 /// <summary>
 /// Formats a <see cref="TimeSpan"/> into a compact, human-readable string using language-neutral
-/// unit symbols (<c>d</c>, <c>h</c>, <c>min</c>, <c>s</c>). The two most significant units are shown
-/// so estimates stay readable across the full range from sub-second to multi-year durations.
+/// unit symbols (<c>d</c>, <c>h</c>, <c>min</c>, <c>s</c>). At most the two most significant units
+/// are shown so estimates stay readable across the full range from sub-second to multi-year
+/// durations.
 /// </summary>
 public static class DurationFormatter
 {

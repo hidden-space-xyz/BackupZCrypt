@@ -11,15 +11,13 @@ namespace BackupZCrypt.Domain.Factories;
 internal sealed class CompressionServiceFactory(IEnumerable<ICompressionStrategy> strategies)
     : ICompressionServiceFactory
 {
+    /// <summary>
+    /// The lookup table of registered compression strategies keyed by the mode each one implements.
+    /// </summary>
     private readonly Dictionary<CompressionMode, ICompressionStrategy> strategies =
         strategies.ToDictionary(s => s.Id, s => s);
 
-    /// <summary>
-    /// Returns the strategy registered for the specified compression mode.
-    /// </summary>
-    /// <param name="mode">The compression mode to resolve.</param>
-    /// <returns>The matching <see cref="ICompressionStrategy"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">No strategy is registered for <paramref name="mode"/>.</exception>
+    /// <inheritdoc/>
     public ICompressionStrategy Create(CompressionMode mode)
     {
         return !this.strategies.TryGetValue(mode, out var strategy)

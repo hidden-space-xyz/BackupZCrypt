@@ -11,7 +11,11 @@ namespace BackupZCrypt.Desktop.Services;
 /// </summary>
 internal sealed class ClipboardService : IClipboardService
 {
-    /// <inheritdoc />
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Does nothing when the application is not running a classic desktop lifetime or its main window exposes
+    /// no clipboard; in that case the returned task completes without the clipboard having been updated.
+    /// </remarks>
     public async Task SetTextAsync(string text)
     {
         if (

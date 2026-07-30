@@ -14,14 +14,53 @@ namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
 /// </summary>
 internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 {
+    /// <summary>
+    /// The desired average chunk size in bytes (1 MiB). Cut points become far more likely once a
+    /// chunk reaches this length, which centers the size distribution on the target.
+    /// </summary>
     private const int ChunkTargetSize = 1 * 1024 * 1024;
+
+    /// <summary>
+    /// The minimum chunk length in bytes (256 KiB). No cut point is searched for before this
+    /// offset, so only the final chunk of a stream can be shorter.
+    /// </summary>
     private const int ChunkMinSize = 256 * 1024;
+
+    /// <summary>
+    /// The longest chunk in bytes (4 MiB). A boundary is forced here when the rolling hash has not
+    /// produced one, which bounds both the read buffer and the memory held per chunk.
+    /// </summary>
     private const int ChunkMaxSize = 4 * 1024 * 1024;
+
+    /// <summary>
+    /// The strict cut-point mask (22 set bits) applied while a chunk is still shorter than
+    /// <see cref="ChunkTargetSize"/>, making an early boundary a roughly one-in-four-million event.
+    /// </summary>
     private const ulong MaskSmall = 0x0000D93767537000UL;
+
+    /// <summary>
+    /// The lenient cut-point mask (18 set bits) applied once a chunk has passed
+    /// <see cref="ChunkTargetSize"/>, which makes a boundary sixteen times likelier per byte.
+    /// </summary>
     private const ulong MaskLarge = 0x0000D90707537000UL;
+
+    /// <summary>
+    /// <see cref="MaskSmall"/> shifted left one bit, compensating for the extra shift the
+    /// two-bytes-per-step hash carries at even offsets.
+    /// </summary>
     private const ulong MaskSmallShifted = MaskSmall << 1;
+
+    /// <summary>
+    /// <see cref="MaskLarge"/> shifted left one bit, compensating for the extra shift the
+    /// two-bytes-per-step hash carries at even offsets.
+    /// </summary>
     private const ulong MaskLargeShifted = MaskLarge << 1;
 
+    /// <summary>
+    /// The Gear table: one pseudo-random 64-bit value per possible byte value, mixed into the
+    /// rolling hash as each byte is consumed. These values must stay fixed, because changing them
+    /// moves every boundary and defeats deduplication against chunks already stored in a backup.
+    /// </summary>
     private static readonly ulong[] Gear =
     [
         0x3B5D3C7D207E37DCUL,
@@ -282,6 +321,10 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
         0xAABD2B2A451504E1UL,
     ];
 
+    /// <summary>
+    /// <see cref="Gear"/> with every entry pre-shifted left one bit, used for the first byte of each
+    /// two-byte step so that the shift is not repeated for every byte scanned.
+    /// </summary>
     private static readonly ulong[] GearLs = CreateShiftedGearTable();
 
     /// <summary>
@@ -290,7 +333,7 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
     /// shorter than the target size.
     /// </summary>
     /// <param name="source">The stream to chunk.</param>
-    /// <param name="cancellationToken">Token used to cancel the enumeration.</param>
+    /// <param name="cancellationToken">A token to cancel the enumeration.</param>
     /// <returns>An asynchronous sequence of chunk buffers covering the stream in order.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkAsync(
@@ -302,6 +345,13 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
         return ChunkCoreAsync(source, cancellationToken);
     }
 
+    /// <summary>
+    /// Runs the chunking loop: refills a pooled buffer up to <see cref="ChunkMaxSize"/>, emits the
+    /// chunk ending at the boundary found in it, then shifts the unconsumed bytes back to the front.
+    /// </summary>
+    /// <param name="source">The stream to chunk.</param>
+    /// <param name="cancellationToken">A token to cancel the enumeration.</param>
+    /// <returns>An asynchronous sequence of chunk buffers covering the stream in order.</returns>
     private static async IAsyncEnumerable<ReadOnlyMemory<byte>> ChunkCoreAsync(
         Stream source,
         [EnumeratorCancellation] CancellationToken cancellationToken
@@ -362,6 +412,16 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
         }
     }
 
+    /// <summary>
+    /// Locates the end of the next chunk with the FastCDC normalized rolling hash: the first
+    /// <see cref="ChunkMinSize"/> bytes are skipped without hashing, <see cref="MaskSmall"/> governs
+    /// the scan up to <see cref="ChunkTargetSize"/>, and <see cref="MaskLarge"/> governs it beyond.
+    /// </summary>
+    /// <param name="source">The buffered bytes to search for a cut point.</param>
+    /// <returns>
+    /// The chunk length in bytes, capped at <see cref="ChunkMaxSize"/> or at the available length
+    /// when no cut point is found.
+    /// </returns>
     private static int FindChunkBoundary(ReadOnlySpan<byte> source)
     {
         var remaining = source.Length;
@@ -425,6 +485,10 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
         return remaining;
     }
 
+    /// <summary>
+    /// Builds the pre-shifted lookup table held by <see cref="GearLs"/>.
+    /// </summary>
+    /// <returns>A table holding each <see cref="Gear"/> entry shifted left one bit.</returns>
     private static ulong[] CreateShiftedGearTable()
     {
         var shifted = new ulong[Gear.Length];

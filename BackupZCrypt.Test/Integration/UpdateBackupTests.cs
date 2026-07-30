@@ -12,6 +12,10 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 public sealed class UpdateBackupTests
 {
+    /// <summary>
+    /// The password every backup in this fixture is created, updated, and restored with; long and
+    /// varied enough to clear the validator's strength warnings.
+    /// </summary>
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
     [Test]
@@ -86,6 +90,14 @@ public sealed class UpdateBackupTests
         }
     }
 
+    /// <summary>
+    /// Builds an AES, PBKDF2, and Zstd request that proceeds past advisory warnings, so create,
+    /// update, and restore all run against identical cryptographic options.
+    /// </summary>
+    /// <param name="sourcePath">The tree to back up, or the backup directory to restore from.</param>
+    /// <param name="destinationPath">The directory the backup or the restored files are written to.</param>
+    /// <param name="operation">The operation to dispatch.</param>
+    /// <returns>The assembled request.</returns>
     private static BackupRequest NewRequest(
         string sourcePath,
         string destinationPath,

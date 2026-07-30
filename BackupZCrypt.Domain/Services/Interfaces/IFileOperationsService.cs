@@ -7,11 +7,13 @@ namespace BackupZCrypt.Domain.Services.Interfaces;
 public interface IFileOperationsService
 {
     /// <summary>
-    /// Enumerates files within a directory that match a search pattern.
+    /// Recursively enumerates files under a directory that match a search pattern, skipping
+    /// inaccessible entries and never following directory reparse points (symbolic links or
+    /// junctions) so enumeration cannot cycle or escape the source tree.
     /// </summary>
-    /// <param name="directoryPath">The directory to search.</param>
-    /// <param name="searchPattern">The search pattern to match file names against.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="directoryPath">The root directory to search.</param>
+    /// <param name="searchPattern">The wildcard expression matched against file names; defaults to all files.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The full paths of the matching files.</returns>
     public Task<string[]> GetFilesAsync(
         string directoryPath,
@@ -34,10 +36,10 @@ public interface IFileOperationsService
     public bool FileExists(string filePath);
 
     /// <summary>
-    /// Asynchronously creates the specified directory, including any missing parent directories.
+    /// Creates the specified directory, including any missing parent directories.
     /// </summary>
     /// <param name="directoryPath">The directory path to create.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the directory has been created.</returns>
     public Task CreateDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
 
@@ -56,10 +58,10 @@ public interface IFileOperationsService
     public void MoveFile(string sourcePath, string destinationPath, bool overwrite);
 
     /// <summary>
-    /// Asynchronously removes all files and subdirectories from a directory while keeping the directory itself.
+    /// Removes all files and subdirectories from a directory while keeping the directory itself.
     /// </summary>
     /// <param name="directoryPath">The directory to clean.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the directory has been emptied.</returns>
     public Task CleanDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
 
@@ -109,11 +111,11 @@ public interface IFileOperationsService
     public Stream CreateWriteStream(string filePath, int bufferSize);
 
     /// <summary>
-    /// Computes a content hash for the specified file.
+    /// Computes the SHA-256 hash of the specified file's contents.
     /// </summary>
     /// <param name="filePath">The path of the file to hash.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The computed hash encoded as a string.</returns>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The Base64-encoded SHA-256 digest of the file.</returns>
     public Task<string> ComputeFileHashAsync(
         string filePath,
         CancellationToken cancellationToken = default
@@ -123,7 +125,7 @@ public interface IFileOperationsService
     /// Reads the entire contents of a file into a byte array.
     /// </summary>
     /// <param name="filePath">The path of the file to read.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The file contents as a byte array.</returns>
     public Task<byte[]> ReadAllBytesAsync(string filePath, CancellationToken cancellationToken = default);
 
@@ -132,7 +134,7 @@ public interface IFileOperationsService
     /// </summary>
     /// <param name="filePath">The path of the file to write.</param>
     /// <param name="bytes">The bytes to write.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the file has been written.</returns>
     public Task WriteAllBytesAsync(
         string filePath,

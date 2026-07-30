@@ -17,7 +17,7 @@ namespace BackupZCrypt.Desktop;
 
 /// <summary>
 /// The Avalonia application root: loads XAML, builds the dependency-injection container, applies the
-/// language preference and shows the main window.
+/// language preference, and shows the main window.
 /// </summary>
 public sealed class App : Avalonia.Application
 {
@@ -30,7 +30,7 @@ public sealed class App : Avalonia.Application
     }
 
     /// <summary>
-    /// Completes framework initialization by wiring up services, applying the saved language and
+    /// Completes framework initialization by wiring up services, applying the saved language, and
     /// creating the main window for the classic desktop lifetime.
     /// </summary>
     public override void OnFrameworkInitializationCompleted()
@@ -51,6 +51,11 @@ public sealed class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    /// <summary>
+    /// Builds the dependency-injection container holding the domain and application services, the
+    /// Desktop-only platform services, and the ViewModel of the shell and of every page.
+    /// </summary>
+    /// <returns>The built provider, disposed when the desktop lifetime exits.</returns>
     private static ServiceProvider ConfigureServices()
     {
         ServiceCollection services = [];
@@ -72,6 +77,14 @@ public sealed class App : Avalonia.Application
         return services.BuildServiceProvider();
     }
 
+    /// <summary>
+    /// Applies the language stored in <see cref="LanguageSettings"/> to the current and default UI culture.
+    /// </summary>
+    /// <remarks>
+    /// Failures are deliberately swallowed: a missing, unreadable, or invalid language preference must leave the
+    /// application on the system default UI culture rather than block startup.
+    /// </remarks>
+    /// <param name="services">The provider used to resolve the <see cref="ISettingsService"/>.</param>
     private static void ApplyLanguagePreference(ServiceProvider services)
     {
         try
@@ -91,7 +104,6 @@ public sealed class App : Avalonia.Application
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // If the saved language cannot be read or applied, fall back to the system default UI culture.
         }
     }
 }

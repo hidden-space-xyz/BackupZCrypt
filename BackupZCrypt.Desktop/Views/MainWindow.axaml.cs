@@ -19,6 +19,11 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
     }
 
+    /// <summary>
+    /// Starts a window move drag when the custom title bar is pressed with the left button.
+    /// </summary>
+    /// <param name="sender">The title-bar element that raised the event.</param>
+    /// <param name="e">The pointer event carrying the button state.</param>
     private void OnTitleBarPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -27,26 +32,49 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Maximizes or restores the window when the custom title bar is double-tapped.
+    /// </summary>
+    /// <param name="sender">The title-bar element that raised the event.</param>
+    /// <param name="e">The tap event data.</param>
     private void OnTitleBarDoubleTapped(object? sender, TappedEventArgs e)
     {
         ToggleMaximize();
     }
 
+    /// <summary>
+    /// Minimizes the window from the title-bar minimize button.
+    /// </summary>
+    /// <param name="sender">The button that raised the event.</param>
+    /// <param name="e">The click event data.</param>
     private void OnMinimize(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
     }
 
+    /// <summary>
+    /// Maximizes or restores the window from the title-bar maximize button.
+    /// </summary>
+    /// <param name="sender">The button that raised the event.</param>
+    /// <param name="e">The click event data.</param>
     private void OnMaximizeRestore(object? sender, RoutedEventArgs e)
     {
         ToggleMaximize();
     }
 
+    /// <summary>
+    /// Closes the window from the title-bar close button.
+    /// </summary>
+    /// <param name="sender">The button that raised the event.</param>
+    /// <param name="e">The click event data.</param>
     private void OnClose(object? sender, RoutedEventArgs e)
     {
         Close();
     }
 
+    /// <summary>
+    /// Switches the window between the maximized and normal states.
+    /// </summary>
     private void ToggleMaximize()
     {
         WindowState =

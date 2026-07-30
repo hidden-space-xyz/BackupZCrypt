@@ -10,8 +10,9 @@ namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 /// Base class for AEAD encryption strategies backed by a platform (BCL) AEAD primitive such as
 /// AES-GCM or ChaCha20-Poly1305. Handles the shared flow: the ciphertext and its appended
 /// authentication tag are produced directly into a single result buffer, that buffer is zeroed if
-/// the primitive throws, and the tag length is validated before decryption. Derived types supply the
-/// concrete primitive via <see cref="EncryptCore"/> and <see cref="DecryptCore"/>.
+/// the primitive throws, and inputs too short to contain a tag are rejected before decryption is
+/// attempted. Derived types supply the concrete primitive via <see cref="EncryptCore"/> and
+/// <see cref="DecryptCore"/>.
 /// </summary>
 internal abstract class PlatformAeadEncryptionStrategyBase : IEncryptionAlgorithmStrategy
 {
@@ -27,7 +28,7 @@ internal abstract class PlatformAeadEncryptionStrategyBase : IEncryptionAlgorith
     /// <param name="plaintext">The chunk to encrypt.</param>
     /// <param name="key">The encryption key.</param>
     /// <param name="nonce">The unique per-chunk nonce.</param>
-    /// <param name="associatedData">Additional authenticated data bound to the ciphertext but not encrypted.</param>
+    /// <param name="associatedData">The additional authenticated data bound to the ciphertext but not encrypted.</param>
     /// <returns>The ciphertext followed by the authentication tag.</returns>
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,
@@ -114,7 +115,7 @@ internal abstract class PlatformAeadEncryptionStrategyBase : IEncryptionAlgorith
     /// <param name="plaintext">The chunk to encrypt.</param>
     /// <param name="ciphertext">The span that receives the ciphertext; the same length as <paramref name="plaintext"/>.</param>
     /// <param name="tag">The span that receives the authentication tag.</param>
-    /// <param name="associatedData">Additional authenticated data bound to the ciphertext but not encrypted.</param>
+    /// <param name="associatedData">The additional authenticated data bound to the ciphertext but not encrypted.</param>
     protected abstract void EncryptCore(
         byte[] key,
         byte[] nonce,

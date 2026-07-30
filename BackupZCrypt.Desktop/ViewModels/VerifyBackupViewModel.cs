@@ -96,6 +96,10 @@ public sealed partial class VerifyBackupViewModel(
         );
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder holding the backup to verify.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickBackupFolderAsync()
     {

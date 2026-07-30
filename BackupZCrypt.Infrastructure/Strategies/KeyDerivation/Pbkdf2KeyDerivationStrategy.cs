@@ -12,6 +12,10 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 /// </summary>
 internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
+    /// <summary>
+    /// The number of PBKDF2 rounds (800000). PBKDF2 is not memory-hard, so the iteration count is
+    /// the only lever available to make an offline password guess expensive.
+    /// </summary>
     private const int Iterations = 800000;
 
     /// <summary>

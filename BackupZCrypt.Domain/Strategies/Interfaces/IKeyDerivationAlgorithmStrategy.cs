@@ -17,7 +17,8 @@ public interface IKeyDerivationAlgorithmStrategy
     /// </summary>
     /// <param name="password">The user-supplied password.</param>
     /// <param name="salt">The salt that makes the derivation unique.</param>
-    /// <param name="keySize">The desired key size in bytes.</param>
-    /// <returns>The derived key.</returns>
+    /// <param name="keySize">The desired key size in bits.</param>
+    /// <returns>The derived key, <paramref name="keySize"/> bits in length.</returns>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">Key derivation fails.</exception>
     public byte[] DeriveKey(string password, byte[] salt, int keySize);
 }

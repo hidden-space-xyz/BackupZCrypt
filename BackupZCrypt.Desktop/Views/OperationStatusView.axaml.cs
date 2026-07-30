@@ -13,7 +13,16 @@ namespace BackupZCrypt.Desktop.Views;
 /// </summary>
 public sealed partial class OperationStatusView : UserControl
 {
+    /// <summary>
+    /// The view model whose state changes are being observed, or <see langword="null"/> while the
+    /// control is not subscribed.
+    /// </summary>
     private OperationViewModelBase? viewModel;
+
+    /// <summary>
+    /// A value indicating whether a dialog is already on screen, so a further state change cannot
+    /// open a second one.
+    /// </summary>
     private bool dialogOpen;
 
     /// <summary>
@@ -24,27 +33,32 @@ public sealed partial class OperationStatusView : UserControl
         InitializeComponent();
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
         Hook(DataContext as OperationViewModelBase);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     protected override void OnUnloaded(RoutedEventArgs e)
     {
         base.OnUnloaded(e);
         Hook(null);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
         Hook(DataContext as OperationViewModelBase);
     }
 
+    /// <summary>
+    /// Moves the property-changed subscription to the given view model, detaching from the previous
+    /// one first so the control never leaves a handler behind.
+    /// </summary>
+    /// <param name="vm">The view model to observe, or <see langword="null"/> to only detach.</param>
     private void Hook(OperationViewModelBase? vm)
     {
         if (ReferenceEquals(viewModel, vm))
@@ -65,6 +79,11 @@ public sealed partial class OperationStatusView : UserControl
         }
     }
 
+    /// <summary>
+    /// Opens the modal dialog when the running, warnings, or result state of the view model changes.
+    /// </summary>
+    /// <param name="sender">The view model that raised the event.</param>
+    /// <param name="e">The property change notification.</param>
     private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (
@@ -82,6 +101,11 @@ public sealed partial class OperationStatusView : UserControl
         await TryShowDialogAsync();
     }
 
+    /// <summary>
+    /// Shows the operation dialog over the owning window, unless one is already open, the view model
+    /// has nothing to report, or the control is not yet attached to a window.
+    /// </summary>
+    /// <returns>A task that completes when the dialog is dismissed, or immediately when none is shown.</returns>
     private async Task TryShowDialogAsync()
     {
         if (dialogOpen || viewModel is null)

@@ -15,21 +15,56 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </summary>
 public sealed class BackupRequestValidatorTests
 {
+    /// <summary>
+    /// The rooted source path the requests point at. Nothing is created on disk because the file
+    /// system is substituted, but the path must be absolute to survive path normalization.
+    /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
         Path.Combine(Path.GetTempPath(), "bzc-validator-src")
     );
+
+    /// <summary>
+    /// The rooted destination path the requests point at, kept distinct from <see cref="SourceDir"/>
+    /// so overlap checks only fire when a test asks for it.
+    /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
         Path.Combine(Path.GetTempPath(), "bzc-validator-dst")
     );
 
+    /// <summary>
+    /// The substituted file system the validator probes for path existence, for the source and
+    /// destination file listings, and for the file sizes behind the free-space estimate.
+    /// </summary>
     private readonly IFileOperationsService fileOperations =
         Substitute.For<IFileOperationsService>();
+
+    /// <summary>
+    /// The substituted storage service the validator queries for the destination drive root, that
+    /// drive's readiness, and its available free space.
+    /// </summary>
     private readonly ISystemStorageService systemStorage = Substitute.For<ISystemStorageService>();
+
+    /// <summary>
+    /// The substituted password service that supplies the strength analysis behind weak-password warnings.
+    /// </summary>
     private readonly IPasswordService passwordService = Substitute.For<IPasswordService>();
 
+    /// <summary>
+    /// Creates a validator wired to the substituted file, storage, and password services.
+    /// </summary>
+    /// <returns>The system under test.</returns>
     private BackupRequestValidator CreateSut() =>
         new(this.fileOperations, this.systemStorage, this.passwordService);
 
+    /// <summary>
+    /// Builds a request whose fields are each individually valid, so a test only varies the one it
+    /// exercises. Whether validation actually reports nothing still depends on the substitute setup.
+    /// </summary>
+    /// <param name="source">The source path to validate.</param>
+    /// <param name="destination">The destination path to validate.</param>
+    /// <param name="password">The password, also used as the confirmation so the two always match.</param>
+    /// <param name="operation">The operation the request asks for.</param>
+    /// <returns>An AES plus Argon2id request built from the supplied values.</returns>
     private static BackupRequest ValidRequest(
         string source,
         string destination,
@@ -46,6 +81,11 @@ public sealed class BackupRequestValidatorTests
             operation
         );
 
+    /// <summary>
+    /// Projects validation messages down to their codes so assertions ignore format arguments.
+    /// </summary>
+    /// <param name="messages">The errors or warnings returned by the validator.</param>
+    /// <returns>The code of each message, in the order reported.</returns>
     private static IReadOnlyList<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages) =>
         messages.Select(m => m.Code).ToList();
 

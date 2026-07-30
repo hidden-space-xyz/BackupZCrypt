@@ -4,17 +4,19 @@ using BackupZCrypt.Domain.Enums;
 namespace BackupZCrypt.Desktop.Services;
 
 /// <summary>
-/// Maps each algorithm enum value to its localized display text. This replaces the
-/// display name/description/summary that used to live on the Infrastructure strategy implementations:
-/// presentation text now belongs entirely to the Desktop layer.
+/// Maps encryption, key-derivation, and compression enum values to their localized display text.
 /// </summary>
+/// <remarks>
+/// Presentation text belongs entirely to the Desktop layer, so the strategy implementations in Infrastructure
+/// carry no display name, summary, or description of their own.
+/// </remarks>
 internal static class AlgorithmMetadataProvider
 {
     /// <summary>
     /// Gets the localized display name for an encryption algorithm.
     /// </summary>
     /// <param name="id">The encryption algorithm.</param>
-    /// <returns>The localized name.</returns>
+    /// <returns>The localized name, or an empty string when the value is not a known algorithm.</returns>
     public static string GetName(EncryptionAlgorithm id)
     {
         return id switch
@@ -32,7 +34,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized short summary for an encryption algorithm.
     /// </summary>
     /// <param name="id">The encryption algorithm.</param>
-    /// <returns>The localized summary.</returns>
+    /// <returns>The localized summary, or an empty string when the value is not a known algorithm.</returns>
     public static string GetSummary(EncryptionAlgorithm id)
     {
         return id switch
@@ -50,7 +52,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized full description for an encryption algorithm.
     /// </summary>
     /// <param name="id">The encryption algorithm.</param>
-    /// <returns>The localized description.</returns>
+    /// <returns>The localized description, or an empty string when the value is not a known algorithm.</returns>
     public static string GetDescription(EncryptionAlgorithm id)
     {
         return id switch
@@ -68,7 +70,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized display name for a key-derivation algorithm.
     /// </summary>
     /// <param name="id">The key-derivation algorithm.</param>
-    /// <returns>The localized name.</returns>
+    /// <returns>The localized name, or an empty string when the value is not a known algorithm.</returns>
     public static string GetName(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -84,7 +86,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized short summary for a key-derivation algorithm.
     /// </summary>
     /// <param name="id">The key-derivation algorithm.</param>
-    /// <returns>The localized summary.</returns>
+    /// <returns>The localized summary, or an empty string when the value is not a known algorithm.</returns>
     public static string GetSummary(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -100,7 +102,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized full description for a key-derivation algorithm.
     /// </summary>
     /// <param name="id">The key-derivation algorithm.</param>
-    /// <returns>The localized description.</returns>
+    /// <returns>The localized description, or an empty string when the value is not a known algorithm.</returns>
     public static string GetDescription(KeyDerivationAlgorithm id)
     {
         return id switch
@@ -116,7 +118,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized display name for a compression mode.
     /// </summary>
     /// <param name="id">The compression mode.</param>
-    /// <returns>The localized name.</returns>
+    /// <returns>The localized name for a Zstandard level, or the "no compression" name for every other value.</returns>
     public static string GetName(CompressionMode id)
     {
         return id switch
@@ -132,7 +134,10 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized short summary for a compression mode.
     /// </summary>
     /// <param name="id">The compression mode.</param>
-    /// <returns>The localized summary.</returns>
+    /// <returns>
+    /// The localized summary for a Zstandard level, or the "no compression" description for every other value,
+    /// because no separate "no compression" summary resource exists.
+    /// </returns>
     public static string GetSummary(CompressionMode id)
     {
         return id switch
@@ -148,7 +153,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized full description for a compression mode.
     /// </summary>
     /// <param name="id">The compression mode.</param>
-    /// <returns>The localized description.</returns>
+    /// <returns>The localized description for a Zstandard level, or the "no compression" description for every other value.</returns>
     public static string GetDescription(CompressionMode id)
     {
         return id switch

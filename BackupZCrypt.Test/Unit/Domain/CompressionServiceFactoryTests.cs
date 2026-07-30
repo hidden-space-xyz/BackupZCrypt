@@ -11,6 +11,12 @@ namespace BackupZCrypt.Test.Unit.Domain;
 /// </summary>
 public sealed class CompressionServiceFactoryTests
 {
+    /// <summary>
+    /// Creates a substitute strategy that advertises the given mode, which is all the factory
+    /// indexes on.
+    /// </summary>
+    /// <param name="id">The compression mode the stub reports as its identifier.</param>
+    /// <returns>A substitute strategy whose <see cref="ICompressionStrategy.Id"/> reports <paramref name="id"/>.</returns>
     private static ICompressionStrategy Stub(CompressionMode id)
     {
         var strategy = Substitute.For<ICompressionStrategy>();

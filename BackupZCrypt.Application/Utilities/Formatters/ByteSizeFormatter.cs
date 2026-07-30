@@ -5,13 +5,20 @@ namespace BackupZCrypt.Application.Utilities.Formatters;
 /// </summary>
 public static class ByteSizeFormatter
 {
+    /// <summary>
+    /// The unit suffixes in ascending order, each one 1024 times the previous; the last entry caps the
+    /// scaling, so sizes beyond a terabyte keep growing in TB.
+    /// </summary>
     private static readonly string[] Suffixes = ["B", "KB", "MB", "GB", "TB"];
 
     /// <summary>
     /// Formats a byte count as a string scaled to the largest fitting unit (for example, "1.5 MB").
     /// </summary>
     /// <param name="bytes">The number of bytes to format; the magnitude is used for negative values.</param>
-    /// <returns>A formatted size string with one decimal place and a unit suffix.</returns>
+    /// <returns>
+    /// A formatted size string with one decimal place and a unit suffix, or <c>"0 B"</c> when
+    /// <paramref name="bytes"/> is zero.
+    /// </returns>
     public static string Format(long bytes)
     {
         if (bytes == 0)

@@ -6,17 +6,17 @@ namespace BackupZCrypt.Domain.Enums;
 public enum EncryptionAlgorithm
 {
     /// <summary>
-    /// AES in an authenticated (GCM) mode.
+    /// AES block cipher in GCM authenticated mode.
     /// </summary>
     Aes = 0,
 
     /// <summary>
-    /// Twofish block cipher.
+    /// Twofish block cipher in GCM authenticated mode.
     /// </summary>
     Twofish = 1,
 
     /// <summary>
-    /// Serpent block cipher.
+    /// Serpent block cipher in GCM authenticated mode.
     /// </summary>
     Serpent = 2,
 
@@ -26,7 +26,7 @@ public enum EncryptionAlgorithm
     ChaCha20 = 3,
 
     /// <summary>
-    /// Camellia block cipher.
+    /// Camellia block cipher in GCM authenticated mode.
     /// </summary>
     Camellia = 4,
 }

@@ -1,8 +1,8 @@
 namespace BackupZCrypt.Application.ValueObjects.Manifest;
 
 /// <summary>
-/// The unencrypted header of a chunked manifest file, carrying the parameters needed to
-/// derive keys and decrypt the manifest payload.
+/// A chunked manifest file parsed into its parts: the unencrypted 34-byte header (algorithm, key
+/// derivation, and master salt) that doubles as AEAD associated data, the nonce, and the ciphertext.
 /// </summary>
 /// <param name="Algorithm">The encryption algorithm that protects the manifest payload.</param>
 /// <param name="KeyDerivation">The key derivation algorithm used to derive the manifest key.</param>

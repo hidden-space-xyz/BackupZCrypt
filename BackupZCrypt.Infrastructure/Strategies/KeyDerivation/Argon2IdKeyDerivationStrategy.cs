@@ -15,8 +15,20 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 /// </summary>
 internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
+    /// <summary>
+    /// The Argon2id memory cost in kibibytes (262144 KiB, or 256 MiB). A large working set is what
+    /// denies an attacker cheap massively parallel guessing on GPUs or custom hardware.
+    /// </summary>
     private const int MemoryCost = 262144;
+
+    /// <summary>
+    /// The Argon2id time cost: the number of passes made over the memory block.
+    /// </summary>
     private const int Iterations = 4;
+
+    /// <summary>
+    /// The number of Argon2id lanes computed in parallel.
+    /// </summary>
     private const int Parallelism = 2;
 
     /// <summary>

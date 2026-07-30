@@ -10,11 +10,13 @@ namespace BackupZCrypt.Application.ValueObjects;
 /// <typeparam name="T">The type of value produced on success.</typeparam>
 public class Result<T> : Result
 {
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Result{T}"/> class.
     /// </summary>
-    /// <param name="value">The success value; ignored when <paramref name="isSuccess"/> is <see langword="false"/>.</param>
+    /// <param name="value">
+    /// The success value. It is still stored when <paramref name="isSuccess"/> is <see langword="false"/>, but
+    /// <see cref="Value"/> then throws instead of returning it.
+    /// </param>
     /// <param name="isSuccess">Whether the operation succeeded.</param>
     /// <param name="errors">The errors associated with a failure; empty on success.</param>
     protected Result(T value, bool isSuccess, IReadOnlyList<LocalizableMessage> errors)
@@ -37,12 +39,14 @@ public class Result<T> : Result
     /// Implicitly wraps a value in a successful result.
     /// </summary>
     /// <param name="value">The success value.</param>
+    /// <returns>A successful result wrapping <paramref name="value"/>.</returns>
     public static implicit operator Result<T>(T value) => Success(value);
 
     /// <summary>
     /// Implicitly converts a message code into a failed result carrying that single error.
     /// </summary>
     /// <param name="code">The message code describing the failure.</param>
+    /// <returns>A failed result carrying the message code as its only error.</returns>
     public static implicit operator Result<T>(MessageCode code) => Failure(code);
 
     /// <summary>

@@ -12,13 +12,17 @@ namespace BackupZCrypt.Infrastructure.Strategies.Encryption;
 
 /// <summary>
 /// Base class for AEAD encryption strategies backed by BouncyCastle GCM block ciphers
-/// (used for block algorithms the platform does not provide natively, e.g. Twofish,
+/// (used for block algorithms the platform does not provide natively, for example Twofish,
 /// Serpent, Camellia). Handles the shared GCM encrypt/decrypt flow with the authentication
 /// tag appended to the ciphertext and zeroes intermediate plaintext/output buffers;
 /// derived types supply the concrete cipher via <see cref="CreateCipher"/>.
 /// </summary>
 internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgorithmStrategy
 {
+    /// <summary>
+    /// The GCM authentication tag length in bits (128). BouncyCastle's <see cref="AeadParameters"/>
+    /// expects the MAC size in bits, unlike the platform primitives that take it in bytes.
+    /// </summary>
     private const int MacSize = EncryptionConstants.MacSize;
 
     /// <summary>
@@ -33,7 +37,7 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
     /// <param name="plaintext">The chunk to encrypt.</param>
     /// <param name="key">The encryption key.</param>
     /// <param name="nonce">The unique per-chunk nonce.</param>
-    /// <param name="associatedData">Additional authenticated data bound to the ciphertext but not encrypted.</param>
+    /// <param name="associatedData">The additional authenticated data bound to the ciphertext but not encrypted.</param>
     /// <returns>The ciphertext followed by the authentication tag.</returns>
     public byte[] EncryptChunk(
         ReadOnlySpan<byte> plaintext,

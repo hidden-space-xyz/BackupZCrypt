@@ -26,8 +26,6 @@
     <ProjectReference Include="..\BackupZCrypt.Composition\BackupZCrypt.Composition.csproj" />
   </ItemGroup>
 
-  <!-- Desktop resx copied (not project-referenced, to avoid pulling Avalonia) so the
-       localization-parity test can assert every MessageCode has a translation. -->
   <ItemGroup>
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.resx" Link="TestData\Strings.resx" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.es.resx" Link="TestData\Strings.es.resx" CopyToOutputDirectory="PreserveNewest" />

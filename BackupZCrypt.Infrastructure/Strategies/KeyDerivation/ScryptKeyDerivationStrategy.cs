@@ -15,8 +15,22 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 /// </summary>
 internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {
+    /// <summary>
+    /// The scrypt CPU/memory cost parameter N (2^18). Together with <see cref="BlockSize"/> it sets
+    /// the working set to roughly 128 * N * r bytes, or 256 MiB.
+    /// </summary>
     private const int CostParameter = 262144;
+
+    /// <summary>
+    /// The scrypt block size parameter r, which scales both the memory used and the size of each
+    /// sequential read.
+    /// </summary>
     private const int BlockSize = 8;
+
+    /// <summary>
+    /// The scrypt parallelization parameter p. One independent lane keeps the cost of a single
+    /// derivation inherently sequential.
+    /// </summary>
     private const int Parallelization = 1;
 
     /// <summary>

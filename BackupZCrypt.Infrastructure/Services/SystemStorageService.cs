@@ -10,7 +10,7 @@ namespace BackupZCrypt.Infrastructure.Services;
 internal sealed class SystemStorageService : ISystemStorageService
 {
     /// <summary>
-    /// Returns the volume root (e.g. <c>C:\</c>) of the supplied path.
+    /// Returns the volume root (for example, <c>C:\</c>) of the supplied path.
     /// </summary>
     /// <param name="fullPath">The path whose root is requested.</param>
     /// <returns>The path root, or <see langword="null"/> if it cannot be determined.</returns>

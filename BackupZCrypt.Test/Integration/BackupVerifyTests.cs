@@ -15,6 +15,10 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 public sealed class BackupVerifyTests
 {
+    /// <summary>
+    /// The password every backup in this fixture is created and verified with; long and varied
+    /// enough to clear the validator's strength warnings.
+    /// </summary>
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
     [TestCase(CompressionMode.None)]
@@ -136,6 +140,15 @@ public sealed class BackupVerifyTests
         Assert.That(CollectCodes(result), Does.Contain(MessageCode.PasswordRequired));
     }
 
+    /// <summary>
+    /// Fills the source with three files, one of them nested, and backs them up so the verify tests
+    /// have an intact backup to work against. Fails the test if creation does not succeed.
+    /// </summary>
+    /// <param name="orchestrator">The orchestrator that executes the create operation.</param>
+    /// <param name="source">The directory the sample files are written to.</param>
+    /// <param name="destination">The directory the backup is written to.</param>
+    /// <param name="compression">The compression mode applied to chunks before encryption.</param>
+    /// <returns>A task that completes once the backup exists.</returns>
     private static async Task CreateBackupAsync(
         IBackupOrchestrator orchestrator,
         TempDir source,
@@ -155,6 +168,15 @@ public sealed class BackupVerifyTests
         Assert.That(result.IsSuccess && result.Value.IsSuccess, Is.True, "Backup creation failed.");
     }
 
+    /// <summary>
+    /// Builds an AES plus PBKDF2 request that proceeds past advisory warnings.
+    /// </summary>
+    /// <param name="sourcePath">The tree to back up, or the backup directory to verify.</param>
+    /// <param name="operation">The operation to dispatch.</param>
+    /// <param name="compression">The compression mode applied to chunks before encryption.</param>
+    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
+    /// <param name="destinationPath">The output directory, left empty for read-only verify runs.</param>
+    /// <returns>The assembled request.</returns>
     private static BackupRequest NewRequest(
         string sourcePath,
         BackupOperation operation,
@@ -176,6 +198,11 @@ public sealed class BackupVerifyTests
         );
     }
 
+    /// <summary>
+    /// Flips every bit of the first byte of an arbitrary chunk file, so the authentication tag over
+    /// that ciphertext no longer validates and verify must report an integrity failure.
+    /// </summary>
+    /// <param name="backupPath">The root of the backup whose chunk directory is tampered with.</param>
     private static void CorruptOneChunk(string backupPath)
     {
         var chunksDir = Path.Combine(backupPath, BackupConstants.ChunksDirectoryName);
@@ -185,6 +212,13 @@ public sealed class BackupVerifyTests
         File.WriteAllBytes(chunkFile, bytes);
     }
 
+    /// <summary>
+    /// Gathers the orchestrator's own error codes together with the per-file codes of the inner
+    /// backup result, which is only read when the outer result succeeded because
+    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
+    /// </summary>
+    /// <param name="result">The orchestrator outcome to inspect.</param>
+    /// <returns>The distinct message codes reported at either level.</returns>
     private static HashSet<MessageCode> CollectCodes(Result<BackupResult> result)
     {
         var codes = result.Errors.Select(static e => e.Code).ToHashSet();

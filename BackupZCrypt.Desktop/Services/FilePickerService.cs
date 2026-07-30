@@ -11,7 +11,10 @@ namespace BackupZCrypt.Desktop.Services;
 /// </summary>
 internal sealed class FilePickerService : IFilePickerService
 {
-    /// <inheritdoc />
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Also yields <see langword="null"/> when there is no desktop main window to host the dialog.
+    /// </remarks>
     public async Task<string?> PickFolderAsync(string title)
     {
         var topLevel = GetTopLevel();
@@ -27,6 +30,10 @@ internal sealed class FilePickerService : IFilePickerService
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
+    /// <summary>
+    /// Resolves the main window whose storage provider hosts the folder picker.
+    /// </summary>
+    /// <returns>The main window, or <see langword="null"/> when the application is not running a classic desktop lifetime.</returns>
     private static Window? GetTopLevel()
     {
         return Avalonia.Application.Current?.ApplicationLifetime

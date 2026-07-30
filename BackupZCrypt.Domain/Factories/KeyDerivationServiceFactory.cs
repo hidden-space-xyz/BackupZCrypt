@@ -12,17 +12,15 @@ internal sealed class KeyDerivationServiceFactory(
     IEnumerable<IKeyDerivationAlgorithmStrategy> strategies
 ) : IKeyDerivationServiceFactory
 {
+    /// <summary>
+    /// The lookup table of registered key derivation strategies keyed by the algorithm each one implements.
+    /// </summary>
     private readonly Dictionary<
         KeyDerivationAlgorithm,
         IKeyDerivationAlgorithmStrategy
     > strategies = strategies.ToDictionary(s => s.Id, s => s);
 
-    /// <summary>
-    /// Returns the strategy registered for the specified key derivation algorithm.
-    /// </summary>
-    /// <param name="algorithm">The key derivation algorithm to resolve.</param>
-    /// <returns>The matching <see cref="IKeyDerivationAlgorithmStrategy"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">No strategy is registered for <paramref name="algorithm"/>.</exception>
+    /// <inheritdoc/>
     public IKeyDerivationAlgorithmStrategy Create(KeyDerivationAlgorithm algorithm)
     {
         return !this.strategies.TryGetValue(algorithm, out var strategy)

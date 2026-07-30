@@ -10,6 +10,9 @@ namespace BackupZCrypt.Desktop.Resources;
 /// </summary>
 internal static class Strings
 {
+    /// <summary>
+    /// The reader for the <c>Strings</c> resource set embedded in this assembly, shared by every accessor.
+    /// </summary>
     private static readonly ResourceManager ResourceManager = new(
         "BackupZCrypt.Desktop.Resources.Strings",
         typeof(Strings).Assembly
@@ -281,7 +284,7 @@ internal static class Strings
     public static string RevealPasswordTooltip => Get();
 
     /// <summary>
-    /// Gets the generate-password button text.
+    /// Gets the generate-password button tooltip.
     /// </summary>
     public static string GenerateButton => Get();
 
@@ -366,7 +369,7 @@ internal static class Strings
     public static string ResultErrorTitle => Get();
 
     /// <summary>
-    /// Gets the title shown when an operation is cancelled.
+    /// Gets the title shown when an operation is canceled.
     /// </summary>
     public static string ResultCancelled => Get();
 
@@ -700,6 +703,11 @@ internal static class Strings
     /// </summary>
     public static string VerifyFailureTitle => Get();
 
+    /// <summary>
+    /// Resolves the resource entry named after the calling property for the current UI culture.
+    /// </summary>
+    /// <param name="name">The resource key, supplied automatically from the calling member's name.</param>
+    /// <returns>The localized string, or the key itself when no matching resource exists.</returns>
     private static string Get([CallerMemberName] string name = "")
     {
         return ResourceManager.GetString(name, CultureInfo.CurrentUICulture) ?? name;

@@ -13,11 +13,12 @@ namespace BackupZCrypt.Application.Orchestrators;
 /// <summary>
 /// Orchestrates a backup, update, restore, or verify: it validates the request, normalizes paths,
 /// prepares the destination directory, and dispatches to the chunk-based backup service. Verification
-/// is read-only and takes a dedicated path that skips destination preparation.
+/// is read-only and takes a dedicated path that skips both request validation and destination
+/// preparation.
 /// </summary>
-/// <param name="backupRequestValidator">Validator producing blocking errors and advisory warnings.</param>
-/// <param name="fileOperationsService">Service used to inspect and prepare the file system.</param>
-/// <param name="chunkedBackupService">Service that performs the chunk-based backup, update, restore, and verify operations.</param>
+/// <param name="backupRequestValidator">The validator producing blocking errors and advisory warnings.</param>
+/// <param name="fileOperationsService">The service used to inspect and prepare the file system.</param>
+/// <param name="chunkedBackupService">The service that performs the chunk-based backup, update, restore, and verify operations.</param>
 internal sealed class BackupOrchestrator(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
@@ -100,6 +101,20 @@ internal sealed class BackupOrchestrator(
         }
     }
 
+    /// <summary>
+    /// Dispatches an already-validated request to the create, update, or restore path of the
+    /// chunk-based backup service.
+    /// </summary>
+    /// <param name="sourcePath">The normalized absolute source path.</param>
+    /// <param name="destinationPath">The normalized absolute destination path.</param>
+    /// <param name="request">The backup request describing the operation, paths, and options.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome reported by the selected backup service operation.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="request"/> carries an operation this method does not dispatch, such as
+    /// <see cref="BackupOperation.Verify"/>, which is handled on its own read-only path.
+    /// </exception>
     private Task<Result<BackupResult>> RunBackupAsync(
         string sourcePath,
         string destinationPath,
@@ -135,6 +150,19 @@ internal sealed class BackupOrchestrator(
         };
     }
 
+    /// <summary>
+    /// Runs the read-only verify path, which requires a password and an existing source directory but
+    /// never cleans, creates, or writes to a destination.
+    /// </summary>
+    /// <param name="request">The backup request identifying the archive to verify.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// A successful result whose value reports the verification outcome, carrying a non-success
+    /// <see cref="BackupResult"/> when the password is missing or the source path cannot be
+    /// normalized, or a failure result when the source directory is absent or an unexpected error
+    /// occurs.
+    /// </returns>
     private async Task<Result<BackupResult>> ExecuteVerifyAsync(
         BackupRequest request,
         IProgress<BackupStatus> progress,
@@ -194,6 +222,12 @@ internal sealed class BackupOrchestrator(
         }
     }
 
+    /// <summary>
+    /// Expands and resolves the request's source and destination paths, keeping the raw values when
+    /// normalization fails so the caller's existence checks report the problem instead.
+    /// </summary>
+    /// <param name="request">The backup request whose paths are normalized.</param>
+    /// <returns>The normalized source and destination paths.</returns>
     private static (string SourcePath, string DestinationPath) NormalizePaths(BackupRequest request)
     {
         var sourcePath =
@@ -206,6 +240,16 @@ internal sealed class BackupOrchestrator(
         return (sourcePath, destinationPath);
     }
 
+    /// <summary>
+    /// Runs the request validator and turns blocking errors, or warnings the user has not agreed to
+    /// proceed past, into a non-success <see cref="BackupResult"/>.
+    /// </summary>
+    /// <param name="request">The backup request to validate.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// A result carrying the validation errors or warnings that stop the operation, or
+    /// <see langword="null"/> when the request may proceed.
+    /// </returns>
     private async Task<Result<BackupResult>?> ValidateRequestAsync(
         BackupRequest request,
         CancellationToken cancellationToken

@@ -3,7 +3,7 @@ using BackupZCrypt.Domain.Enums;
 namespace BackupZCrypt.Domain.ValueObjects.Backup;
 
 /// <summary>
-/// Describes a backup, restore or update operation and the cryptographic options it should use.
+/// Describes a backup, restore, or update operation and the cryptographic options it should use.
 /// </summary>
 /// <param name="SourcePath">The file or directory to back up, or the backup to restore from.</param>
 /// <param name="DestinationPath">The location where the backup is written or restored to.</param>

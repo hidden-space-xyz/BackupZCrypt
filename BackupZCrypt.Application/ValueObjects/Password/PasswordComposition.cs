@@ -5,8 +5,8 @@ namespace BackupZCrypt.Application.ValueObjects.Password;
 /// </summary>
 /// <param name="HasUpper">Whether the password contains an uppercase ASCII letter.</param>
 /// <param name="HasLower">Whether the password contains a lowercase ASCII letter.</param>
-/// <param name="HasDigit">Whether the password contains a digit.</param>
-/// <param name="HasSpecial">Whether the password contains a special character.</param>
+/// <param name="HasDigit">Whether the password contains an ASCII decimal digit.</param>
+/// <param name="HasSpecial">Whether the password contains one of the recognized ASCII punctuation or symbol characters.</param>
 /// <param name="HasOther">Whether the password contains a non-ASCII (Unicode) character.</param>
 public sealed record PasswordComposition(
     bool HasUpper,

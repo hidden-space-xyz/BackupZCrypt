@@ -11,12 +11,12 @@ namespace BackupZCrypt.Application.Validators;
 
 /// <summary>
 /// Validates backup requests against the file system and storage, collecting blocking errors
-/// (invalid paths, missing sources, weak passwords) and advisory warnings (low disk space,
-/// large operations, existing destination files).
+/// (invalid paths, missing sources, unusable passwords) and advisory warnings (low disk space,
+/// weak passwords, existing files at the destination).
 /// </summary>
-/// <param name="fileOperations">Service used to inspect files and directories.</param>
-/// <param name="systemStorage">Service used to query drive readiness and free space.</param>
-/// <param name="passwordService">Service used to assess password strength for warnings.</param>
+/// <param name="fileOperations">The service used to inspect files and directories.</param>
+/// <param name="systemStorage">The service used to query drive readiness and free space.</param>
+/// <param name="passwordService">The service used to assess password strength for warnings.</param>
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     ISystemStorageService systemStorage,
@@ -27,6 +27,10 @@ internal sealed class BackupRequestValidator(
     /// Analyzes a request for blocking errors such as invalid or missing paths, password problems,
     /// and source/destination overlap.
     /// </summary>
+    /// <remarks>
+    /// The source and destination overlap checks are best-effort: when the paths cannot be probed they
+    /// are skipped, so an unreadable path never blocks the backup with a spurious error.
+    /// </remarks>
     /// <param name="request">The backup request to validate.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The localizable errors found; empty when the request is valid.</returns>
@@ -197,8 +201,6 @@ internal sealed class BackupRequestValidator(
             }
             catch
             {
-                // The source/destination relationship checks are best-effort; if the paths cannot be
-                // probed, skip them rather than block the backup with a spurious error.
             }
         }
 
@@ -206,9 +208,14 @@ internal sealed class BackupRequestValidator(
     }
 
     /// <summary>
-    /// Analyzes a request for advisory warnings such as low disk space, large file counts,
-    /// existing destination files, and weak passwords.
+    /// Analyzes a request for advisory warnings: low free space at the destination, files already
+    /// present in the destination for a create or restore, and a weak password on a create.
     /// </summary>
+    /// <remarks>
+    /// Every probe is advisory and never fails the operation: a file whose size cannot be read counts
+    /// as zero bytes toward the free-space estimate, and a failure part-way through returns the
+    /// warnings gathered so far.
+    /// </remarks>
     /// <param name="request">The backup request to inspect.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The localizable warnings found; empty when there are none.</returns>
@@ -250,7 +257,6 @@ internal sealed class BackupRequestValidator(
                         }
                         catch
                         {
-                            // A file whose size cannot be read contributes nothing to the estimate.
                             return 0;
                         }
                     });
@@ -306,8 +312,6 @@ internal sealed class BackupRequestValidator(
         }
         catch
         {
-            // Warnings are advisory only; if any probe fails, return whatever was gathered so far
-            // rather than failing the operation.
         }
 
         return warnings;

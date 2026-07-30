@@ -41,7 +41,9 @@ internal sealed class ViewLocator : IDataTemplate
     /// Determines whether this template applies to the supplied data object.
     /// </summary>
     /// <param name="data">The data object to test.</param>
-    /// <returns><see langword="true"/> when <paramref name="data"/> is a <see cref="ViewModelBase"/>; otherwise <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="data"/> is a <see cref="ViewModelBase"/>; otherwise <see langword="false"/>.
+    /// </returns>
     public bool Match(object? data)
     {
         return data is ViewModelBase;

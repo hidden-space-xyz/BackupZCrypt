@@ -1,7 +1,7 @@
 namespace BackupZCrypt.Infrastructure.Strategies.Compression;
 
 /// <summary>
-/// Zstandard compression strategy favouring speed over ratio (level 1).
+/// Zstandard compression strategy favoring speed over ratio (level 1).
 /// </summary>
 internal sealed class ZstdFastCompressionStrategy : ZstdCompressionStrategyBase
 {

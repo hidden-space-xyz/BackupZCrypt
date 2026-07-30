@@ -8,6 +8,10 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 /// </summary>
 public sealed class CompressionStrategyTests
 {
+    /// <summary>
+    /// Supplies every Zstandard level as a test case so each behaves identically from the caller's view.
+    /// </summary>
+    /// <returns>One strategy instance per supported compression level.</returns>
     private static IEnumerable<ICompressionStrategy> Levels() =>
         [
             new ZstdFastCompressionStrategy(),
@@ -15,6 +19,12 @@ public sealed class CompressionStrategyTests
             new ZstdBestCompressionStrategy(),
         ];
 
+    /// <summary>
+    /// Produces incompressible-looking bytes from a fixed seed so failures reproduce exactly.
+    /// </summary>
+    /// <param name="length">The number of bytes to produce.</param>
+    /// <param name="seed">The seed that makes the sequence deterministic.</param>
+    /// <returns>A buffer of pseudo-random bytes.</returns>
     private static byte[] RandomBytes(int length, int seed)
     {
         var data = new byte[length];
@@ -22,6 +32,11 @@ public sealed class CompressionStrategyTests
         return data;
     }
 
+    /// <summary>
+    /// Produces a repeating 16-byte ramp, a highly redundant pattern any level should shrink.
+    /// </summary>
+    /// <param name="length">The number of bytes to produce.</param>
+    /// <returns>A buffer whose bytes cycle from 0 through 15.</returns>
     private static byte[] CompressiblePattern(int length)
     {
         var data = new byte[length];
@@ -33,6 +48,12 @@ public sealed class CompressionStrategyTests
         return data;
     }
 
+    /// <summary>
+    /// Compresses a buffer and drains the resulting stream so tests can assert on the raw bytes.
+    /// </summary>
+    /// <param name="strategy">The compression strategy to exercise.</param>
+    /// <param name="input">The bytes to compress.</param>
+    /// <returns>The compressed representation of <paramref name="input"/>.</returns>
     private static async Task<byte[]> CompressToBytesAsync(
         ICompressionStrategy strategy,
         byte[] input
@@ -44,6 +65,12 @@ public sealed class CompressionStrategyTests
         return collected.ToArray();
     }
 
+    /// <summary>
+    /// Decompresses a buffer and drains the resulting stream so tests can compare it to the original.
+    /// </summary>
+    /// <param name="strategy">The compression strategy to exercise.</param>
+    /// <param name="compressed">The bytes previously produced by <see cref="CompressToBytesAsync"/>.</param>
+    /// <returns>The recovered plaintext bytes.</returns>
     private static async Task<byte[]> DecompressToBytesAsync(
         ICompressionStrategy strategy,
         byte[] compressed

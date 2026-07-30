@@ -11,15 +11,13 @@ namespace BackupZCrypt.Domain.Factories;
 internal sealed class EncryptionServiceFactory(IEnumerable<IEncryptionAlgorithmStrategy> strategies)
     : IEncryptionServiceFactory
 {
+    /// <summary>
+    /// The lookup table of registered encryption strategies keyed by the algorithm each one implements.
+    /// </summary>
     private readonly Dictionary<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> strategies =
         strategies.ToDictionary(s => s.Id, s => s);
 
-    /// <summary>
-    /// Returns the strategy registered for the specified encryption algorithm.
-    /// </summary>
-    /// <param name="algorithm">The encryption algorithm to resolve.</param>
-    /// <returns>The matching <see cref="IEncryptionAlgorithmStrategy"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">No strategy is registered for <paramref name="algorithm"/>.</exception>
+    /// <inheritdoc/>
     public IEncryptionAlgorithmStrategy Create(EncryptionAlgorithm algorithm)
     {
         return !this.strategies.TryGetValue(algorithm, out var strategy)

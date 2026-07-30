@@ -11,7 +11,7 @@ public sealed record BackupResult
     /// <summary>
     /// Initializes a new instance of the <see cref="BackupResult"/> class.
     /// </summary>
-    /// <param name="isSuccess">Whether the operation completed successfully.</param>
+    /// <param name="isSuccess">Whether the operation succeeded.</param>
     /// <param name="elapsedTime">The total time the operation took.</param>
     /// <param name="totalBytes">The total number of bytes processed.</param>
     /// <param name="processedFiles">The number of files processed successfully.</param>
@@ -117,6 +117,17 @@ public sealed record BackupResult
     public double FilesPerSecond =>
         this.ElapsedTime.TotalSeconds > 0 ? this.ProcessedFiles / this.ElapsedTime.TotalSeconds : 0;
 
+    /// <summary>
+    /// Guards the constructor arguments, rejecting negative values and a processed file count
+    /// that exceeds the total.
+    /// </summary>
+    /// <param name="elapsedTime">The total time the operation took.</param>
+    /// <param name="totalBytes">The total number of bytes processed.</param>
+    /// <param name="processedFiles">The number of files processed successfully.</param>
+    /// <param name="totalFiles">The total number of files in the operation.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// A value is negative or <paramref name="processedFiles"/> exceeds <paramref name="totalFiles"/>.
+    /// </exception>
     private static void ValidateInputs(
         TimeSpan elapsedTime,
         long totalBytes,

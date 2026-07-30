@@ -8,9 +8,9 @@ namespace BackupZCrypt.Desktop;
 internal static class Program
 {
     /// <summary>
-    /// Process entry point; starts the application with the classic desktop lifetime.
+    /// Starts the application with the classic desktop lifetime; this is the process entry point.
     /// </summary>
-    /// <param name="args">Command-line arguments forwarded to the Avalonia lifetime.</param>
+    /// <param name="args">The command-line arguments forwarded to the Avalonia lifetime.</param>
     [STAThread]
     public static void Main(string[] args)
     {

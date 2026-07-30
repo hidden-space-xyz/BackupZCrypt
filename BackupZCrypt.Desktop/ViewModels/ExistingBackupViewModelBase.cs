@@ -14,8 +14,8 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// </summary>
 /// <param name="orchestrator">The orchestrator that executes backup operations.</param>
 /// <param name="settingsService">The service that reads and persists user settings.</param>
-/// <param name="filePicker">The folder/file picker service.</param>
-/// <param name="manifestService">The service used to detect the kind of manifest at a backup path.</param>
+/// <param name="filePicker">The folder picker service.</param>
+/// <param name="manifestService">The service used to detect the kind of manifest at the backup path.</param>
 public abstract partial class ExistingBackupViewModelBase(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
@@ -23,6 +23,10 @@ public abstract partial class ExistingBackupViewModelBase(
     IManifestService manifestService
 ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
+    /// <summary>
+    /// The counter that stamps each detection run, so a slow result for an older path is discarded
+    /// instead of overwriting the state of the path the user has since typed.
+    /// </summary>
     private int detectionVersion;
 
     /// <summary>
@@ -66,7 +70,7 @@ public abstract partial class ExistingBackupViewModelBase(
     /// Determines whether the operation can start, additionally requiring a detected chunked manifest
     /// and a password when the manifest is encrypted.
     /// </summary>
-    /// <returns><see langword="true"/> when the operation may begin; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the operation may begin; otherwise <see langword="false"/>.</returns>
     protected override bool CanStart()
     {
         return base.CanStart()
@@ -82,6 +86,15 @@ public abstract partial class ExistingBackupViewModelBase(
         _ = RefreshDetectionAsync();
     }
 
+    /// <summary>
+    /// Inspects the manifest at <see cref="BackupPath"/> and updates the detection state, requiring a
+    /// password when an encrypted manifest is found and reporting no backup otherwise.
+    /// </summary>
+    /// <remarks>
+    /// A probe that throws is treated as no backup found, since detection only decides what the page
+    /// shows; the operation itself still validates the path.
+    /// </remarks>
+    /// <returns>A task that completes once the detection state reflects the current path.</returns>
     private async Task RefreshDetectionAsync()
     {
         var version = Interlocked.Increment(ref detectionVersion);

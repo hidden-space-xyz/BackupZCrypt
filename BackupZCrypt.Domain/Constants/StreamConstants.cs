@@ -6,7 +6,8 @@ namespace BackupZCrypt.Domain.Constants;
 public static class StreamConstants
 {
     /// <summary>
-    /// Buffer size in bytes used when copying data between streams.
+    /// The buffer size in bytes (80 KiB) used for stream copies, pooled read buffers, and file stream buffering.
+    /// The value matches the default buffer size the BCL uses for stream copies.
     /// </summary>
     public const int CopyBufferSize = 80 * 1024;
 }

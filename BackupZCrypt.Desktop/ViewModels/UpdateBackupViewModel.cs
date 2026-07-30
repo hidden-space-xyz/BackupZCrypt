@@ -67,12 +67,20 @@ public sealed partial class UpdateBackupViewModel(
         );
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder whose current contents feed the update.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickSourceFolderAsync()
     {
         return PickFolderIntoAsync(path => SourcePath = path);
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder holding the backup to update.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickBackupFolderAsync()
     {

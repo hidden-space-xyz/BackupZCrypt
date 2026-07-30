@@ -23,7 +23,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the update-backup icon: two 120-degree annular arc segments (outer radius 9, inner radius 7) of a
-    /// circle centred at (12,12), each ending in a solid triangular arrowhead that shares the arc's radial end edge.
+    /// circle centered at (12,12), each ending in a solid triangular arrowhead that shares the arc's radial end edge.
     /// </summary>
     public static StreamGeometry ArrowSync { get; } = StreamGeometry.Parse(
         "M4.21,7.5 A9,9 0 0 1 19.79,7.5 L18.06,8.5 A7,7 0 0 0 5.94,8.5 Z " +
@@ -41,7 +41,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the verify-backup icon: the same shield silhouette as <see cref="ShieldLock"/> with a mitred 2px
-    /// checkmark polygon cut out of its centre.
+    /// checkmark polygon cut out of its center.
     /// </summary>
     public static StreamGeometry ShieldCheck { get; } = StreamGeometry.Parse(
         "M12,2.2 L19.5,4.8 V10.5 C19.5,15.3 16.6,19.2 12,21.6 C7.4,19.2 4.5,15.3 4.5,10.5 V4.8 Z " +
@@ -49,7 +49,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the settings icon: an eight-tooth gear built as a 32-vertex polygon alternating between tip radius 10
-    /// and root radius 7.8 (tip half-angle 8 degrees, root half-angle 14.5 degrees), with a radius-4.2 centre hole.
+    /// and root radius 7.8 (tip half-angle 8 degrees, root half-angle 14.5 degrees), with a radius-4.2 center hole.
     /// </summary>
     public static StreamGeometry Settings { get; } = StreamGeometry.Parse(
         "M10.05,4.45 L10.61,2.1 L13.39,2.1 L13.95,4.45 L15.96,5.28 L18.02,4.01 L19.99,5.98 L18.72,8.04 " +
@@ -88,7 +88,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the generate-password icon: a four-point star drawn with four quadratic curves pulled toward the
-    /// centre (arm length 7), plus a smaller copy (arm length 3.7) at the upper right.
+    /// center (arm length 7), plus a smaller copy (arm length 3.7) at the upper right.
     /// </summary>
     public static StreamGeometry Sparkle { get; } = StreamGeometry.Parse(
         "M10,6.5 Q11.6,11.9 17,13.5 Q11.6,15.1 10,20.5 Q8.4,15.1 3,13.5 Q8.4,11.9 10,6.5 Z " +
@@ -116,7 +116,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the error icon: a solid radius-10 disc with a twelve-vertex "X" polygon cut out (2.2px stroke width,
-    /// tips 4.6 from the centre along the diagonals).
+    /// tips 4.6 from the center along the diagonals).
     /// </summary>
     public static StreamGeometry ErrorCircle { get; } = StreamGeometry.Parse(
         "M22,12 A10,10 0 1 1 2,12 A10,10 0 1 1 22,12 Z " +
@@ -125,7 +125,7 @@ internal static class Icons
 
     /// <summary>
     /// Gets the success icon: a solid radius-10 disc with the same mitred 2px checkmark polygon as
-    /// <see cref="ShieldCheck"/> cut out, optically centred in the disc.
+    /// <see cref="ShieldCheck"/> cut out, optically centered in the disc.
     /// </summary>
     public static StreamGeometry CheckCircle { get; } = StreamGeometry.Parse(
         "M22,12 A10,10 0 1 1 2,12 A10,10 0 1 1 22,12 Z " +

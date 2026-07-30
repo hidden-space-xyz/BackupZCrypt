@@ -15,10 +15,6 @@
         WindowStartupLocation="CenterOwner">
 
   <Window.Styles>
-    <!-- Entry: fade in while scaling up from 96%. Runs once when the dialog attaches.
-         Keyframes target the individual transform properties rather than RenderTransform itself:
-         only properties owned by a Transform have a registered animator, and the animator builds
-         the backing TransformGroup on the card for us. -->
     <Style Selector="Border.dialogCard">
       <Style.Animations>
         <Animation Duration="0:0:0.18" FillMode="Forward" Easing="CubicEaseOut">
@@ -38,7 +34,6 @@
       </Style.Animations>
     </Style>
 
-    <!-- Gentle breathing of the in-progress icon so the dialog never looks frozen. -->
     <Style Selector="PathIcon.pulse">
       <Style.Animations>
         <Animation Duration="0:0:1.2" IterationCount="Infinite" Easing="SineEaseInOut">
@@ -55,7 +50,6 @@
       </Style.Animations>
     </Style>
 
-    <!-- Tinted circular container for the status icon of each panel. -->
     <Style Selector="Border.statusBadge">
       <Setter Property="Width" Value="40" />
       <Setter Property="Height" Value="40" />
@@ -71,9 +65,6 @@
     </Style>
   </Window.Styles>
 
-  <!-- The margin leaves room for the drop shadow inside the transparent window bounds; the
-       code-behind removes margin and shadow when per-pixel transparency is not granted.
-       The card is also the drag handle, since the window has no system title bar. -->
   <Border x:Name="DialogCard"
           Classes="dialogCard"
           PointerPressed="OnCardPressed"

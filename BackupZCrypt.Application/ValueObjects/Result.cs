@@ -33,6 +33,7 @@ public class Result
     /// Implicitly converts a message code into a failed result carrying that single error.
     /// </summary>
     /// <param name="code">The message code describing the failure.</param>
+    /// <returns>A failed result carrying the message code as its only error.</returns>
     public static implicit operator Result(MessageCode code) => Failure(code);
 
     /// <summary>

@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.Messaging;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// ViewModel for the main window shell: owns the navigation items, the currently displayed page and
+/// ViewModel for the main window shell: owns the navigation items, the currently displayed page, and
 /// the version caption, and handles cross-page navigation requests.
 /// </summary>
 public sealed partial class MainWindowViewModel
@@ -92,6 +92,11 @@ public sealed partial class MainWindowViewModel
         }
     }
 
+    /// <summary>
+    /// Swaps the displayed page when the sidebar selection changes, moving the active-page flag to the
+    /// incoming page and letting it run its on-navigation work.
+    /// </summary>
+    /// <param name="value">The newly selected navigation item.</param>
     partial void OnSelectedItemChanged(NavigationItem value)
     {
         if (value is null)

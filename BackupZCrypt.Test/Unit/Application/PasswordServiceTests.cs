@@ -9,6 +9,9 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </summary>
 public sealed class PasswordServiceTests
 {
+    /// <summary>
+    /// The password service under test; it is stateless, so one instance is shared by every test.
+    /// </summary>
     private readonly PasswordService sut = new();
 
     [TestCase(null)]

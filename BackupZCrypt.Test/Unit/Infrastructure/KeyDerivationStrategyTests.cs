@@ -5,13 +5,24 @@ using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 
 /// <summary>
-/// Unit tests for the key-derivation strategies (Argon2id, PBKDF2 and scrypt).
+/// Unit tests for the key-derivation strategies (Argon2id, PBKDF2, and scrypt).
 /// </summary>
 public sealed class KeyDerivationStrategyTests
 {
+    /// <summary>
+    /// The passphrase every derivation starts from; its exact value is irrelevant beyond being fixed.
+    /// </summary>
     private const string Password = "correct horse battery staple";
+
+    /// <summary>
+    /// The requested key length in bits, taken from the production master-key size.
+    /// </summary>
     private const int KeySizeBits = EncryptionConstants.KeySize;
 
+    /// <summary>
+    /// A fixed 32-byte salt matching <see cref="EncryptionConstants.SaltSize"/>, hard-coded so
+    /// derivations repeat exactly across runs.
+    /// </summary>
     private static readonly byte[] Salt =
     [
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -20,6 +31,11 @@ public sealed class KeyDerivationStrategyTests
         0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
     ];
 
+    /// <summary>
+    /// Supplies every production key-derivation function as a test case so all of them satisfy the
+    /// same contract.
+    /// </summary>
+    /// <returns>One strategy instance per supported key-derivation algorithm.</returns>
     private static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs() =>
         [
             new Argon2IdKeyDerivationStrategy(),

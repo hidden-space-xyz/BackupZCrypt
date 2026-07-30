@@ -50,7 +50,8 @@ public enum MessageCode
     DestinationDriveNotAccessibleFormat = 8,
 
     /// <summary>
-    /// The destination path is invalid; formatted with the offending path.
+    /// The destination path could not be inspected to determine its drive; formatted with the
+    /// detail of the failure.
     /// </summary>
     DestinationInvalidFormat = 9,
 
@@ -70,7 +71,8 @@ public enum MessageCode
     SourceInsideDestination = 13,
 
     /// <summary>
-    /// A path is invalid; formatted with the offending path.
+    /// A path could not be expanded and resolved to absolute form; formatted with the detail of
+    /// the failure.
     /// </summary>
     InvalidPathFormat = 14,
 
@@ -105,12 +107,14 @@ public enum MessageCode
     PasswordMismatch = 20,
 
     /// <summary>
-    /// The destination drive is low on free space; formatted with the space detail.
+    /// The destination drive holds less free space than the operation is estimated to need;
+    /// formatted with the available space and the estimated requirement.
     /// </summary>
     LowDiskSpaceFormat = 21,
 
     /// <summary>
-    /// The destination already contains files; formatted with the count or detail.
+    /// The destination already holds files that a create or restore may overwrite; formatted with
+    /// the number of existing files.
     /// </summary>
     DestinationExistingFilesFormat = 24,
 
@@ -125,7 +129,8 @@ public enum MessageCode
     NoFilesInSourceDirectory = 26,
 
     /// <summary>
-    /// Encryption of a file failed; formatted with error detail.
+    /// A single file could not be processed because of a file-level I/O or access error; the run
+    /// continues with the remaining files. Formatted with the file path and the error detail.
     /// </summary>
     EncryptionErrorFormat = 27,
 
@@ -155,7 +160,8 @@ public enum MessageCode
     BackupDestinationMustExist = 33,
 
     /// <summary>
-    /// The supplied password is incorrect.
+    /// Authenticated decryption of the manifest or of a chunk failed, so either the password is
+    /// incorrect or the stored data has been corrupted or tampered with.
     /// </summary>
     InvalidPassword = 34,
 

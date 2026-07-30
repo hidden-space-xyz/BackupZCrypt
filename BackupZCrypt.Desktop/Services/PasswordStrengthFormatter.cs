@@ -15,7 +15,7 @@ internal static class PasswordStrengthFormatter
 {
     /// <summary>
     /// Formats a password-strength analysis into a single localized caption combining the strength label,
-    /// entropy and up to three improvement suggestions.
+    /// entropy, and up to three improvement suggestions.
     /// </summary>
     /// <param name="analysis">The structured strength analysis to format.</param>
     /// <returns>The localized caption.</returns>

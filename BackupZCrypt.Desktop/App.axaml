@@ -9,11 +9,6 @@
   </Application.DataTemplates>
 
   <Application.Resources>
-    <!-- ===== Color tokens — the single source for every hue that appears more than once.
-         StaticResource resolves at parse time, so tokens must precede the brushes below. ===== -->
-
-    <!-- Fluent accent ramp; native Fluent controls (CheckBox, ToggleSwitch, selection) read
-         these, and the Accent* brushes below reference them so the brand stays single-source. -->
     <Color x:Key="SystemAccentColor">#8FCC3B</Color>
     <Color x:Key="SystemAccentColorDark1">#7BB52C</Color>
     <Color x:Key="SystemAccentColorDark2">#689A24</Color>
@@ -22,7 +17,6 @@
     <Color x:Key="SystemAccentColorLight2">#B3E175</Color>
     <Color x:Key="SystemAccentColorLight3">#C8EA98</Color>
 
-    <!-- Shared by the app brushes and the Fluent theme-resource overrides further down. -->
     <Color x:Key="FieldBackgroundColor">#12151F</Color>
     <Color x:Key="FieldBackgroundHoverColor">#151926</Color>
     <Color x:Key="StrongBorderColor">#363E55</Color>
@@ -30,48 +24,34 @@
     <Color x:Key="DimTextColor">#A6ADC2</Color>
     <Color x:Key="OverlayBackgroundColor">#1B2130</Color>
 
-    <!-- ===== Surface layers, darkest to lightest: window base, sidebar, card. The overlay
-         (popup) layer exists only as OverlayBackgroundColor, consumed by the ComboBox
-         drop-down override below. ===== -->
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0E1119" />
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#131724" />
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#181D2B" />
 
-    <!-- Borders: subtle for cards and dividers, strong for interactive fields. -->
     <SolidColorBrush x:Key="CardBorderBrush" Color="#262C3D" />
     <SolidColorBrush x:Key="StrongBorderBrush" Color="{StaticResource StrongBorderColor}" />
 
-    <!-- Text. -->
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#EDEFF6" />
     <SolidColorBrush x:Key="DimTextBrush" Color="{StaticResource DimTextColor}" />
 
-    <!-- Accent states. AccentForegroundBrush is the near-black text used on lime surfaces. -->
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource SystemAccentColor}" />
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource SystemAccentColorLight1}" />
     <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource SystemAccentColorDark1}" />
     <SolidColorBrush x:Key="AccentForegroundBrush" Color="#0D1207" />
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1F8FCC3B" />
 
-    <!-- Interactive fields, inset relative to the card they sit on. -->
     <SolidColorBrush x:Key="FieldBackgroundBrush" Color="{StaticResource FieldBackgroundColor}" />
     <SolidColorBrush x:Key="FieldBackgroundHoverBrush" Color="{StaticResource FieldBackgroundHoverColor}" />
     <SolidColorBrush x:Key="FieldBorderHoverBrush" Color="{StaticResource FieldBorderHoverColor}" />
 
-    <!-- Navigation / disabled. -->
     <SolidColorBrush x:Key="NavHoverBrush" Color="#1B2030" />
     <SolidColorBrush x:Key="NavSelectedBrush" Color="#222941" />
     <SolidColorBrush x:Key="NavSelectedHoverBrush" Color="#2C3042" />
     <SolidColorBrush x:Key="DisabledButtonBrush" Color="#2B3145" />
 
-    <!-- Colour-matched fully-transparent rest states for brush transitions. Brush transitions
-         interpolate every ARGB channel, so fading from Brushes.Transparent (#00FFFFFF, white)
-         to a dark colour flashes a pale wash; fading from these keeps the hue and only ramps
-         the alpha. -->
     <SolidColorBrush x:Key="NavHoverTransparentBrush" Color="#001B2030" />
     <SolidColorBrush x:Key="AccentTransparentBrush" Color="#008FCC3B" />
 
-    <!-- Status. StrengthGoodBrush is the intermediate step of the password-strength meter
-         between WarningBrush and SuccessBrush. -->
     <SolidColorBrush x:Key="SuccessBrush" Color="#45C08B" />
     <SolidColorBrush x:Key="WarningBrush" Color="#E8B95C" />
     <SolidColorBrush x:Key="DangerBrush" Color="#E56A76" />
@@ -82,22 +62,16 @@
     <SolidColorBrush x:Key="InfoCardBrush" Color="#192338" />
     <SolidColorBrush x:Key="WarningBorderBrush" Color="#4DE8B95C" />
 
-    <!-- Track behind progress bars. -->
     <SolidColorBrush x:Key="ProgressTrackBrush" Color="#232736" />
 
-    <!-- Elevation. The second shadow of the PrimaryButton* trio is the accent glow: its hex
-         must track the SystemAccentColor ramp (BoxShadows strings cannot reference resources). -->
     <BoxShadows x:Key="CardShadow">0 1 2 0 #33000000, 0 4 16 0 #26000000</BoxShadows>
     <BoxShadows x:Key="DialogShadow">0 2 8 0 #4D000000, 0 16 48 0 #66000000</BoxShadows>
     <BoxShadows x:Key="PrimaryButtonShadow">0 1 3 0 #40000000, 0 0 0 0 #008FCC3B</BoxShadows>
     <BoxShadows x:Key="PrimaryButtonHoverShadow">0 2 8 0 #40000000, 0 0 18 0 #478FCC3B</BoxShadows>
     <BoxShadows x:Key="PrimaryButtonPressedShadow">0 1 2 0 #40000000, 0 0 6 0 #338FCC3B</BoxShadows>
 
-    <!-- Monospace stack for file paths (Inter has no mono cut). -->
     <FontFamily x:Key="MonoFontFamily">Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace</FontFamily>
 
-    <!-- Fluent theme-resource overrides: TextBox. The focused border stays 1px so the
-         content does not shift when a field gains focus; the accent colour does the work. -->
     <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource FieldBackgroundColor}" />
     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource FieldBackgroundHoverColor}" />
     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource FieldBackgroundColor}" />
@@ -107,7 +81,6 @@
     <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#4D8FCC3B" />
     <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
 
-    <!-- Fluent theme-resource overrides: ComboBox. -->
     <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource FieldBackgroundColor}" />
     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource FieldBackgroundHoverColor}" />
     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="{StaticResource FieldBackgroundHoverColor}" />

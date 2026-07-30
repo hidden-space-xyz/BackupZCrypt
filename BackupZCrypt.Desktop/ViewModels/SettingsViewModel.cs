@@ -16,14 +16,31 @@ using CommunityToolkit.Mvvm.Input;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// ViewModel for the settings page: lets the user choose default encryption, key-derivation and
+/// ViewModel for the settings page: lets the user choose default encryption, key-derivation, and
 /// compression algorithms plus the UI language, and persists those choices.
 /// </summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
+    /// <summary>
+    /// The service that reads and persists user settings.
+    /// </summary>
     private readonly ISettingsService settingsService;
+
+    /// <summary>
+    /// The service that estimates how long a backup of a given size would take.
+    /// </summary>
     private readonly IBackupBenchmarkService benchmarkService;
+
+    /// <summary>
+    /// A value indicating whether the stored settings have already been applied, so returning to the
+    /// page never discards edits the user has not saved yet.
+    /// </summary>
     private bool loaded;
+
+    /// <summary>
+    /// The language code that was persisted when the page loaded, used to tell whether the user changed
+    /// the language and therefore needs to restart.
+    /// </summary>
     private string? savedLanguageCode;
 
     /// <summary>
@@ -226,6 +243,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>
     /// Loads the persisted defaults and language preference the first time the page is shown.
     /// </summary>
+    /// <remarks>
+    /// A failure to read the stored settings is swallowed and leaves the selections the constructor
+    /// made, so the page still offers a valid configuration to save.
+    /// </remarks>
     /// <returns>A task that completes once the settings have been loaded.</returns>
     public override async Task OnNavigatedToAsync()
     {
@@ -259,10 +280,17 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // If the persisted settings cannot be read, keep the defaults selected in the constructor.
         }
     }
 
+    /// <summary>
+    /// Persists the selected algorithm defaults and language, and reports whether a restart is needed
+    /// for the new language to take effect.
+    /// </summary>
+    /// <remarks>
+    /// A failed write is swallowed and only leaves the saved notice hidden.
+    /// </remarks>
+    /// <returns>A task that completes once the settings have been written.</returns>
     [RelayCommand]
     private async Task SaveAsync()
     {
@@ -293,11 +321,20 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Determines whether a benchmark may start, which requires that no other benchmark is running.
+    /// </summary>
+    /// <returns><see langword="true"/> if a benchmark may begin; otherwise <see langword="false"/>.</returns>
     private bool CanRunBenchmark()
     {
         return !IsBenchmarkRunning;
     }
 
+    /// <summary>
+    /// Estimates, off the UI thread, how long backing up the entered amount of data would take with the
+    /// selected algorithms, and shows the duration and throughput or an error.
+    /// </summary>
+    /// <returns>A task that completes once the estimate or its error has been shown.</returns>
     [RelayCommand(CanExecute = nameof(CanRunBenchmark))]
     private async Task RunBenchmarkAsync()
     {
@@ -350,6 +387,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Converts the entered amount and unit into a byte count, rejecting entries that are not a
+    /// positive finite number, that amount to less than one byte, or that do not fit in a
+    /// <see cref="long"/>.
+    /// </summary>
+    /// <param name="dataBytes">Receives the byte count, or zero when the entry is not usable.</param>
+    /// <returns><see langword="true"/> if a usable byte count was produced; otherwise <see langword="false"/>.</returns>
     private bool TryParseDataBytes(out long dataBytes)
     {
         dataBytes = 0;

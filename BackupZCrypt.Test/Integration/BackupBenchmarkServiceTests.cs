@@ -12,8 +12,19 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 public sealed class BackupBenchmarkServiceTests
 {
+    /// <summary>
+    /// The payload size the estimates are requested for: 2^30 bytes, one gibibyte.
+    /// </summary>
     private const long OneGigabyte = 1024L * 1024L * 1024L;
 
+    /// <summary>
+    /// Builds a benchmark request that defaults to AES without compression, so each test varies only
+    /// the option it is interested in.
+    /// </summary>
+    /// <param name="dataBytes">The amount of source data to estimate for, in bytes.</param>
+    /// <param name="compression">The compression mode to measure.</param>
+    /// <param name="encryption">The AEAD cipher to measure.</param>
+    /// <returns>The assembled request, always using PBKDF2 key derivation.</returns>
     private static BenchmarkRequest NewRequest(
         long dataBytes,
         CompressionMode compression = CompressionMode.None,

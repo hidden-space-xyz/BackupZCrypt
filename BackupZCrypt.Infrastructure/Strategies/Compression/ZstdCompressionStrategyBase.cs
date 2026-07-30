@@ -29,7 +29,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
     /// files would leak unencrypted content to disk.
     /// </summary>
     /// <param name="inputStream">The data to compress.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A stream over the compressed data, positioned at offset zero.</returns>
     public async Task<Stream> CompressAsync(
         Stream inputStream,
@@ -52,7 +52,7 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
     /// streamed lazily, so the level does not need to match the one used for compression.
     /// </summary>
     /// <param name="inputStream">The compressed data to read from.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A stream that yields the decompressed data as it is read.</returns>
     public Task<Stream> DecompressAsync(
         Stream inputStream,

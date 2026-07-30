@@ -11,6 +11,12 @@ namespace BackupZCrypt.Test.Unit.Domain;
 /// </summary>
 public sealed class KeyDerivationServiceFactoryTests
 {
+    /// <summary>
+    /// Creates a substitute strategy that advertises the given algorithm, which is all the factory
+    /// indexes on.
+    /// </summary>
+    /// <param name="id">The key-derivation algorithm the stub reports as its identifier.</param>
+    /// <returns>A substitute strategy whose <see cref="IKeyDerivationAlgorithmStrategy.Id"/> reports <paramref name="id"/>.</returns>
     private static IKeyDerivationAlgorithmStrategy Stub(KeyDerivationAlgorithm id)
     {
         var strategy = Substitute.For<IKeyDerivationAlgorithmStrategy>();

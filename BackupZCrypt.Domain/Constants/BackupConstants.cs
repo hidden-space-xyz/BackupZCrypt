@@ -6,17 +6,17 @@ namespace BackupZCrypt.Domain.Constants;
 public static class BackupConstants
 {
     /// <summary>
-    /// File extension used for backup artifacts produced by this tool.
+    /// The file extension used for backup artifacts produced by this tool.
     /// </summary>
     public const string AppFileExtension = ".bzc";
 
     /// <summary>
-    /// File name of the encrypted manifest that stores restore metadata.
+    /// The file name of the encrypted manifest that stores restore metadata.
     /// </summary>
     public const string ManifestFileName = "manifest" + AppFileExtension;
 
     /// <summary>
-    /// Name of the directory that holds the encrypted chunk files.
+    /// The name of the directory that holds the encrypted chunk files.
     /// </summary>
     public const string ChunksDirectoryName = "chunks";
 }

@@ -62,12 +62,20 @@ public sealed partial class RestoreBackupViewModel(
         );
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder holding the backup to restore.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickBackupFolderAsync()
     {
         return PickFolderIntoAsync(path => SourcePath = path);
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder that will receive the recovered files.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickDestinationFolderAsync()
     {

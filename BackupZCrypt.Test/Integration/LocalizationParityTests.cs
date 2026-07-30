@@ -9,12 +9,21 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 public sealed class LocalizationParityTests
 {
+    /// <summary>
+    /// The path of the English resource file, pointing at the copy the build places in the test
+    /// output rather than at the Desktop project, which is not referenced here so Avalonia is not
+    /// pulled in.
+    /// </summary>
     private static readonly string EnglishResxPath = Path.Combine(
         AppContext.BaseDirectory,
         "TestData",
         "Strings.resx"
     );
 
+    /// <summary>
+    /// The path of the Spanish resource file, copied into the test output alongside its English
+    /// counterpart.
+    /// </summary>
     private static readonly string SpanishResxPath = Path.Combine(
         AppContext.BaseDirectory,
         "TestData",
@@ -63,6 +72,12 @@ public sealed class LocalizationParityTests
         );
     }
 
+    /// <summary>
+    /// Reads the resource names declared by a resx file, failing the test with a hint about the
+    /// output copy step when the file is absent.
+    /// </summary>
+    /// <param name="resxPath">The path of the resx file to parse.</param>
+    /// <returns>The ordinal-compared set of resource names it declares.</returns>
     private static HashSet<string> ReadResxKeys(string resxPath)
     {
         Assert.That(
@@ -81,6 +96,11 @@ public sealed class LocalizationParityTests
             .ToHashSet(StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// Renders a set of resx keys so a parity failure names the offending entries.
+    /// </summary>
+    /// <param name="keys">The keys to list.</param>
+    /// <returns>The comma-separated keys, or "(none)" when the list is empty.</returns>
     private static string Describe(List<string> keys)
     {
         return keys.Count == 0 ? "(none)" : string.Join(", ", keys);

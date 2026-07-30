@@ -16,32 +16,135 @@ namespace BackupZCrypt.Application.Services;
 /// </summary>
 internal sealed partial class PasswordService : IPasswordService
 {
+    /// <summary>
+    /// The effective entropy, in bits, that is treated as a perfect password; anything at or above it scores
+    /// the maximum. Roughly the strength of a 20-character mixed-class password.
+    /// </summary>
     private const double MaxEntropyBits = 120.0;
+
+    /// <summary>
+    /// The upper bound of the strength score scale reported to the user.
+    /// </summary>
     private const double MaxScore = 100.0;
+
+    /// <summary>
+    /// The number of distinct character classes a password must use before it can earn the bonus points.
+    /// </summary>
     private const int MinCategoriesForBonus = 4;
+
+    /// <summary>
+    /// The password length required before the bonus points can be earned.
+    /// </summary>
     private const int MinLengthForBonus = 16;
+
+    /// <summary>
+    /// The effective entropy, in bits, required before the bonus points can be earned.
+    /// </summary>
     private const double MinEntropyForBonus = 90.0;
+
+    /// <summary>
+    /// The points added to the score when a password satisfies the length, variety, and entropy conditions
+    /// together, rewarding passwords that are strong on every axis at once.
+    /// </summary>
     private const double BonusPoints = 5.0;
+
+    /// <summary>
+    /// The number of symbols one letter case contributes to the assumed search alphabet.
+    /// </summary>
     private const int LetterPoolSize = 26;
+
+    /// <summary>
+    /// The number of symbols the decimal digits contribute to the assumed search alphabet.
+    /// </summary>
     private const int DigitPoolSize = 10;
+
+    /// <summary>
+    /// The number of symbols the printable punctuation set contributes to the assumed search alphabet.
+    /// </summary>
     private const int SpecialCharPoolSize = 32;
+
+    /// <summary>
+    /// The number of symbols credited when any non-ASCII character is present, kept deliberately conservative
+    /// because the real Unicode alphabet an attacker would search is unknowable.
+    /// </summary>
     private const int UnicodePoolSize = 50;
+
+    /// <summary>
+    /// The lowest score rated as <see cref="PasswordStrength.Strong"/>.
+    /// </summary>
     private const double StrongThreshold = 85.0;
+
+    /// <summary>
+    /// The lowest score rated as <see cref="PasswordStrength.Good"/>.
+    /// </summary>
     private const double GoodThreshold = 65.0;
+
+    /// <summary>
+    /// The lowest score rated as <see cref="PasswordStrength.Fair"/>.
+    /// </summary>
     private const double FairThreshold = 45.0;
+
+    /// <summary>
+    /// The lowest score rated as <see cref="PasswordStrength.Weak"/>; anything below is
+    /// <see cref="PasswordStrength.VeryWeak"/>.
+    /// </summary>
     private const double WeakThreshold = 25.0;
+
+    /// <summary>
+    /// The uppercase letters the generator draws from.
+    /// </summary>
     private const string UppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    /// <summary>
+    /// The lowercase letters the generator draws from.
+    /// </summary>
     private const string LowercaseChars = "abcdefghijklmnopqrstuvwxyz";
+
+    /// <summary>
+    /// The digits the generator draws from.
+    /// </summary>
     private const string NumberChars = "0123456789";
+
+    /// <summary>
+    /// The punctuation the generator draws from.
+    /// </summary>
     private const string SpecialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+
+    /// <summary>
+    /// The characters that are easy to confuse when read back by eye, removed from the generator alphabet when
+    /// <see cref="PasswordGenerationOptions.ExcludeSimilarCharacters"/> is set.
+    /// </summary>
     private const string SimilarChars = "il1Lo0O";
 
+    /// <summary>
+    /// The regex that detects an ASCII uppercase letter.
+    /// </summary>
     private static readonly Regex UpperCaseRegex = UpperCaseRegexFactory();
+
+    /// <summary>
+    /// The regex that detects an ASCII lowercase letter.
+    /// </summary>
     private static readonly Regex LowerCaseRegex = LowerCaseRegexFactory();
+
+    /// <summary>
+    /// The regex that detects a decimal digit.
+    /// </summary>
     private static readonly Regex NumberRegex = NumberRegexFactory();
+
+    /// <summary>
+    /// The regex that detects a recognized punctuation character.
+    /// </summary>
     private static readonly Regex SpecialCharRegex = SpecialCharRegexFactory();
+
+    /// <summary>
+    /// The regex that matches a standalone four-digit year in the 1900-2099 range, since birth and current
+    /// years are among the most guessable substrings a password can contain.
+    /// </summary>
     private static readonly Regex YearRegex = YearRegexFactory();
 
+    /// <summary>
+    /// The well-known words and keyboard runs that each cost a fixed entropy penalty when found in a password.
+    /// </summary>
     private static readonly string[] CommonSubstrings =
     [
         "password",
@@ -57,6 +160,10 @@ internal sealed partial class PasswordService : IPasswordService
         "letmein",
     ];
 
+    /// <summary>
+    /// The alphabet, keyboard rows, and digit run that passwords are scanned against, in both directions, to
+    /// find predictable ascending or descending runs.
+    /// </summary>
     private static readonly string[] LinearSequences =
     [
         "abcdefghijklmnopqrstuvwxyz",
@@ -66,6 +173,10 @@ internal sealed partial class PasswordService : IPasswordService
         "0123456789",
     ];
 
+    /// <summary>
+    /// The leetspeak substitutions folded back to the letters they imitate, so that disguised common words such
+    /// as <c>p@ssw0rd</c> are still penalized.
+    /// </summary>
     private static readonly Dictionary<char, char> LeetMap = new()
     {
         ['0'] = 'o',
@@ -129,7 +240,7 @@ internal sealed partial class PasswordService : IPasswordService
     /// character classes to avoid modulo bias.
     /// </summary>
     /// <param name="length">The number of characters to generate; must be positive.</param>
-    /// <param name="options">Flags selecting which character classes to include and exclusions to apply.</param>
+    /// <param name="options">The flags selecting which character classes to include and exclusions to apply.</param>
     /// <returns>A cryptographically random password.</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is zero or negative.</exception>
     /// <exception cref="ArgumentException">No character class is selected, or the resulting character set is empty.</exception>
@@ -218,6 +329,13 @@ internal sealed partial class PasswordService : IPasswordService
         }
     }
 
+    /// <summary>
+    /// Sums the alphabet an attacker would have to search, adding one pool per character class the password
+    /// actually uses, and reports which classes were found.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <param name="flags">Receives the character classes detected in the password.</param>
+    /// <returns>The estimated size of the search alphabet, in symbols.</returns>
     private static int EstimatePoolSize(string password, out PasswordComposition flags)
     {
         var hasUpper = UpperCaseRegex.IsMatch(password);
@@ -258,6 +376,12 @@ internal sealed partial class PasswordService : IPasswordService
         return size;
     }
 
+    /// <summary>
+    /// Computes the entropy penalty for runs of three or more identical adjacent characters, charging 1.5 bits
+    /// for every character beyond the second in each run.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double RepetitionPenalty(string password)
     {
         double penalty = 0;
@@ -288,6 +412,12 @@ internal sealed partial class PasswordService : IPasswordService
         return penalty;
     }
 
+    /// <summary>
+    /// Computes the entropy penalty for runs drawn from the known linear sequences, scanning each sequence both
+    /// forwards and reversed.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double SequencePenalty(string password)
     {
         double penalty = 0;
@@ -303,6 +433,13 @@ internal sealed partial class PasswordService : IPasswordService
         return penalty;
     }
 
+    /// <summary>
+    /// Charges 2 bits for every character beyond the second at each position where the password begins to track
+    /// the given sequence for at least three characters.
+    /// </summary>
+    /// <param name="passwordLower">The password lowercased for comparison.</param>
+    /// <param name="sequence">The sequence to match against, starting at its first character.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double SequenceScan(string passwordLower, string sequence)
     {
         double penalty = 0;
@@ -333,6 +470,12 @@ internal sealed partial class PasswordService : IPasswordService
         return penalty;
     }
 
+    /// <summary>
+    /// Charges 6 bits for each common substring found in the password, counting it once literally and again
+    /// after leetspeak normalization so a substitution cipher does not hide it.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double PatternPenalty(string password)
     {
         var lower = password.ToLowerInvariant();
@@ -344,11 +487,23 @@ internal sealed partial class PasswordService : IPasswordService
         return penalty;
     }
 
+    /// <summary>
+    /// Charges 4 bits for every four-digit year the password contains.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double YearPenalty(string password)
     {
         return YearRegex.Count(password) * 4.0;
     }
 
+    /// <summary>
+    /// Penalizes passwords drawn from too few character classes: a single-class password loses 2 bits per
+    /// character up to 20, and a short two-class password loses a flat 10.
+    /// </summary>
+    /// <param name="flags">The character classes detected in the password.</param>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The penalty in bits.</returns>
     private static double HomogeneousClassPenalty(PasswordComposition flags, string password)
     {
         if (flags.CategoryCount <= 1)
@@ -359,6 +514,11 @@ internal sealed partial class PasswordService : IPasswordService
         return flags.CategoryCount == 2 && password.Length < 10 ? 10 : 0;
     }
 
+    /// <summary>
+    /// Replaces leetspeak characters with the letters they imitate, leaving every other character untouched.
+    /// </summary>
+    /// <param name="input">The lowercased password to normalize.</param>
+    /// <returns>The normalized text.</returns>
     private static string NormalizeLeet(string input)
     {
         StringBuilder sb = new(input.Length);
@@ -378,6 +538,11 @@ internal sealed partial class PasswordService : IPasswordService
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Maps a numeric score onto the coarse strength rating shown to the user.
+    /// </summary>
+    /// <param name="score">The computed strength score.</param>
+    /// <returns>The rating the score falls into.</returns>
     private static PasswordStrength GetStrengthFromScore(double score)
     {
         return score switch
@@ -390,6 +555,13 @@ internal sealed partial class PasswordService : IPasswordService
         };
     }
 
+    /// <summary>
+    /// Selects the message codes for the improvement advice that applies to this password, which the Desktop
+    /// layer resolves into translated text.
+    /// </summary>
+    /// <param name="flags">The character classes detected in the password.</param>
+    /// <param name="password">The password the advice is about.</param>
+    /// <returns>The applicable tips, in the order they are shown.</returns>
     private static List<MessageCode> BuildTips(PasswordComposition flags, string password)
     {
         List<MessageCode> tips = [];
@@ -442,6 +614,12 @@ internal sealed partial class PasswordService : IPasswordService
         return tips;
     }
 
+    /// <summary>
+    /// Determines whether the password contains the first four characters of a known linear sequence, read
+    /// either forwards or backwards.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns><see langword="true"/> if an obvious sequence is present; otherwise <see langword="false"/>.</returns>
     private static bool HasObviousSequence(string password)
     {
         var lower = password.ToLowerInvariant();
@@ -456,6 +634,11 @@ internal sealed partial class PasswordService : IPasswordService
             });
     }
 
+    /// <summary>
+    /// Determines whether the password contains two identical adjacent characters.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns><see langword="true"/> if any character repeats immediately; otherwise <see langword="false"/>.</returns>
     private static bool HasRepeats(string password)
     {
         for (var i = 1; i < password.Length; i++)
@@ -469,18 +652,38 @@ internal sealed partial class PasswordService : IPasswordService
         return false;
     }
 
+    /// <summary>
+    /// Builds the source-generated regex matching a single ASCII uppercase letter.
+    /// </summary>
+    /// <returns>The generated regex.</returns>
     [GeneratedRegex("[A-Z]")]
     private static partial Regex UpperCaseRegexFactory();
 
+    /// <summary>
+    /// Builds the source-generated regex matching a single ASCII lowercase letter.
+    /// </summary>
+    /// <returns>The generated regex.</returns>
     [GeneratedRegex("[a-z]")]
     private static partial Regex LowerCaseRegexFactory();
 
+    /// <summary>
+    /// Builds the source-generated regex matching a single decimal digit.
+    /// </summary>
+    /// <returns>The generated regex.</returns>
     [GeneratedRegex("[0-9]")]
     private static partial Regex NumberRegexFactory();
 
+    /// <summary>
+    /// Builds the source-generated regex matching a single recognized punctuation character.
+    /// </summary>
+    /// <returns>The generated regex.</returns>
     [GeneratedRegex(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]")]
     private static partial Regex SpecialCharRegexFactory();
 
+    /// <summary>
+    /// Builds the source-generated regex matching a standalone four-digit year between 1900 and 2099.
+    /// </summary>
+    /// <returns>The generated regex.</returns>
     [GeneratedRegex(@"\b(19|20)\d{2}\b")]
     private static partial Regex YearRegexFactory();
 }

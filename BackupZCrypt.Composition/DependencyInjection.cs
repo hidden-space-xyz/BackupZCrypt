@@ -25,10 +25,10 @@ namespace BackupZCrypt.Composition;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the Infrastructure implementations of Domain contracts: the factories,
+    /// Registers the implementations behind the Domain contracts: the algorithm factories,
     /// the key-derivation/encryption/compression/chunking algorithm strategies, and the
-    /// file-system and storage services. Every strategy is registered as a singleton so
-    /// consumers can resolve the full <see cref="IEnumerable{T}"/> set and index by the
+    /// password, file-system, and storage services. Every strategy is registered as a singleton
+    /// so consumers can resolve the full <see cref="IEnumerable{T}"/> set and index by the
     /// strategy's enum <c>Id</c>.
     /// </summary>
     /// <param name="services">The service collection to add the registrations to.</param>

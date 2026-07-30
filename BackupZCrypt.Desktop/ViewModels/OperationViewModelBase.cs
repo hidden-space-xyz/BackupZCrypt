@@ -19,19 +19,27 @@ namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
 /// Shared engine for the create/update/restore/verify pages: request execution with progress reporting,
-/// cancellation, the warnings confirmation flow and the final result panel. Subclasses only describe
+/// cancellation, the warnings confirmation flow, and the final result panel. Subclasses only describe
 /// how to build the request.
 /// </summary>
 /// <param name="orchestrator">The orchestrator that executes backup operations.</param>
 /// <param name="settingsService">The service that reads and persists user settings.</param>
-/// <param name="filePicker">The folder/file picker service.</param>
+/// <param name="filePicker">The folder picker service.</param>
 public abstract partial class OperationViewModelBase(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
     IFilePickerService filePicker
 ) : ViewModelBase
 {
+    /// <summary>
+    /// The cancellation source of the operation currently in flight, or <see langword="null"/> when idle.
+    /// </summary>
     private CancellationTokenSource? operationCts;
+
+    /// <summary>
+    /// A value indicating whether the remembered paths have already been applied, so returning to the
+    /// page never overwrites what the user has typed since.
+    /// </summary>
     private bool recentPathsLoaded;
 
     /// <summary>
@@ -151,7 +159,7 @@ public abstract partial class OperationViewModelBase(
     public bool IsIdle => !IsRunning;
 
     /// <summary>
-    /// Gets the folder/file picker service.
+    /// Gets the folder picker service.
     /// </summary>
     protected IFilePickerService FilePicker { get; } = filePicker;
 
@@ -163,6 +171,10 @@ public abstract partial class OperationViewModelBase(
     /// <summary>
     /// Loads and applies the most recently used paths the first time the page is shown.
     /// </summary>
+    /// <remarks>
+    /// Recent paths are a convenience only, so a failure to read them is swallowed and the page simply
+    /// starts with empty inputs.
+    /// </remarks>
     /// <returns>A task that completes once the recent paths have been applied.</returns>
     public override async Task OnNavigatedToAsync()
     {
@@ -180,8 +192,6 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Recent paths are a convenience only; if they cannot be read the page simply starts
-            // with empty inputs.
         }
     }
 
@@ -210,7 +220,7 @@ public abstract partial class OperationViewModelBase(
     /// Determines whether the operation can start, requiring that no operation is running, the source
     /// path is set, and the destination path is set when <see cref="RequiresDestination"/> is <see langword="true"/>.
     /// </summary>
-    /// <returns><see langword="true"/> when the operation may begin; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the operation may begin; otherwise <see langword="false"/>.</returns>
     protected virtual bool CanStart()
     {
         return !IsRunning
@@ -247,28 +257,48 @@ public abstract partial class OperationViewModelBase(
     {
     }
 
+    /// <summary>
+    /// Reacts to a change of the source path by re-running the page's path-dependent work.
+    /// </summary>
+    /// <param name="value">The new source path.</param>
     partial void OnSourcePathChanged(string value)
     {
         HandlePathChanged();
     }
 
+    /// <summary>
+    /// Reacts to a change of the destination path by re-running the page's path-dependent work.
+    /// </summary>
+    /// <param name="value">The new destination path.</param>
     partial void OnDestinationPathChanged(string value)
     {
         HandlePathChanged();
     }
 
+    /// <summary>
+    /// Starts the operation, stopping at the confirmation panel when the request raises warnings.
+    /// </summary>
+    /// <returns>A task that completes once the operation has finished and its result is shown.</returns>
     [RelayCommand(CanExecute = nameof(CanStart))]
     private Task StartAsync()
     {
         return RunAsync(proceedOnWarnings: false);
     }
 
+    /// <summary>
+    /// Requests cancellation of the operation currently in flight.
+    /// </summary>
     [RelayCommand]
     private void CancelOperation()
     {
         operationCts?.Cancel();
     }
 
+    /// <summary>
+    /// Re-runs the operation after the user acknowledged the warnings, telling the orchestrator to
+    /// proceed past them.
+    /// </summary>
+    /// <returns>A task that completes once the operation has finished and its result is shown.</returns>
     [RelayCommand]
     private Task ContinueAnywayAsync()
     {
@@ -276,6 +306,9 @@ public abstract partial class OperationViewModelBase(
         return RunAsync(proceedOnWarnings: true);
     }
 
+    /// <summary>
+    /// Closes the warnings panel and discards the listed warnings without starting the operation.
+    /// </summary>
     [RelayCommand]
     private void DismissWarnings()
     {
@@ -283,12 +316,21 @@ public abstract partial class OperationViewModelBase(
         Warnings.Clear();
     }
 
+    /// <summary>
+    /// Closes the result panel.
+    /// </summary>
     [RelayCommand]
     private void DismissResult()
     {
         HasResult = false;
     }
 
+    /// <summary>
+    /// Runs the operation off the UI thread, streaming progress to the page and turning the outcome,
+    /// a cancellation, or an unexpected exception into the result panel.
+    /// </summary>
+    /// <param name="proceedOnWarnings">Whether the request should continue past advisory warnings.</param>
+    /// <returns>A task that completes once the result has been presented.</returns>
     private async Task RunAsync(bool proceedOnWarnings)
     {
         ResetState();
@@ -330,6 +372,11 @@ public abstract partial class OperationViewModelBase(
         }
     }
 
+    /// <summary>
+    /// Projects an engine status report onto the progress bar and its captions, staying indeterminate
+    /// while the total size is still unknown.
+    /// </summary>
+    /// <param name="status">The latest status reported by the engine.</param>
     private void ReportProgress(BackupStatus status)
     {
         IsProgressIndeterminate = status.TotalBytes == 0;
@@ -366,6 +413,12 @@ public abstract partial class OperationViewModelBase(
     /// </summary>
     protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
 
+    /// <summary>
+    /// Turns the orchestrator outcome into either a failure list, the warnings confirmation prompt, or
+    /// the success/partial summary, and remembers the used paths when the operation succeeded.
+    /// </summary>
+    /// <param name="result">The outcome returned by the orchestrator.</param>
+    /// <param name="proceedOnWarnings">Whether the request already opted to continue past warnings.</param>
     private void HandleResult(Result<BackupResult> result, bool proceedOnWarnings)
     {
         if (!result.IsSuccess)
@@ -431,6 +484,10 @@ public abstract partial class OperationViewModelBase(
         }
     }
 
+    /// <summary>
+    /// Shows the result panel in its failed state and lists the localized errors.
+    /// </summary>
+    /// <param name="errors">The messages to localize and display.</param>
     private void ShowFailure(IEnumerable<LocalizableMessage> errors)
     {
         HasResult = true;
@@ -445,6 +502,9 @@ public abstract partial class OperationViewModelBase(
         ShowErrors = Errors.Count > 0;
     }
 
+    /// <summary>
+    /// Clears the progress, result, and message state so a new run starts from an empty panel.
+    /// </summary>
     private void ResetState()
     {
         Errors.Clear();
@@ -480,6 +540,14 @@ public abstract partial class OperationViewModelBase(
         };
     }
 
+    /// <summary>
+    /// Persists the paths of the completed operation so the pages can pre-fill them next time.
+    /// </summary>
+    /// <remarks>
+    /// Remembering the last-used paths is a best-effort convenience, so a failure here is swallowed: it
+    /// must not affect the already-completed operation.
+    /// </remarks>
+    /// <returns>A task that completes once the paths have been written.</returns>
     private async Task SaveRecentPathsAsync()
     {
         try
@@ -490,8 +558,6 @@ public abstract partial class OperationViewModelBase(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Remembering the last-used paths is a best-effort convenience; a failure here must not
-            // affect the already-completed operation.
         }
     }
 }

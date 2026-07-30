@@ -15,14 +15,11 @@ namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
 /// ViewModel for the create-backup page: collects the source and destination, manages the password
-/// (entry, reveal, generation, copy and strength feedback) and reflects the algorithm defaults from settings.
+/// (entry, reveal, generation, copy, and strength feedback), and reflects the algorithm defaults from settings.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CreateBackupViewModel"/> class.
-/// </remarks>
 /// <param name="orchestrator">The orchestrator that executes the backup operation.</param>
 /// <param name="settingsService">The service that reads and persists user settings.</param>
-/// <param name="filePicker">The folder/file picker service.</param>
+/// <param name="filePicker">The folder picker service.</param>
 /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
 /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
 public sealed partial class CreateBackupViewModel(
@@ -33,13 +30,35 @@ public sealed partial class CreateBackupViewModel(
     IPasswordService passwordService
     ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
 {
+    /// <summary>
+    /// The character count of a generated password, set far above the guessable range because a
+    /// brute-forced password exposes every chunk of the backup.
+    /// </summary>
     private const int GeneratedPasswordLength = 50;
 
+    /// <summary>
+    /// The shortest accepted password, mirroring the bound enforced by the request validator.
+    /// </summary>
     private const int MinPasswordLength = 8;
+
+    /// <summary>
+    /// The longest accepted password, mirroring the bound enforced by the request validator.
+    /// </summary>
     private const int MaxPasswordLength = 1000;
 
+    /// <summary>
+    /// The encryption algorithm applied to the new backup, taken from the saved defaults.
+    /// </summary>
     private EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.Aes;
+
+    /// <summary>
+    /// The key-derivation algorithm used to turn the password into the master key, taken from the saved defaults.
+    /// </summary>
     private KeyDerivationAlgorithm keyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id;
+
+    /// <summary>
+    /// The compression applied to chunks before they are encrypted, taken from the saved defaults.
+    /// </summary>
     private CompressionMode compressionMode = CompressionMode.None;
 
     /// <summary>
@@ -76,7 +95,7 @@ public sealed partial class CreateBackupViewModel(
     public partial string StrengthDescription { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the brush that colours the strength indicator according to the password's strength.
+    /// Gets or sets the brush that colors the strength indicator according to the password's strength.
     /// </summary>
     [ObservableProperty]
     public partial IBrush StrengthBrush { get; set; } = Brushes.Gray;
@@ -98,6 +117,10 @@ public sealed partial class CreateBackupViewModel(
     /// Refreshes the encryption state from the latest settings defaults, unless an operation is
     /// currently in flight.
     /// </summary>
+    /// <remarks>
+    /// A failure to read the stored defaults is swallowed and leaves the built-in algorithm choices in
+    /// place, so the page always offers a usable configuration.
+    /// </remarks>
     /// <returns>A task that completes once the encryption state has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
     {
@@ -119,7 +142,6 @@ public sealed partial class CreateBackupViewModel(
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // If the defaults cannot be read, keep the built-in algorithm defaults set above.
         }
     }
 
@@ -136,7 +158,7 @@ public sealed partial class CreateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the create-backup request from the current source, destination, password and configured algorithms.
+    /// Builds the create-backup request from the current source, destination, password, and configured algorithms.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <returns>The configured <see cref="BackupRequest"/>.</returns>
@@ -159,12 +181,17 @@ public sealed partial class CreateBackupViewModel(
     /// Determines whether the backup can start, additionally requiring a valid, confirmed password so
     /// the user cannot start a backup that would immediately fail password validation.
     /// </summary>
-    /// <returns><see langword="true"/> when the backup may begin; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the backup may begin; otherwise <see langword="false"/>.</returns>
     protected override bool CanStart()
     {
         return base.CanStart() && IsPasswordValid();
     }
 
+    /// <summary>
+    /// Determines whether the entered password satisfies the same rules the request validator applies:
+    /// within the length bounds, free of leading or trailing whitespace, and matching the confirmation.
+    /// </summary>
+    /// <returns><see langword="true"/> if the password would pass validation; otherwise <see langword="false"/>.</returns>
     private bool IsPasswordValid()
     {
         return Password.Length >= MinPasswordLength
@@ -173,18 +200,30 @@ public sealed partial class CreateBackupViewModel(
             && string.Equals(Password, ConfirmPassword, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder to back up.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickSourceFolderAsync()
     {
         return PickFolderIntoAsync(path => SourcePath = path);
     }
 
+    /// <summary>
+    /// Lets the user browse for the folder that will hold the encrypted backup.
+    /// </summary>
+    /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     [RelayCommand]
     private Task PickDestinationFolderAsync()
     {
         return PickFolderIntoAsync(path => DestinationPath = path);
     }
 
+    /// <summary>
+    /// Fills both password fields with a freshly generated password that mixes upper- and lower-case
+    /// letters, digits, and symbols, and keeps it masked so it is not left exposed on screen.
+    /// </summary>
     [RelayCommand]
     private void GeneratePassword()
     {
@@ -201,14 +240,26 @@ public sealed partial class CreateBackupViewModel(
         RevealPassword = false;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether there is a password to place on the clipboard.
+    /// </summary>
     private bool CanCopyPassword => Password.Length > 0;
 
+    /// <summary>
+    /// Copies the current password to the clipboard so the user can store it before starting, since a
+    /// lost password makes the backup unrecoverable.
+    /// </summary>
+    /// <returns>A task that completes once the clipboard has been written.</returns>
     [RelayCommand(CanExecute = nameof(CanCopyPassword))]
     private async Task CopyPasswordAsync()
     {
         await clipboardService.SetTextAsync(Password);
     }
 
+    /// <summary>
+    /// Re-evaluates the confirmation match and refreshes the strength meter for the new password.
+    /// </summary>
+    /// <param name="value">The new password.</param>
     partial void OnPasswordChanged(string value)
     {
         UpdatePasswordMismatch();
@@ -235,6 +286,11 @@ public sealed partial class CreateBackupViewModel(
         };
     }
 
+    /// <summary>
+    /// Looks up a themed brush by resource key, falling back to grey when the resource is unavailable.
+    /// </summary>
+    /// <param name="key">The resource key of the brush.</param>
+    /// <returns>The themed brush, or <see cref="Brushes.Gray"/> when it cannot be resolved.</returns>
     private static IBrush ResolveBrush(string key)
     {
         return
@@ -245,11 +301,18 @@ public sealed partial class CreateBackupViewModel(
             : Brushes.Gray;
     }
 
+    /// <summary>
+    /// Re-evaluates whether the confirmation entry still matches the password.
+    /// </summary>
+    /// <param name="value">The new confirmation entry.</param>
     partial void OnConfirmPasswordChanged(string value)
     {
         UpdatePasswordMismatch();
     }
 
+    /// <summary>
+    /// Shows the mismatch hint once the user has typed a confirmation that differs from the password.
+    /// </summary>
     private void UpdatePasswordMismatch()
     {
         ShowPasswordMismatch =

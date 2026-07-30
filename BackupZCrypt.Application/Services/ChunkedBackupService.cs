@@ -18,17 +18,17 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 namespace BackupZCrypt.Application.Services;
 
 /// <summary>
-/// Implements chunk-based backup, update, and restore. Files are split into content-defined
-/// chunks that are deduplicated by content hash, optionally compressed, and individually
-/// encrypted with per-chunk nonces; sub-keys for chunk encryption, nonce derivation, chunk
-/// naming, and the manifest are derived from the password-derived master key via HKDF.
+/// Implements chunk-based backup, update, restore, and verification. Files are split into
+/// content-defined chunks that are deduplicated by content hash, optionally compressed, and
+/// individually encrypted with per-chunk nonces; sub-keys for chunk encryption, nonce derivation,
+/// chunk naming, and the manifest are derived from the password-derived master key via HKDF.
 /// </summary>
-/// <param name="compressionServiceFactory">Factory producing compression strategies for a compression mode.</param>
-/// <param name="encryptionServiceFactory">Factory producing encryption strategies for an algorithm.</param>
-/// <param name="fileOperationsService">Service used to read, write, and enumerate files.</param>
-/// <param name="manifestService">Service used to read and write the encrypted backup manifest.</param>
-/// <param name="chunkingStrategy">Strategy used to split file streams into content-defined chunks.</param>
-/// <param name="keyDerivationServiceFactory">Factory producing key derivation services for an algorithm.</param>
+/// <param name="compressionServiceFactory">The factory producing compression strategies for a compression mode.</param>
+/// <param name="encryptionServiceFactory">The factory producing encryption strategies for an algorithm.</param>
+/// <param name="fileOperationsService">The service used to read, write, and enumerate files.</param>
+/// <param name="manifestService">The service used to read and write the encrypted backup manifest.</param>
+/// <param name="chunkingStrategy">The strategy used to split file streams into content-defined chunks.</param>
+/// <param name="keyDerivationServiceFactory">The factory producing key derivation services for an algorithm.</param>
 internal sealed class ChunkedBackupService(
     ICompressionServiceFactory compressionServiceFactory,
     IEncryptionServiceFactory encryptionServiceFactory,
@@ -38,14 +38,28 @@ internal sealed class ChunkedBackupService(
     IKeyDerivationServiceFactory keyDerivationServiceFactory
 ) : IChunkedBackupService
 {
+    /// <summary>
+    /// The length in bytes of a 256-bit key, which is also the expected length of the SHA-256 chunk
+    /// and file hashes decoded from the manifest.
+    /// </summary>
     private const int KeySizeBytes = EncryptionConstants.KeySize / 8;
 
+    /// <summary>
+    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
+    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// </summary>
     private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 
+    /// <summary>
+    /// The characters that may never appear anywhere in a manifest entry path.
+    /// </summary>
     private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
 
+    /// <summary>
+    /// The characters that may never appear inside a single path segment on Windows.
+    /// </summary>
     private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
 
     /// <summary>
@@ -908,6 +922,26 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Splits a file into content-defined chunks, stores each chunk encrypted on disk, hashes the
+    /// whole file, and returns the manifest entry that reconstructs it.
+    /// </summary>
+    /// <remarks>
+    /// Chunks are deduplicated through <paramref name="storedChunks"/>, so a chunk already being
+    /// stored for another file is awaited instead of being encrypted and written a second time.
+    /// </remarks>
+    /// <param name="filePath">The absolute path of the file to read.</param>
+    /// <param name="relativePath">The file's path relative to the backup root, as recorded in the manifest.</param>
+    /// <param name="fileSize">The file size in bytes recorded in the manifest entry.</param>
+    /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="nonceKey">The sub-key each chunk's deterministic nonce is derived from.</param>
+    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to encrypt chunks.</param>
+    /// <param name="compressionStrategy">The strategy applied before encryption, or <see langword="null"/> to skip compression.</param>
+    /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The manifest entry describing the file and its ordered chunk references.</returns>
     private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
         string filePath,
         string relativePath,
@@ -984,6 +1018,21 @@ internal sealed class ChunkedBackupService(
         return new ChunkManifestFileEntry(relativePath, fileHashB64, fileSize, chunkRefs);
     }
 
+    /// <summary>
+    /// Reconstructs one backed-up file on disk, creating its parent directory and writing the
+    /// decrypted chunks to a path confined to the restore root.
+    /// </summary>
+    /// <param name="fileEntry">The manifest entry describing the file and its chunks.</param>
+    /// <param name="chunksDir">The directory the encrypted chunk files are read from.</param>
+    /// <param name="destinationPath">The restore root the file is written beneath.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to decrypt chunks.</param>
+    /// <param name="storedChunkNonces">The cache resolving a chunk hash to the nonce its stored ciphertext authenticates under.</param>
+    /// <param name="compressionStrategy">The decompression strategy, or <see langword="null"/> if chunks are uncompressed.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the file has been reconstructed and checked against the manifest.</returns>
+    /// <exception cref="InvalidDataException">The manifest entry path is malformed or escapes the restore root.</exception>
     private async Task RestoreFileFromChunksAsync(
         ChunkManifestFileEntry fileEntry,
         string chunksDir,
@@ -1025,6 +1074,31 @@ internal sealed class ChunkedBackupService(
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Decrypts and authenticates every chunk of a file into <paramref name="destination"/>, then
+    /// checks the reassembled size and SHA-256 hash against the manifest.
+    /// </summary>
+    /// <remarks>
+    /// Each chunk is authenticated with its content hash concatenated with its nonce as associated
+    /// data, so a tampered chunk fails before any of it reaches <paramref name="destination"/>, and
+    /// decompression is bounded by the size the manifest declares for the file so a chunk cannot
+    /// expand past it. Verification passes <see cref="Stream.Null"/> as the destination to discard
+    /// the plaintext. Each chunk's decoded hash, nonce, associated data, ciphertext, and plaintext
+    /// are zeroed once the chunk has been written, and the expected and computed file hashes are
+    /// zeroed after they are compared.
+    /// </remarks>
+    /// <param name="fileEntry">The manifest entry describing the file and its chunks.</param>
+    /// <param name="chunksDir">The directory the encrypted chunk files are read from.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to decrypt chunks.</param>
+    /// <param name="storedChunkNonces">The cache resolving a chunk hash to the nonce its stored ciphertext authenticates under.</param>
+    /// <param name="compressionStrategy">The decompression strategy, or <see langword="null"/> if chunks are uncompressed.</param>
+    /// <param name="destination">The stream the reconstructed plaintext is written to.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when every chunk has been verified and written to <paramref name="destination"/>.</returns>
+    /// <exception cref="InvalidDataException">The entry path is malformed or a chunk decompresses beyond the declared size.</exception>
+    /// <exception cref="CryptographicException">A chunk fails authentication or the size or hash does not match the manifest.</exception>
     private async Task VerifyFileChunksAsync(
         ChunkManifestFileEntry fileEntry,
         string chunksDir,
@@ -1139,6 +1213,26 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Compresses a chunk when compression is enabled, encrypts it, and writes the ciphertext to its
+    /// content-addressed file.
+    /// </summary>
+    /// <remarks>
+    /// Compression runs before encryption so ciphertext is never compressed. The nonce is derived
+    /// deterministically from the chunk hash, which lets identical content deduplicate while keeping
+    /// the nonce key-dependent, and the chunk hash concatenated with that nonce is bound in as
+    /// associated data. The compressed copy of the chunk, the ciphertext, the associated data, and
+    /// the nonce are zeroed before returning; the plaintext buffer is owned by the caller.
+    /// </remarks>
+    /// <param name="chunkData">The plaintext bytes of the chunk.</param>
+    /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
+    /// <param name="chunkFilePath">The full path the encrypted chunk is written to.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="nonceKey">The sub-key the chunk nonce is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to encrypt the chunk.</param>
+    /// <param name="compressionStrategy">The compression strategy, or <see langword="null"/> to store the chunk uncompressed.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The Base64-encoded nonce recorded for the chunk in the manifest.</returns>
     private async Task<string> EncryptAndStoreChunkAsync(
         ReadOnlyMemory<byte> chunkData,
         byte[] chunkHash,
@@ -1223,6 +1317,21 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Builds the cache that maps each chunk hash referenced by a manifest to the nonce its stored
+    /// ciphertext authenticates under.
+    /// </summary>
+    /// <remarks>
+    /// Resolution is deferred and performed at most once per chunk, so a chunk whose manifest
+    /// references all agree on one nonce is never read from disk.
+    /// </remarks>
+    /// <param name="manifestFiles">The manifest entries whose chunk references are indexed.</param>
+    /// <param name="chunksDir">The directory the encrypted chunk files are read from.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key used to test a candidate nonce.</param>
+    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to decrypt chunks.</param>
+    /// <param name="cancellationToken">A token to cancel the deferred resolution.</param>
+    /// <returns>A cache keyed by Base64 chunk hash whose values resolve to the effective Base64 nonce.</returns>
     private ConcurrentDictionary<string, Lazy<Task<string>>> BuildStoredChunkNonceCache(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
         string chunksDir,
@@ -1258,6 +1367,23 @@ internal sealed class ChunkedBackupService(
         return storedChunks;
     }
 
+    /// <summary>
+    /// Determines which of a chunk's recorded nonces its stored ciphertext authenticates under.
+    /// </summary>
+    /// <remarks>
+    /// A single candidate is trusted without reading the chunk. When the manifest disagrees about a
+    /// chunk's nonce, each candidate is tried in turn and the first one that authenticates wins; the
+    /// decrypted plaintext is discarded and zeroed because only the nonce is needed.
+    /// </remarks>
+    /// <param name="chunkHashB64">The Base64-encoded SHA-256 content hash of the chunk.</param>
+    /// <param name="nonceCandidates">The distinct Base64 nonces the manifest records for the chunk.</param>
+    /// <param name="chunksDir">The directory the encrypted chunk file is read from.</param>
+    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="namingKey">The sub-key the chunk's on-disk file name is derived from.</param>
+    /// <param name="encryptionStrategy">The strategy used to decrypt the chunk.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The Base64 nonce the stored chunk authenticates under.</returns>
+    /// <exception cref="CryptographicException">No candidate was supplied or none authenticates the stored chunk.</exception>
     private async Task<string> ResolveChunkNonceAsync(
         string chunkHashB64,
         string[] nonceCandidates,
@@ -1350,6 +1476,18 @@ internal sealed class ChunkedBackupService(
         throw lastException ?? new CryptographicException();
     }
 
+    /// <summary>
+    /// Groups the distinct nonces a manifest records for each chunk hash.
+    /// </summary>
+    /// <remarks>
+    /// Every entry path, chunk hash, and nonce is validated here so a malformed manifest is rejected
+    /// up front. The decoded bytes serve only as a length check and are zeroed immediately; the
+    /// Base64 forms are what the caller keys and returns.
+    /// </remarks>
+    /// <param name="manifestFiles">The manifest entries to scan.</param>
+    /// <returns>A dictionary mapping each Base64 chunk hash to its distinct Base64 nonces.</returns>
+    /// <exception cref="InvalidDataException">An entry path is empty, rooted, or contains traversal or invalid characters.</exception>
+    /// <exception cref="CryptographicException">A chunk hash or nonce is not Base64 of the expected length.</exception>
     private static Dictionary<string, string[]> BuildChunkNonceCandidates(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
@@ -1395,6 +1533,19 @@ internal sealed class ChunkedBackupService(
         );
     }
 
+    /// <summary>
+    /// Awaits the store operation for a chunk and returns its nonce, evicting a failed operation from
+    /// the cache so a later file re-attempts it instead of reusing a permanently faulted task.
+    /// </summary>
+    /// <remarks>
+    /// Only the operation this caller published is evicted, identified by reference, so an entry a
+    /// concurrent caller won the race with is never removed. The failure is always rethrown.
+    /// </remarks>
+    /// <param name="chunkHashB64">The Base64-encoded content hash keying the chunk in the cache.</param>
+    /// <param name="storedChunk">The operation actually held in the cache, which may belong to another caller.</param>
+    /// <param name="candidateChunk">The operation this caller offered when adding the entry.</param>
+    /// <param name="storedChunks">The shared cache of chunk store operations.</param>
+    /// <returns>The Base64-encoded nonce the chunk was stored with.</returns>
     private static async Task<string> AwaitStoredChunkNonceAsync(
         string chunkHashB64,
         Lazy<Task<string>> storedChunk,
@@ -1419,6 +1570,18 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Orders manifest entries by path and rewrites every chunk reference with the nonce the stored
+    /// chunk actually authenticates under.
+    /// </summary>
+    /// <remarks>
+    /// An update carries unchanged entries over from the previous manifest, so their recorded nonces
+    /// can disagree with the chunk on disk; canonicalizing before saving keeps the manifest
+    /// consistent with the stored ciphertext and makes the written order deterministic.
+    /// </remarks>
+    /// <param name="entries">The entries collected for the new manifest.</param>
+    /// <param name="storedChunks">The cache resolving a chunk hash to its effective nonce.</param>
+    /// <returns>The entries ordered by path, each carrying the resolved chunk nonces.</returns>
     private static async Task<IReadOnlyList<ChunkManifestFileEntry>> CanonicalizeChunkEntriesAsync(
         IEnumerable<ChunkManifestFileEntry> entries,
         ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks
@@ -1452,6 +1615,21 @@ internal sealed class ChunkedBackupService(
         return canonicalEntries;
     }
 
+    /// <summary>
+    /// Deletes the chunk files in the chunks directory that the newly saved manifest no longer
+    /// references.
+    /// </summary>
+    /// <remarks>
+    /// Pruning is best-effort cleanup that runs only after the manifest has been written, so nothing
+    /// it does can lose data: a chunk that cannot be removed because it is locked or access is denied
+    /// is left behind as a harmless orphan, and any other failure is swallowed rather than failing an
+    /// update that has already completed.
+    /// </remarks>
+    /// <param name="chunksDir">The directory holding the stored chunk files.</param>
+    /// <param name="referencedChunkHashes">The Base64 chunk hashes the new manifest still references.</param>
+    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the unreferenced chunk files have been pruned.</returns>
     private async Task DeleteOrphanedChunksAsync(
         string chunksDir,
         IEnumerable<string> referencedChunkHashes,
@@ -1498,19 +1676,23 @@ internal sealed class ChunkedBackupService(
                     }
                     catch
                     {
-                        // Best-effort deletion; a chunk that cannot be removed (locked or access
-                        // denied) is left as a harmless orphan rather than failing the update.
                     }
                 }
             }
         }
         catch
         {
-            // Orphan-chunk pruning is best-effort cleanup performed only after the manifest is
-            // saved; a failure here must never fail an already-completed update.
         }
     }
 
+    /// <summary>
+    /// Enumerates every file under a source directory, sorted with the platform's path comparison so
+    /// runs over the same tree process files in a repeatable order.
+    /// </summary>
+    /// <param name="sourcePath">The directory to enumerate.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The sorted file paths and their root, or <see langword="null"/> if the directory does not exist.</returns>
+    /// <exception cref="ArgumentException"><paramref name="sourcePath"/> is <see langword="null"/> or whitespace.</exception>
     private async Task<(string[] SourceFiles, string SourceRoot)?> ResolveSourceAsync(
         string sourcePath,
         CancellationToken cancellationToken
@@ -1531,6 +1713,12 @@ internal sealed class ChunkedBackupService(
         return (sourceFiles, sourcePath);
     }
 
+    /// <summary>
+    /// Resolves the compression strategy for a mode, treating <see cref="CompressionMode.None"/> as
+    /// no strategy so chunks bypass the compression path entirely.
+    /// </summary>
+    /// <param name="compressionMode">The compression mode recorded for the backup.</param>
+    /// <returns>The compression strategy, or <see langword="null"/> when compression is disabled.</returns>
     private ICompressionStrategy? CreateCompressionStrategy(CompressionMode compressionMode)
     {
         return compressionMode == CompressionMode.None
@@ -1538,6 +1726,17 @@ internal sealed class ChunkedBackupService(
             : compressionServiceFactory.Create(compressionMode);
     }
 
+    /// <summary>
+    /// Derives the master key from the password and salt, then expands it into the purpose-bound
+    /// sub-keys used for chunk encryption, nonce derivation, chunk naming, and the manifest.
+    /// </summary>
+    /// <remarks>
+    /// The master key is zeroed if sub-key expansion fails, so no key material survives an error.
+    /// </remarks>
+    /// <param name="password">The user's password.</param>
+    /// <param name="salt">The master salt generated for or read from the backup.</param>
+    /// <param name="kdf">The key derivation algorithm recorded in the manifest preamble.</param>
+    /// <returns>The derived key set; disposing it wipes every key it holds.</returns>
     private DerivedKeySet DeriveKeySet(string password, byte[] salt, KeyDerivationAlgorithm kdf)
     {
         var strategy = keyDerivationServiceFactory.Create(kdf);
@@ -1560,6 +1759,17 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Expands a 256-bit sub-key from the master key with HKDF-Expand over SHA-256.
+    /// </summary>
+    /// <remarks>
+    /// Only the expand step is applied because the master key is already a full-length output of a
+    /// password-based KDF; the context label is what keeps each sub-key bound to one purpose and
+    /// independent of the others.
+    /// </remarks>
+    /// <param name="masterKey">The master key derived from the password.</param>
+    /// <param name="context">The label identifying the sub-key's purpose.</param>
+    /// <returns>The derived sub-key.</returns>
     private static byte[] DeriveSubKey(byte[] masterKey, ReadOnlySpan<byte> context)
     {
         var subKey = new byte[KeySizeBytes];
@@ -1567,6 +1777,12 @@ internal sealed class ChunkedBackupService(
         return subKey;
     }
 
+    /// <summary>
+    /// Wraps a block of memory in a non-writable stream, reusing the backing array when the memory
+    /// exposes one so chunk data is not copied.
+    /// </summary>
+    /// <param name="data">The bytes to expose as a stream.</param>
+    /// <returns>A read-only stream over the data.</returns>
     private static MemoryStream CreateReadOnlyStream(ReadOnlyMemory<byte> data)
     {
         return System.Runtime.InteropServices.MemoryMarshal.TryGetArray(data, out var segment)
@@ -1574,6 +1790,10 @@ internal sealed class ChunkedBackupService(
             : new MemoryStream(data.ToArray(), writable: false);
     }
 
+    /// <summary>
+    /// Generates the random master salt that seeds key derivation for a new backup.
+    /// </summary>
+    /// <returns>A fresh salt of <see cref="EncryptionConstants.SaltSize"/> bytes.</returns>
     private static byte[] GenerateSalt()
     {
         var salt = new byte[EncryptionConstants.SaltSize];
@@ -1581,6 +1801,16 @@ internal sealed class ChunkedBackupService(
         return salt;
     }
 
+    /// <summary>
+    /// Computes a chunk's on-disk name as the lowercase hex of <c>HMAC-SHA256(namingKey, chunkHash)</c>.
+    /// </summary>
+    /// <remarks>
+    /// Keying the name keeps the content hashes off disk, so someone reading the chunks directory
+    /// cannot test whether a known file is part of the backup. The intermediate HMAC is zeroed.
+    /// </remarks>
+    /// <param name="namingKey">The chunk-naming sub-key.</param>
+    /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
+    /// <returns>The chunk file name without its extension.</returns>
     private static string ComputeChunkFileName(byte[] namingKey, byte[] chunkHash)
     {
         var hmac = HMACSHA256.HashData(namingKey, chunkHash);
@@ -1594,6 +1824,21 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Copies a stream to a destination while appending the copied bytes to a running hash, stopping
+    /// with an error if the copy would exceed the caller's byte budget.
+    /// </summary>
+    /// <remarks>
+    /// The budget bounds decompression to the size the manifest declares for the file, so a crafted
+    /// chunk cannot expand without limit. The pooled buffer is zeroed before it is returned.
+    /// </remarks>
+    /// <param name="source">The stream to read from.</param>
+    /// <param name="destination">The stream the bytes are written to.</param>
+    /// <param name="hasher">The running hash the copied bytes are appended to.</param>
+    /// <param name="maxBytes">The maximum number of bytes this copy is allowed to produce.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The number of bytes copied.</returns>
+    /// <exception cref="InvalidDataException">The source yields more than <paramref name="maxBytes"/> bytes.</exception>
     private static async Task<long> CopyToWithHashAsync(
         Stream source,
         Stream destination,
@@ -1640,6 +1885,15 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Adds up the sizes of the files about to be backed up to seed the progress total.
+    /// </summary>
+    /// <remarks>
+    /// The total only feeds progress reporting, so a file whose size cannot be read (removed, locked,
+    /// or overflowing the running sum) is skipped rather than failing the backup.
+    /// </remarks>
+    /// <param name="files">The file paths to measure.</param>
+    /// <returns>The total size in bytes of the files that could be measured.</returns>
     private long SumFileSizes(IEnumerable<string> files)
     {
         long total = 0;
@@ -1655,14 +1909,24 @@ internal sealed class ChunkedBackupService(
             }
             catch
             {
-                // The sum only feeds the progress total; skip any file whose size cannot be read
-                // (removed, locked, or overflowing) rather than failing the backup.
             }
         }
 
         return total;
     }
 
+    /// <summary>
+    /// Decodes a Base64 value read from the manifest and enforces its exact decoded length.
+    /// </summary>
+    /// <remarks>
+    /// Length is checked before the bytes reach any cryptographic primitive, and a buffer of the
+    /// wrong size is zeroed before the failure is raised.
+    /// </remarks>
+    /// <param name="value">The Base64 text to decode.</param>
+    /// <param name="expectedLength">The exact number of bytes the value must decode to.</param>
+    /// <param name="errorMessage">The message carried by the exception when validation fails.</param>
+    /// <returns>The decoded bytes.</returns>
+    /// <exception cref="CryptographicException">The value is not valid Base64 or decodes to the wrong length.</exception>
     private static byte[] DecodeBase64FixedLength(
         string value,
         int expectedLength,
@@ -1689,6 +1953,18 @@ internal sealed class ChunkedBackupService(
         return decoded;
     }
 
+    /// <summary>
+    /// Validates that a manifest entry path is relative and free of traversal segments and illegal
+    /// characters, with an extra per-segment file name check on Windows.
+    /// </summary>
+    /// <remarks>
+    /// Applied to paths both on the way into and on the way out of a manifest, so neither a hostile
+    /// source tree nor a crafted manifest can steer a write outside the destination.
+    /// </remarks>
+    /// <param name="relativePath">The entry path to validate.</param>
+    /// <exception cref="InvalidDataException">
+    /// The path is empty, rooted, contains invalid characters, or contains a <c>..</c> segment.
+    /// </exception>
     private static void ValidateRelativeManifestPath(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
@@ -1727,6 +2003,19 @@ internal sealed class ChunkedBackupService(
         }
     }
 
+    /// <summary>
+    /// Resolves a manifest entry path against the restore root and confirms the result stays inside
+    /// that root.
+    /// </summary>
+    /// <remarks>
+    /// Both paths are fully resolved first and the root is compared with a trailing separator, so a
+    /// sibling directory whose name merely starts with the root's name is not accepted as being
+    /// inside it.
+    /// </remarks>
+    /// <param name="destinationRoot">The directory restored files must stay within.</param>
+    /// <param name="relativePath">The entry path taken from the manifest.</param>
+    /// <returns>The absolute path the restored file may be written to.</returns>
+    /// <exception cref="InvalidDataException">The path is invalid or resolves outside the destination root.</exception>
     private static string ResolveSafeDestinationPath(string destinationRoot, string relativePath)
     {
         ValidateRelativeManifestPath(relativePath);
@@ -1740,6 +2029,11 @@ internal sealed class ChunkedBackupService(
             : destinationFullPath;
     }
 
+    /// <summary>
+    /// Appends a directory separator to a path unless it already ends with one.
+    /// </summary>
+    /// <param name="path">The path to normalize.</param>
+    /// <returns>The path terminated by a directory separator.</returns>
     private static string EnsureTrailingDirectorySeparator(string path)
     {
         return
@@ -1749,6 +2043,12 @@ internal sealed class ChunkedBackupService(
             : path + Path.DirectorySeparatorChar;
     }
 
+    /// <summary>
+    /// Determines whether a failure is confined to the file being processed, in which case the run
+    /// records the error and moves on instead of aborting the whole operation.
+    /// </summary>
+    /// <param name="ex">The exception thrown while processing a file.</param>
+    /// <returns><see langword="true"/> if the failure affects only one file; otherwise <see langword="false"/>.</returns>
     private static bool IsFileLevelError(Exception ex)
     {
         return ex
@@ -1759,6 +2059,15 @@ internal sealed class ChunkedBackupService(
                 or UnauthorizedAccessException;
     }
 
+    /// <summary>
+    /// Owns the master key and the purpose-bound sub-keys for the duration of a single operation, so
+    /// that disposing the set wipes all of them together.
+    /// </summary>
+    /// <param name="masterKey">The key derived from the password and the master salt.</param>
+    /// <param name="chunkEncryptionKey">The sub-key chunk contents are encrypted with.</param>
+    /// <param name="chunkNonceKey">The sub-key per-chunk nonces are derived from.</param>
+    /// <param name="namingKey">The sub-key chunk file names are derived from.</param>
+    /// <param name="manifestEncryptionKey">The sub-key the manifest is encrypted with.</param>
     private sealed class DerivedKeySet(
         byte[] masterKey,
         byte[] chunkEncryptionKey,
@@ -1767,16 +2076,34 @@ internal sealed class ChunkedBackupService(
         byte[] manifestEncryptionKey
         ) : IDisposable
     {
+        /// <summary>
+        /// Gets the password-derived key every sub-key is expanded from.
+        /// </summary>
         public byte[] MasterKey { get; } = masterKey;
 
+        /// <summary>
+        /// Gets the sub-key used to encrypt and decrypt chunk contents.
+        /// </summary>
         public byte[] ChunkEncryptionKey { get; } = chunkEncryptionKey;
 
+        /// <summary>
+        /// Gets the sub-key each chunk's deterministic nonce is derived from.
+        /// </summary>
         public byte[] ChunkNonceKey { get; } = chunkNonceKey;
 
+        /// <summary>
+        /// Gets the sub-key each chunk's on-disk file name is derived from.
+        /// </summary>
         public byte[] NamingKey { get; } = namingKey;
 
+        /// <summary>
+        /// Gets the sub-key used to encrypt and decrypt the manifest.
+        /// </summary>
         public byte[] ManifestEncryptionKey { get; } = manifestEncryptionKey;
 
+        /// <summary>
+        /// Wipes the master key and every sub-key from memory.
+        /// </summary>
         public void Dispose()
         {
             CryptographicOperations.ZeroMemory(MasterKey);

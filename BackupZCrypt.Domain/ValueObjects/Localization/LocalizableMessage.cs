@@ -5,14 +5,10 @@ namespace BackupZCrypt.Domain.ValueObjects.Localization;
 /// <see cref="MessageCode"/> plus its format arguments. The presentation layer resolves
 /// the code to a localized string and applies the arguments; no translated text ever lives here.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="LocalizableMessage"/> class.
-/// </remarks>
 /// <param name="code">The language-neutral code identifying the message.</param>
 /// <param name="args">The format arguments applied when the code is resolved to localized text.</param>
 public sealed class LocalizableMessage(MessageCode code, params object[] args)
 {
-
     /// <summary>
     /// Gets the language-neutral code identifying the message.
     /// </summary>

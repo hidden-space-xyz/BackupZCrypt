@@ -19,7 +19,7 @@ public interface IPasswordService
     /// Generates a cryptographically random password of the requested length.
     /// </summary>
     /// <param name="length">The number of characters the generated password must contain.</param>
-    /// <param name="options">Flags selecting which character classes to include and exclusions to apply.</param>
+    /// <param name="options">The flags selecting which character classes to include and exclusions to apply.</param>
     /// <returns>A randomly generated password.</returns>
     public string GeneratePassword(int length, PasswordGenerationOptions options);
 }

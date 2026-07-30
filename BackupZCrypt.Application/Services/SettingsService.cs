@@ -10,21 +10,31 @@ namespace BackupZCrypt.Application.Services;
 /// Persists strongly typed settings as indented JSON files under a per-user application data
 /// directory, recreating defaults when a file is missing or corrupted.
 /// </summary>
-/// <param name="fileOperationsService">Service used to read and write settings files.</param>
+/// <param name="fileOperationsService">The service used to read and write settings files.</param>
 /// <param name="baseDirectoryPath">An optional override for the settings directory; defaults to local application data.</param>
 internal sealed class SettingsService(
     IFileOperationsService fileOperationsService,
     string? baseDirectoryPath = null
 ) : ISettingsService
 {
+    /// <summary>
+    /// The folder created under the per-user application data directory that holds every settings file.
+    /// </summary>
     private const string SettingsDirectoryName = "BackupZCrypt";
 
+    /// <summary>
+    /// The JSON options shared by reads and writes: indented output, with enums stored as names so a settings
+    /// file stays readable and survives renumbering of the enum members.
+    /// </summary>
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
         Converters = { new JsonStringEnumConverter() },
     };
 
+    /// <summary>
+    /// Gets the directory that settings files are read from and written to.
+    /// </summary>
     private string BaseDirectoryPath { get; } =
         baseDirectoryPath
         ?? Path.Combine(
@@ -47,6 +57,10 @@ internal sealed class SettingsService(
     /// <summary>
     /// Loads the persisted settings, recreating and saving the defaults when the file is absent or corrupted.
     /// </summary>
+    /// <remarks>
+    /// A corrupt or version-incompatible settings file is deliberately not treated as fatal: the deserialization
+    /// failure is swallowed and the file is replaced with the defaults.
+    /// </remarks>
     /// <typeparam name="T">The settings type to load.</typeparam>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The loaded settings, or freshly created defaults.</returns>
@@ -78,7 +92,6 @@ internal sealed class SettingsService(
         }
         catch (JsonException)
         {
-            // A corrupt or incompatible settings file is not fatal; fall through to recreate it from defaults.
         }
 
         var recreated = T.DefaultValue;
