@@ -265,14 +265,21 @@ jobs:
       - name: Restore
         run: dotnet restore "$SOLUTION"
 
-      # -p:BuildingPortablePackage=true stops the Desktop GeneratePortablePackages target
-      # from publishing all four runtimes while the solution is built in Release.
+      # -p:BuildingPortablePackage=true stops the Desktop GeneratePortablePackages target from
+      # publishing all four runtimes while the solution is built in Release. It matters more now that
+      # the test project references Desktop, which would otherwise drag that target into every test run.
+      #
+      # --blame-hang-timeout turns a deadlocked test into a dump plus a clear failure instead of a job
+      # that burns the full six-hour runner budget; the suite finishes in well under a minute.
       - name: Test
         run: |
           dotnet test "$SOLUTION" \
             --configuration Release \
             --no-restore \
             -p:BuildingPortablePackage=true \
+            --collect:"XPlat Code Coverage" \
+            --settings coverlet.runsettings \
+            --blame-hang-timeout 5m \
             --logger "trx;LogFileName=test-results.trx" \
             --results-directory "$GITHUB_WORKSPACE/test-results"
 

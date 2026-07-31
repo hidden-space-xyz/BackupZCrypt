@@ -7,8 +7,16 @@ using NSubstitute;
 namespace BackupZCrypt.Test.Unit.Domain;
 
 /// <summary>
-/// Unit tests for the key-derivation service factory's strategy resolution.
+/// Unit tests for the key-derivation service factory's strategy resolution. The successful lookups
+/// are covered end to end against the real container by
+/// <see cref="BackupZCrypt.Test.Unit.Composition.StrategyRegistrationTests"/>; what only a
+/// substituted strategy set can show is what the factory does when the requested algorithm has no
+/// strategy at all.
 /// </summary>
+/// <remarks>
+/// Deriving the master key with a different function than the manifest records makes the archive
+/// permanently undecryptable, so an unknown algorithm has to fail instead.
+/// </remarks>
 public sealed class KeyDerivationServiceFactoryTests
 {
     /// <summary>
@@ -22,20 +30,6 @@ public sealed class KeyDerivationServiceFactoryTests
         var strategy = Substitute.For<IKeyDerivationAlgorithmStrategy>();
         _ = strategy.Id.Returns(id);
         return strategy;
-    }
-
-    [Test]
-    public void Create_RegisteredAlgorithm_ReturnsMatchingStrategy()
-    {
-        var argon = Stub(KeyDerivationAlgorithm.Argon2id);
-        var pbkdf2 = Stub(KeyDerivationAlgorithm.PBKDF2);
-        var factory = new KeyDerivationServiceFactory([argon, pbkdf2]);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(factory.Create(KeyDerivationAlgorithm.Argon2id), Is.SameAs(argon));
-            Assert.That(factory.Create(KeyDerivationAlgorithm.PBKDF2), Is.SameAs(pbkdf2));
-        }
     }
 
     [Test]

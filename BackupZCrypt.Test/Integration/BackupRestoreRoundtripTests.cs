@@ -22,20 +22,46 @@ public sealed class BackupRestoreRoundtripTests
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
     /// <summary>
-    /// Supplies the algorithm combinations exercised by the round-trip test.
+    /// The number of chunk files <see cref="BuildSourceTree"/> must leave on disk: one per distinct
+    /// non-empty content. The two byte-identical twins therefore share a single chunk and the empty
+    /// file contributes none, which is what makes this count an assertion about deduplication.
+    /// </summary>
+    private const int ExpectedChunkFiles = 5;
+
+    /// <summary>
+    /// A payload FastCDC is guaranteed to split, because it exceeds the strategy's 4 MiB maximum
+    /// chunk length and so forces at least one internal boundary regardless of content.
+    /// </summary>
+    private const int MultiChunkFileSize = (4 * 1024 * 1024) + 4096;
+
+    /// <summary>
+    /// Supplies the algorithm combinations exercised by the round-trip test: every cipher paired with
+    /// every compression mode under PBKDF2, the cheapest key derivation function, plus exactly one
+    /// case per memory-hard KDF so Argon2id and Scrypt each derive a real master key without
+    /// multiplying their cost across the whole matrix. Enumerating the enum members rather than
+    /// listing them means a newly added cipher or compression mode is round-tripped automatically
+    /// instead of silently escaping coverage.
     /// </summary>
     /// <returns>One case per encryption, compression, and key-derivation combination under test.</returns>
     private static IEnumerable<TestCaseData> Configs()
     {
+        foreach (var encryption in Enum.GetValues<EncryptionAlgorithm>())
+        {
+            foreach (var compression in Enum.GetValues<CompressionMode>())
+            {
+                yield return new TestCaseData(encryption, compression, KeyDerivationAlgorithm.PBKDF2);
+            }
+        }
+
         yield return new TestCaseData(
             EncryptionAlgorithm.Aes,
             CompressionMode.Zstd,
-            KeyDerivationAlgorithm.PBKDF2
+            KeyDerivationAlgorithm.Argon2id
         );
         yield return new TestCaseData(
-            EncryptionAlgorithm.Aes,
+            EncryptionAlgorithm.ChaCha20,
             CompressionMode.None,
-            KeyDerivationAlgorithm.Argon2id
+            KeyDerivationAlgorithm.Scrypt
         );
     }
 
@@ -84,6 +110,11 @@ public sealed class BackupRestoreRoundtripTests
         {
             Assert.That(File.Exists(manifestPath), Is.True, $"Manifest not written at '{manifestPath}'.");
             Assert.That(createProgress.Reports, Is.Not.Empty);
+            Assert.That(
+                ChunkFiles(destination.Path),
+                Has.Length.EqualTo(ExpectedChunkFiles),
+                "Content-addressed storage did not collapse the byte-identical files into one shared chunk."
+            );
         }
 
         var restoreProgress = new RecordingProgress<BackupStatus>();
@@ -110,6 +141,68 @@ public sealed class BackupRestoreRoundtripTests
         }
 
         AssertTreesByteIdentical(expected, restored.Path);
+    }
+
+    [Test]
+    public async Task CreateThenRestore_FileLongerThanTheMaximumChunk_ReassemblesItsChunksInOrder()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restored = new TempDir();
+
+        var content = DeterministicBytes(MultiChunkFileSize, seed: 7);
+        _ = source.WriteFile("split.bin", content);
+
+        var createResult = await orchestrator.ExecuteAsync(
+            NewRequest(
+                source.Path,
+                destination.Path,
+                EncryptionAlgorithm.Aes,
+                CompressionMode.None,
+                KeyDerivationAlgorithm.PBKDF2,
+                BackupOperation.Create
+            ),
+            new RecordingProgress<BackupStatus>()
+        );
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(createResult.IsSuccess, Is.True, DescribeErrors("Create failed", createResult.Errors));
+            Assert.That(createResult.Value.IsSuccess, Is.True);
+            Assert.That(
+                ChunkFiles(destination.Path),
+                Has.Length.GreaterThan(1),
+                "The payload exceeds the maximum chunk length, so it must be stored as several chunks."
+            );
+        }
+
+        var restoreResult = await orchestrator.ExecuteAsync(
+            NewRequest(
+                destination.Path,
+                restored.Path,
+                EncryptionAlgorithm.Aes,
+                CompressionMode.None,
+                KeyDerivationAlgorithm.PBKDF2,
+                BackupOperation.Restore
+            ),
+            new RecordingProgress<BackupStatus>()
+        );
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(restoreResult.IsSuccess, Is.True, DescribeErrors("Restore failed", restoreResult.Errors));
+            Assert.That(restoreResult.Value.IsSuccess, Is.True);
+        }
+
+        Assert.That(
+            await File.ReadAllBytesAsync(Path.Combine(restored.Path, "split.bin")),
+            Is.EqualTo(content),
+            "A reassembly that concatenated the chunks in the wrong order would still produce a file of the "
+                + "right length, so this byte comparison is what pins the ordering."
+        );
     }
 
     [Test]
@@ -241,8 +334,9 @@ public sealed class BackupRestoreRoundtripTests
     }
 
     /// <summary>
-    /// Populates the source directory with the tree the round trip must reproduce: nested folders,
-    /// text, an empty file, a 37-byte file, and a 512 KiB binary payload.
+    /// Populates the source directory with the tree the round trip must reproduce: nested folders, a
+    /// zero-length file, a small binary payload, and two byte-identical files in different folders so
+    /// deduplication has something to collapse.
     /// </summary>
     /// <param name="source">The temporary directory to write the tree into.</param>
     /// <returns>The written content keyed by path relative to <paramref name="source"/>.</returns>
@@ -256,11 +350,14 @@ public sealed class BackupRestoreRoundtripTests
             files[relativePath] = content;
         }
 
+        var repeated = "Repeated content stored once and referenced twice.\n"u8.ToArray();
+
         Add("readme.txt", "Hello, BackupZCrypt integration test.\n"u8.ToArray());
         Add(Path.Combine("docs", "notes.md"), "# Notes\n\nNested file content.\n"u8.ToArray());
         Add(Path.Combine("docs", "sub", "deep.txt"), "Deeply nested.\n"u8.ToArray());
         Add("empty.dat", []);
-        Add("binary.bin", DeterministicBytes(512 * 1024, seed: 1234));
+        Add("twin-a.txt", repeated);
+        Add(Path.Combine("docs", "twin-b.txt"), repeated);
         Add("small.bin", DeterministicBytes(37, seed: 99));
 
         return files;
@@ -277,6 +374,19 @@ public sealed class BackupRestoreRoundtripTests
         var data = new byte[length];
         new Random(seed).NextBytes(data);
         return data;
+    }
+
+    /// <summary>
+    /// Lists the encrypted chunk files stored under a backup root.
+    /// </summary>
+    /// <param name="backupRoot">The directory a backup was written to.</param>
+    /// <returns>The absolute paths of the stored chunk files.</returns>
+    private static string[] ChunkFiles(string backupRoot)
+    {
+        return Directory.GetFiles(
+            Path.Combine(backupRoot, BackupConstants.ChunksDirectoryName),
+            "*" + BackupConstants.AppFileExtension
+        );
     }
 
     /// <summary>

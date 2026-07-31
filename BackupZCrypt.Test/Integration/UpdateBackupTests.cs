@@ -1,4 +1,5 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
@@ -18,6 +19,12 @@ public sealed class UpdateBackupTests
     /// </summary>
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
+    /// <summary>
+    /// The content shared by two files in different folders, so both entries reference one chunk and
+    /// deleting only one of them must not reclaim it.
+    /// </summary>
+    private const string SharedContent = "shared twin content";
+
     [Test]
     public async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
@@ -36,7 +43,11 @@ public sealed class UpdateBackupTests
             NewRequest(source.Path, destination.Path, BackupOperation.Create),
             new RecordingProgress<BackupStatus>()
         );
-        Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
+            Assert.That(ChunkFiles(destination.Path), Has.Length.EqualTo(3));
+        }
 
         const string modifiedContent = "MODIFIED content that is clearly different from the original";
         _ = source.WriteText("changing.txt", modifiedContent);
@@ -55,8 +66,21 @@ public sealed class UpdateBackupTests
                     "Update did not succeed."
                 );
 
-            Assert.That(updateResult.Value.TotalFiles, Is.EqualTo(2));
+            Assert.That(
+                updateResult.Value.TotalFiles,
+                Is.EqualTo(2),
+                "Only the modified and the added file may be re-chunked; the two untouched files are carried "
+                    + "over from the previous manifest without being read back through the chunking pipeline."
+            );
             Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(updateResult.Value.TotalFiles));
+
+            Assert.That(
+                ChunkFiles(destination.Path),
+                Has.Length.EqualTo(4),
+                "The chunk the modified file no longer references was not pruned. Four live contents remain "
+                    + "(two untouched, one rewritten, one new), so the superseded chunk of changing.txt is the "
+                    + "only one pruning may reclaim."
+            );
         }
 
         var restoreResult = await orchestrator.ExecuteAsync(
@@ -88,6 +112,101 @@ public sealed class UpdateBackupTests
                 Is.EqualTo(addedContent)
             );
         }
+    }
+
+    [Test]
+    public async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restored = new TempDir();
+
+        var uniquePath = source.WriteText("unique.txt", "unique content");
+        var twinPath = source.WriteText("twin-a.txt", SharedContent);
+        var survivorRelativePath = Path.Combine("dir", "twin-b.txt");
+        _ = source.WriteText(survivorRelativePath, SharedContent);
+
+        var createResult = await orchestrator.ExecuteAsync(
+            NewRequest(source.Path, destination.Path, BackupOperation.Create),
+            new RecordingProgress<BackupStatus>()
+        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
+            Assert.That(createResult.Value.TotalFiles, Is.EqualTo(3));
+            Assert.That(
+                ChunkFiles(destination.Path),
+                Has.Length.EqualTo(2),
+                "The two byte-identical files should have been stored as a single shared chunk."
+            );
+        }
+
+        File.Delete(uniquePath);
+        File.Delete(twinPath);
+
+        var updateResult = await orchestrator.ExecuteAsync(
+            NewRequest(source.Path, destination.Path, BackupOperation.Update),
+            new RecordingProgress<BackupStatus>()
+        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(updateResult.IsSuccess, Is.True);
+            Assert.That(updateResult.Value.IsSuccess, Is.True, "Update did not succeed.");
+
+            Assert.That(
+                updateResult.Value.TotalFiles,
+                Is.EqualTo(0),
+                "The only surviving file is unchanged, so nothing at all has to be re-chunked."
+            );
+
+            Assert.That(
+                ChunkFiles(destination.Path),
+                Has.Length.EqualTo(1),
+                "Pruning reclaimed the wrong number of chunks after a source file was deleted. The deleted "
+                    + "unique file releases its chunk, but the shared chunk was introduced by the deleted twin "
+                    + "and is still referenced by the survivor, so pruning must leave it alone."
+            );
+        }
+
+        var restoreResult = await orchestrator.ExecuteAsync(
+            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
+            new RecordingProgress<BackupStatus>()
+        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                Is.True,
+                "Restore after the pruning update did not succeed."
+            );
+
+            Assert.That(restoreResult.Value.TotalFiles, Is.EqualTo(1), "The deleted entries were not dropped.");
+            Assert.That(
+                Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories),
+                Has.Length.EqualTo(1)
+            );
+            Assert.That(
+                await File.ReadAllTextAsync(Path.Combine(restored.Path, survivorRelativePath)),
+                Is.EqualTo(SharedContent),
+                "The survivor's shared chunk was destroyed by pruning the file that introduced it."
+            );
+        }
+    }
+
+    /// <summary>
+    /// Lists the encrypted chunk files stored under a backup root.
+    /// </summary>
+    /// <param name="backupRoot">The directory a backup was written to.</param>
+    /// <returns>The absolute paths of the stored chunk files.</returns>
+    private static string[] ChunkFiles(string backupRoot)
+    {
+        return Directory.GetFiles(
+            Path.Combine(backupRoot, BackupConstants.ChunksDirectoryName),
+            "*" + BackupConstants.AppFileExtension
+        );
     }
 
     /// <summary>

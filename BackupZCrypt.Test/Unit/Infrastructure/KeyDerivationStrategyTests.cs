@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
@@ -7,6 +9,14 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 /// <summary>
 /// Unit tests for the key-derivation strategies (Argon2id, PBKDF2, and scrypt).
 /// </summary>
+/// <remarks>
+/// Each strategy wraps its provider's failures in a <see cref="CryptographicException"/>, the only
+/// exception type the layers above expect from a key derivation: a raw provider exception escaping is
+/// mapped to "unexpected error" instead of a password or KDF problem, and the inner exception has to
+/// survive because a derivation failure is otherwise undiagnosable from the message alone. A null
+/// password is simply the cheapest way to make a derivation fail - it fails on the first statement
+/// inside the guarded block, so not a single round of PBKDF2, scrypt or Argon2id is computed.
+/// </remarks>
 public sealed class KeyDerivationStrategyTests
 {
     /// <summary>
@@ -62,5 +72,21 @@ public sealed class KeyDerivationStrategyTests
 
         var keyOtherPassword = kdf.DeriveKey(Password + "!", Salt, KeySizeBits);
         Assert.That(keyOtherPassword, Is.Not.EqualTo(key));
+    }
+
+    [TestCaseSource(nameof(Kdfs))]
+    public void DeriveKey_WhenDerivationFails_ReportsACryptographicExceptionThatKeepsTheCause(
+        IKeyDerivationAlgorithmStrategy kdf
+    )
+    {
+        var error = Assert.Throws<CryptographicException>(
+            () => kdf.DeriveKey(null!, Salt, KeySizeBits)
+        );
+
+        Assert.That(
+            error?.InnerException,
+            Is.Not.Null,
+            "The provider failure was swallowed, leaving nothing to diagnose the derivation with."
+        );
     }
 }

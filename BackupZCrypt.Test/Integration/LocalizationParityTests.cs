@@ -6,13 +6,17 @@ namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
 /// Verifies that every message code has an English resx key and that the English and Spanish keys match.
+/// These tests read the resource files themselves, which is what makes both key sets visible at once;
+/// <c>MessageLocalizerTests</c> covers the complementary runtime question of whether the resources actually
+/// resolve through the resource manager for the culture in effect.
 /// </summary>
 public sealed class LocalizationParityTests
 {
     /// <summary>
-    /// The path of the English resource file, pointing at the copy the build places in the test
-    /// output rather than at the Desktop project, which is not referenced here so Avalonia is not
-    /// pulled in.
+    /// The path of the English resource file. The assertions compare the declared key sets of both
+    /// languages, which the compiled resources cannot answer because they only expose the values of the
+    /// culture currently in effect, so the resx XML is parsed instead — read from the copy the build places
+    /// in the test output, since the tests run from that directory rather than from the repository.
     /// </summary>
     private static readonly string EnglishResxPath = Path.Combine(
         AppContext.BaseDirectory,

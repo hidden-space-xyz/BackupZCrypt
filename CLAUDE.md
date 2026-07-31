@@ -101,6 +101,11 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
   dedupes, but key-dependent). On-disk chunk filename = `HMAC-SHA256(namingKey, chunkHash)` hex +
   `.bzc`, so filenames never leak the content hash. Optional Zstd compression is applied **before**
   encryption. AEAD associated data = `chunkHash ‖ nonce`.
+- **Entry paths.** A manifest entry path is portable data, not a host path: it is always written with
+  `/` separators (`ToManifestPath`) and translated back to the host separator on restore
+  (`ToPlatformPath`), so a Windows-written archive rebuilds the same tree on Unix. Both separators are
+  recognized on every platform, which also keeps traversal detection platform-independent — a crafted
+  `..\..\escape` is rejected on Unix, where `\` is otherwise a legal file-name character.
 - **Manifest.** `manifest.bzc` = unencrypted 34-byte preamble (`algo` byte, `kdf` byte, 32-byte
   salt) + 12-byte nonce + AEAD-encrypted JSON document. The preamble is the AEAD associated data;
   the master salt is echoed inside the encrypted document and `FixedTimeEquals`-checked against the

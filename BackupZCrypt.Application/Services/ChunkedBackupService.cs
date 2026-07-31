@@ -58,6 +58,19 @@ internal sealed class ChunkedBackupService(
     private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
 
     /// <summary>
+    /// The separators recognized inside a manifest entry path, independent of the running platform.
+    /// </summary>
+    /// <remarks>
+    /// A manifest is portable data, not a host path: an archive written on Windows must restore to the
+    /// same directory tree on Linux and macOS. Both separators are therefore always recognized, so a
+    /// legacy entry such as <c>docs\notes.md</c> still splits into segments on Unix — where <c>\</c> is
+    /// an ordinary file-name character — instead of collapsing the tree into one oddly named file.
+    /// Treating both as separators everywhere also makes traversal detection platform-independent, so
+    /// a crafted <c>..\..\escape</c> entry is rejected on Unix rather than slipping past the check.
+    /// </remarks>
+    private static readonly char[] ManifestPathSeparators = ['/', '\\'];
+
+    /// <summary>
     /// The characters that may never appear inside a single path segment on Windows.
     /// </summary>
     private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
@@ -163,9 +176,8 @@ internal sealed class ChunkedBackupService(
                         {
                             try
                             {
-                                var relativePath = fileOperationsService.GetRelativePath(
-                                    sourceRoot,
-                                    file
+                                var relativePath = ToManifestPath(
+                                    fileOperationsService.GetRelativePath(sourceRoot, file)
                                 );
 
                                 ValidateRelativeManifestPath(relativePath);
@@ -294,6 +306,11 @@ internal sealed class ChunkedBackupService(
     /// rewriting the manifest, and deleting chunks no longer referenced once the manifest is saved.
     /// The encryption, key derivation, and compression settings are taken from the existing backup.
     /// </summary>
+    /// <remarks>
+    /// Existing entries are indexed by their canonical manifest path, so an archive written by an earlier
+    /// version that recorded Windows separators still matches the files it already holds instead of
+    /// re-adding every one of them as new.
+    /// </remarks>
     /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
     /// <param name="destinationPath">The directory containing the existing backup to update.</param>
     /// <param name="request">The backup request carrying the password used to open the manifest.</param>
@@ -375,7 +392,7 @@ internal sealed class ChunkedBackupService(
             foreach (var entry in existingManifest.Files)
             {
                 ValidateRelativeManifestPath(entry.OriginalPath);
-                existingFileIndex[entry.OriginalPath] = entry;
+                existingFileIndex[ToManifestPath(entry.OriginalPath)] = entry;
             }
 
             ConcurrentBag<ChunkManifestFileEntry> updatedEntries = [];
@@ -389,7 +406,9 @@ internal sealed class ChunkedBackupService(
 
             foreach (var file in sourceFiles)
             {
-                var relativePath = fileOperationsService.GetRelativePath(sourceRoot, file);
+                var relativePath = ToManifestPath(
+                    fileOperationsService.GetRelativePath(sourceRoot, file)
+                );
                 ValidateRelativeManifestPath(relativePath);
                 var fileSize = fileOperationsService.GetFileSize(file);
 
@@ -1983,7 +2002,7 @@ internal sealed class ChunkedBackupService(
         }
 
         var pathSegments = relativePath.Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            ManifestPathSeparators,
             StringSplitOptions.RemoveEmptyEntries
         );
 
@@ -2021,7 +2040,9 @@ internal sealed class ChunkedBackupService(
         ValidateRelativeManifestPath(relativePath);
 
         var rootFullPath = Path.GetFullPath(destinationRoot);
-        var destinationFullPath = Path.GetFullPath(Path.Combine(rootFullPath, relativePath));
+        var destinationFullPath = Path.GetFullPath(
+            Path.Combine(rootFullPath, ToPlatformPath(relativePath))
+        );
         var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
 
         return !destinationFullPath.StartsWith(rootWithSeparator, PathComparer)
@@ -2041,6 +2062,29 @@ internal sealed class ChunkedBackupService(
             || path.EndsWith(Path.AltDirectorySeparatorChar)
             ? path
             : path + Path.DirectorySeparatorChar;
+    }
+
+    /// <summary>
+    /// Converts a host-relative path into the manifest's canonical, platform-independent form.
+    /// </summary>
+    /// <remarks>
+    /// Forward slashes are the canonical separator on disk, the same convention archive formats use, so
+    /// an archive records the same entry text no matter which platform wrote it.
+    /// </remarks>
+    /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
+    /// <returns>The path with every separator normalized to <c>/</c>.</returns>
+    private static string ToManifestPath(string relativePath) => relativePath.Replace('\\', '/');
+
+    /// <summary>
+    /// Converts a manifest entry path back into a path the running platform can resolve.
+    /// </summary>
+    /// <param name="manifestPath">The entry path taken from the manifest, in either notation.</param>
+    /// <returns>The path with every separator replaced by the platform's directory separator.</returns>
+    private static string ToPlatformPath(string manifestPath)
+    {
+        return manifestPath
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
     }
 
     /// <summary>

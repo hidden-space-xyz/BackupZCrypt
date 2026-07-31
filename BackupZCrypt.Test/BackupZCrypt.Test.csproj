@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
@@ -24,6 +28,7 @@
     <ProjectReference Include="..\BackupZCrypt.Application\BackupZCrypt.Application.csproj" />
     <ProjectReference Include="..\BackupZCrypt.Infrastructure\BackupZCrypt.Infrastructure.csproj" />
     <ProjectReference Include="..\BackupZCrypt.Composition\BackupZCrypt.Composition.csproj" />
+    <ProjectReference Include="..\BackupZCrypt.Desktop\BackupZCrypt.Desktop.csproj" />
   </ItemGroup>
 
   <ItemGroup>

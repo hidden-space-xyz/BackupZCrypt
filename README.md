@@ -77,6 +77,31 @@ dotnet build BackupZCrypt.sln
 dotnet run --project BackupZCrypt.Desktop
 ```
 
+### Running the Tests
+
+```bash
+dotnet test BackupZCrypt.sln
+```
+
+The suite is designed to run unattended on CI: no test depends on wall-clock timing, throughput, or a
+specific locale, and every temporary file lives in a directory the test owns and deletes. To collect a
+coverage report, pass the settings file at the repository root:
+
+```bash
+dotnet test BackupZCrypt.sln --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+```
+
+`coverlet.runsettings` excludes only the Avalonia UI shell — the XAML code-behind, the entry point, and
+the platform adapters — which cannot run without a real window and render platform. Every layer that
+carries a cryptographic or data-integrity guarantee is measured in full.
+
+### Cross-Platform Archives
+
+Backups are portable between operating systems. The manifest records file paths with `/` separators
+regardless of the platform that wrote it, and restore accepts either separator, so an archive created on
+Windows rebuilds the same directory tree on Linux and macOS — including archives written by earlier
+versions, which recorded `\`.
+
 ### Project Structure
 
 | Project | Purpose |

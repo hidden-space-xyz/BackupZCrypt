@@ -6,12 +6,16 @@ namespace BackupZCrypt.Test.Unit.Domain;
 /// <summary>
 /// Unit tests for the backup result value object.
 /// </summary>
+/// <remarks>
+/// The guard cases assert <c>ParamName</c> rather than only the exception type, which covers all five
+/// guards individually and pins that each one still reports the constructor parameter the caller passed.
+/// </remarks>
 public sealed class BackupResultTests
 {
     [Test]
-    public void HasErrorsAndHasWarnings_ReflectSuppliedCollections()
+    public void ErrorAndWarningFlags_TrackSuppliedCollections()
     {
-        var result = new BackupResult(
+        var populated = new BackupResult(
             isSuccess: false,
             elapsedTime: TimeSpan.FromSeconds(1),
             totalBytes: 0,
@@ -21,49 +25,56 @@ public sealed class BackupResultTests
             warnings: [new LocalizableMessage(MessageCode.WeakPasswordWarning)]
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.HasErrors, Is.True);
-            Assert.That(result.HasWarnings, Is.True);
-        }
-    }
-
-    [Test]
-    public void NoErrorsOrWarnings_DefaultToEmpty()
-    {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
+        var omitted = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.HasErrors, Is.False);
-            Assert.That(result.HasWarnings, Is.False);
-            Assert.That(result.Errors, Is.Empty);
-            Assert.That(result.Warnings, Is.Empty);
+            Assert.That(populated.HasErrors, Is.True);
+            Assert.That(populated.HasWarnings, Is.True);
+            Assert.That(populated.Errors.Select(e => e.Code), Is.EqualTo([MessageCode.AllFilesFailed]));
+            Assert.That(
+                populated.Warnings.Select(w => w.Code),
+                Is.EqualTo([MessageCode.WeakPasswordWarning])
+            );
+
+            Assert.That(omitted.HasErrors, Is.False);
+            Assert.That(omitted.HasWarnings, Is.False);
+            Assert.That(omitted.Errors, Is.Empty);
+            Assert.That(omitted.Warnings, Is.Empty);
         }
     }
 
-    [Test]
-    public void FailedFiles_IsTotalMinusProcessed()
+    [TestCase(1d, 100L, 7, 10, 3, 0.7d, 100d, 7d)]
+    [TestCase(1d, 0L, 2, 8, 6, 0.25d, 0d, 2d)]
+    [TestCase(1d, 0L, 0, 0, 0, 1.0d, 0d, 0d)]
+    [TestCase(0d, 1000L, 5, 5, 0, 1.0d, 0d, 0d)]
+    [TestCase(2d, 1000L, 4, 4, 0, 1.0d, 500d, 2d)]
+    public void DerivedMetrics_ComputeExpectedValues(
+        double elapsedSeconds,
+        long totalBytes,
+        int processedFiles,
+        int totalFiles,
+        int expectedFailedFiles,
+        double expectedSuccessRate,
+        double expectedBytesPerSecond,
+        double expectedFilesPerSecond
+    )
     {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(1), 100, 7, 10);
+        var result = new BackupResult(
+            true,
+            TimeSpan.FromSeconds(elapsedSeconds),
+            totalBytes,
+            processedFiles,
+            totalFiles
+        );
 
-        Assert.That(result.FailedFiles, Is.EqualTo(3));
-    }
-
-    [Test]
-    public void SuccessRate_ZeroFiles_IsOne()
-    {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
-
-        Assert.That(result.SuccessRate, Is.EqualTo(1.0));
-    }
-
-    [Test]
-    public void SuccessRate_PartialProcessing_IsRatio()
-    {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 2, 8);
-
-        Assert.That(result.SuccessRate, Is.EqualTo(0.25));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result.FailedFiles, Is.EqualTo(expectedFailedFiles));
+            Assert.That(result.SuccessRate, Is.EqualTo(expectedSuccessRate));
+            Assert.That(result.BytesPerSecond, Is.EqualTo(expectedBytesPerSecond));
+            Assert.That(result.FilesPerSecond, Is.EqualTo(expectedFilesPerSecond));
+        }
     }
 
     [TestCase(0, 10, false)]
@@ -81,51 +92,30 @@ public sealed class BackupResultTests
         Assert.That(result.IsPartialSuccess, Is.EqualTo(expected));
     }
 
-    [Test]
-    public void BytesPerSecondAndFilesPerSecond_ZeroElapsed_ReturnZero()
+    [TestCase(-1d, 0L, 0, 0, "elapsedTime")]
+    [TestCase(0d, -1L, 0, 0, "totalBytes")]
+    [TestCase(0d, 0L, -1, 0, "processedFiles")]
+    [TestCase(0d, 0L, 0, -1, "totalFiles")]
+    [TestCase(0d, 0L, 5, 3, "processedFiles")]
+    public void Constructor_OutOfRangeArguments_ThrowsNamingTheOffendingParameter(
+        double elapsedSeconds,
+        long totalBytes,
+        int processedFiles,
+        int totalFiles,
+        string expectedParamName
+    )
     {
-        var result = new BackupResult(true, TimeSpan.Zero, 1000, 5, 5);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.BytesPerSecond, Is.Zero);
-            Assert.That(result.FilesPerSecond, Is.Zero);
-        }
-    }
-
-    [Test]
-    public void BytesPerSecondAndFilesPerSecond_NonZeroElapsed_ComputeRate()
-    {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(2), 1000, 4, 4);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.BytesPerSecond, Is.EqualTo(500));
-            Assert.That(result.FilesPerSecond, Is.EqualTo(2));
-        }
-    }
-
-    [Test]
-    public void Constructor_NegativeElapsed_Throws()
-    {
-        _ = Assert.Throws<ArgumentOutOfRangeException>(
-            () => new BackupResult(true, TimeSpan.FromSeconds(-1), 0, 0, 0)
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                new BackupResult(
+                    true,
+                    TimeSpan.FromSeconds(elapsedSeconds),
+                    totalBytes,
+                    processedFiles,
+                    totalFiles
+                )
         );
-    }
 
-    [Test]
-    public void Constructor_NegativeTotalBytes_Throws()
-    {
-        _ = Assert.Throws<ArgumentOutOfRangeException>(
-            () => new BackupResult(true, TimeSpan.Zero, -1, 0, 0)
-        );
-    }
-
-    [Test]
-    public void Constructor_ProcessedGreaterThanTotal_Throws()
-    {
-        _ = Assert.Throws<ArgumentOutOfRangeException>(
-            () => new BackupResult(true, TimeSpan.Zero, 0, 5, 3)
-        );
+        Assert.That(exception?.ParamName, Is.EqualTo(expectedParamName));
     }
 }

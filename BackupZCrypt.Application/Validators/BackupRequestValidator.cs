@@ -24,6 +24,19 @@ internal sealed class BackupRequestValidator(
 ) : IBackupRequestValidator
 {
     /// <summary>
+    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
+    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// </summary>
+    /// <remarks>
+    /// This mirrors the comparison the chunked backup service applies. Comparing case-insensitively on
+    /// Unix would reject <c>/data/Backup</c> alongside <c>/data/backup</c> as the same directory, even
+    /// though they are two distinct directories there.
+    /// </remarks>
+    private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
+
+    /// <summary>
     /// Analyzes a request for blocking errors such as invalid or missing paths, password problems,
     /// and source/destination overlap.
     /// </summary>
@@ -167,13 +180,7 @@ internal sealed class BackupRequestValidator(
             {
                 if (fileOperations.DirectoryExists(sourcePath))
                 {
-                    if (
-                        string.Equals(
-                            sourcePath,
-                            destinationPath,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
+                    if (string.Equals(sourcePath, destinationPath, PathComparer))
                     {
                         errors.Add(
                             new LocalizableMessage(MessageCode.SourceDestinationSameDirectory)
@@ -182,7 +189,7 @@ internal sealed class BackupRequestValidator(
                     else if (
                         destinationPath.StartsWith(
                             sourcePath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase
+                            PathComparer
                         )
                     )
                     {
@@ -191,7 +198,7 @@ internal sealed class BackupRequestValidator(
                     else if (
                         sourcePath.StartsWith(
                             destinationPath + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase
+                            PathComparer
                         )
                     )
                     {

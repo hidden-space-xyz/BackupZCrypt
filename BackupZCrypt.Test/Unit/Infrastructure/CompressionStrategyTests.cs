@@ -6,6 +6,24 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 /// <summary>
 /// Unit tests for the Zstandard compression strategies.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The three modes share a base class and differ only in the level they hand to zstd, so nothing but
+/// an output-size comparison would notice a level swapped between the fastest and the best strategy.
+/// That comparison is only ever made between the two extremes: zstd guarantees no monotonic
+/// relationship between the output sizes of adjacent levels, and measurement confirms it. On a
+/// 256 KiB sample <see cref="ZstdFastCompressionStrategy"/> and
+/// <see cref="ZstdCompressionStrategy"/> tie exactly on uniform data (48 bytes against 48), and Zstd
+/// comes out 19 bytes larger than ZstdFast on semi-compressible data (6645 against 6626). An
+/// assertion that one level beats its neighbour would therefore fail on a valid library upgrade,
+/// whereas the extremes differ by roughly 11%, which is a real and stable signal.
+/// </para>
+/// <para>
+/// Decompression runs on restore, so a damaged or truncated frame has to fail loudly rather than hand
+/// back a short buffer that would be written to disk as a silently truncated file. The concrete
+/// exception type belongs to the zstd binding, so only the failure itself is asserted.
+/// </para>
+/// </remarks>
 public sealed class CompressionStrategyTests
 {
     /// <summary>
@@ -43,6 +61,38 @@ public sealed class CompressionStrategyTests
         for (var i = 0; i < length; i++)
         {
             data[i] = (byte)(i % 16);
+        }
+
+        return data;
+    }
+
+    /// <summary>
+    /// Produces partly redundant data: a random ordering of blocks drawn from a small dictionary,
+    /// so the matches a higher level finds are measurably longer than the ones the fastest level
+    /// settles for. A uniform pattern would compress to the same size at every level and could not
+    /// tell the levels apart.
+    /// </summary>
+    /// <param name="length">The number of bytes to produce.</param>
+    /// <param name="seed">The seed that makes the block ordering deterministic.</param>
+    /// <returns>A buffer built by repeating sixteen distinct random blocks in a random order.</returns>
+    private static byte[] SemiCompressiblePattern(int length, int seed)
+    {
+        var blocks = new byte[16][];
+        for (var i = 0; i < blocks.Length; i++)
+        {
+            blocks[i] = RandomBytes(256, seed + i + 1);
+        }
+
+        var picker = new Random(seed);
+        var data = new byte[length];
+        var offset = 0;
+
+        while (offset < length)
+        {
+            var block = blocks[picker.Next(blocks.Length)];
+            var count = Math.Min(block.Length, length - offset);
+            block.AsSpan(0, count).CopyTo(data.AsSpan(offset));
+            offset += count;
         }
 
         return data;
@@ -94,14 +144,28 @@ public sealed class CompressionStrategyTests
     }
 
     [TestCaseSource(nameof(Levels))]
-    public async Task Roundtrip_RecoversRandomData(ICompressionStrategy strategy)
+    public async Task Roundtrip_IncompressibleData_RecoversItWithBoundedExpansion(
+        ICompressionStrategy strategy
+    )
     {
         var original = RandomBytes(64 * 1024, seed: 2024);
 
         var compressed = await CompressToBytesAsync(strategy, original);
         var restored = await DecompressToBytesAsync(strategy, compressed);
 
-        Assert.That(restored, Is.EqualTo(original));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(restored, Is.EqualTo(original));
+
+            Assert.That(
+                compressed,
+                Has.Length.LessThanOrEqualTo(original.Length + 1024),
+                $"Incompressible input grew from {original.Length} to {compressed.Length} bytes. "
+                    + "Already-compressed chunks (media, archives) expand rather than shrink and the "
+                    + "backup stores the expanded result, so the overhead has to stay a small "
+                    + "constant."
+            );
+        }
     }
 
     [TestCaseSource(nameof(Levels))]
@@ -116,5 +180,59 @@ public sealed class CompressionStrategyTests
             Has.Length.LessThan(original.Length),
             $"Expected compressed length {compressed.Length} < original {original.Length}."
         );
+    }
+
+    [Test]
+    public async Task Compress_BestLevel_ProducesSmallerOutputThanFastLevel()
+    {
+        var original = SemiCompressiblePattern(256 * 1024, seed: 5150);
+
+        var fast = await CompressToBytesAsync(new ZstdFastCompressionStrategy(), original);
+        var best = await CompressToBytesAsync(new ZstdBestCompressionStrategy(), original);
+
+        Assert.That(
+            best,
+            Has.Length.LessThan(fast.Length),
+            $"ZstdBest ({best.Length} bytes) did not beat ZstdFast ({fast.Length} bytes), "
+                + "so the two levels are probably swapped or identical, which no round-trip test "
+                + "would catch."
+        );
+    }
+
+    [Test]
+    public async Task Decompress_FrameWrittenByAnotherLevel_RecoversOriginal()
+    {
+        var original = CompressiblePattern(32 * 1024);
+        var levels = Levels().ToArray();
+
+        foreach (var writer in levels)
+        {
+            var compressed = await CompressToBytesAsync(writer, original);
+
+            foreach (var reader in levels)
+            {
+                var restored = await DecompressToBytesAsync(reader, compressed);
+
+                Assert.That(
+                    restored,
+                    Is.EqualTo(original),
+                    $"{reader.Id} could not read a frame written by {writer.Id}. Restore picks its "
+                        + "strategy from the mode recorded in the manifest, so decompression must "
+                        + "not depend on the level that wrote the frame."
+                );
+            }
+        }
+    }
+
+    [Test]
+    public async Task Decompress_CorruptOrTruncatedFrame_FailsInsteadOfReturningPartialData()
+    {
+        var strategy = new ZstdCompressionStrategy();
+        var compressed = await CompressToBytesAsync(strategy, CompressiblePattern(32 * 1024));
+        var truncated = compressed[..(compressed.Length / 2)];
+        var garbage = RandomBytes(1024, seed: 777);
+
+        _ = Assert.CatchAsync(async () => await DecompressToBytesAsync(strategy, truncated));
+        _ = Assert.CatchAsync(async () => await DecompressToBytesAsync(strategy, garbage));
     }
 }

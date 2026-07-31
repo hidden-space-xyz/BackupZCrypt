@@ -7,8 +7,16 @@ using NSubstitute;
 namespace BackupZCrypt.Test.Unit.Domain;
 
 /// <summary>
-/// Unit tests for the compression service factory's strategy resolution.
+/// Unit tests for the compression service factory's strategy resolution. The successful lookups are
+/// covered end to end against the real container by
+/// <see cref="BackupZCrypt.Test.Unit.Composition.StrategyRegistrationTests"/>; what only a
+/// substituted strategy set can show is what the factory does when the requested mode has no
+/// strategy at all.
 /// </summary>
+/// <remarks>
+/// Falling back to whatever single strategy happens to be registered would compress chunks in a mode the
+/// manifest does not record, so an unknown mode has to fail instead.
+/// </remarks>
 public sealed class CompressionServiceFactoryTests
 {
     /// <summary>
@@ -22,20 +30,6 @@ public sealed class CompressionServiceFactoryTests
         var strategy = Substitute.For<ICompressionStrategy>();
         _ = strategy.Id.Returns(id);
         return strategy;
-    }
-
-    [Test]
-    public void Create_RegisteredMode_ReturnsMatchingStrategy()
-    {
-        var none = Stub(CompressionMode.None);
-        var zstd = Stub(CompressionMode.Zstd);
-        var factory = new CompressionServiceFactory([none, zstd]);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(factory.Create(CompressionMode.None), Is.SameAs(none));
-            Assert.That(factory.Create(CompressionMode.Zstd), Is.SameAs(zstd));
-        }
     }
 
     [Test]
