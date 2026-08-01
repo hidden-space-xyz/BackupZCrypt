@@ -103,7 +103,10 @@
                          Minimum="0"
                          Maximum="100"
                          Value="{Binding StrengthScore}"
-                         Foreground="{Binding StrengthBrush}">
+                         Classes.strength-danger="{Binding Strength, Converter={x:Static conv:PasswordConverters.StrengthIsBand}, ConverterParameter=danger}"
+                         Classes.strength-warning="{Binding Strength, Converter={x:Static conv:PasswordConverters.StrengthIsBand}, ConverterParameter=warning}"
+                         Classes.strength-good="{Binding Strength, Converter={x:Static conv:PasswordConverters.StrengthIsBand}, ConverterParameter=good}"
+                         Classes.strength-strong="{Binding Strength, Converter={x:Static conv:PasswordConverters.StrengthIsBand}, ConverterParameter=strong}">
               <ProgressBar.Transitions>
                 <Transitions>
                   <DoubleTransition Property="Value" Duration="0:0:0.25" Easing="SineEaseOut" />

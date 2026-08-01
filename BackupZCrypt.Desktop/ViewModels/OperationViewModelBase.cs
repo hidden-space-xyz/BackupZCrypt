@@ -57,6 +57,17 @@ internal abstract partial class OperationViewModelBase(
     public partial string DestinationPath { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the password protecting the backup.
+    /// </summary>
+    /// <remarks>
+    /// Declared once here rather than on each page so there is a single owner of the secret, and so
+    /// <see cref="HandleResult"/> has one place to clear it from once the operation has succeeded.
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    public partial string Password { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether an operation is currently running.
     /// </summary>
     [ObservableProperty]
@@ -202,6 +213,24 @@ internal abstract partial class OperationViewModelBase(
     /// <param name="recent">The recently used paths.</param>
     protected virtual void ApplyRecentPaths(RecentPathSettings recent)
     {
+    }
+
+    /// <summary>
+    /// Called after <see cref="Password"/> changes, so a page can refresh whatever it derives from it.
+    /// The default implementation does nothing.
+    /// </summary>
+    /// <param name="value">The new password.</param>
+    protected virtual void OnPasswordUpdated(string value)
+    {
+    }
+
+    /// <summary>
+    /// Forwards the generated change notification to the overridable hook.
+    /// </summary>
+    /// <param name="value">The new password.</param>
+    partial void OnPasswordChanged(string value)
+    {
+        OnPasswordUpdated(value);
     }
 
     /// <summary>
@@ -485,7 +514,30 @@ internal abstract partial class OperationViewModelBase(
         if (operation.IsSuccess)
         {
             _ = SaveRecentPathsAsync();
+            ClearPassword();
         }
+    }
+
+    /// <summary>
+    /// Drops the password once the operation it protected has succeeded.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every page ViewModel is a singleton held for the lifetime of the window, so without this the
+    /// plaintext password stays reachable from a live object for as long as the application runs.
+    /// Be clear about what this does and does not buy: a .NET <see cref="string"/> cannot be zeroed,
+    /// and the bound <c>TextBox</c> keeps its own copy, so this only drops the last permanently-held
+    /// reference and lets the garbage collector reclaim it eventually. It is not a wipe.
+    /// </para>
+    /// <para>
+    /// Only on success, and only after <c>CreateRequest</c> has already captured the value. Clearing
+    /// on failure would be actively hostile: the commonest reason to re-run a restore is a mistyped
+    /// password, and the user would have to retype a fifty-character generated one.
+    /// </para>
+    /// </remarks>
+    protected virtual void ClearPassword()
+    {
+        Password = string.Empty;
     }
 
     /// <summary>

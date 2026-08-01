@@ -1,4 +1,3 @@
-using Avalonia.Media;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
@@ -54,14 +53,6 @@ internal sealed partial class CreateBackupViewModel(
     private CompressionMode compressionMode = CompressionMode.None;
 
     /// <summary>
-    /// Gets or sets the password used to encrypt the backup.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CopyPasswordCommand))]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    public partial string Password { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the repeated password used to confirm the entry matches.
     /// </summary>
     [ObservableProperty]
@@ -87,10 +78,15 @@ internal sealed partial class CreateBackupViewModel(
     public partial string StrengthDescription { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the brush that colors the strength indicator according to the password's strength.
+    /// Gets or sets the assessed strength of the current password.
     /// </summary>
+    /// <remarks>
+    /// The View turns this into a colour through a style class. The ViewModel deliberately does not
+    /// resolve a brush itself: that would make it reach into Avalonia's theme resources, and the
+    /// colour would then be fixed at the moment it was resolved rather than following a theme change.
+    /// </remarks>
     [ObservableProperty]
-    public partial IBrush StrengthBrush { get; set; } = Brushes.Gray;
+    public partial PasswordStrength Strength { get; set; } = PasswordStrength.VeryWeak;
 
     /// <summary>
     /// Gets or sets a value indicating whether password-strength feedback is currently shown.
@@ -249,11 +245,21 @@ internal sealed partial class CreateBackupViewModel(
     }
 
     /// <summary>
+    /// Also drops the confirmation entry, which holds a second copy of the same secret.
+    /// </summary>
+    protected override void ClearPassword()
+    {
+        base.ClearPassword();
+        ConfirmPassword = string.Empty;
+    }
+
+    /// <summary>
     /// Re-evaluates the confirmation match and refreshes the strength meter for the new password.
     /// </summary>
     /// <param name="value">The new password.</param>
-    partial void OnPasswordChanged(string value)
+    protected override void OnPasswordUpdated(string value)
     {
+        CopyPasswordCommand.NotifyCanExecuteChanged();
         UpdatePasswordMismatch();
 
         if (string.IsNullOrEmpty(value))
@@ -269,28 +275,7 @@ internal sealed partial class CreateBackupViewModel(
         HasStrength = true;
         StrengthScore = analysis.Score;
         StrengthDescription = PasswordStrengthFormatter.Format(analysis);
-        StrengthBrush = analysis.Strength switch
-        {
-            PasswordStrength.VeryWeak or PasswordStrength.Weak => ResolveBrush("DangerBrush"),
-            PasswordStrength.Fair => ResolveBrush("WarningBrush"),
-            PasswordStrength.Good => ResolveBrush("StrengthGoodBrush"),
-            _ => ResolveBrush("SuccessBrush"),
-        };
-    }
-
-    /// <summary>
-    /// Looks up a themed brush by resource key, falling back to grey when the resource is unavailable.
-    /// </summary>
-    /// <param name="key">The resource key of the brush.</param>
-    /// <returns>The themed brush, or <see cref="Brushes.Gray"/> when it cannot be resolved.</returns>
-    private static IBrush ResolveBrush(string key)
-    {
-        return
-            Avalonia.Application.Current is { } app
-            && app.TryGetResource(key, app.ActualThemeVariant, out var value)
-            && value is IBrush brush
-            ? brush
-            : Brushes.Gray;
+        Strength = analysis.Strength;
     }
 
     /// <summary>

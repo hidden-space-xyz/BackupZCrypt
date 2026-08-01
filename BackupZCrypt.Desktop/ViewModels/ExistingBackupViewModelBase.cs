@@ -31,13 +31,6 @@ internal abstract partial class ExistingBackupViewModelBase(
     private int detectionVersion;
 
     /// <summary>
-    /// Gets or sets the password used to open the existing backup.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    public partial string Password { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the kind of manifest detected at the backup path.
     /// </summary>
     [ObservableProperty]

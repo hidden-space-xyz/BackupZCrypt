@@ -539,6 +539,77 @@ public sealed class OperationViewModelBaseTests
     /// settings read hands the page a <see langword="null"/> settings object.
     /// </summary>
     /// <returns>The system under test.</returns>
+    [TestCase(true, 5, 5, "", Description = "cleared once the operation it protected has succeeded")]
+    [TestCase(false, 3, 5, "secret", Description = "kept after a partial run, which may be re-run")]
+    public async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
+        bool succeeded,
+        int processedFiles,
+        int totalFiles,
+        string expectedPassword
+    )
+    {
+        var sut = CreateSut();
+        StubOrchestrator(
+            Result<BackupResult>.Success(
+                new BackupResult(
+                    succeeded,
+                    TimeSpan.FromSeconds(1),
+                    1024,
+                    processedFiles,
+                    totalFiles
+                )
+            )
+        );
+
+        sut.SourcePath = "source";
+        sut.DestinationPath = "destination";
+        sut.Password = "secret";
+
+        await sut.StartCommand.ExecuteAsync(null);
+
+        Assert.That(
+            sut.Password,
+            Is.EqualTo(expectedPassword),
+            "Page ViewModels are singletons held for the life of the window, so a password kept after "
+                + "a successful run stays reachable forever; clearing after a failed one would force "
+                + "the user to retype a generated password to correct an unrelated problem."
+        );
+    }
+
+    [Test]
+    public async Task StartCommand_CapturesThePasswordBeforeClearingIt()
+    {
+        List<BackupRequest> requests = [];
+        var sut = CreateSut();
+
+        _ = this
+            .orchestrator.ExecuteAsync(
+                Arg.Do<BackupRequest>(requests.Add),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                Task.FromResult(
+                    Result<BackupResult>.Success(
+                        new BackupResult(true, TimeSpan.FromSeconds(1), 1024, 1, 1)
+                    )
+                )
+            );
+
+        sut.SourcePath = "source";
+        sut.DestinationPath = "destination";
+        sut.Password = "secret";
+
+        await sut.StartCommand.ExecuteAsync(null);
+
+        Assert.That(
+            requests.Select(static r => r.Password),
+            Is.EqualTo(new[] { "secret" }),
+            "The request must carry the real password: clearing it before CreateRequest ran would "
+                + "silently send an empty one to the engine."
+        );
+    }
+
     private TestOperationViewModel CreateSut()
     {
         _ = this
@@ -608,11 +679,13 @@ public sealed class OperationViewModelBaseTests
         /// <inheritdoc/>
         protected override BackupRequest CreateRequest(bool proceedOnWarnings)
         {
+            // Reads the real Password rather than a literal, so a change that cleared it before the
+            // request was built would be visible here instead of hidden behind a stub value.
             return new BackupRequest(
                 SourcePath,
                 DestinationPath,
-                "test-password",
-                "test-password",
+                Password,
+                Password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.PBKDF2,
                 BackupOperation.Create,

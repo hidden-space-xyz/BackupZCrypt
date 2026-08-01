@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 
 using BackupZCrypt.Desktop.Converters;
+using BackupZCrypt.Domain.Enums;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 
@@ -31,5 +32,62 @@ public sealed class PasswordConvertersTests
                 "Only a deliberately revealed password may clear the mask and so become copyable."
             );
         }
+    }
+
+    [TestCase(PasswordStrength.VeryWeak, "danger")]
+    [TestCase(PasswordStrength.Weak, "danger")]
+    [TestCase(PasswordStrength.Fair, "warning")]
+    [TestCase(PasswordStrength.Good, "good")]
+    [TestCase(PasswordStrength.Strong, "strong")]
+    public void StrengthIsBand_MatchesExactlyOneBandPerStrength(
+        PasswordStrength strength,
+        string expectedBand
+    )
+    {
+        string[] bands = ["danger", "warning", "good", "strong"];
+
+        var matched = bands
+            .Where(band =>
+                (bool)
+                    PasswordConverters.StrengthIsBand.Convert(
+                        strength,
+                        typeof(bool),
+                        band,
+                        CultureInfo.InvariantCulture
+                    )!
+            )
+            .ToList();
+
+        Assert.That(
+            matched,
+            Is.EqualTo(new[] { expectedBand }),
+            "Each strength must light exactly one style class: none leaves the bar on the default "
+                + "accent colour, and two would let style order decide the colour."
+        );
+    }
+
+    [Test]
+    public void StrengthIsBand_EveryDeclaredStrength_HasABand()
+    {
+        var unmapped = Enum.GetValues<PasswordStrength>()
+            .Where(strength =>
+                !new[] { "danger", "warning", "good", "strong" }
+                    .Any(band =>
+                        (bool)
+                            PasswordConverters.StrengthIsBand.Convert(
+                                strength,
+                                typeof(bool),
+                                band,
+                                CultureInfo.InvariantCulture
+                            )!
+                    )
+            )
+            .ToList();
+
+        Assert.That(
+            unmapped,
+            Is.Empty,
+            "A new PasswordStrength member with no colour band would silently show the default accent."
+        );
     }
 }
