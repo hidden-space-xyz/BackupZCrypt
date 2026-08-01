@@ -33,6 +33,11 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
     /// Initializes a new instance of the <see cref="MainWindowViewModel"/> class, building the
     /// navigation list and activating the create-backup page.
     /// </summary>
+    /// <remarks>
+    /// Assigning the initial selection is what activates the first page: the change handler sets the
+    /// active-page flag and starts that page's on-navigation work. Calling
+    /// <see cref="ViewModelBase.OnNavigatedToAsync"/> here as well would run it a second time.
+    /// </remarks>
     /// <param name="createBackup">The create-backup page ViewModel.</param>
     /// <param name="updateBackup">The update-backup page ViewModel.</param>
     /// <param name="restoreBackup">The restore-backup page ViewModel.</param>
@@ -63,8 +68,6 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
         VersionText = about.VersionText;
         CurrentPage = createBackup;
 
-        // Assigning the selection runs OnSelectedItemChanged, which activates the page and starts
-        // its on-navigation work; calling OnNavigatedToAsync here as well would run it twice.
         SelectedItem = NavigationItems[0];
     }
 

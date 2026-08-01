@@ -219,6 +219,12 @@ internal sealed class ManifestService(
     /// Serializes, encrypts, and atomically writes a chunked manifest, prefixing it with the preamble
     /// header and a freshly generated nonce.
     /// </summary>
+    /// <remarks>
+    /// The master salt is decoded with <see cref="Convert.TryFromBase64String"/> rather than parsed,
+    /// so a malformed value becomes a reported rejection carrying its own message code. Parsing would
+    /// raise a <see cref="FormatException"/> that the surrounding handler could only surface as an
+    /// untranslated .NET string spliced into a localized sentence.
+    /// </remarks>
     /// <param name="manifestData">The manifest contents to serialize and encrypt.</param>
     /// <param name="destinationRoot">The backup root directory the manifest is written into.</param>
     /// <param name="encryptionKey">The derived manifest encryption key.</param>
@@ -248,9 +254,6 @@ internal sealed class ManifestService(
 
         try
         {
-            // Decoded rather than parsed with Convert.FromBase64String so malformed input is a
-            // reported rejection instead of a FormatException that the catch below would surface as
-            // an untranslated .NET message.
             var masterSalt = new byte[EncryptionConstants.SaltSize];
             if (
                 !Convert.TryFromBase64String(manifestData.MasterSalt, masterSalt, out var saltLength)

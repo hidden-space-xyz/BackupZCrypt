@@ -354,6 +354,12 @@ internal abstract partial class OperationViewModelBase(
     /// Runs the operation off the UI thread, streaming progress to the page and turning the outcome,
     /// a cancellation, or an unexpected exception into the result panel.
     /// </summary>
+    /// <remarks>
+    /// The orchestrator funnels its own failures into a <c>Result</c>, so the exception handler is
+    /// reached only when something escaped it. The raw exception text is wrapped in the localized
+    /// unexpected-error frame rather than shown bare, so the sentence the user reads follows their
+    /// language even when the detail inside it cannot be translated.
+    /// </remarks>
     /// <param name="proceedOnWarnings">Whether the request should continue past advisory warnings.</param>
     /// <returns>A task that completes once the result has been presented.</returns>
     private async Task RunAsync(bool proceedOnWarnings)
@@ -388,9 +394,6 @@ internal abstract partial class OperationViewModelBase(
             ResultIsSuccess = false;
             ResultTitle = Strings.ResultErrorTitle;
 
-            // The orchestrator funnels its own failures into a Result, so reaching here means an
-            // exception escaped it. Wrapping the raw text in the localized frame keeps the sentence
-            // the user reads in their own language even when the detail is not translatable.
             Errors.Add(
                 MessageLocalizer.Localize(
                     new LocalizableMessage(MessageCode.UnexpectedErrorFormat, ex.Message)

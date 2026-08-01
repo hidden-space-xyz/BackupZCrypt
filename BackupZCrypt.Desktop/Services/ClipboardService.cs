@@ -15,6 +15,8 @@ internal sealed class ClipboardService : IClipboardService
     /// <remarks>
     /// Does nothing when the application is not running a classic desktop lifetime or its main window exposes
     /// no clipboard; in that case the returned task completes without the clipboard having been updated.
+    /// The transfer object is disposed only once the clipboard write has completed, by which point the
+    /// clipboard holds its own copy of the payload.
     /// </remarks>
     public async Task SetTextAsync(string text)
     {
@@ -24,8 +26,6 @@ internal sealed class ClipboardService : IClipboardService
             && desktop.MainWindow?.Clipboard is { } clipboard
         )
         {
-            // Disposed only after SetDataAsync has completed, by which point the clipboard has taken
-            // its own copy of the payload.
             using var dataTransfer = new DataTransfer();
             dataTransfer.Add(DataTransferItem.CreateText(text));
             await clipboard.SetDataAsync(dataTransfer);

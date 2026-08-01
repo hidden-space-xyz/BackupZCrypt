@@ -44,6 +44,11 @@ public static class DependencyInjection
     /// <c>App.ConfigureServices</c> instead: this project must not reference Avalonia, since that
     /// would point a dependency arrow outward.
     /// </para>
+    /// <para>
+    /// Chunking is the one family registered exactly once, by design. The manifest records no chunker
+    /// identifier, so a second implementation would change chunk boundaries with nothing on disk to
+    /// say which one produced them, destroying deduplication against every archive already written.
+    /// </para>
     /// </remarks>
     /// <param name="services">The service collection to add the registrations to.</param>
     /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
@@ -67,8 +72,6 @@ public static class DependencyInjection
         _ = services.AddSingleton<ICompressionStrategy, ZstdCompressionStrategy>();
         _ = services.AddSingleton<ICompressionStrategy, ZstdBestCompressionStrategy>();
 
-        // Exactly one chunking strategy, by design: the manifest records no chunker identifier, so a
-        // second one would change chunk boundaries with nothing on disk to say which produced them.
         _ = services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
 
         _ = services.AddSingleton<IFileOperationsService, FileOperationsService>();

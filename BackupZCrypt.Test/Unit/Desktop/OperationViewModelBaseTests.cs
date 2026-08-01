@@ -677,10 +677,12 @@ public sealed class OperationViewModelBaseTests
         public List<RecentPathSettings> AppliedRecentPaths { get; } = [];
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// Reads the real <c>Password</c> rather than a literal, so a change that cleared it before
+        /// the request was built shows up here instead of hiding behind a stub value.
+        /// </remarks>
         protected override BackupRequest CreateRequest(bool proceedOnWarnings)
         {
-            // Reads the real Password rather than a literal, so a change that cleared it before the
-            // request was built would be visible here instead of hidden behind a stub value.
             return new BackupRequest(
                 SourcePath,
                 DestinationPath,

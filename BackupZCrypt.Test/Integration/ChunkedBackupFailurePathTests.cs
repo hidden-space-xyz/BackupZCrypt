@@ -322,11 +322,11 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Value.ProcessedFiles, Is.EqualTo(expected.Count - 1));
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
 
-            // A restore failure must not be reported as an encryption failure: the user is reading
-            // files out, and being told the file could not be encrypted is simply wrong.
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.DecryptionErrorFormat)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.DecryptionErrorFormat),
+                "A restore failure must not be reported as an encryption failure: the user is reading "
+                    + "files out, and being told the file could not be encrypted is simply wrong."
             );
             Assert.That(
                 reproduced,

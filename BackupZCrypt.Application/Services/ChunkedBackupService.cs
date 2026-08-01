@@ -281,9 +281,18 @@ internal sealed class ChunkedBackupService(
     /// The encryption, key derivation, and compression settings are taken from the existing backup.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Existing entries are indexed by their canonical manifest path, so an archive written by an earlier
     /// version that recorded Windows separators still matches the files it already holds instead of
     /// re-adding every one of them as new.
+    /// </para>
+    /// <para>
+    /// An update reuses the algorithms the archive was written with, never the ones
+    /// <paramref name="request"/> carries: a different key derivation function produces a different
+    /// master key and the archive stops opening. Those values are therefore read from the manifest
+    /// preamble and header at each point of use, leaving <paramref name="request"/> meaning what the
+    /// user asked for rather than what the archive happens to be.
+    /// </para>
     /// </remarks>
     /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
     /// <param name="destinationPath">The directory containing the existing backup to update.</param>
@@ -310,10 +319,6 @@ internal sealed class ChunkedBackupService(
             return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForUpdate);
         }
 
-        // An update must reuse the algorithms the archive was written with, never the ones the caller
-        // supplied: a different KDF derives a different master key and the archive stops opening.
-        // Read them from the preamble at each use site rather than rewriting the request, so the
-        // request keeps meaning "what the user asked for" all the way through.
         DerivedKeySet? keys = null;
 
         try

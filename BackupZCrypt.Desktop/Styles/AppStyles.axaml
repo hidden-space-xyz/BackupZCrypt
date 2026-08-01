@@ -401,11 +401,6 @@
     <Setter Property="RenderTransform" Value="rotate(180deg)" />
   </Style>
 
-  <!--
-    Password-strength colour bands. These belong here rather than in the ViewModel so they stay
-    DynamicResource lookups that follow the active theme variant, and so the BrushTransition on the
-    strength bar animates between them.
-  -->
   <Style Selector="ProgressBar.strength-danger">
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
   </Style>

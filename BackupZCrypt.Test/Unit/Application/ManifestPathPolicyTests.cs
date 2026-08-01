@@ -37,10 +37,10 @@ public sealed class ManifestPathPolicyTests
     [Test]
     public void ValidateRelative_BackslashTraversal_IsRejectedEvenWhereBackslashIsALegalNameCharacter()
     {
-        // On Unix '\' is an ordinary file-name character, so a check that only split on the host
-        // separator would read "..\..\escape.txt" as one harmless file name and let it through.
         _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ValidateRelative("..\\..\\escape.txt")
+            () => ManifestPathPolicy.ValidateRelative("..\\..\\escape.txt"),
+            "On Unix '\\' is an ordinary file-name character, so a check that split only on the host "
+                + "separator would read this as one harmless file name and let it through."
         );
     }
 
@@ -79,12 +79,12 @@ public sealed class ManifestPathPolicyTests
     [Test]
     public void ResolveSafeDestination_SiblingWhoseNameSharesThePrefix_IsNotTreatedAsInside()
     {
-        // "…/root-evil" starts with "…/root" as a string, but is a different directory. The root is
-        // compared with a trailing separator precisely so this is not accepted.
         var root = Path.Combine(Path.GetTempPath(), "bzc-root");
 
         _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt")
+            () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt"),
+            "'bzc-root-evil' starts with 'bzc-root' as a string but is a different directory; the "
+                + "root is compared with a trailing separator precisely so this is not accepted."
         );
     }
 
