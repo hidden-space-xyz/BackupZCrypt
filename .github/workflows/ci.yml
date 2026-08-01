@@ -1,10 +1,5 @@
 name: CI
 
-# Runs the build and the full test suite on every push to a working branch and on every pull
-# request. Without this, the only workflow in the repository triggered on pushes to `master`, so
-# nothing verified the architecture, localization, or on-disk format guards until after a change had
-# already been merged and was on its way to a release.
-
 on:
   push:
     branches-ignore:
@@ -43,8 +38,6 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
 
-      # -warnaserror makes the analyzer gate real: the solution builds at zero warnings today, and
-      # this is what keeps it there rather than letting warnings accumulate unnoticed.
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --configuration Debug --no-restore -warnaserror
 

@@ -1,11 +1,5 @@
 <Project>
 
-  <!--
-    Settings shared by every project in the solution. Keeping them here rather than repeated in six
-    .csproj files is what makes "analyzers are gates" true: a new project inherits the full rule set
-    instead of silently opting out by omission, which is how BackupZCrypt.Desktop ended up without
-    AnalysisMode for as long as it did.
-  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,9 +12,7 @@
     <AnalysisMode>All</AnalysisMode>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
-    <!-- Makes the .editorconfig style rules build warnings rather than IDE-only suggestions. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <!-- Turns the "every non-private member is documented" convention into something the build checks. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

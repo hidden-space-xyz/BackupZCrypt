@@ -5,20 +5,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!--
-    The test project deliberately opts out of the solution-wide analyzer gate inherited from
-    Directory.Build.props. Test code is held to a different standard on purpose:
-
-      - CA1707 conflicts with the Method_Scenario_Expected naming the suite uses throughout.
-      - CA1515/CA1062 want internal types and null-guards on [TestCase] parameters that NUnit
-        itself supplies.
-      - CA5394 flags System.Random, which is the right tool for generating deterministic
-        pseudo-random fixture data and is never used for anything security-bearing here.
-      - CS1591 would demand an XML doc on every test method, where the name is the documentation.
-
-    NUnit.Analyzers still runs and is the analyzer that actually matters here: it catches wrong
-    assertion forms. The production projects keep the full gate.
-  -->
   <PropertyGroup>
     <AnalysisMode>Default</AnalysisMode>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
@@ -56,7 +42,6 @@
   <ItemGroup>
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.resx" Link="TestData\Strings.resx" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.es.resx" Link="TestData\Strings.es.resx" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Committed archives that pin the on-disk format; see Tools\OnDiskFormatFixtures.cs. -->
     <None Include="TestData\LegacyArchives\**\*" LinkBase="TestData\LegacyArchives" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

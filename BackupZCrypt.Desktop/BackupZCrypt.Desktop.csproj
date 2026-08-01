@@ -6,12 +6,6 @@
     <ApplicationIcon>Resources\BackupZCrypt.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <!--
-    Desktop is a leaf application: nothing outside it consumes its types, so every one of them is
-    internal, matching how Application and Infrastructure declare their implementations. The test
-    project sees them directly; DynamicProxyGenAssembly2 is the assembly Castle DynamicProxy emits
-    substitutes into, and NSubstitute cannot mock an internal interface without it.
-  -->
   <ItemGroup>
     <InternalsVisibleTo Include="BackupZCrypt.Test" />
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />

@@ -1,10 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    Domain references no other project and no runtime NuGet package: contracts, enums, constants,
-    and value objects over the BCL only. The Roslynator references inherited from
-    Directory.Build.props are build-time analyzers (PrivateAssets=all) and ship nothing.
-  -->
   <ItemGroup>
     <InternalsVisibleTo Include="BackupZCrypt.Composition" />
     <InternalsVisibleTo Include="BackupZCrypt.Test" />
