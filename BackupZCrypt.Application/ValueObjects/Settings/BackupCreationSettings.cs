@@ -1,7 +1,7 @@
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
 
-namespace BackupZCrypt.Application.ValueObjects.Backup;
+namespace BackupZCrypt.Application.ValueObjects.Settings;
 
 /// <summary>
 /// Persisted defaults preselected in the UI when creating a new backup.

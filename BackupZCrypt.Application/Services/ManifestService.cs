@@ -248,15 +248,16 @@ internal sealed class ManifestService(
 
         try
         {
-            var masterSalt = Convert.FromBase64String(manifestData.MasterSalt);
-            if (masterSalt.Length != EncryptionConstants.SaltSize)
+            // Decoded rather than parsed with Convert.FromBase64String so malformed input is a
+            // reported rejection instead of a FormatException that the catch below would surface as
+            // an untranslated .NET message.
+            var masterSalt = new byte[EncryptionConstants.SaltSize];
+            if (
+                !Convert.TryFromBase64String(manifestData.MasterSalt, masterSalt, out var saltLength)
+                || saltLength != EncryptionConstants.SaltSize
+            )
             {
-                errors.Add(
-                    new LocalizableMessage(
-                        MessageCode.ManifestWriteFailedFormat,
-                        "Manifest master salt must be exactly 32 bytes."
-                    )
-                );
+                errors.Add(new LocalizableMessage(MessageCode.ManifestInvalidMasterSalt));
                 return errors;
             }
 
@@ -266,12 +267,7 @@ internal sealed class ManifestService(
                 || !Enum.IsDefined(manifestData.Header.Compression)
             )
             {
-                errors.Add(
-                    new LocalizableMessage(
-                        MessageCode.ManifestWriteFailedFormat,
-                        "Manifest contains an unsupported algorithm identifier."
-                    )
-                );
+                errors.Add(new LocalizableMessage(MessageCode.ManifestUnsupportedAlgorithm));
                 return errors;
             }
 

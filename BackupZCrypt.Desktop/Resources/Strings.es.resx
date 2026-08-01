@@ -546,6 +546,15 @@
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
     <value>No se pudo escribir o cifrar el manifiesto: {0}</value>
   </data>
+  <data name="ManifestInvalidMasterSalt" xml:space="preserve">
+    <value>No se pudo escribir el manifiesto: la sal maestra no tiene la longitud requerida.</value>
+  </data>
+  <data name="ManifestUnsupportedAlgorithm" xml:space="preserve">
+    <value>No se pudo escribir el manifiesto: indica un algoritmo que esta versión no admite.</value>
+  </data>
+  <data name="DecryptionErrorFormat" xml:space="preserve">
+    <value>No se pudo restaurar el archivo: {0} - {1}</value>
+  </data>
   <data name="ManifestRequiredForUpdate" xml:space="preserve">
     <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación del backup. No se puede actualizar sin manifiesto.</value>
   </data>

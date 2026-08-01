@@ -1,9 +1,9 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.Input;
@@ -76,24 +76,13 @@ internal sealed partial class VerifyBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the verify request. The encryption and key-derivation values only signal that a
-    /// password is involved; the actual algorithms are read from the manifest during verification.
+    /// Builds the verify request.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected override BackupRequest CreateRequest(bool proceedOnWarnings)
     {
-        return new BackupRequest(
-            SourcePath,
-            string.Empty,
-            Password,
-            Password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Verify,
-            CompressionMode.None,
-            proceedOnWarnings
-        );
+        return BackupRequest.ForVerify(SourcePath, Password, proceedOnWarnings);
     }
 
     /// <summary>

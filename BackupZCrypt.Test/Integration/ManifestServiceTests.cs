@@ -612,7 +612,20 @@ public sealed class ManifestServiceTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(errors[0].Code, Is.EqualTo(MessageCode.ManifestWriteFailedFormat));
+            Assert.That(
+                errors[0].Code,
+                Is.AnyOf(
+                    MessageCode.ManifestInvalidMasterSalt,
+                    MessageCode.ManifestUnsupportedAlgorithm
+                ),
+                "the rejection must name which parameter was wrong, and must carry no untranslatable text"
+            );
+            Assert.That(
+                errors[0].Args,
+                Is.Empty,
+                "these codes describe the whole problem; splicing an English sentence in as a format "
+                    + "argument is what put untranslated text in front of a Spanish user before"
+            );
             Assert.That(
                 Directory.GetFiles(backup.Path),
                 Is.Empty,

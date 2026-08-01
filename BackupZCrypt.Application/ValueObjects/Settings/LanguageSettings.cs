@@ -1,6 +1,6 @@
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Domain.Services.Interfaces;
 
-namespace BackupZCrypt.Application.ValueObjects.Backup;
+namespace BackupZCrypt.Application.ValueObjects.Settings;
 
 /// <summary>
 /// Persisted UI language preference.

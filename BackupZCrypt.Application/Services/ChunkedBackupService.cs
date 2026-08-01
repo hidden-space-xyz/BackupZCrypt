@@ -736,7 +736,7 @@ internal sealed class ChunkedBackupService(
                                 {
                                     errors.Add(
                                         new LocalizableMessage(
-                                            MessageCode.EncryptionErrorFormat,
+                                            MessageCode.DecryptionErrorFormat,
                                             fileEntry.OriginalPath,
                                             ex.Message
                                         )

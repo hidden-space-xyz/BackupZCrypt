@@ -3,8 +3,8 @@ using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
@@ -60,8 +60,7 @@ internal sealed class App : Avalonia.Application
     {
         ServiceCollection services = [];
 
-        _ = services.AddDomainServices();
-        _ = services.AddApplicationServices();
+        _ = services.AddBackupZCryptServices();
 
         _ = services.AddSingleton<IFilePickerService, FilePickerService>();
         _ = services.AddSingleton<IClipboardService, ClipboardService>();

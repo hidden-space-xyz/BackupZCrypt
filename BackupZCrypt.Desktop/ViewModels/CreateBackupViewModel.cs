@@ -2,10 +2,12 @@ using Avalonia.Media;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -35,16 +37,6 @@ internal sealed partial class CreateBackupViewModel(
     /// brute-forced password exposes every chunk of the backup.
     /// </summary>
     private const int GeneratedPasswordLength = 50;
-
-    /// <summary>
-    /// The shortest accepted password, mirroring the bound enforced by the request validator.
-    /// </summary>
-    private const int MinPasswordLength = 8;
-
-    /// <summary>
-    /// The longest accepted password, mirroring the bound enforced by the request validator.
-    /// </summary>
-    private const int MaxPasswordLength = 1000;
 
     /// <summary>
     /// The encryption algorithm applied to the new backup, taken from the saved defaults.
@@ -194,8 +186,8 @@ internal sealed partial class CreateBackupViewModel(
     /// <returns><see langword="true"/> if the password would pass validation; otherwise <see langword="false"/>.</returns>
     private bool IsPasswordValid()
     {
-        return Password.Length >= MinPasswordLength
-            && Password.Length <= MaxPasswordLength
+        return Password.Length >= PasswordConstants.MinLength
+            && Password.Length <= PasswordConstants.MaxLength
             && string.Equals(Password.Trim(), Password, StringComparison.Ordinal)
             && string.Equals(Password, ConfirmPassword, StringComparison.Ordinal);
     }

@@ -1,6 +1,6 @@
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Test.Common;
 

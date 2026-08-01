@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.ValueObjects.Backup;
+namespace BackupZCrypt.Application.ValueObjects;
 
 /// <summary>
 /// The immutable result of a backup-time benchmark: the estimated total duration for the requested

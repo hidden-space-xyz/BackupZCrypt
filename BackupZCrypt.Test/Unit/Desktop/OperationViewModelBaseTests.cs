@@ -1,14 +1,14 @@
 using System.Globalization;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -324,7 +324,17 @@ public sealed class OperationViewModelBaseTests
             Assert.That(sut.HasResult, Is.True);
             Assert.That(sut.ResultIsSuccess, Is.False);
             Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultErrorTitle));
-            Assert.That(sut.Errors, Is.EqualTo(new[] { "disk gone" }));
+            Assert.That(
+                sut.Errors,
+                Has.Count.EqualTo(1).And.All.Contains("disk gone"),
+                "the exception detail must survive"
+            );
+            Assert.That(
+                sut.Errors[0],
+                Is.Not.EqualTo("disk gone"),
+                "the detail must be wrapped in the localized frame rather than shown bare, so the "
+                    + "sentence around it follows the user's language"
+            );
             Assert.That(sut.ShowErrors, Is.True);
             Assert.That(sut.IsRunning, Is.False);
             Assert.That(sut.StartCommand.CanExecute(null), Is.True);

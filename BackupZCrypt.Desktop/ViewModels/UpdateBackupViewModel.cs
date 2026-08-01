@@ -1,8 +1,8 @@
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.Input;
@@ -47,24 +47,13 @@ internal sealed partial class UpdateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the update request. The encryption and key-derivation values only signal whether a
-    /// password is involved; the actual algorithms are read from the existing manifest during the update.
+    /// Builds the update request.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <returns>The configured <see cref="BackupRequest"/>.</returns>
     protected override BackupRequest CreateRequest(bool proceedOnWarnings)
     {
-        return new BackupRequest(
-            SourcePath,
-            DestinationPath,
-            Password,
-            Password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Update,
-            CompressionMode.None,
-            proceedOnWarnings
-        );
+        return BackupRequest.ForUpdate(SourcePath, DestinationPath, Password, proceedOnWarnings);
     }
 
     /// <summary>

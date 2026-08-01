@@ -17,8 +17,7 @@ public static class TestHost
     public static ServiceProvider CreateProvider()
     {
         return new ServiceCollection()
-            .AddDomainServices()
-            .AddApplicationServices()
+            .AddBackupZCryptServices()
             .BuildServiceProvider();
     }
 }

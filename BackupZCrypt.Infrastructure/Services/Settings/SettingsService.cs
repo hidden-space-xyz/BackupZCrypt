@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using BackupZCrypt.Application.Services.Interfaces;
+
 using BackupZCrypt.Domain.Services.Interfaces;
 
-namespace BackupZCrypt.Application.Services;
+namespace BackupZCrypt.Infrastructure.Services.Settings;
 
 /// <summary>
 /// Persists strongly typed settings as indented JSON files under a per-user application data

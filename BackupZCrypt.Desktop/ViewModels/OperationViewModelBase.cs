@@ -2,13 +2,13 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 
 using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -358,7 +358,15 @@ internal abstract partial class OperationViewModelBase(
             HasResult = true;
             ResultIsSuccess = false;
             ResultTitle = Strings.ResultErrorTitle;
-            Errors.Add(ex.Message);
+
+            // The orchestrator funnels its own failures into a Result, so reaching here means an
+            // exception escaped it. Wrapping the raw text in the localized frame keeps the sentence
+            // the user reads in their own language even when the detail is not translatable.
+            Errors.Add(
+                MessageLocalizer.Localize(
+                    new LocalizableMessage(MessageCode.UnexpectedErrorFormat, ex.Message)
+                )
+            );
             ShowErrors = true;
         }
         finally

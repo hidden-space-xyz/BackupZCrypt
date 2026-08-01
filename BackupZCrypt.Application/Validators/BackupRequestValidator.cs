@@ -1,3 +1,4 @@
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
@@ -141,12 +142,12 @@ internal sealed class BackupRequestValidator(
         }
         else
         {
-            if (request.Password.Length < 8)
+            if (request.Password.Length < PasswordConstants.MinLength)
             {
                 errors.Add(new LocalizableMessage(MessageCode.PasswordTooShort));
             }
 
-            if (request.Password.Length > 1000)
+            if (request.Password.Length > PasswordConstants.MaxLength)
             {
                 errors.Add(new LocalizableMessage(MessageCode.PasswordTooLong));
             }

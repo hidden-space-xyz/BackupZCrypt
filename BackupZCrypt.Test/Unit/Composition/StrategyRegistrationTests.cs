@@ -13,7 +13,7 @@ namespace BackupZCrypt.Test.Unit.Composition;
 /// <summary>
 /// Guards the composition root against a missing strategy registration. Adding an algorithm means
 /// adding an enum member, implementing the strategy, and registering it in
-/// <c>DependencyInjection.AddDomainServices</c>; forgetting the last step is otherwise invisible
+/// <c>DependencyInjection.AddBackupZCryptServices</c>; forgetting the last step is otherwise invisible
 /// until a user has already typed a password, and for a restore it would mean an unreadable backup.
 /// The cases are driven from <see cref="Enum.GetValues{TEnum}"/>, so a new enum member fails here
 /// until it is wired up.

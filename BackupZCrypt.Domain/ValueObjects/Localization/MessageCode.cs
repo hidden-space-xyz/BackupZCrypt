@@ -271,4 +271,21 @@ public enum MessageCode
     /// be circular.
     /// </summary>
     VerifyInvalidPassword = 55,
+
+    /// <summary>
+    /// A file could not be reconstructed during a restore; formatted with the path and reason.
+    /// </summary>
+    DecryptionErrorFormat = 56,
+
+    /// <summary>
+    /// The master salt recorded for the manifest is malformed or not the required length, so the
+    /// manifest was not written.
+    /// </summary>
+    ManifestInvalidMasterSalt = 57,
+
+    /// <summary>
+    /// The manifest names an encryption, key derivation, or compression identifier this build does
+    /// not recognize, so the manifest was not written.
+    /// </summary>
+    ManifestUnsupportedAlgorithm = 58,
 }

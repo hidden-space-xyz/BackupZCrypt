@@ -1,10 +1,10 @@
-using BackupZCrypt.Application.Services;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Infrastructure.Services;
+using BackupZCrypt.Infrastructure.Services.Settings;
 using BackupZCrypt.Test.Common;
 
-namespace BackupZCrypt.Test.Unit.Application;
+namespace BackupZCrypt.Test.Unit.Infrastructure;
 
 /// <summary>
 /// Tests that every persisted settings type survives a save and reload through the settings service,

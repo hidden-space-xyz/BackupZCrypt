@@ -1,11 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-using BackupZCrypt.Application.Services;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Infrastructure.Services;
+using BackupZCrypt.Infrastructure.Services.Settings;
 using BackupZCrypt.Test.Common;
 
 using NSubstitute;

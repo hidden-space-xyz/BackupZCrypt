@@ -45,7 +45,7 @@ Every arrow points inward and there are no others. `Domain` is the centre and de
 |---|---|---|
 | `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (strategies, services, factories). Three factory *implementations* also live here (`CompressionServiceFactory`, `EncryptionServiceFactory`, `KeyDerivationServiceFactory`). | **BCL only** — no other project, no runtime NuGet package |
 | `BackupZCrypt.Application` | Use-case orchestration and business services, validators, `Result`/`Result<T>`, manifest value objects. | Domain |
-| `BackupZCrypt.Infrastructure` | Concrete encryption / KDF / compression / chunking strategies + file & storage services. | Domain (+ BouncyCastle, ZstdSharp.Port) |
+| `BackupZCrypt.Infrastructure` | Concrete encryption / KDF / compression / chunking strategies + file, storage, and settings-persistence services. | Domain (+ BouncyCastle, ZstdSharp.Port) |
 | `BackupZCrypt.Composition` | DI composition root wiring contracts → implementations. | Application, Infrastructure, Domain |
 | `BackupZCrypt.Desktop` | Avalonia MVVM UI. **Owns all localized text.** | Application, Composition, Domain (+ Avalonia, CommunityToolkit.Mvvm) |
 | `BackupZCrypt.Test` | NUnit + NSubstitute suite. | all of the above |
@@ -73,7 +73,7 @@ carrying an enum `Id`. All implementations are registered as singletons against 
 (`services.AddSingleton<IEncryptionAlgorithmStrategy, ...>()`), then consumers inject the full
 `IEnumerable<T>` and index it by `Id` into a dictionary. **To add an algorithm:** add an enum member,
 implement an `internal sealed` strategy in Infrastructure, and register it in
-`DependencyInjection.AddDomainServices`. Nothing else selects strategies.
+`DependencyInjection.AddBackupZCryptServices`. Nothing else selects strategies.
 
 **Chunking is the exception and must stay one implementation.** `IChunkingStrategy` carries no `Id`,
 there is no `ChunkingAlgorithm` enum, and — critically — the manifest preamble records **no chunker
@@ -100,7 +100,11 @@ whose name ends in `Format` take `string.Format` arguments.
   failing; these tests are what turns that into a red `dotnet test`.
 
 **Request flow.** A Desktop ViewModel builds a `BackupRequest` and calls
-`IBackupOrchestrator.ExecuteAsync`. The orchestrator validates (blocking errors vs. advisory
+`IBackupOrchestrator.ExecuteAsync`. Only **Create** chooses its algorithms; restore, update, and
+verify read the cipher and KDF from the manifest preamble and the compression mode from the manifest
+header, because anything else would derive the wrong key. Build those with
+`BackupRequest.ForRestore` / `.ForUpdate` / `.ForVerify` rather than passing values the operation
+discards. The orchestrator validates (blocking errors vs. advisory
 warnings gated by `ProceedOnWarnings`), normalizes paths, prepares the destination, then dispatches
 by `BackupOperation` to `IChunkedBackupService.{Create,Update,Restore,Verify}Async`. Each op
 processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) reporting through
@@ -154,7 +158,7 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
   a missing one is now a CS1591 build warning. Update `README.md` when user-facing behavior changes.
 - **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming.
   `Test/Common/TestHost.cs` builds a real DI provider
-  (`AddDomainServices().AddApplicationServices()`) — integration tests exercise the real
+  (`AddBackupZCryptServices()`) — integration tests exercise the real
   crypto/chunking stack against temp directories rather than mocking it.
 - **The on-disk format is pinned, and that is load-bearing.** `Test/Unit/Format/OnDiskFormatTests.cs`
   restores committed fixture archives written by an earlier build and asserts golden vectors for each

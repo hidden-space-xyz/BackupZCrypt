@@ -546,6 +546,15 @@
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
     <value>Failed to write or encrypt manifest: {0}</value>
   </data>
+  <data name="ManifestInvalidMasterSalt" xml:space="preserve">
+    <value>Failed to write the manifest: the master salt is not the required length.</value>
+  </data>
+  <data name="ManifestUnsupportedAlgorithm" xml:space="preserve">
+    <value>Failed to write the manifest: it names an algorithm this version does not support.</value>
+  </data>
+  <data name="DecryptionErrorFormat" xml:space="preserve">
+    <value>Could not restore file: {0} - {1}</value>
+  </data>
   <data name="ManifestRequiredForUpdate" xml:space="preserve">
     <value>Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest.</value>
   </data>

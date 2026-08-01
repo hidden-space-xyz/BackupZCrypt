@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Services.Interfaces;
+namespace BackupZCrypt.Domain.Services.Interfaces;
 
 /// <summary>
 /// Persists and retrieves strongly typed application settings as JSON files on disk.
