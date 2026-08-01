@@ -50,29 +50,6 @@ internal sealed class ChunkedBackupService(
     private static readonly StringComparison PathComparer = PathNormalizationHelper.PathComparer;
 
     /// <summary>
-    /// The characters that may never appear anywhere in a manifest entry path.
-    /// </summary>
-    private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
-
-    /// <summary>
-    /// The separators recognized inside a manifest entry path, independent of the running platform.
-    /// </summary>
-    /// <remarks>
-    /// A manifest is portable data, not a host path: an archive written on Windows must restore to the
-    /// same directory tree on Linux and macOS. Both separators are therefore always recognized, so a
-    /// legacy entry such as <c>docs\notes.md</c> still splits into segments on Unix — where <c>\</c> is
-    /// an ordinary file-name character — instead of collapsing the tree into one oddly named file.
-    /// Treating both as separators everywhere also makes traversal detection platform-independent, so
-    /// a crafted <c>..\..\escape</c> entry is rejected on Unix rather than slipping past the check.
-    /// </remarks>
-    private static readonly char[] ManifestPathSeparators = ['/', '\\'];
-
-    /// <summary>
-    /// The characters that may never appear inside a single path segment on Windows.
-    /// </summary>
-    private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
-
-    /// <summary>
     /// Creates a new chunked backup, processing files in parallel, deduplicating chunks by content,
     /// and persisting an encrypted manifest.
     /// </summary>
@@ -173,11 +150,11 @@ internal sealed class ChunkedBackupService(
                         {
                             try
                             {
-                                var relativePath = ToManifestPath(
+                                var relativePath = ManifestPathPolicy.ToManifestPath(
                                     fileOperationsService.GetRelativePath(sourceRoot, file)
                                 );
 
-                                ValidateRelativeManifestPath(relativePath);
+                                ManifestPathPolicy.ValidateRelative(relativePath);
                                 var fileSize = fileOperationsService.GetFileSize(file);
 
                                 var entry = await ChunkAndEncryptFileAsync(
@@ -333,21 +310,15 @@ internal sealed class ChunkedBackupService(
             return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForUpdate);
         }
 
-        request = request with
-        {
-            EncryptionAlgorithm = preamble.Algorithm,
-            KeyDerivationAlgorithm = preamble.KeyDerivation,
-        };
-
+        // An update must reuse the algorithms the archive was written with, never the ones the caller
+        // supplied: a different KDF derives a different master key and the archive stops opening.
+        // Read them from the preamble at each use site rather than rewriting the request, so the
+        // request keeps meaning "what the user asked for" all the way through.
         DerivedKeySet? keys = null;
 
         try
         {
-            keys = DeriveKeySet(
-                request.Password,
-                preamble.MasterSalt,
-                request.KeyDerivationAlgorithm
-            );
+            keys = DeriveKeySet(request.Password, preamble.MasterSalt, preamble.KeyDerivation);
 
             var existingManifest = manifestService.DecryptChunkManifest(
                 preamble,
@@ -359,8 +330,6 @@ internal sealed class ChunkedBackupService(
                 return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
             }
 
-            request = request with { Compression = existingManifest.Header.Compression };
-
             var source = await ResolveSourceAsync(sourcePath, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -371,8 +340,10 @@ internal sealed class ChunkedBackupService(
 
             var (sourceFiles, sourceRoot) = source.Value;
 
-            var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
-            var compressionStrategy = CreateCompressionStrategy(request.Compression);
+            var encryptionStrategy = encryptionServiceFactory.Create(preamble.Algorithm);
+            var compressionStrategy = CreateCompressionStrategy(
+                existingManifest.Header.Compression
+            );
 
             var chunksDir = fileOperationsService.CombinePath(
                 destinationPath,
@@ -388,8 +359,8 @@ internal sealed class ChunkedBackupService(
             );
             foreach (var entry in existingManifest.Files)
             {
-                ValidateRelativeManifestPath(entry.OriginalPath);
-                existingFileIndex[ToManifestPath(entry.OriginalPath)] = entry;
+                ManifestPathPolicy.ValidateRelative(entry.OriginalPath);
+                existingFileIndex[ManifestPathPolicy.ToManifestPath(entry.OriginalPath)] = entry;
             }
 
             ConcurrentBag<ChunkManifestFileEntry> updatedEntries = [];
@@ -403,10 +374,10 @@ internal sealed class ChunkedBackupService(
 
             foreach (var file in sourceFiles)
             {
-                var relativePath = ToManifestPath(
+                var relativePath = ManifestPathPolicy.ToManifestPath(
                     fileOperationsService.GetRelativePath(sourceRoot, file)
                 );
-                ValidateRelativeManifestPath(relativePath);
+                ManifestPathPolicy.ValidateRelative(relativePath);
                 var fileSize = fileOperationsService.GetFileSize(file);
 
                 if (existingFileIndex.TryGetValue(relativePath, out var existing))
@@ -540,9 +511,9 @@ internal sealed class ChunkedBackupService(
             }
 
             ManifestHeader header = new(
-                request.EncryptionAlgorithm,
-                request.KeyDerivationAlgorithm,
-                request.Compression
+                preamble.Algorithm,
+                preamble.KeyDerivation,
+                existingManifest.Header.Compression
             );
 
             var canonicalEntries = await CanonicalizeChunkEntriesAsync(updatedEntries, storedChunks)
@@ -559,7 +530,7 @@ internal sealed class ChunkedBackupService(
                     newManifest,
                     destinationPath,
                     keys.ManifestEncryptionKey,
-                    request.EncryptionAlgorithm,
+                    preamble.Algorithm,
                     cancellationToken
                 )
                 .ConfigureAwait(false);
@@ -972,7 +943,7 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        ValidateRelativeManifestPath(relativePath);
+        ManifestPathPolicy.ValidateRelative(relativePath);
         List<ChunkManifestChunkRef> chunkRefs = [];
 
         await using var fileStream = fileOperationsService.OpenReadStream(
@@ -1061,7 +1032,7 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        var destFilePath = ResolveSafeDestinationPath(destinationPath, fileEntry.OriginalPath);
+        var destFilePath = ManifestPathPolicy.ResolveSafeDestination(destinationPath, fileEntry.OriginalPath);
         var destDir = fileOperationsService.GetDirectoryName(destFilePath);
 
         if (!string.IsNullOrEmpty(destDir))
@@ -1127,7 +1098,7 @@ internal sealed class ChunkedBackupService(
         CancellationToken cancellationToken
     )
     {
-        ValidateRelativeManifestPath(fileEntry.OriginalPath);
+        ManifestPathPolicy.ValidateRelative(fileEntry.OriginalPath);
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         long processedBytes = 0;
@@ -1512,7 +1483,7 @@ internal sealed class ChunkedBackupService(
 
         foreach (var file in manifestFiles)
         {
-            ValidateRelativeManifestPath(file.OriginalPath);
+            ManifestPathPolicy.ValidateRelative(file.OriginalPath);
 
             foreach (var chunk in file.Chunks)
             {
@@ -1967,121 +1938,6 @@ internal sealed class ChunkedBackupService(
         }
 
         return decoded;
-    }
-
-    /// <summary>
-    /// Validates that a manifest entry path is relative and free of traversal segments and illegal
-    /// characters, with an extra per-segment file name check on Windows.
-    /// </summary>
-    /// <remarks>
-    /// Applied to paths both on the way into and on the way out of a manifest, so neither a hostile
-    /// source tree nor a crafted manifest can steer a write outside the destination.
-    /// </remarks>
-    /// <param name="relativePath">The entry path to validate.</param>
-    /// <exception cref="InvalidDataException">
-    /// The path is empty, rooted, contains invalid characters, or contains a <c>..</c> segment.
-    /// </exception>
-    private static void ValidateRelativeManifestPath(string relativePath)
-    {
-        if (string.IsNullOrWhiteSpace(relativePath))
-        {
-            throw new InvalidDataException("Manifest entry path is empty.");
-        }
-
-        if (Path.IsPathRooted(relativePath))
-        {
-            throw new InvalidDataException("Manifest entry path must be relative.");
-        }
-
-        if (relativePath.IndexOfAny(InvalidPathChars) >= 0)
-        {
-            throw new InvalidDataException("Manifest entry path contains invalid characters.");
-        }
-
-        var pathSegments = relativePath.Split(
-            ManifestPathSeparators,
-            StringSplitOptions.RemoveEmptyEntries
-        );
-
-        if (pathSegments.Any(static segment => segment == ".."))
-        {
-            throw new InvalidDataException("Manifest entry path contains traversal segments.");
-        }
-
-        if (
-            OperatingSystem.IsWindows()
-            && pathSegments.Any(static segment => segment.IndexOfAny(InvalidFileNameChars) >= 0)
-        )
-        {
-            throw new InvalidDataException(
-                "Manifest entry path contains invalid file name characters."
-            );
-        }
-    }
-
-    /// <summary>
-    /// Resolves a manifest entry path against the restore root and confirms the result stays inside
-    /// that root.
-    /// </summary>
-    /// <remarks>
-    /// Both paths are fully resolved first and the root is compared with a trailing separator, so a
-    /// sibling directory whose name merely starts with the root's name is not accepted as being
-    /// inside it.
-    /// </remarks>
-    /// <param name="destinationRoot">The directory restored files must stay within.</param>
-    /// <param name="relativePath">The entry path taken from the manifest.</param>
-    /// <returns>The absolute path the restored file may be written to.</returns>
-    /// <exception cref="InvalidDataException">The path is invalid or resolves outside the destination root.</exception>
-    private static string ResolveSafeDestinationPath(string destinationRoot, string relativePath)
-    {
-        ValidateRelativeManifestPath(relativePath);
-
-        var rootFullPath = Path.GetFullPath(destinationRoot);
-        var destinationFullPath = Path.GetFullPath(
-            Path.Combine(rootFullPath, ToPlatformPath(relativePath))
-        );
-        var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
-
-        return !destinationFullPath.StartsWith(rootWithSeparator, PathComparer)
-            ? throw new InvalidDataException("Manifest entry path escapes the restore directory.")
-            : destinationFullPath;
-    }
-
-    /// <summary>
-    /// Appends a directory separator to a path unless it already ends with one.
-    /// </summary>
-    /// <param name="path">The path to normalize.</param>
-    /// <returns>The path terminated by a directory separator.</returns>
-    private static string EnsureTrailingDirectorySeparator(string path)
-    {
-        return
-            path.EndsWith(Path.DirectorySeparatorChar)
-            || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
-
-    /// <summary>
-    /// Converts a host-relative path into the manifest's canonical, platform-independent form.
-    /// </summary>
-    /// <remarks>
-    /// Forward slashes are the canonical separator on disk, the same convention archive formats use, so
-    /// an archive records the same entry text no matter which platform wrote it.
-    /// </remarks>
-    /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
-    /// <returns>The path with every separator normalized to <c>/</c>.</returns>
-    private static string ToManifestPath(string relativePath) => relativePath.Replace('\\', '/');
-
-    /// <summary>
-    /// Converts a manifest entry path back into a path the running platform can resolve.
-    /// </summary>
-    /// <param name="manifestPath">The entry path taken from the manifest, in either notation.</param>
-    /// <returns>The path with every separator replaced by the platform's directory separator.</returns>
-    private static string ToPlatformPath(string manifestPath)
-    {
-        return manifestPath
-            .Replace('\\', Path.DirectorySeparatorChar)
-            .Replace('/', Path.DirectorySeparatorChar);
     }
 
     /// <summary>
