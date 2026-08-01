@@ -13,7 +13,7 @@ namespace BackupZCrypt.Desktop.Views;
 /// Modal dialog that presents the warnings confirmation flow and the final operation result, styled
 /// like the rest of the application. It closes itself once neither state is active.
 /// </summary>
-public sealed partial class OperationDialog : Window
+internal sealed partial class OperationDialog : Window
 {
     /// <summary>
     /// The view model whose state changes are being observed, or <see langword="null"/> while the

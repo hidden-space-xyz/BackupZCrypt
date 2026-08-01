@@ -85,9 +85,11 @@ roslynator_max_line_length = 140
 roslynator_tab_length = 4
 roslynator_new_line_at_end_of_file = true
 
-# Prefer underscore-prefixed private fields.
-# This is common in layered business applications and reduces naming ambiguity.
-roslynator_prefix_field_identifier_with_underscore = true
+# Private fields are named without a leading underscore, which is what every field in the solution
+# already does; `this.` disambiguates where it matters. This option only configures Roslynator's
+# code fix — it raises no diagnostic — so leaving it at `true` meant the file asked for a convention
+# nothing enforced and no code followed.
+roslynator_prefix_field_identifier_with_underscore = false
 
 # Prefer trailing commas in multi-line constructs to improve diffs.
 roslynator_trailing_comma_style = include

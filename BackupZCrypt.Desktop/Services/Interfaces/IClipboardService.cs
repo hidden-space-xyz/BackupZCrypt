@@ -3,7 +3,7 @@ namespace BackupZCrypt.Desktop.Services.Interfaces;
 /// <summary>
 /// Writes text to the system clipboard.
 /// </summary>
-public interface IClipboardService
+internal interface IClipboardService
 {
     /// <summary>
     /// Copies the supplied text to the system clipboard.

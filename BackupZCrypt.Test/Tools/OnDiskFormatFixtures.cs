@@ -105,12 +105,18 @@ public static class OnDiskFormatFixtures
     public static byte[] GoldenChunkContent => "BackupZCrypt golden chunk"u8.ToArray();
 
     /// <summary>
+    /// Gets the repository root, located by walking up from the test assembly to the solution file.
+    /// </summary>
+    /// <exception cref="DirectoryNotFoundException">No ancestor directory contains the solution file.</exception>
+    public static string RepositoryRoot => FindRepositoryRoot();
+
+    /// <summary>
     /// Gets the committed fixture root inside the source tree, used by the generator to overwrite
     /// the archives in place.
     /// </summary>
     /// <exception cref="DirectoryNotFoundException">The repository root could not be located.</exception>
     public static string RepositoryTestDataRoot =>
-        Path.Combine(FindRepositoryRoot(), "BackupZCrypt.Test", "TestData", "LegacyArchives");
+        Path.Combine(RepositoryRoot, "BackupZCrypt.Test", "TestData", "LegacyArchives");
 
     /// <summary>
     /// Gets the fixture root copied next to the test assembly, used by the pinning tests at run time.

@@ -24,7 +24,9 @@ internal sealed class ClipboardService : IClipboardService
             && desktop.MainWindow?.Clipboard is { } clipboard
         )
         {
-            var dataTransfer = new DataTransfer();
+            // Disposed only after SetDataAsync has completed, by which point the clipboard has taken
+            // its own copy of the payload.
+            using var dataTransfer = new DataTransfer();
             dataTransfer.Add(DataTransferItem.CreateText(text));
             await clipboard.SetDataAsync(dataTransfer);
         }

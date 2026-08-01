@@ -174,11 +174,6 @@ internal static class Strings
     public static string SectionSecurity => Get();
 
     /// <summary>
-    /// Gets the options section heading.
-    /// </summary>
-    public static string SectionOptions => Get();
-
-    /// <summary>
     /// Gets the defaults section heading.
     /// </summary>
     public static string SectionDefaults => Get();
@@ -387,11 +382,6 @@ internal static class Strings
     /// Gets the format string for the result size.
     /// </summary>
     public static string ResultSizeFormat => Get();
-
-    /// <summary>
-    /// Gets the errors panel title.
-    /// </summary>
-    public static string ErrorsTitle => Get();
 
     /// <summary>
     /// Gets the language field label.

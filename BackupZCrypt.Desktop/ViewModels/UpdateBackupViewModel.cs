@@ -17,7 +17,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// <param name="settingsService">The service that reads and persists user settings.</param>
 /// <param name="filePicker">The folder picker service.</param>
 /// <param name="manifestService">The service used to detect the kind of manifest at the backup path.</param>
-public sealed partial class UpdateBackupViewModel(
+internal sealed partial class UpdateBackupViewModel(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
     IFilePickerService filePicker,

@@ -470,8 +470,7 @@ internal sealed class ManifestService(
                 f.FileHash,
                 f.TotalSize,
                 [.. f.Chunks]
-            ))
-;
+            ));
 
         return new ChunkManifestData(header, document.MasterSalt, files);
     }

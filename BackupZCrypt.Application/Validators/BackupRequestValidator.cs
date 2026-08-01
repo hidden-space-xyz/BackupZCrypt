@@ -28,13 +28,10 @@ internal sealed class BackupRequestValidator(
     /// elsewhere, matching how each platform's file system distinguishes names.
     /// </summary>
     /// <remarks>
-    /// This mirrors the comparison the chunked backup service applies. Comparing case-insensitively on
-    /// Unix would reject <c>/data/Backup</c> alongside <c>/data/backup</c> as the same directory, even
-    /// though they are two distinct directories there.
+    /// Shared with the chunked backup service so validation and execution cannot disagree on whether
+    /// two paths denote the same directory.
     /// </remarks>
-    private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
+    private static readonly StringComparison PathComparer = PathNormalizationHelper.PathComparer;
 
     /// <summary>
     /// Analyzes a request for blocking errors such as invalid or missing paths, password problems,

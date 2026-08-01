@@ -9,7 +9,7 @@ namespace BackupZCrypt.Desktop.Views;
 /// <summary>
 /// The application's main window, hosting the navigation shell and a custom title bar.
 /// </summary>
-public sealed partial class MainWindow : Window
+internal sealed partial class MainWindow : Window
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -88,6 +88,8 @@ public sealed partial class MainWindow : Window
     /// <param name="change">The property change notification.</param>
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
+        ArgumentNullException.ThrowIfNull(change);
+
         base.OnPropertyChanged(change);
 
         if (change.Property == WindowStateProperty)

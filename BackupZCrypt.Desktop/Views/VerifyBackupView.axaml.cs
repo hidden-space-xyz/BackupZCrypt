@@ -5,7 +5,7 @@ namespace BackupZCrypt.Desktop.Views;
 /// <summary>
 /// View for the verify-backup page.
 /// </summary>
-public sealed partial class VerifyBackupView : UserControl
+internal sealed partial class VerifyBackupView : UserControl
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="VerifyBackupView"/> class.

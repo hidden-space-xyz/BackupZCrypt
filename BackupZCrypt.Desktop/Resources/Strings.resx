@@ -210,9 +210,6 @@
   <data name="SectionSecurity" xml:space="preserve">
     <value>Security</value>
   </data>
-  <data name="SectionOptions" xml:space="preserve">
-    <value>Options</value>
-  </data>
   <data name="SectionDefaults" xml:space="preserve">
     <value>Defaults</value>
   </data>
@@ -335,9 +332,6 @@
   </data>
   <data name="ResultSizeFormat" xml:space="preserve">
     <value>Total size: {0}</value>
-  </data>
-  <data name="ErrorsTitle" xml:space="preserve">
-    <value>Errors</value>
   </data>
   <data name="LanguageLabel" xml:space="preserve">
     <value>Language</value>

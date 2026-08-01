@@ -13,7 +13,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the about page: lists the available algorithms with their descriptions and the
 /// application version.
 /// </summary>
-public sealed class AboutViewModel : ViewModelBase
+internal sealed class AboutViewModel : ViewModelBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AboutViewModel"/> class, building the algorithm

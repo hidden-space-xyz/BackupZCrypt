@@ -19,7 +19,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the settings page: lets the user choose default encryption, key-derivation, and
 /// compression algorithms plus the UI language, and persists those choices.
 /// </summary>
-public sealed partial class SettingsViewModel : ViewModelBase
+internal sealed partial class SettingsViewModel : ViewModelBase
 {
     /// <summary>
     /// The service that reads and persists user settings.
@@ -145,6 +145,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
         IEnumerable<ICompressionStrategy> compressionStrategies
     )
     {
+        ArgumentNullException.ThrowIfNull(settingsService);
+
         this.settingsService = settingsService;
         this.benchmarkService = benchmarkService;
 

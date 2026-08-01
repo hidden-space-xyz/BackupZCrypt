@@ -52,37 +52,34 @@ internal sealed class BackupOrchestrator(
             return validationResult;
         }
 
-        var (sourcePath, destinationPath) = NormalizePaths(request);
-
-        if (!fileOperationsService.DirectoryExists(sourcePath))
-        {
-            return Result<BackupResult>.Failure(
-                fileOperationsService.FileExists(sourcePath)
-                    ? MessageCode.SourceMustBeDirectory
-                    : MessageCode.SourcePathNotExist
-            );
-        }
-
-        if (
-            request.Operation == BackupOperation.Update
-            && !fileOperationsService.DirectoryExists(destinationPath)
-        )
-        {
-            return Result<BackupResult>.Failure(MessageCode.BackupDestinationMustExist);
-        }
-
-        if (
-            request.Operation == BackupOperation.Create
-            && fileOperationsService.DirectoryExists(destinationPath)
-        )
-        {
-            await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
-        }
-
-        await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
-
         try
         {
+            var (sourcePath, destinationPath) = NormalizePaths(request);
+
+            var sourceError = CheckSourceDirectory(sourcePath);
+            if (sourceError is not null)
+            {
+                return Result<BackupResult>.Failure(sourceError.Value);
+            }
+
+            if (
+                request.Operation == BackupOperation.Update
+                && !fileOperationsService.DirectoryExists(destinationPath)
+            )
+            {
+                return Result<BackupResult>.Failure(MessageCode.BackupDestinationMustExist);
+            }
+
+            if (
+                request.Operation == BackupOperation.Create
+                && fileOperationsService.DirectoryExists(destinationPath)
+            )
+            {
+                await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
+            }
+
+            await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
+
             return await RunBackupAsync(
                 sourcePath,
                 destinationPath,
@@ -183,28 +180,25 @@ internal sealed class BackupOrchestrator(
             );
         }
 
-        var sourcePath =
-            PathNormalizationHelper.TryNormalize(request.SourcePath, out var normalizeError)
-            ?? request.SourcePath;
-
-        if (normalizeError is not null)
-        {
-            return Result<BackupResult>.Success(
-                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: [normalizeError])
-            );
-        }
-
-        if (!fileOperationsService.DirectoryExists(sourcePath))
-        {
-            return Result<BackupResult>.Failure(
-                fileOperationsService.FileExists(sourcePath)
-                    ? MessageCode.SourceMustBeDirectory
-                    : MessageCode.SourcePathNotExist
-            );
-        }
-
         try
         {
+            var sourcePath =
+                PathNormalizationHelper.TryNormalize(request.SourcePath, out var normalizeError)
+                ?? request.SourcePath;
+
+            if (normalizeError is not null)
+            {
+                return Result<BackupResult>.Success(
+                    new BackupResult(false, TimeSpan.Zero, 0, 0, 0, errors: [normalizeError])
+                );
+            }
+
+            var sourceError = CheckSourceDirectory(sourcePath);
+            if (sourceError is not null)
+            {
+                return Result<BackupResult>.Failure(sourceError.Value);
+            }
+
             return await chunkedBackupService.VerifyAsync(
                 sourcePath,
                 request,
@@ -220,6 +214,24 @@ internal sealed class BackupOrchestrator(
         {
             return Result<BackupResult>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Checks that the source path is an existing directory, distinguishing a path that is a file
+    /// from one that does not exist at all.
+    /// </summary>
+    /// <param name="sourcePath">The normalized source path to check.</param>
+    /// <returns>The message code describing the problem, or <see langword="null"/> when the path is a directory.</returns>
+    private MessageCode? CheckSourceDirectory(string sourcePath)
+    {
+        if (fileOperationsService.DirectoryExists(sourcePath))
+        {
+            return null;
+        }
+
+        return fileOperationsService.FileExists(sourcePath)
+            ? MessageCode.SourceMustBeDirectory
+            : MessageCode.SourcePathNotExist;
     }
 
     /// <summary>

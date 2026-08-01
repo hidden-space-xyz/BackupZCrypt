@@ -8,6 +8,20 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 internal static class PathNormalizationHelper
 {
     /// <summary>
+    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
+    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// </summary>
+    /// <remarks>
+    /// Every layer that decides whether two paths denote the same location must use this one value.
+    /// Comparing case-insensitively on Unix would treat <c>/data/Backup</c> and <c>/data/backup</c>
+    /// as the same directory when they are two distinct ones, and disagreeing on the rule between
+    /// the validator and the backup engine would let a request pass validation and then be refused.
+    /// </remarks>
+    internal static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
+
+    /// <summary>
     /// Attempts to expand and resolve a raw path to its absolute form.
     /// </summary>
     /// <param name="rawPath">The raw path to normalize; whitespace yields an empty string.</param>

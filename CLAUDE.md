@@ -34,35 +34,52 @@ MSBuild target, which `dotnet publish`es self-contained single-file bundles for 
 ## Architecture — Clean Architecture, dependencies point inward
 
 ```
-Desktop ─┐
-         ├─> Composition ─> Application ─> Domain
-Infra ───┘        (Composition also ─> Infrastructure ─> Domain)
+Desktop ──> Composition ──> Application ──> Domain
+   │             │                             ▲
+   └─────────────┴──> Infrastructure ──────────┘
 ```
+
+Every arrow points inward and there are no others. `Domain` is the centre and depends on nothing.
 
 | Project | Role | May reference |
 |---|---|---|
-| `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (strategies, services, factories). Two factory *implementations* also live here (`CompressionServiceFactory`, `KeyDerivationServiceFactory`). | **BCL only** — no NuGet, no other project |
+| `BackupZCrypt.Domain` | Enums, constants, value objects, and **interfaces** (strategies, services, factories). Three factory *implementations* also live here (`CompressionServiceFactory`, `EncryptionServiceFactory`, `KeyDerivationServiceFactory`). | **BCL only** — no other project, no runtime NuGet package |
 | `BackupZCrypt.Application` | Use-case orchestration and business services, validators, `Result`/`Result<T>`, manifest value objects. | Domain |
 | `BackupZCrypt.Infrastructure` | Concrete encryption / KDF / compression / chunking strategies + file & storage services. | Domain (+ BouncyCastle, ZstdSharp.Port) |
-| `BackupZCrypt.Composition` | DI composition root wiring contracts → implementations. | Application, Infrastructure |
-| `BackupZCrypt.Desktop` | Avalonia MVVM UI. **Owns all localized text.** | Application, Composition (+ Avalonia, CommunityToolkit.Mvvm) |
+| `BackupZCrypt.Composition` | DI composition root wiring contracts → implementations. | Application, Infrastructure, Domain |
+| `BackupZCrypt.Desktop` | Avalonia MVVM UI. **Owns all localized text.** | Application, Composition, Domain (+ Avalonia, CommunityToolkit.Mvvm) |
 | `BackupZCrypt.Test` | NUnit + NSubstitute suite. | all of the above |
 
 Non-negotiable boundary rules:
-- **Domain references nothing** — no NuGet package, no other project (BCL only).
+- **Domain references nothing** — no other project, and no NuGet package that ships anything. The
+  Roslynator references it inherits from `Directory.Build.props` are build-time analyzers
+  (`PrivateAssets=all`) and contribute no runtime dependency.
 - Concrete implementations are `internal sealed`, exposed to `Composition` and `Test` via
   `InternalsVisibleTo`. **Never `new` an implementation across a layer** — register it in
-  `BackupZCrypt.Composition/DependencyInjection.cs` and resolve it through DI.
+  `BackupZCrypt.Composition/DependencyInjection.cs` and resolve it through DI. The one deliberate
+  exception is `App.ConfigureServices`, which registers the Desktop-only platform services and the
+  ViewModels: `Composition` cannot reference Avalonia without inverting the dependency arrow.
+- `BackupZCrypt.Desktop` declares **no public types at all** — it is a leaf application, so its
+  ViewModels, Views, and models are `internal`, matching how the inner layers declare theirs.
 - **No user-facing English/Spanish text below the Desktop layer** (see Localization below).
+
+`LayerDependencyTests` enforces the table above by parsing the project files, so an illegal
+reference fails `dotnet test` even before anything uses it.
 
 ## Cross-cutting patterns (read these before adding code)
 
-**Strategy + factory selection.** Every encryption / KDF / compression / chunking algorithm is a
-strategy carrying an enum `Id`. All implementations are registered as singletons against the same
-interface (`services.AddSingleton<IEncryptionAlgorithmStrategy, ...>()`), then consumers inject the
-full `IEnumerable<T>` and index it by `Id` into a dictionary. **To add an algorithm:** add an enum
-member, implement an `internal sealed` strategy in Infrastructure, and register it in
+**Strategy + factory selection.** Every encryption / KDF / compression algorithm is a strategy
+carrying an enum `Id`. All implementations are registered as singletons against the same interface
+(`services.AddSingleton<IEncryptionAlgorithmStrategy, ...>()`), then consumers inject the full
+`IEnumerable<T>` and index it by `Id` into a dictionary. **To add an algorithm:** add an enum member,
+implement an `internal sealed` strategy in Infrastructure, and register it in
 `DependencyInjection.AddDomainServices`. Nothing else selects strategies.
+
+**Chunking is the exception and must stay one implementation.** `IChunkingStrategy` carries no `Id`,
+there is no `ChunkingAlgorithm` enum, and — critically — the manifest preamble records **no chunker
+identifier**. A second chunking strategy would therefore change chunk boundaries with nothing on disk
+to say which one produced them, destroying deduplication against every archive already written.
+`StrategyRegistrationTests` asserts exactly one registration.
 
 **Result over exceptions across layers.** Application operations return `Result` / `Result<T>`
 (in `BackupZCrypt.Application/ValueObjects/`) carrying `LocalizableMessage` errors — they do not
@@ -76,8 +93,11 @@ returning a `MessageCode` yields failure. Exceptions inside the engine are caugh
 whose name ends in `Format` take `string.Format` arguments.
 - Adding or changing a `MessageCode` requires the matching key in **both**
   `BackupZCrypt.Desktop/Resources/Strings.resx` (en) and `Strings.es.resx` (es).
-- `LocalizationParityTests` enforces this: every `MessageCode` must have an English key, and the
-  en/es key sets must be identical. These tests fail the build if you forget a translation.
+- `LocalizationParityTests` enforces this: every `MessageCode` must have an English key, the en/es
+  key sets must be identical, and the English file must hold exactly the keys the application asks
+  for — no missing entries and no orphans. Both `Strings.Get` and `Strings.GetByKey` fall back to
+  returning the key itself, so a missing entry ships a raw identifier as visible UI text rather than
+  failing; these tests are what turns that into a red `dotnet test`.
 
 **Request flow.** A Desktop ViewModel builds a `BackupRequest` and calls
 `IBackupOrchestrator.ExecuteAsync`. The orchestrator validates (blocking errors vs. advisory
@@ -121,16 +141,28 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
 
 - **Central package management** — all versions live in `Directory.Packages.props`; project files
   reference packages without versions. Keep packages on their latest stable compatible versions.
-- **Analyzers are gates.** Every project sets `AnalysisMode=All` and includes Roslynator; the
-  `.editorconfig` is strict (file-scoped namespaces, `var` always, explicit accessibility modifiers,
-  underscore-prefixed private fields, trailing commas, `I`-prefixed interfaces, braces always,
-  140-col lines). A clean change adds **zero** new analyzer/format warnings.
-- **Docs.** Every non-`private` member has an XML doc comment (the existing code is thorough — match
-  it). Update `README.md` when user-facing behavior or usage changes.
-- **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming (the naming
-  analyzer intentionally excludes methods to allow this). `Test/Common/TestHost.cs` builds a real DI
-  provider (`AddDomainServices().AddApplicationServices()`) — integration tests exercise the real
+- **Analyzers are gates.** `Directory.Build.props` gives every project `AnalysisMode=All`,
+  `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, and Roslynator — do not re-declare these
+  per project. The `.editorconfig` is strict (file-scoped namespaces, `var` always, explicit
+  accessibility modifiers, private fields without an underscore prefix, trailing commas,
+  `I`-prefixed interfaces, braces always, 140-col lines). A clean change adds **zero** new
+  analyzer/format warnings, and the solution builds at zero today.
+  `BackupZCrypt.Test` deliberately opts out (see the comment in its `.csproj`): the suite's
+  `Method_Scenario_Expected` names conflict with CA1707 and the docs rule, and NUnit.Analyzers is
+  the analyzer that matters there.
+- **Docs.** Every non-`private` member has an XML doc comment — with `GenerateDocumentationFile` on,
+  a missing one is now a CS1591 build warning. Update `README.md` when user-facing behavior changes.
+- **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming.
+  `Test/Common/TestHost.cs` builds a real DI provider
+  (`AddDomainServices().AddApplicationServices()`) — integration tests exercise the real
   crypto/chunking stack against temp directories rather than mocking it.
+- **The on-disk format is pinned, and that is load-bearing.** `Test/Unit/Format/OnDiskFormatTests.cs`
+  restores committed fixture archives written by an earlier build and asserts golden vectors for each
+  KDF, the four HKDF sub-key labels, the chunk nonce, the AEAD associated data, and the chunk file
+  name. **If one of these fails, assume a change broke the format, not that the test is stale** — a
+  format change makes every archive a user already wrote permanently unreadable. The fixtures are
+  regenerated only by the `[Explicit]` `Test/Tools/LegacyArchiveGenerator.cs`, and only on a
+  deliberate format change.
 - **Settings** persist as indented JSON under `%LocalAppData%/BackupZCrypt` (platform equivalent
   elsewhere), one file per settings type; defaults are recreated if a file is missing or corrupt.
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).

@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Xml.Linq;
 
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Integration;
@@ -73,6 +75,36 @@ public sealed class LocalizationParityTests
             "Strings.resx and Strings.es.resx must contain the identical set of keys.\n"
                 + $"Only in English: {Describe(onlyInEnglish)}\n"
                 + $"Only in Spanish: {Describe(onlyInSpanish)}"
+        );
+    }
+
+    [Test]
+    public void EnglishResx_HoldsExactlyTheKeysTheApplicationAsksFor()
+    {
+        var englishKeys = ReadResxKeys(EnglishResxPath);
+
+        var requested = typeof(Strings)
+            .GetProperties(BindingFlags.Public | BindingFlags.Static)
+            .Select(static p => p.Name)
+            .Concat(Enum.GetNames<MessageCode>())
+            .ToHashSet(StringComparer.Ordinal);
+
+        var missing = requested
+            .Except(englishKeys)
+            .OrderBy(static k => k, StringComparer.Ordinal)
+            .ToList();
+        var orphaned = englishKeys
+            .Except(requested)
+            .OrderBy(static k => k, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.That(
+            missing.Count == 0 && orphaned.Count == 0,
+            Is.True,
+            "Strings.Get and Strings.GetByKey both fall back to returning the key itself, so a "
+                + "missing entry ships the raw identifier as visible UI text instead of failing.\n"
+                + $"Asked for but not in Strings.resx: {Describe(missing)}\n"
+                + $"In Strings.resx but never asked for: {Describe(orphaned)}"
         );
     }
 

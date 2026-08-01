@@ -3,7 +3,7 @@ namespace BackupZCrypt.Desktop.Services.Interfaces;
 /// <summary>
 /// Presents a native folder picker and returns the selected local path.
 /// </summary>
-public interface IFilePickerService
+internal interface IFilePickerService
 {
     /// <summary>
     /// Prompts the user to choose a single folder.

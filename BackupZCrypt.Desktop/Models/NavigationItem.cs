@@ -10,4 +10,4 @@ namespace BackupZCrypt.Desktop.Models;
 /// <param name="Icon">The vector geometry displayed next to the title.</param>
 /// <param name="Title">The localized navigation label.</param>
 /// <param name="Page">The ViewModel of the page activated when this item is selected.</param>
-public sealed record NavigationItem(StreamGeometry Icon, string Title, ViewModelBase Page);
+internal sealed record NavigationItem(StreamGeometry Icon, string Title, ViewModelBase Page);

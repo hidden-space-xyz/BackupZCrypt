@@ -45,12 +45,9 @@ internal sealed class ChunkedBackupService(
     private const int KeySizeBytes = EncryptionConstants.KeySize / 8;
 
     /// <summary>
-    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
-    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// The comparison applied to backup paths, shared with every other layer that compares them.
     /// </summary>
-    private static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
+    private static readonly StringComparison PathComparer = PathNormalizationHelper.PathComparer;
 
     /// <summary>
     /// The characters that may never appear anywhere in a manifest entry path.
@@ -2099,7 +2096,7 @@ internal sealed class ChunkedBackupService(
             is FileNotFoundException
                 or DirectoryNotFoundException
                 or PathTooLongException
-                or IOException { Message: not null }
+                or IOException
                 or UnauthorizedAccessException;
     }
 

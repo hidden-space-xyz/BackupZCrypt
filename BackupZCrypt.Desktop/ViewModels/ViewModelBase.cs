@@ -5,7 +5,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// <summary>
 /// Base class for all ViewModels, providing change notification and a navigation activation hook.
 /// </summary>
-public abstract partial class ViewModelBase : ObservableObject
+internal abstract partial class ViewModelBase : ObservableObject
 {
     /// <summary>
     /// Gets or sets a value indicating whether this ViewModel's page is the one currently shown in

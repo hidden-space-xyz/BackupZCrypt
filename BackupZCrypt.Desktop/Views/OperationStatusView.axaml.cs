@@ -11,7 +11,7 @@ namespace BackupZCrypt.Desktop.Views;
 /// Reusable control that displays live operation progress inline and surfaces the warnings
 /// confirmation and final result in a modal dialog.
 /// </summary>
-public sealed partial class OperationStatusView : UserControl
+internal sealed partial class OperationStatusView : UserControl
 {
     /// <summary>
     /// The view model whose state changes are being observed, or <see langword="null"/> while the

@@ -19,7 +19,7 @@ namespace BackupZCrypt.Desktop;
 /// The Avalonia application root: loads XAML, builds the dependency-injection container, applies the
 /// language preference, and shows the main window.
 /// </summary>
-public sealed class App : Avalonia.Application
+internal sealed class App : Avalonia.Application
 {
     /// <summary>
     /// Loads the application's XAML resources.

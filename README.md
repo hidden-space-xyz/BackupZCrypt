@@ -106,11 +106,12 @@ versions, which recorded `\`.
 
 | Project | Purpose |
 |---|---|
-| `BackupZCrypt.Domain` | Core contracts: enums, constants, strategy and service interfaces, value objects |
+| `BackupZCrypt.Domain` | Core contracts: enums, constants, strategy and service interfaces, value objects, and the algorithm factories |
 | `BackupZCrypt.Application` | Business logic: backup orchestration, chunked backup engine, manifest and settings services |
 | `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; file system access |
 | `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |
 | `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
+| `BackupZCrypt.Test` | NUnit suite: unit, integration, architecture, and on-disk format tests |
 
 ## 🚀 Roadmap
 

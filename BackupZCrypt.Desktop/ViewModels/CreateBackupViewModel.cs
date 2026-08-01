@@ -22,7 +22,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// <param name="filePicker">The folder picker service.</param>
 /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
 /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
-public sealed partial class CreateBackupViewModel(
+internal sealed partial class CreateBackupViewModel(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
     IFilePickerService filePicker,

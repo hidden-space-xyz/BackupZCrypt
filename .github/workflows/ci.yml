@@ -1,0 +1,55 @@
+name: CI
+
+# Runs the build and the full test suite on every push to a working branch and on every pull
+# request. Without this, the only workflow in the repository triggered on pushes to `master`, so
+# nothing verified the architecture, localization, or on-disk format guards until after a change had
+# already been merged and was on its way to a release.
+
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  SOLUTION: BackupZCrypt.sln
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      # -warnaserror makes the analyzer gate real: the solution builds at zero warnings today, and
+      # this is what keeps it there rather than letting warnings accumulate unnoticed.
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --configuration Debug --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --configuration Debug --no-build --verbosity normal
+
+      - name: Verify formatting
+        run: dotnet format ${{ env.SOLUTION }} --verify-no-changes --no-restore

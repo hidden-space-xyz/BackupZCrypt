@@ -25,7 +25,7 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// <param name="orchestrator">The orchestrator that executes backup operations.</param>
 /// <param name="settingsService">The service that reads and persists user settings.</param>
 /// <param name="filePicker">The folder picker service.</param>
-public abstract partial class OperationViewModelBase(
+internal abstract partial class OperationViewModelBase(
     IBackupOrchestrator orchestrator,
     ISettingsService settingsService,
     IFilePickerService filePicker
@@ -61,7 +61,6 @@ public abstract partial class OperationViewModelBase(
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
     public partial bool IsRunning { get; set; }
 
     /// <summary>
@@ -154,11 +153,6 @@ public abstract partial class OperationViewModelBase(
     public ObservableCollection<string> Warnings { get; } = [];
 
     /// <summary>
-    /// Gets a value indicating whether no operation is currently running.
-    /// </summary>
-    public bool IsIdle => !IsRunning;
-
-    /// <summary>
     /// Gets the folder picker service.
     /// </summary>
     protected IFilePickerService FilePicker { get; } = filePicker;
@@ -235,6 +229,8 @@ public abstract partial class OperationViewModelBase(
     /// <returns>A task that completes once the folder picker has been dismissed.</returns>
     protected async Task PickFolderIntoAsync(Action<string> assign)
     {
+        ArgumentNullException.ThrowIfNull(assign);
+
         var path = await FilePicker.PickFolderAsync(Strings.PickFolderTitle);
         if (path is not null)
         {
@@ -533,6 +529,8 @@ public abstract partial class OperationViewModelBase(
     /// <returns>The recent paths to save.</returns>
     protected virtual RecentPathSettings BuildRecentPaths(RecentPathSettings current)
     {
+        ArgumentNullException.ThrowIfNull(current);
+
         return current with
         {
             LastSourcePath = SourcePath,

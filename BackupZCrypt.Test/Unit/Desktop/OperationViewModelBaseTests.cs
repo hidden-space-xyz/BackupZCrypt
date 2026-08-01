@@ -95,20 +95,10 @@ public sealed class OperationViewModelBaseTests
         sut.DestinationPath = "destination";
 
         sut.IsRunning = true;
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.StartCommand.CanExecute(null), Is.False);
-            Assert.That(sut.IsIdle, Is.False);
-        }
+        Assert.That(sut.StartCommand.CanExecute(null), Is.False);
 
         sut.IsRunning = false;
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.StartCommand.CanExecute(null), Is.True);
-            Assert.That(sut.IsIdle, Is.True);
-        }
+        Assert.That(sut.StartCommand.CanExecute(null), Is.True);
     }
 
     [TestCase(true, 5)]

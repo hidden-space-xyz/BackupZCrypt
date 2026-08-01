@@ -114,6 +114,21 @@ public sealed class StrategyRegistrationTests
     }
 
     [Test]
+    public void Registrations_ContainExactlyOneChunkingStrategy()
+    {
+        using var provider = TestHost.CreateProvider();
+
+        Assert.That(
+            provider.GetServices<IChunkingStrategy>().ToList(),
+            Has.Count.EqualTo(1),
+            "Chunking is the one strategy family with no enum identifier and no manifest field "
+                + "recording which implementation ran. A second registration would change chunk "
+                + "boundaries with nothing on disk to say so, destroying deduplication against every "
+                + "archive already written."
+        );
+    }
+
+    [Test]
     public void Create_UnregisteredEncryptionAlgorithm_ThrowsInsteadOfSubstitutingAnotherCipher()
     {
         var registered = Substitute.For<IEncryptionAlgorithmStrategy>();

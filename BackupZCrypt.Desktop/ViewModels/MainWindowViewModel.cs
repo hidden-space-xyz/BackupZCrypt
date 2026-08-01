@@ -1,27 +1,27 @@
 using System.Collections.ObjectModel;
 
-using BackupZCrypt.Desktop.Messages;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
 /// ViewModel for the main window shell: owns the navigation items, the currently displayed page, and
-/// the version caption, and handles cross-page navigation requests.
+/// the version caption.
 /// </summary>
-public sealed partial class MainWindowViewModel
-    : ViewModelBase,
-        IRecipient<NavigateToPageMessage>
+internal sealed partial class MainWindowViewModel : ViewModelBase
 {
     /// <summary>
     /// Gets or sets the navigation item currently selected in the sidebar.
     /// </summary>
+    /// <remarks>
+    /// Nullable because the bound <c>ListBox</c> clears its selection while the items are being
+    /// rebuilt; the change handler ignores that transient null.
+    /// </remarks>
     [ObservableProperty]
-    public partial NavigationItem SelectedItem { get; set; }
+    public partial NavigationItem? SelectedItem { get; set; }
 
     /// <summary>
     /// Gets or sets the ViewModel of the page currently shown in the content area.
@@ -48,6 +48,8 @@ public sealed partial class MainWindowViewModel
         AboutViewModel about
     )
     {
+        ArgumentNullException.ThrowIfNull(about);
+
         NavigationItems =
         [
             new NavigationItem(Icons.ShieldLock, Strings.NavCreate, createBackup),
@@ -60,10 +62,10 @@ public sealed partial class MainWindowViewModel
 
         VersionText = about.VersionText;
         CurrentPage = createBackup;
-        SelectedItem = NavigationItems[0];
-        _ = createBackup.OnNavigatedToAsync();
 
-        WeakReferenceMessenger.Default.Register(this);
+        // Assigning the selection runs OnSelectedItemChanged, which activates the page and starts
+        // its on-navigation work; calling OnNavigatedToAsync here as well would run it twice.
+        SelectedItem = NavigationItems[0];
     }
 
     /// <summary>
@@ -77,27 +79,11 @@ public sealed partial class MainWindowViewModel
     public string VersionText { get; }
 
     /// <summary>
-    /// Handles a navigation request by selecting the navigation item whose page matches the requested type.
-    /// </summary>
-    /// <param name="message">The navigation request.</param>
-    public void Receive(NavigateToPageMessage message)
-    {
-        var target = NavigationItems.FirstOrDefault(item =>
-            item.Page.GetType() == message.PageType
-        );
-
-        if (target is not null)
-        {
-            SelectedItem = target;
-        }
-    }
-
-    /// <summary>
     /// Swaps the displayed page when the sidebar selection changes, moving the active-page flag to the
     /// incoming page and letting it run its on-navigation work.
     /// </summary>
-    /// <param name="value">The newly selected navigation item.</param>
-    partial void OnSelectedItemChanged(NavigationItem value)
+    /// <param name="value">The newly selected navigation item, or <see langword="null"/> while the selection is being cleared.</param>
+    partial void OnSelectedItemChanged(NavigationItem? value)
     {
         if (value is null)
         {
