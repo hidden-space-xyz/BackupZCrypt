@@ -1,6 +1,6 @@
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
-using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;

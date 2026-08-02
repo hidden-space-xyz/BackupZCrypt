@@ -171,46 +171,6 @@ public enum MessageCode
     UnexpectedErrorFormat = 35,
 
     /// <summary>
-    /// Strength label for a very weak password.
-    /// </summary>
-    StrengthVeryWeak = 36,
-
-    /// <summary>
-    /// Strength label for a weak password.
-    /// </summary>
-    StrengthWeak = 37,
-
-    /// <summary>
-    /// Strength label for a fair password.
-    /// </summary>
-    StrengthFair = 38,
-
-    /// <summary>
-    /// Strength label for a good password.
-    /// </summary>
-    StrengthGood = 39,
-
-    /// <summary>
-    /// Strength label for a strong password.
-    /// </summary>
-    StrengthStrong = 40,
-
-    /// <summary>
-    /// Estimated password entropy; formatted with the entropy value.
-    /// </summary>
-    EntropyFormat = 41,
-
-    /// <summary>
-    /// Header for the list of password improvement suggestions.
-    /// </summary>
-    Suggestions = 42,
-
-    /// <summary>
-    /// Positive confirmation that the password needs no improvement.
-    /// </summary>
-    GoodJob = 43,
-
-    /// <summary>
     /// Tip suggesting the password be made longer.
     /// </summary>
     TipIncreaseLength = 44,

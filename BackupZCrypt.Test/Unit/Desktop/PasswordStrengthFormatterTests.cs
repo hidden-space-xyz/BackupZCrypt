@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using BackupZCrypt.Application.ValueObjects.Password;
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -19,13 +20,13 @@ public sealed class PasswordStrengthFormatterTests
     /// The label every strength must carry, kept as an independent map so that a mis-wired arm in the
     /// formatter's switch cannot be masked by the same mistake being repeated in the test.
     /// </summary>
-    private static readonly Dictionary<PasswordStrength, MessageCode> ExpectedLabels = new()
+    private static readonly Dictionary<PasswordStrength, string> ExpectedLabels = new()
     {
-        [PasswordStrength.VeryWeak] = MessageCode.StrengthVeryWeak,
-        [PasswordStrength.Weak] = MessageCode.StrengthWeak,
-        [PasswordStrength.Fair] = MessageCode.StrengthFair,
-        [PasswordStrength.Good] = MessageCode.StrengthGood,
-        [PasswordStrength.Strong] = MessageCode.StrengthStrong,
+        [PasswordStrength.VeryWeak] = Strings.StrengthVeryWeak,
+        [PasswordStrength.Weak] = Strings.StrengthWeak,
+        [PasswordStrength.Fair] = Strings.StrengthFair,
+        [PasswordStrength.Good] = Strings.StrengthGood,
+        [PasswordStrength.Strong] = Strings.StrengthStrong,
     };
 
     /// <summary>
@@ -55,7 +56,7 @@ public sealed class PasswordStrengthFormatterTests
             $"PasswordStrength.{strength} has no expected label here; add it alongside the formatter's switch arm."
         );
 
-        var expected = Localize(ExpectedLabels[strength]);
+        var expected = ExpectedLabels[strength];
         var caption = PasswordStrengthFormatter.Format(new PasswordStrengthAnalysis(strength, 50, 64.0, []));
 
         Assert.That(
@@ -72,7 +73,7 @@ public sealed class PasswordStrengthFormatterTests
 
         Assert.That(
             caption,
-            Does.StartWith(Localize(MessageCode.StrengthVeryWeak)),
+            Does.StartWith(Strings.StrengthVeryWeak),
             "An unrecognized strength must degrade to the weakest label; degrading upwards would tell a user a bad password is safe."
         );
     }
@@ -112,12 +113,12 @@ public sealed class PasswordStrengthFormatterTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                caption.Contains(Localize(MessageCode.Suggestions), StringComparison.Ordinal),
+                caption.Contains(Strings.Suggestions, StringComparison.Ordinal),
                 Is.EqualTo(expectsSuggestions),
                 $"Suggestions must appear only when there are tips. Caption: '{caption}'."
             );
             Assert.That(
-                caption.Contains(Localize(MessageCode.GoodJob), StringComparison.Ordinal),
+                caption.Contains(Strings.GoodJob, StringComparison.Ordinal),
                 Is.EqualTo(expectsCongratulation),
                 $"The congratulation must appear only for a strong password with nothing left to improve. Caption: '{caption}'."
             );
@@ -183,7 +184,9 @@ public sealed class PasswordStrengthFormatterTests
     }
 
     /// <summary>
-    /// Localizes a bare message code the same way the formatter localizes its own labels and tips.
+    /// Localizes a bare message code the same way the formatter localizes the tips the Application
+    /// layer hands it. The caption's own vocabulary is read from <see cref="Strings"/> directly,
+    /// because the formatter picks it here rather than receiving it as a code.
     /// </summary>
     /// <param name="code">The code to localize.</param>
     /// <returns>The localized text for the current UI culture.</returns>

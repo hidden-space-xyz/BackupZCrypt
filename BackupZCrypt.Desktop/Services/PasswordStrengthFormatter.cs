@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 
 using BackupZCrypt.Application.ValueObjects.Password;
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -11,6 +12,12 @@ namespace BackupZCrypt.Desktop.Services;
 /// Builds the password-strength caption from the structured analysis the Application layer produces
 /// (strength, entropy, tip codes). The string assembly and its translation live here, in the presentation layer.
 /// </summary>
+/// <remarks>
+/// Only the tips travel as <see cref="MessageCode"/> values, because only they are chosen by the
+/// Application layer. The caption's own vocabulary — the strength labels, the entropy format, and the
+/// two closing remarks — is picked here and so reads <see cref="Strings"/> directly rather than routing
+/// presentation text through a language-neutral code the lower layers never emit.
+/// </remarks>
 internal static class PasswordStrengthFormatter
 {
     /// <summary>
@@ -23,30 +30,27 @@ internal static class PasswordStrengthFormatter
     {
         var label = analysis.Strength switch
         {
-            PasswordStrength.VeryWeak => MessageCode.StrengthVeryWeak,
-            PasswordStrength.Weak => MessageCode.StrengthWeak,
-            PasswordStrength.Fair => MessageCode.StrengthFair,
-            PasswordStrength.Good => MessageCode.StrengthGood,
-            PasswordStrength.Strong => MessageCode.StrengthStrong,
-            _ => MessageCode.StrengthVeryWeak,
+            PasswordStrength.VeryWeak => Strings.StrengthVeryWeak,
+            PasswordStrength.Weak => Strings.StrengthWeak,
+            PasswordStrength.Fair => Strings.StrengthFair,
+            PasswordStrength.Good => Strings.StrengthGood,
+            PasswordStrength.Strong => Strings.StrengthStrong,
+            _ => Strings.StrengthVeryWeak,
         };
 
         StringBuilder sb = new();
-        _ = sb.Append(MessageLocalizer.Localize(new LocalizableMessage(label)))
+        _ = sb.Append(label)
             .Append(" // ")
-            .Append(
-            MessageLocalizer.Localize(
-                new LocalizableMessage(
-                    MessageCode.EntropyFormat,
-                    analysis.Entropy.ToString("0.0", CultureInfo.CurrentCulture)
-                )
-            )
+            .AppendFormat(
+            CultureInfo.CurrentUICulture,
+            Strings.EntropyFormat,
+            analysis.Entropy.ToString("0.0", CultureInfo.CurrentCulture)
         );
 
         if (analysis.Tips.Count > 0)
         {
             _ = sb.Append(" // ")
-                .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.Suggestions)))
+                .Append(Strings.Suggestions)
                 .Append(' ')
                 .AppendJoin(
                 ", ",
@@ -57,8 +61,7 @@ internal static class PasswordStrengthFormatter
         }
         else if (analysis.Strength == PasswordStrength.Strong)
         {
-            _ = sb.Append(" // ")
-                .Append(MessageLocalizer.Localize(new LocalizableMessage(MessageCode.GoodJob)));
+            _ = sb.Append(" // ").Append(Strings.GoodJob);
         }
 
         return sb.ToString();

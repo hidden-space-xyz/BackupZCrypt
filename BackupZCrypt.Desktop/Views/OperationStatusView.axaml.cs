@@ -76,6 +76,12 @@ internal sealed partial class OperationStatusView : UserControl
     /// <summary>
     /// Opens the modal dialog when the running, warnings, or result state of the view model changes.
     /// </summary>
+    /// <remarks>
+    /// An event handler cannot return a task, so a fault escaping <see cref="TryShowDialogAsync"/>
+    /// would be rethrown on the dispatcher and terminate the process — potentially mid-backup, and
+    /// nothing else in the application observes it. Swallowing it costs only the dialog, which is
+    /// the same posture every other handler in this assembly takes.
+    /// </remarks>
     /// <param name="sender">The view model that raised the event.</param>
     /// <param name="e">The property change notification.</param>
     private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -92,7 +98,13 @@ internal sealed partial class OperationStatusView : UserControl
             return;
         }
 
-        await TryShowDialogAsync();
+        try
+        {
+            await TryShowDialogAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+        }
     }
 
     /// <summary>

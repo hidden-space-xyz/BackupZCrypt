@@ -1,6 +1,6 @@
 using BackupZCrypt.Domain.Enums;
 
-namespace BackupZCrypt.Application.ValueObjects;
+namespace BackupZCrypt.Application.ValueObjects.Benchmark;
 
 /// <summary>
 /// Describes a backup-time benchmark: the cryptographic options to exercise and the amount of

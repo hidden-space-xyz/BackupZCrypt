@@ -694,6 +694,46 @@ internal static class Strings
     public static string VerifyFailureTitle => Get();
 
     /// <summary>
+    /// Gets the strength label for a very weak password.
+    /// </summary>
+    public static string StrengthVeryWeak => Get();
+
+    /// <summary>
+    /// Gets the strength label for a weak password.
+    /// </summary>
+    public static string StrengthWeak => Get();
+
+    /// <summary>
+    /// Gets the strength label for a fair password.
+    /// </summary>
+    public static string StrengthFair => Get();
+
+    /// <summary>
+    /// Gets the strength label for a good password.
+    /// </summary>
+    public static string StrengthGood => Get();
+
+    /// <summary>
+    /// Gets the strength label for a strong password.
+    /// </summary>
+    public static string StrengthStrong => Get();
+
+    /// <summary>
+    /// Gets the format string for the estimated password entropy.
+    /// </summary>
+    public static string EntropyFormat => Get();
+
+    /// <summary>
+    /// Gets the header for the list of password improvement suggestions.
+    /// </summary>
+    public static string Suggestions => Get();
+
+    /// <summary>
+    /// Gets the positive confirmation that the password needs no improvement.
+    /// </summary>
+    public static string GoodJob => Get();
+
+    /// <summary>
     /// Resolves the resource entry named after the calling property for the current UI culture.
     /// </summary>
     /// <param name="name">The resource key, supplied automatically from the calling member's name.</param>
