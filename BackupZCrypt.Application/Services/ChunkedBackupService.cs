@@ -281,18 +281,11 @@ internal sealed class ChunkedBackupService(
     /// The encryption, key derivation, and compression settings are taken from the existing backup.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Existing entries are indexed by their canonical manifest path, so an archive written by an earlier
-    /// version that recorded Windows separators still matches the files it already holds instead of
-    /// re-adding every one of them as new.
-    /// </para>
-    /// <para>
     /// An update reuses the algorithms the archive was written with, never the ones
     /// <paramref name="request"/> carries: a different key derivation function produces a different
     /// master key and the archive stops opening. Those values are therefore read from the manifest
     /// preamble and header at each point of use, leaving <paramref name="request"/> meaning what the
     /// user asked for rather than what the archive happens to be.
-    /// </para>
     /// </remarks>
     /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
     /// <param name="destinationPath">The directory containing the existing backup to update.</param>
@@ -365,7 +358,7 @@ internal sealed class ChunkedBackupService(
             foreach (var entry in existingManifest.Files)
             {
                 ManifestPathPolicy.ValidateRelative(entry.OriginalPath);
-                existingFileIndex[ManifestPathPolicy.ToManifestPath(entry.OriginalPath)] = entry;
+                existingFileIndex[entry.OriginalPath] = entry;
             }
 
             ConcurrentBag<ChunkManifestFileEntry> updatedEntries = [];
@@ -413,14 +406,9 @@ internal sealed class ChunkedBackupService(
                 new BackupStatus(0, totalFilesToProcess, 0, totalBytes, TimeSpan.Zero)
             );
 
-            var storedChunks = BuildStoredChunkNonceCache(
-                existingManifest.Files,
-                chunksDir,
-                keys.ChunkEncryptionKey,
-                keys.NamingKey,
-                encryptionStrategy,
-                cancellationToken
-            );
+            ValidateManifestEntries(existingManifest.Files);
+
+            var storedChunks = BuildStoredChunkNonceCache(existingManifest.Files);
 
             if (totalFilesToProcess > 0)
             {
@@ -628,14 +616,9 @@ internal sealed class ChunkedBackupService(
                 BackupConstants.ChunksDirectoryName
             );
 
-            var storedChunkNonces = BuildStoredChunkNonceCache(
-                manifest.Files,
-                chunksDir,
-                keys.ChunkEncryptionKey,
-                keys.NamingKey,
-                encryptionStrategy,
-                cancellationToken
-            );
+            ValidateManifestEntries(manifest.Files);
+
+            var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
 
             var totalFiles = manifest.Files.Count;
             var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
@@ -821,14 +804,9 @@ internal sealed class ChunkedBackupService(
                 BackupConstants.ChunksDirectoryName
             );
 
-            var storedChunkNonces = BuildStoredChunkNonceCache(
-                manifest.Files,
-                chunksDir,
-                keys.ChunkEncryptionKey,
-                keys.NamingKey,
-                encryptionStrategy,
-                cancellationToken
-            );
+            ValidateManifestEntries(manifest.Files);
+
+            var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
 
             var totalFiles = manifest.Files.Count;
             var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
@@ -1314,23 +1292,17 @@ internal sealed class ChunkedBackupService(
     /// ciphertext authenticates under.
     /// </summary>
     /// <remarks>
-    /// Resolution is deferred and performed at most once per chunk, so a chunk whose manifest
-    /// references all agree on one nonce is never read from disk.
+    /// A chunk's nonce is a deterministic function of the chunk-nonce sub-key and the chunk's content
+    /// hash, and that sub-key is fixed for an archive's whole lifetime because the master salt is
+    /// preserved across updates. One hash can therefore carry exactly one nonce; a manifest that
+    /// records two for the same hash is rejected rather than guessed at. The entries are shared with
+    /// the write path, which resolves its own asynchronously as chunks are stored.
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries whose chunk references are indexed.</param>
-    /// <param name="chunksDir">The directory the encrypted chunk files are read from.</param>
-    /// <param name="encryptionKey">The chunk encryption sub-key used to test a candidate nonce.</param>
-    /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
-    /// <param name="encryptionStrategy">The strategy used to decrypt chunks.</param>
-    /// <param name="cancellationToken">A token to cancel the deferred resolution.</param>
-    /// <returns>A cache keyed by Base64 chunk hash whose values resolve to the effective Base64 nonce.</returns>
-    private ConcurrentDictionary<string, Lazy<Task<string>>> BuildStoredChunkNonceCache(
-        IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
-        string chunksDir,
-        byte[] encryptionKey,
-        byte[] namingKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        CancellationToken cancellationToken
+    /// <returns>A cache keyed by Base64 chunk hash whose values resolve to the recorded Base64 nonce.</returns>
+    /// <exception cref="CryptographicException">A chunk hash carries more than one distinct nonce.</exception>
+    private static ConcurrentDictionary<string, Lazy<Task<string>>> BuildStoredChunkNonceCache(
+        IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
         var chunkNonceCandidates = BuildChunkNonceCandidates(manifestFiles);
@@ -1338,18 +1310,14 @@ internal sealed class ChunkedBackupService(
 
         foreach (var (chunkHashB64, nonceCandidates) in chunkNonceCandidates)
         {
-            var candidateCopy = nonceCandidates.ToArray();
+            if (nonceCandidates.Length != 1)
+            {
+                throw new CryptographicException();
+            }
+
+            var nonceB64 = nonceCandidates[0];
             var storedChunk = new Lazy<Task<string>>(
-                () =>
-                    ResolveChunkNonceAsync(
-                        chunkHashB64,
-                        candidateCopy,
-                        chunksDir,
-                        encryptionKey,
-                        namingKey,
-                        encryptionStrategy,
-                        cancellationToken
-                    ),
+                () => Task.FromResult(nonceB64),
                 LazyThreadSafetyMode.ExecutionAndPublication
             );
 
@@ -1360,132 +1328,21 @@ internal sealed class ChunkedBackupService(
     }
 
     /// <summary>
-    /// Determines which of a chunk's recorded nonces its stored ciphertext authenticates under.
+    /// Validates every entry path, chunk hash, and chunk nonce a manifest records, before any file is
+    /// created, read, or overwritten.
     /// </summary>
     /// <remarks>
-    /// A single candidate is trusted without reading the chunk. When the manifest disagrees about a
-    /// chunk's nonce, each candidate is tried in turn and the first one that authenticates wins; the
-    /// decrypted plaintext is discarded and zeroed because only the nonce is needed.
+    /// This runs as one up-front sweep so a malformed or crafted manifest is rejected before a restore
+    /// creates a directory, before a verify reads a chunk, and before an update rewrites the manifest.
+    /// The decoded bytes serve only as a length check and are zeroed immediately.
     /// </remarks>
-    /// <param name="chunkHashB64">The Base64-encoded SHA-256 content hash of the chunk.</param>
-    /// <param name="nonceCandidates">The distinct Base64 nonces the manifest records for the chunk.</param>
-    /// <param name="chunksDir">The directory the encrypted chunk file is read from.</param>
-    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
-    /// <param name="namingKey">The sub-key the chunk's on-disk file name is derived from.</param>
-    /// <param name="encryptionStrategy">The strategy used to decrypt the chunk.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The Base64 nonce the stored chunk authenticates under.</returns>
-    /// <exception cref="CryptographicException">No candidate was supplied or none authenticates the stored chunk.</exception>
-    private async Task<string> ResolveChunkNonceAsync(
-        string chunkHashB64,
-        string[] nonceCandidates,
-        string chunksDir,
-        byte[] encryptionKey,
-        byte[] namingKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        CancellationToken cancellationToken
-    )
-    {
-        if (nonceCandidates.Length == 0)
-        {
-            throw new CryptographicException();
-        }
-
-        if (nonceCandidates.Length == 1)
-        {
-            return nonceCandidates[0];
-        }
-
-        var chunkHash = DecodeBase64FixedLength(chunkHashB64, KeySizeBytes, "Invalid chunk hash.");
-        var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
-        var chunkFilePath = fileOperationsService.CombinePath(
-            chunksDir,
-            chunkFileName + BackupConstants.AppFileExtension
-        );
-        var encryptedData = await fileOperationsService
-            .ReadAllBytesAsync(chunkFilePath, cancellationToken)
-            .ConfigureAwait(false);
-        CryptographicException? lastException = null;
-
-        try
-        {
-            foreach (var nonceCandidate in nonceCandidates)
-            {
-                byte[]? decryptedData = null;
-                byte[]? nonce = null;
-                byte[]? associatedData = null;
-
-                try
-                {
-                    nonce = DecodeBase64FixedLength(
-                        nonceCandidate,
-                        EncryptionConstants.NonceSize,
-                        "Invalid chunk nonce."
-                    );
-                    associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
-                    decryptedData = encryptionStrategy.DecryptChunk(
-                        encryptedData,
-                        encryptionKey,
-                        nonce,
-                        associatedData
-                    );
-
-                    return nonceCandidate;
-                }
-                catch (FormatException ex)
-                {
-                    lastException = new CryptographicException(ex.Message, ex);
-                }
-                catch (CryptographicException ex)
-                {
-                    lastException = ex;
-                }
-                finally
-                {
-                    if (decryptedData is not null)
-                    {
-                        CryptographicOperations.ZeroMemory(decryptedData);
-                    }
-
-                    if (nonce is not null)
-                    {
-                        CryptographicOperations.ZeroMemory(nonce);
-                    }
-
-                    if (associatedData is not null)
-                    {
-                        CryptographicOperations.ZeroMemory(associatedData);
-                    }
-                }
-            }
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(chunkHash);
-            CryptographicOperations.ZeroMemory(encryptedData);
-        }
-
-        throw lastException ?? new CryptographicException();
-    }
-
-    /// <summary>
-    /// Groups the distinct nonces a manifest records for each chunk hash.
-    /// </summary>
-    /// <remarks>
-    /// Every entry path, chunk hash, and nonce is validated here so a malformed manifest is rejected
-    /// up front. The decoded bytes serve only as a length check and are zeroed immediately; the
-    /// Base64 forms are what the caller keys and returns.
-    /// </remarks>
-    /// <param name="manifestFiles">The manifest entries to scan.</param>
-    /// <returns>A dictionary mapping each Base64 chunk hash to its distinct Base64 nonces.</returns>
+    /// <param name="manifestFiles">The manifest entries to validate.</param>
     /// <exception cref="InvalidDataException">An entry path is empty, rooted, or contains traversal or invalid characters.</exception>
     /// <exception cref="CryptographicException">A chunk hash or nonce is not Base64 of the expected length.</exception>
-    private static Dictionary<string, string[]> BuildChunkNonceCandidates(
+    private static void ValidateManifestEntries(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
-        Dictionary<string, List<string>> chunkNonceCandidates = new(StringComparer.Ordinal);
-
         foreach (var file in manifestFiles)
         {
             ManifestPathPolicy.ValidateRelative(file.OriginalPath);
@@ -1504,7 +1361,29 @@ internal sealed class ChunkedBackupService(
                 );
                 CryptographicOperations.ZeroMemory(decodedHash);
                 CryptographicOperations.ZeroMemory(decodedNonce);
+            }
+        }
+    }
 
+    /// <summary>
+    /// Groups the distinct nonces a manifest records for each chunk hash.
+    /// </summary>
+    /// <remarks>
+    /// The entries are expected to have passed <see cref="ValidateManifestEntries"/> already; the
+    /// Base64 forms are what the caller keys and returns.
+    /// </remarks>
+    /// <param name="manifestFiles">The manifest entries to scan.</param>
+    /// <returns>A dictionary mapping each Base64 chunk hash to its distinct Base64 nonces.</returns>
+    private static Dictionary<string, string[]> BuildChunkNonceCandidates(
+        IReadOnlyList<ChunkManifestFileEntry> manifestFiles
+    )
+    {
+        Dictionary<string, List<string>> chunkNonceCandidates = new(StringComparer.Ordinal);
+
+        foreach (var file in manifestFiles)
+        {
+            foreach (var chunk in file.Chunks)
+            {
                 if (!chunkNonceCandidates.TryGetValue(chunk.Hash, out var nonceCandidates))
                 {
                     nonceCandidates = [];
@@ -1567,9 +1446,9 @@ internal sealed class ChunkedBackupService(
     /// chunk actually authenticates under.
     /// </summary>
     /// <remarks>
-    /// An update carries unchanged entries over from the previous manifest, so their recorded nonces
-    /// can disagree with the chunk on disk; canonicalizing before saving keeps the manifest
-    /// consistent with the stored ciphertext and makes the written order deterministic.
+    /// An update mixes entries carried over from the previous manifest with entries produced by this
+    /// run, so every chunk reference is re-emitted from the shared resolution cache and the entries are
+    /// ordered by path, keeping the written manifest identical for identical content.
     /// </remarks>
     /// <param name="entries">The entries collected for the new manifest.</param>
     /// <param name="storedChunks">The cache resolving a chunk hash to its effective nonce.</param>

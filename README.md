@@ -99,8 +99,7 @@ carries a cryptographic or data-integrity guarantee is measured in full.
 
 Backups are portable between operating systems. The manifest records file paths with `/` separators
 regardless of the platform that wrote it, and restore accepts either separator, so an archive created on
-Windows rebuilds the same directory tree on Linux and macOS — including archives written by earlier
-versions, which recorded `\`.
+Windows rebuilds the same directory tree on Linux and macOS.
 
 ### Project Structure
 

@@ -6,7 +6,7 @@ namespace BackupZCrypt.Test.Tools;
 /// One committed fixture archive: the algorithm combination it was written with and the directory
 /// name it lives under.
 /// </summary>
-/// <param name="Name">The directory name under <c>TestData/LegacyArchives</c>.</param>
+/// <param name="Name">The directory name under <c>TestData/OnDiskFormatArchives</c>.</param>
 /// <param name="Encryption">The AEAD cipher the archive was written with.</param>
 /// <param name="KeyDerivation">The key derivation function the archive was written with.</param>
 /// <param name="Compression">The compression mode applied to chunks before encryption.</param>
@@ -116,13 +116,13 @@ public static class OnDiskFormatFixtures
     /// </summary>
     /// <exception cref="DirectoryNotFoundException">The repository root could not be located.</exception>
     public static string RepositoryTestDataRoot =>
-        Path.Combine(RepositoryRoot, "BackupZCrypt.Test", "TestData", "LegacyArchives");
+        Path.Combine(RepositoryRoot, "BackupZCrypt.Test", "TestData", "OnDiskFormatArchives");
 
     /// <summary>
     /// Gets the fixture root copied next to the test assembly, used by the pinning tests at run time.
     /// </summary>
     public static string DeployedTestDataRoot =>
-        Path.Combine(AppContext.BaseDirectory, "TestData", "LegacyArchives");
+        Path.Combine(AppContext.BaseDirectory, "TestData", "OnDiskFormatArchives");
 
     /// <summary>
     /// Walks up from the test assembly location until it finds the directory holding the solution file.

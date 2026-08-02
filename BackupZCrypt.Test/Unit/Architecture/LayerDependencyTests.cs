@@ -55,7 +55,7 @@ public sealed class LayerDependencyTests
     {
         var declared = ReadProject(project)
             .Descendants("ProjectReference")
-            .Select(static r => Path.GetFileNameWithoutExtension(r.Attribute("Include")!.Value))
+            .Select(static r => ProjectNameOf(r.Attribute("Include")!.Value))
             .ToList();
 
         Assert.That(
@@ -122,6 +122,26 @@ public sealed class LayerDependencyTests
             "Package versions belong in Directory.Packages.props. A version pinned in a project file "
                 + "silently overrides central management for that project only."
         );
+    }
+
+    /// <summary>
+    /// Extracts the referenced project's name from the <c>Include</c> path of a
+    /// <c>ProjectReference</c>.
+    /// </summary>
+    /// <remarks>
+    /// MSBuild writes these paths with backslashes on every platform, but <c>\</c> is a legal
+    /// file-name character on Unix, so <see cref="Path.GetFileNameWithoutExtension(string)"/> would
+    /// treat the whole path as one name there and return <c>..\BackupZCrypt.Domain\BackupZCrypt.Domain</c>
+    /// instead of <c>BackupZCrypt.Domain</c>. Splitting on both separators keeps the check reading
+    /// the same edge on Windows and on CI.
+    /// </remarks>
+    /// <param name="include">The raw <c>Include</c> attribute value.</param>
+    /// <returns>The referenced project's name, without directories or extension.</returns>
+    private static string ProjectNameOf(string include)
+    {
+        var lastSegment = include.Split(['\\', '/'])[^1];
+
+        return Path.GetFileNameWithoutExtension(lastSegment);
     }
 
     /// <summary>

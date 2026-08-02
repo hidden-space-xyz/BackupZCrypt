@@ -425,6 +425,79 @@ public sealed class ChunkedBackupSecurityTests
         }
     }
 
+    [Test]
+    public async Task RestoreAsync_ManifestRecordsTwoNoncesForOneChunkHash_IsRejectedInsteadOfGuessed()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restored = new TempDir();
+
+        const string SharedContent = "content whose chunk nonce is derived, not chosen";
+        _ = source.WriteText("a.txt", SharedContent);
+        _ = source.WriteText("b.txt", SharedContent);
+        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.None);
+
+        var (preamble, masterKey, manifest) = await OpenManifestAsync(
+            provider,
+            destination.Path,
+            Password
+        );
+        var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
+
+        Assert.That(
+            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(),
+            Has.Exactly(1).Items,
+            "The fixture relies on both files deduplicating to one shared chunk."
+        );
+
+        var foreignNonce = Convert.ToBase64String(new byte[EncryptionConstants.NonceSize]);
+        Assert.That(
+            foreignNonce,
+            Is.Not.EqualTo(manifest.Files[0].Chunks[0].Nonce),
+            "The fixture must offer a nonce the engine did not derive."
+        );
+
+        var second = manifest.Files[1];
+        var crafted = manifest with
+        {
+            Files =
+            [
+                manifest.Files[0],
+                second with
+                {
+                    Chunks =
+                    [
+                        .. second.Chunks.Select(c => c with { Nonce = foreignNonce }),
+                    ],
+                },
+            ],
+        };
+        await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
+
+        var result = await orchestrator.ExecuteAsync(
+            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
+            new RecordingProgress<BackupStatus>()
+        );
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                result.IsSuccess && result.Value.IsSuccess,
+                Is.False,
+                "A chunk nonce is a deterministic function of the chunk hash, so a manifest offering two "
+                    + "for one hash is crafted and must be rejected rather than resolved by trial decryption."
+            );
+            Assert.That(
+                FilesUnder(restored.Path),
+                Is.Empty,
+                "The rejected manifest still produced output in the restore root."
+            );
+        }
+    }
+
     /// <summary>
     /// Builds an AES plus PBKDF2 request that proceeds past advisory warnings, matching the cheapest
     /// key derivation the app offers so the suite stays affordable on CI.

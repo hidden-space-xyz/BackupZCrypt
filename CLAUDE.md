@@ -165,7 +165,7 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
   KDF, the four HKDF sub-key labels, the chunk nonce, the AEAD associated data, and the chunk file
   name. **If one of these fails, assume a change broke the format, not that the test is stale** — a
   format change makes every archive a user already wrote permanently unreadable. The fixtures are
-  regenerated only by the `[Explicit]` `Test/Tools/LegacyArchiveGenerator.cs`, and only on a
+  regenerated only by the `[Explicit]` `Test/Tools/OnDiskFormatFixtureGenerator.cs`, and only on a
   deliberate format change.
 - **Settings** persist as indented JSON under `%LocalAppData%/BackupZCrypt` (platform equivalent
   elsewhere), one file per settings type; defaults are recreated if a file is missing or corrupt.

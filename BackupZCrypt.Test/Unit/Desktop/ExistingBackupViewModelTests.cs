@@ -85,10 +85,8 @@ public sealed class ExistingBackupViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(sut.DetectedKind, Is.EqualTo(ManifestKind.Encrypted));
-            Assert.That(sut.IsPasswordRequired, Is.True);
+            Assert.That(sut.IsBackupDetected, Is.True);
             Assert.That(sut.HasDetection, Is.False);
-            Assert.That(sut.DetectionMessage, Is.Empty);
             Assert.That(enabledWithoutPassword, Is.False);
             Assert.That(sut.StartCommand.CanExecute(null), Is.True);
         }
@@ -106,10 +104,8 @@ public sealed class ExistingBackupViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(sut.DetectedKind, Is.EqualTo(ManifestKind.Missing));
-            Assert.That(sut.IsPasswordRequired, Is.False);
+            Assert.That(sut.IsBackupDetected, Is.False);
             Assert.That(sut.HasDetection, Is.True);
-            Assert.That(sut.DetectionMessage, Is.EqualTo(Strings.DetectMissing));
             Assert.That(sut.StartCommand.CanExecute(null), Is.False);
         }
     }
@@ -134,10 +130,8 @@ public sealed class ExistingBackupViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(sut.DetectedKind, Is.EqualTo(ManifestKind.Missing));
-            Assert.That(sut.IsPasswordRequired, Is.False);
+            Assert.That(sut.IsBackupDetected, Is.False);
             Assert.That(sut.HasDetection, Is.True);
-            Assert.That(sut.DetectionMessage, Is.EqualTo(Strings.DetectMissing));
             Assert.That(sut.StartCommand.CanExecute(null), Is.False);
         }
     }
@@ -158,8 +152,7 @@ public sealed class ExistingBackupViewModelTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(enabledWithABackup, Is.True);
-            Assert.That(sut.DetectedKind, Is.EqualTo(ManifestKind.Missing));
-            Assert.That(sut.IsPasswordRequired, Is.False);
+            Assert.That(sut.IsBackupDetected, Is.False);
             Assert.That(sut.HasDetection, Is.False);
             Assert.That(sut.StartCommand.CanExecute(null), Is.False);
         }
@@ -189,15 +182,14 @@ public sealed class ExistingBackupViewModelTests
 
         sut.SourcePath = "slow-backup";
         sut.SourcePath = "not-a-backup";
-        var kindBeforeTheStaleResult = sut.DetectedKind;
+        var detectedBeforeTheStaleResult = sut.IsBackupDetected;
 
         slowProbe.SetResult(ManifestKind.Encrypted);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(kindBeforeTheStaleResult, Is.EqualTo(ManifestKind.Missing));
-            Assert.That(sut.DetectedKind, Is.EqualTo(ManifestKind.Missing));
-            Assert.That(sut.IsPasswordRequired, Is.False);
+            Assert.That(detectedBeforeTheStaleResult, Is.False);
+            Assert.That(sut.IsBackupDetected, Is.False);
             Assert.That(sut.HasDetection, Is.True);
             Assert.That(sut.StartCommand.CanExecute(null), Is.False);
         }

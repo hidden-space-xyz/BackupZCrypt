@@ -24,7 +24,7 @@ namespace BackupZCrypt.Test.Unit.Format;
 /// back with the same build, so all of them keep passing when the format itself moves. These do not.
 /// </para>
 /// <para>
-/// Two guards are combined. The <b>fixture archives</b> under <c>TestData/LegacyArchives</c> were
+/// Two guards are combined. The <b>fixture archives</b> under <c>TestData/OnDiskFormatArchives</c> were
 /// written by an earlier build and are committed as binary; restoring them exercises the whole
 /// format end to end, so a change to the manifest JSON keys, the preamble layout, the HKDF labels,
 /// the chunk-naming HMAC, the nonce derivation, or the compress-then-encrypt order breaks them. The
@@ -33,7 +33,7 @@ namespace BackupZCrypt.Test.Unit.Format;
 /// </para>
 /// <para>
 /// If one of these fails, the correct first assumption is that a change broke the format — not that
-/// the test is stale. Regenerate the fixtures with <c>LegacyArchiveGenerator</c> only when the format
+/// the test is stale. Regenerate the fixtures with <c>OnDiskFormatFixtureGenerator</c> only when the format
 /// was changed deliberately and every existing archive is understood to be abandoned.
 /// </para>
 /// </remarks>

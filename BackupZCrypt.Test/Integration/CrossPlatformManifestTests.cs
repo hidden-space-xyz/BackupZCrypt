@@ -16,10 +16,10 @@ namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
 /// Integration tests pinning that an archive is portable between operating systems: a manifest
-/// records entry paths with forward slashes whichever platform wrote it, an archive written by an
-/// older Windows build still restores into a real directory tree elsewhere, and a traversal path
-/// written in Windows notation is rejected on every platform rather than only where <c>\</c> happens
-/// to be the host separator.
+/// records entry paths with forward slashes whichever platform wrote it, a manifest entry recorded
+/// with Windows separators — whoever wrote it — still restores into a real directory tree on every
+/// platform, and a traversal path written in Windows notation is rejected on every platform rather
+/// than only where <c>\</c> happens to be the host separator.
 /// </summary>
 /// <remarks>
 /// Every case uses PBKDF2 and files of a few bytes, so the fixture costs one key derivation per
@@ -84,7 +84,7 @@ public sealed class CrossPlatformManifestTests
     }
 
     [Test]
-    public async Task Restore_LegacyManifestWithBackslashPaths_RebuildsNestedDirectoriesNotAFlatName()
+    public async Task Restore_ForeignManifestEntryWithBackslashSeparators_RebuildsNestedDirectoriesNotAFlatName()
     {
         await using var provider = TestHost.CreateProvider();
         var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
@@ -111,7 +111,7 @@ public sealed class CrossPlatformManifestTests
             Assert.That(
                 File.Exists(restoredFile),
                 Is.True,
-                "A Windows-written entry must restore as a nested directory tree on every platform."
+                "An entry recorded with Windows separators must restore as a nested directory tree on every platform."
             );
             Assert.That(
                 restoredNames,

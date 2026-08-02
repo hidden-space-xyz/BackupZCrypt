@@ -42,7 +42,7 @@
   <ItemGroup>
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.resx" Link="TestData\Strings.resx" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\BackupZCrypt.Desktop\Resources\Strings.es.resx" Link="TestData\Strings.es.resx" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="TestData\LegacyArchives\**\*" LinkBase="TestData\LegacyArchives" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\OnDiskFormatArchives\**\*" LinkBase="TestData\OnDiskFormatArchives" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

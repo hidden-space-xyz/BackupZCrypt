@@ -2,7 +2,6 @@ using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Application.Orchestrators.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
-using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,29 +30,16 @@ internal abstract partial class ExistingBackupViewModelBase(
     private int detectionVersion;
 
     /// <summary>
-    /// Gets or sets the kind of manifest detected at the backup path.
+    /// Gets or sets a value indicating whether a readable backup was detected at the backup path.
     /// </summary>
     [ObservableProperty]
-    public partial ManifestKind DetectedKind { get; set; } = ManifestKind.Missing;
+    public partial bool IsBackupDetected { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether a detection message is shown.
+    /// Gets or sets a value indicating whether the no-backup-found warning is shown.
     /// </summary>
     [ObservableProperty]
     public partial bool HasDetection { get; set; }
-
-    /// <summary>
-    /// Gets or sets the message describing the outcome of backup detection.
-    /// </summary>
-    [ObservableProperty]
-    public partial string DetectionMessage { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether a password is required to proceed, which is the case
-    /// when the detected manifest is encrypted.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool IsPasswordRequired { get; set; }
 
     /// <summary>
     /// Gets the path that points at the existing backup (the source for a restore, the destination for an update).
@@ -61,15 +47,12 @@ internal abstract partial class ExistingBackupViewModelBase(
     protected abstract string BackupPath { get; }
 
     /// <summary>
-    /// Determines whether the operation can start, additionally requiring a detected chunked manifest
-    /// and a password when the manifest is encrypted.
+    /// Determines whether the operation can start, additionally requiring a detected backup and a password.
     /// </summary>
     /// <returns><see langword="true"/> if the operation may begin; otherwise <see langword="false"/>.</returns>
     protected override bool CanStart()
     {
-        return base.CanStart()
-            && DetectedKind is ManifestKind.Encrypted
-            && (!IsPasswordRequired || Password.Length > 0);
+        return base.CanStart() && IsBackupDetected && Password.Length > 0;
     }
 
     /// <summary>
@@ -97,8 +80,7 @@ internal abstract partial class ExistingBackupViewModelBase(
         if (string.IsNullOrWhiteSpace(path))
         {
             HasDetection = false;
-            DetectedKind = ManifestKind.Missing;
-            IsPasswordRequired = false;
+            IsBackupDetected = false;
             NotifyStartCanExecuteChanged();
             return;
         }
@@ -119,14 +101,8 @@ internal abstract partial class ExistingBackupViewModelBase(
             return;
         }
 
-        DetectedKind = kind;
-        IsPasswordRequired = kind == ManifestKind.Encrypted;
-
-        HasDetection = kind != ManifestKind.Encrypted;
-        if (HasDetection)
-        {
-            DetectionMessage = Strings.DetectMissing;
-        }
+        IsBackupDetected = kind is ManifestKind.Encrypted;
+        HasDetection = !IsBackupDetected;
 
         NotifyStartCanExecuteChanged();
     }

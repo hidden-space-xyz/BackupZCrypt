@@ -64,7 +64,7 @@
                         VerticalAlignment="Top"
                         Foreground="{StaticResource WarningBrush}" />
               <TextBlock Grid.Column="1"
-                         Text="{Binding DetectionMessage}"
+                         Text="{x:Static res:Strings.DetectMissing}"
                          TextWrapping="Wrap"
                          FontSize="13"
                          Foreground="{StaticResource WarningBrush}" />
@@ -73,7 +73,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" IsVisible="{Binding IsPasswordRequired}">
+      <Border Classes="card" IsVisible="{Binding IsBackupDetected}">
         <StackPanel Spacing="16">
           <TextBlock Classes="section" Text="{x:Static res:Strings.SectionSecurity}" />
           <StackPanel Spacing="6">

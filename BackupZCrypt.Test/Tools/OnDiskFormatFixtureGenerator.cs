@@ -15,7 +15,7 @@ namespace BackupZCrypt.Test.Tools;
 
 /// <summary>
 /// One-shot maintenance tool that regenerates the committed fixture archives under
-/// <c>TestData/LegacyArchives</c> and prints the golden key-schedule vectors asserted by
+/// <c>TestData/OnDiskFormatArchives</c> and prints the golden key-schedule vectors asserted by
 /// <c>OnDiskFormatTests</c>.
 /// </summary>
 /// <remarks>
@@ -27,11 +27,11 @@ namespace BackupZCrypt.Test.Tools;
 /// <para>
 /// Run it only when the format is changed <b>deliberately</b>, and treat the resulting diff as the
 /// review artefact — a fixture that changes without an intended format change is a data-loss bug:
-/// <c>dotnet test --filter "FullyQualifiedName~LegacyArchiveGenerator"</c>.
+/// <c>dotnet test --filter "FullyQualifiedName~OnDiskFormatFixtureGenerator"</c>.
 /// </para>
 /// </remarks>
 [Explicit("Maintenance tool: rewrites the committed format fixtures. Run only on a deliberate format change.")]
-public sealed class LegacyArchiveGenerator
+public sealed class OnDiskFormatFixtureGenerator
 {
     /// <summary>
     /// The password the fixture archives are created with, shared with <c>OnDiskFormatTests</c>.
