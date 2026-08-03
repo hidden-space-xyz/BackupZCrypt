@@ -37,20 +37,6 @@ internal static class PasswordConverters
     public static readonly IValueConverter StrengthIsBand = new StrengthBandConverter();
 
     /// <summary>
-    /// Maps a <see cref="PasswordStrength"/> to the name of the colour band it belongs to.
-    /// </summary>
-    /// <param name="strength">The strength to classify.</param>
-    /// <returns>The band name, matching a style class in <c>AppStyles.axaml</c>.</returns>
-    private static string BandOf(PasswordStrength strength) =>
-        strength switch
-        {
-            PasswordStrength.VeryWeak or PasswordStrength.Weak => "danger",
-            PasswordStrength.Fair => "warning",
-            PasswordStrength.Good => "good",
-            _ => "strong",
-        };
-
-    /// <summary>
     /// Reports whether the bound <see cref="PasswordStrength"/> belongs to the band named by the
     /// converter parameter.
     /// </summary>
@@ -77,5 +63,19 @@ internal static class PasswordConverters
             object? parameter,
             CultureInfo culture
         ) => throw new NotSupportedException();
+
+        /// <summary>
+        /// Maps a <see cref="PasswordStrength"/> to the name of the colour band it belongs to.
+        /// </summary>
+        /// <param name="strength">The strength to classify.</param>
+        /// <returns>The band name, matching a style class in <c>AppStyles.axaml</c>.</returns>
+        private static string BandOf(PasswordStrength strength) =>
+            strength switch
+            {
+                PasswordStrength.VeryWeak or PasswordStrength.Weak => "danger",
+                PasswordStrength.Fair => "warning",
+                PasswordStrength.Good => "good",
+                _ => "strong",
+            };
     }
 }

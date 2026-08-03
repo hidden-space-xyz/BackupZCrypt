@@ -203,7 +203,7 @@ public sealed class ManifestServiceTests
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations
             .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Combine(call.Arg<string[]>()));
+            .Returns(call => Path.Combine(call.Arg<string[]>() ?? []));
         fileOperations
             .When(operations => operations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()))
             .Do(_ => throw readFailure);
@@ -831,7 +831,7 @@ public sealed class ManifestServiceTests
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations
             .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Combine(call.Arg<string[]>()));
+            .Returns(call => Path.Combine(call.Arg<string[]>() ?? []));
         _ = fileOperations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()).Returns(stream);
 
         var manifestService = new ManifestService(fileOperations, Substitute.For<IEncryptionServiceFactory>());

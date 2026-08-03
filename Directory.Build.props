@@ -21,14 +21,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Roslynator.Analyzers">
+    <PackageReference Include="Meziantou.Analyzer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Roslynator.Formatting.Analyzers">
+    <PackageReference Include="SonarAnalyzer.CSharp">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <!--
+    SonarAnalyzer reads the thresholds of its parameterized rules (line length, cognitive
+    complexity, parameter count, ...) from a file named SonarLint.xml supplied as an AdditionalFile.
+    Severities stay in .editorconfig; only parameters live in the XML.
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)SonarLint.xml')">
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" Link="SonarLint.xml" Visible="false" />
   </ItemGroup>
 
 </Project>

@@ -190,13 +190,32 @@ internal abstract partial class OperationViewModelBase(
 
         recentPathsLoaded = true;
 
+        var recent = await TryLoadRecentPathsAsync();
+
+        if (recent is not null)
+        {
+            ApplyRecentPaths(recent);
+        }
+    }
+
+    /// <summary>
+    /// Reads the persisted recently used paths.
+    /// </summary>
+    /// <returns>
+    /// The stored paths, or <see langword="null"/> when they cannot be read, in which case the page starts
+    /// with empty inputs.
+    /// </returns>
+    private async Task<RecentPathSettings?> TryLoadRecentPathsAsync()
+    {
         try
         {
-            var recent = await SettingsService.GetOrCreateAsync<RecentPathSettings>();
-            ApplyRecentPaths(recent);
+            return await SettingsService.GetOrCreateAsync<RecentPathSettings>(
+                CancellationToken.None
+            );
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            return null;
         }
     }
 
@@ -377,7 +396,8 @@ internal abstract partial class OperationViewModelBase(
             Progress<BackupStatus> progress = new(ReportProgress);
 
             var result = await Task.Run(
-                () => orchestrator.ExecuteAsync(request, progress, cts.Token)
+                () => orchestrator.ExecuteAsync(request, progress, cts.Token),
+                cts.Token
             );
 
             HandleResult(result, proceedOnWarnings);
@@ -516,7 +536,7 @@ internal abstract partial class OperationViewModelBase(
 
         if (operation.IsSuccess)
         {
-            _ = SaveRecentPathsAsync();
+            _ = TrySaveRecentPathsAsync();
             ClearPassword();
         }
     }
@@ -605,20 +625,26 @@ internal abstract partial class OperationViewModelBase(
     /// Persists the paths of the completed operation so the pages can pre-fill them next time.
     /// </summary>
     /// <remarks>
-    /// Remembering the last-used paths is a best-effort convenience, so a failure here is swallowed: it
-    /// must not affect the already-completed operation.
+    /// Remembering the last-used paths is a best-effort convenience, so a failure here is reported rather
+    /// than thrown: it must not affect the already-completed operation. The write is deliberately not
+    /// cancellable — the operation has finished, and cancelling it must not discard where it ran.
     /// </remarks>
-    /// <returns>A task that completes once the paths have been written.</returns>
-    private async Task SaveRecentPathsAsync()
+    /// <returns><see langword="true"/> if the paths were persisted; otherwise <see langword="false"/>.</returns>
+    private async Task<bool> TrySaveRecentPathsAsync()
     {
         try
         {
-            var recent = await SettingsService.GetOrCreateAsync<RecentPathSettings>();
+            var recent = await SettingsService.GetOrCreateAsync<RecentPathSettings>(
+                CancellationToken.None
+            );
 
-            await SettingsService.SaveAsync(BuildRecentPaths(recent));
+            await SettingsService.SaveAsync(BuildRecentPaths(recent), CancellationToken.None);
+
+            return true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            return false;
         }
     }
 }

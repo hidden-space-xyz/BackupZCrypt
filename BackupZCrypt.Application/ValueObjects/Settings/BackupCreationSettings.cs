@@ -1,5 +1,5 @@
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 
 namespace BackupZCrypt.Application.ValueObjects.Settings;
 

@@ -74,7 +74,7 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
-# Portable self-contained build output (generated on Release build)
+# Output of a manual `dotnet publish -o dist`; no build produces this
 dist/
 
 # ASP.NET Scaffolding

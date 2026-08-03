@@ -27,9 +27,12 @@ dotnet test --filter "FullyQualifiedName~BackupRestoreRoundtripTests"
 dotnet test --filter "Name=EveryMessageCode_HasEnglishResxKey"
 ```
 
-A **Release** build of `BackupZCrypt.Desktop` additionally runs the `GeneratePortablePackages`
-MSBuild target, which `dotnet publish`es self-contained single-file bundles for `win-x64`,
-`linux-x64`, `osx-x64`, and `osx-arm64` into `dist/`. This is slow — use Debug for normal iteration.
+**Building never produces a distributable.** No configuration — Debug or Release — publishes
+anything; there is no packaging MSBuild target in `BackupZCrypt.Desktop.csproj`. The self-contained
+single-file bundles for `win-x64`, `linux-x64`, `osx-x64`, and `osx-arm64` are produced **only** by
+the `build` job of [`.github/workflows/release.yml`](.github/workflows/release.yml), on a push to
+`master` that raises `<Version>`. Keep it that way: packaging belongs to the release pipeline, not to
+a local build.
 
 ## Architecture — Clean Architecture, dependencies point inward
 
@@ -52,7 +55,7 @@ Every arrow points inward and there are no others. `Domain` is the centre and de
 
 Non-negotiable boundary rules:
 - **Domain references nothing** — no other project, and no NuGet package that ships anything. The
-  Roslynator references it inherits from `Directory.Build.props` are build-time analyzers
+  Meziantou and Sonar references it inherits from `Directory.Build.props` are build-time analyzers
   (`PrivateAssets=all`) and contribute no runtime dependency.
 - Concrete implementations are `internal sealed`, exposed to `Composition` and `Test` via
   `InternalsVisibleTo`. **Never `new` an implementation across a layer** — register it in
@@ -146,14 +149,21 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
 - **Central package management** — all versions live in `Directory.Packages.props`; project files
   reference packages without versions. Keep packages on their latest stable compatible versions.
 - **Analyzers are gates.** `Directory.Build.props` gives every project `AnalysisMode=All`,
-  `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, and Roslynator — do not re-declare these
-  per project. The `.editorconfig` is strict (file-scoped namespaces, `var` always, explicit
-  accessibility modifiers, private fields without an underscore prefix, trailing commas,
-  `I`-prefixed interfaces, braces always, 140-col lines). A clean change adds **zero** new
-  analyzer/format warnings, and the solution builds at zero today.
+  `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, **Meziantou.Analyzer**, and
+  **SonarAnalyzer.CSharp** — do not re-declare these per project. The `.editorconfig` is strict
+  (file-scoped namespaces, `var` always, explicit accessibility modifiers, private fields without an
+  underscore prefix, trailing commas, `I`-prefixed interfaces, braces always, 140-col lines). A clean
+  change adds **zero** new analyzer/format warnings, and the solution builds at zero today.
   `BackupZCrypt.Test` deliberately opts out (see the comment in its `.csproj`): the suite's
   `Method_Scenario_Expected` names conflict with CA1707 and the docs rule, and NUnit.Analyzers is
   the analyzer that matters there.
+- **Analyzer configuration lives in two files.** Severities go in `.editorconfig`
+  (`dotnet_diagnostic.<ID>.severity`); Sonar's *parameterized* rules cannot be configured there, so
+  their thresholds live in `SonarLint.xml` at the repository root, wired to every project as an
+  `AdditionalFiles` item by `Directory.Build.props`. Changing the 140-column limit, the cognitive
+  complexity ceiling, or the max parameter count means editing `SonarLint.xml`, not `.editorconfig`.
+  Every deviation from a default in either file carries the reason it was made — keep it that way, and
+  prefer fixing the code over adding a suppression.
 - **Docs.** Every non-`private` member has an XML doc comment — with `GenerateDocumentationFile` on,
   a missing one is now a CS1591 build warning. Update `README.md` when user-facing behavior changes.
 - **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming.

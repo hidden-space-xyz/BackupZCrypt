@@ -8,8 +8,8 @@ using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -261,29 +261,58 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
         loaded = true;
 
+        var stored = await TryLoadStoredSettingsAsync();
+
+        if (stored is null)
+        {
+            return;
+        }
+
+        var (defaults, language) = stored.Value;
+
+        SelectedEncryption =
+            EncryptionOptions.FirstOrDefault(o => o.Id == defaults.EncryptionAlgorithm)
+            ?? SelectedEncryption;
+        SelectedKeyDerivation =
+            KeyDerivationOptions.FirstOrDefault(o => o.Id == defaults.KeyDerivationAlgorithm)
+            ?? SelectedKeyDerivation;
+        SelectedCompression =
+            CompressionOptions.FirstOrDefault(o => o.Id == defaults.CompressionMode)
+            ?? SelectedCompression;
+
+        savedLanguageCode = language.LanguageCode;
+        SelectedLanguage =
+            LanguageOptions.FirstOrDefault(o =>
+                string.Equals(o.Code, language.LanguageCode, StringComparison.OrdinalIgnoreCase)
+            ) ?? LanguageOptions[0];
+    }
+
+    /// <summary>
+    /// Reads the persisted algorithm defaults and language preference together.
+    /// </summary>
+    /// <returns>
+    /// The stored settings, or <see langword="null"/> when either cannot be read, in which case the page
+    /// keeps the selections the constructor made.
+    /// </returns>
+    private async Task<(
+        BackupCreationSettings Defaults,
+        LanguageSettings Language
+    )?> TryLoadStoredSettingsAsync()
+    {
         try
         {
-            var defaults = await settingsService.GetOrCreateAsync<BackupCreationSettings>();
-            var language = await settingsService.GetOrCreateAsync<LanguageSettings>();
+            var defaults = await settingsService.GetOrCreateAsync<BackupCreationSettings>(
+                CancellationToken.None
+            );
+            var language = await settingsService.GetOrCreateAsync<LanguageSettings>(
+                CancellationToken.None
+            );
 
-            SelectedEncryption =
-                EncryptionOptions.FirstOrDefault(o => o.Id == defaults.EncryptionAlgorithm)
-                ?? SelectedEncryption;
-            SelectedKeyDerivation =
-                KeyDerivationOptions.FirstOrDefault(o => o.Id == defaults.KeyDerivationAlgorithm)
-                ?? SelectedKeyDerivation;
-            SelectedCompression =
-                CompressionOptions.FirstOrDefault(o => o.Id == defaults.CompressionMode)
-                ?? SelectedCompression;
-
-            savedLanguageCode = language.LanguageCode;
-            SelectedLanguage =
-                LanguageOptions.FirstOrDefault(o =>
-                    string.Equals(o.Code, language.LanguageCode, StringComparison.OrdinalIgnoreCase)
-                ) ?? LanguageOptions[0];
+            return (defaults, language);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            return null;
         }
     }
 

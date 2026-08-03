@@ -19,16 +19,16 @@ Four steps, in order, all against the Debug configuration:
 
 1. `dotnet restore`.
 2. `dotnet build -warnaserror`. The solution builds at zero warnings today and analyzers are build
-   gates (`AnalysisMode=All`, `EnforceCodeStyleInBuild`, Roslynator, `GenerateDocumentationFile`), so
-   any new analyzer, style or missing-XML-doc warning fails the pull request.
+   gates (`AnalysisMode=All`, `EnforceCodeStyleInBuild`, Meziantou.Analyzer, SonarAnalyzer.CSharp,
+   `GenerateDocumentationFile`), so any new analyzer, style or missing-XML-doc warning fails the pull
+   request.
 3. `dotnet test --no-build`.
 4. `dotnet format --verify-no-changes`. A second, independent pass over `.editorconfig`; it overlaps
    with the build gate but catches whitespace-level drift that the IDE analyzers report only as
    suggestions.
 
-Debug is deliberate: a Release build of `BackupZCrypt.Desktop` triggers the
-`GeneratePortablePackages` target, which publishes four self-contained runtimes and is far too slow
-for a per-pull-request gate.
+Debug is deliberate: the pull-request gate only has to prove the code builds clean and the suite is
+green. Nothing here produces a distributable binary — packaging happens exclusively in `release.yml`.
 
 There is no `push` trigger. Pushing to `develop` or to a feature branch runs nothing, so the gate
 fires once per release pull request rather than once per commit. Use the manual dispatch to run the
@@ -86,25 +86,20 @@ prefixes are ignored. A `!` marker or a `BREAKING CHANGE:` footer adds a warning
 The subject pattern accepts `;` as well as `:` after the type, because that has been typoed before.
 When no commit matches, the notes fall back to a maintenance-release line rather than shipping empty.
 
-**`test`** runs the suite in Release, the configuration that is about to be published. Two flags
-matter:
-
-- `-p:BuildingPortablePackage=true` stops the Desktop `GeneratePortablePackages` target from
-  publishing all four runtimes as a side effect of a Release build. It is load-bearing because the
-  test project references Desktop, which would otherwise drag that target into the test run.
-- `--blame-hang-timeout 5m` turns a deadlocked test into a dump plus a clear failure instead of a job
-  that burns the full six-hour runner budget. The suite finishes in well under a minute.
+**`test`** runs the suite in Release, the configuration that is about to be published.
+`--blame-hang-timeout 5m` turns a deadlocked test into a dump plus a clear failure instead of a job
+that burns the full six-hour runner budget. The suite finishes in well under a minute.
 
 The `.trx` log is uploaded on success and on failure (`if: always()`).
 
 **`build`** is a matrix over `win-x64`, `linux-x64`, `osx-x64` and `osx-arm64`, with `fail-fast: true`
-so one broken runtime does not spend runner time on the other three. It mirrors the
-`GeneratePortablePackages` target from
-[`BackupZCrypt.Desktop.csproj`](../../BackupZCrypt.Desktop/BackupZCrypt.Desktop.csproj) — the same
-`PublishSingleFile` / `IncludeNativeLibrariesForSelfExtract` / `EnableCompressionInSingleFile` /
-`DebugType=embedded` set — with `BuildingPortablePackage=true` to keep that target from recursing into
-itself. `-p:Version` is passed explicitly from `prepare`, so the version stamped into the executable
-provably equals the tag.
+so one broken runtime does not spend runner time on the other three. **This job is the only place
+distributable binaries are produced** — no local or CI build of
+[`BackupZCrypt.Desktop.csproj`](../../BackupZCrypt.Desktop/BackupZCrypt.Desktop.csproj) publishes
+anything, in any configuration, so the `PublishSingleFile` /
+`IncludeNativeLibrariesForSelfExtract` / `EnableCompressionInSingleFile` / `DebugType=embedded` set
+lives here and nowhere else. `-p:Version` is passed explicitly from `prepare`, so the version stamped
+into the executable provably equals the tag.
 
 Each runtime is staged as `BackupZCrypt-<tag>-<rid>` next to `LICENSE` and `README.md`, symbols are
 dropped, and the result is zipped for Windows or tarred with `--owner=0 --group=0` elsewhere so the

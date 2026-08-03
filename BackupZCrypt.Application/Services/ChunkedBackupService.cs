@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -218,7 +219,7 @@ internal sealed class ChunkedBackupService(
             catch (OperationCanceledException) when (fatalError is not null)
             {
                 stopwatch.Stop();
-                return Result<BackupResult>.Failure(fatalError!);
+                return Result<BackupResult>.Failure(fatalError);
             }
 
             ManifestHeader header = new(
@@ -499,7 +500,7 @@ internal sealed class ChunkedBackupService(
                 catch (OperationCanceledException) when (fatalError is not null)
                 {
                     stopwatch.Stop();
-                    return Result<BackupResult>.Failure(fatalError!);
+                    return Result<BackupResult>.Failure(fatalError);
                 }
             }
 
@@ -530,7 +531,7 @@ internal sealed class ChunkedBackupService(
 
             if (manifestErrors.Count == 0)
             {
-                await DeleteOrphanedChunksAsync(
+                _ = await TryDeleteOrphanedChunksAsync(
                         chunksDir,
                         referencedChunkHashes.Keys,
                         keys.NamingKey,
@@ -721,7 +722,7 @@ internal sealed class ChunkedBackupService(
             catch (OperationCanceledException) when (fatalError is not null)
             {
                 stopwatch.Stop();
-                return Result<BackupResult>.Failure(fatalError!);
+                return Result<BackupResult>.Failure(fatalError);
             }
 
             List<LocalizableMessage> errorList = [.. errors];
@@ -1493,15 +1494,18 @@ internal sealed class ChunkedBackupService(
     /// <remarks>
     /// Pruning is best-effort cleanup that runs only after the manifest has been written, so nothing
     /// it does can lose data: a chunk that cannot be removed because it is locked or access is denied
-    /// is left behind as a harmless orphan, and any other failure is swallowed rather than failing an
+    /// is left behind as a harmless orphan, and any other failure is reported rather than failing an
     /// update that has already completed.
     /// </remarks>
     /// <param name="chunksDir">The directory holding the stored chunk files.</param>
     /// <param name="referencedChunkHashes">The Base64 chunk hashes the new manifest still references.</param>
     /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the unreferenced chunk files have been pruned.</returns>
-    private async Task DeleteOrphanedChunksAsync(
+    /// <returns>
+    /// <see langword="true"/> if every unreferenced chunk file was removed; <see langword="false"/> if
+    /// one or more orphans were left behind.
+    /// </returns>
+    private async Task<bool> TryDeleteOrphanedChunksAsync(
         string chunksDir,
         IEnumerable<string> referencedChunkHashes,
         byte[] namingKey,
@@ -1529,30 +1533,29 @@ internal sealed class ChunkedBackupService(
 
             if (!fileOperationsService.DirectoryExists(chunksDir))
             {
-                return;
+                return true;
             }
 
             var existingFiles = await fileOperationsService
                 .GetFilesAsync(chunksDir, "*" + BackupConstants.AppFileExtension, cancellationToken)
                 .ConfigureAwait(false);
 
+            var pruned = true;
+
             foreach (var file in existingFiles)
             {
                 var fileName = Path.GetFileName(file);
                 if (!expectedFileNames.Contains(fileName))
                 {
-                    try
-                    {
-                        fileOperationsService.DeleteFile(file);
-                    }
-                    catch
-                    {
-                    }
+                    pruned &= fileOperationsService.TryDeleteFile(file);
                 }
             }
+
+            return pruned;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
+            return false;
         }
     }
 
@@ -1771,15 +1774,9 @@ internal sealed class ChunkedBackupService(
 
         foreach (var file in files)
         {
-            try
+            if (fileOperationsService.TryGetFileSize(file, out var size) && total <= long.MaxValue - size)
             {
-                checked
-                {
-                    total += fileOperationsService.GetFileSize(file);
-                }
-            }
-            catch
-            {
+                total += size;
             }
         }
 

@@ -11,7 +11,7 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 /// <summary>
 /// Key-derivation strategy using the memory-hard Argon2id function (BouncyCastle), tuned with
 /// fixed memory, iteration, and parallelism cost parameters. The password character buffer is
-/// cleared in a <c>finally</c> block, and the derived key is cleared if derivation fails.
+/// cleared in a <see langword="finally"/> block, and the derived key is cleared if derivation fails.
 /// </summary>
 internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

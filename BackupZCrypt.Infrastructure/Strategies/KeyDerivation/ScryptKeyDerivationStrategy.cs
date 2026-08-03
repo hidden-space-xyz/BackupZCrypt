@@ -11,7 +11,7 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 /// <summary>
 /// Key-derivation strategy using the memory-hard scrypt function (BouncyCastle), tuned with
 /// fixed cost, block-size, and parallelization parameters. The UTF-8 password bytes are
-/// cleared in a <c>finally</c> block once derivation completes.
+/// cleared in a <see langword="finally"/> block once derivation completes.
 /// </summary>
 internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

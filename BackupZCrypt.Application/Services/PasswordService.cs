@@ -117,6 +117,17 @@ internal sealed partial class PasswordService : IPasswordService
     private const string SimilarChars = "il1Lo0O";
 
     /// <summary>
+    /// The match timeout applied to every regex in this class.
+    /// </summary>
+    /// <remarks>
+    /// None of these patterns can backtrack catastrophically and every input is a length-bounded
+    /// password, so the timeout is never expected to elapse. It is set anyway because these patterns
+    /// are the only ones in the solution that run over attacker-supplied text, and an unbounded match
+    /// is the shape of a denial-of-service bug even when today's pattern happens to be linear.
+    /// </remarks>
+    private const int RegexTimeoutMilliseconds = 1000;
+
+    /// <summary>
     /// The regex that detects an ASCII uppercase letter.
     /// </summary>
     private static readonly Regex UpperCaseRegex = UpperCaseRegexFactory();
@@ -656,34 +667,34 @@ internal sealed partial class PasswordService : IPasswordService
     /// Builds the source-generated regex matching a single ASCII uppercase letter.
     /// </summary>
     /// <returns>The generated regex.</returns>
-    [GeneratedRegex("[A-Z]")]
+    [GeneratedRegex("[A-Z]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex UpperCaseRegexFactory();
 
     /// <summary>
     /// Builds the source-generated regex matching a single ASCII lowercase letter.
     /// </summary>
     /// <returns>The generated regex.</returns>
-    [GeneratedRegex("[a-z]")]
+    [GeneratedRegex("[a-z]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex LowerCaseRegexFactory();
 
     /// <summary>
     /// Builds the source-generated regex matching a single decimal digit.
     /// </summary>
     /// <returns>The generated regex.</returns>
-    [GeneratedRegex("[0-9]")]
+    [GeneratedRegex("[0-9]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex NumberRegexFactory();
 
     /// <summary>
     /// Builds the source-generated regex matching a single recognized punctuation character.
     /// </summary>
     /// <returns>The generated regex.</returns>
-    [GeneratedRegex(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]")]
+    [GeneratedRegex(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex SpecialCharRegexFactory();
 
     /// <summary>
     /// Builds the source-generated regex matching a standalone four-digit year between 1900 and 2099.
     /// </summary>
     /// <returns>The generated regex.</returns>
-    [GeneratedRegex(@"\b(19|20)\d{2}\b")]
+    [GeneratedRegex(@"\b(?:19|20)\d{2}\b", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex YearRegexFactory();
 }

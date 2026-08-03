@@ -8,7 +8,7 @@ namespace BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
 
 /// <summary>
 /// Key-derivation strategy using PBKDF2 with HMAC-SHA256 and a high fixed iteration count.
-/// The UTF-8 password bytes are zeroed in a <c>finally</c> block once derivation completes.
+/// The UTF-8 password bytes are zeroed in a <see langword="finally"/> block once derivation completes.
 /// </summary>
 internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrategy
 {

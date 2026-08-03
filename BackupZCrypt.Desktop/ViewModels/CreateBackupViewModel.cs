@@ -119,17 +119,38 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
+        var defaults = await TryLoadCreationDefaultsAsync();
+
+        if (defaults is null)
+        {
+            return;
+        }
+
+        encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
+            ? defaults.EncryptionAlgorithm
+            : EncryptionAlgorithm.Aes;
+        keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
+        compressionMode = defaults.CompressionMode;
+    }
+
+    /// <summary>
+    /// Reads the persisted algorithm defaults for a new backup.
+    /// </summary>
+    /// <returns>
+    /// The stored defaults, or <see langword="null"/> when they cannot be read, in which case the page
+    /// keeps the values it was constructed with.
+    /// </returns>
+    private async Task<BackupCreationSettings?> TryLoadCreationDefaultsAsync()
+    {
         try
         {
-            var defaults = await SettingsService.GetOrCreateAsync<BackupCreationSettings>();
-            encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
-                ? defaults.EncryptionAlgorithm
-                : EncryptionAlgorithm.Aes;
-            keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
-            compressionMode = defaults.CompressionMode;
+            return await SettingsService.GetOrCreateAsync<BackupCreationSettings>(
+                CancellationToken.None
+            );
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            return null;
         }
     }
 

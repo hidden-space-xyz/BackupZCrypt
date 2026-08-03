@@ -257,7 +257,6 @@ jobs:
           dotnet test "$SOLUTION" \
             --configuration Release \
             --no-restore \
-            -p:BuildingPortablePackage=true \
             --blame-hang-timeout 5m \
             --logger "trx;LogFileName=test-results.trx" \
             --results-directory "$GITHUB_WORKSPACE/test-results"
@@ -321,7 +320,6 @@ jobs:
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:EnableCompressionInSingleFile=true \
             -p:DebugType=embedded \
-            -p:BuildingPortablePackage=true \
             -p:ContinuousIntegrationBuild=true \
             -p:Version="$VERSION"
 

@@ -81,22 +81,36 @@ internal sealed class SettingsService(
             cancellationToken
         );
 
-        try
-        {
-            var settings = JsonSerializer.Deserialize<T>(rawSettings, SerializerOptions);
+        var settings = TryDeserialize<T>(rawSettings);
 
-            if (settings is not null)
-            {
-                return settings;
-            }
-        }
-        catch (JsonException)
+        if (settings is not null)
         {
+            return settings;
         }
 
         var recreated = T.DefaultValue;
         await this.SaveAsync(recreated, cancellationToken);
         return recreated;
+    }
+
+    /// <summary>
+    /// Deserializes persisted settings, reporting a corrupt or version-incompatible file as a missing
+    /// value rather than as an exception.
+    /// </summary>
+    /// <typeparam name="T">The settings type to read.</typeparam>
+    /// <param name="rawSettings">The raw bytes read from the settings file.</param>
+    /// <returns>The deserialized settings, or <see langword="null"/> when the file cannot be read as <typeparamref name="T"/>.</returns>
+    private static T? TryDeserialize<T>(byte[] rawSettings)
+        where T : class, ISettings<T>
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(rawSettings, SerializerOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

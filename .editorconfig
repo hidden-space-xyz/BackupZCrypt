@@ -1,28 +1,27 @@
 # ============================================================
-# Enterprise .editorconfig for .NET + Roslynator
+# Enterprise .editorconfig for .NET
+# Analyzers: Microsoft CodeAnalysis (CA/IDE) + Meziantou.Analyzer (MA) + SonarAnalyzer.CSharp (S)
 # ============================================================
 # Purpose:
 # - Establish consistent coding conventions across the solution.
-# - Use Roslynator as a quality gate for readability and maintainability.
-# - Keep formatting rules strict, but avoid excessive noise from low-value hints.
+# - Use Meziantou.Analyzer and SonarAnalyzer.CSharp as the quality gate for correctness,
+#   performance, and maintainability.
+# - Keep the gate strict, but avoid noise that duplicates another analyzer or fights a
+#   deliberate architectural decision documented in CLAUDE.md.
 #
 # Notes:
-# - Roslynator supports configuration through .editorconfig.
 # - Analyzer severities are controlled with:
 #     dotnet_diagnostic.<ID>.severity
-# - Roslynator also supports named options such as:
-#     roslynator_use_var
-#     roslynator_prefix_field_identifier_with_underscore
-#     roslynator_null_check_style
-#     roslynator_doc_comment_summary_style
-#     roslynator_use_collection_expression
-#   and many others documented in the official guide.
+# - Meziantou ships many rules at `info`; anything this codebase should actually honour is
+#   escalated to `warning` below so it fails the "zero warnings" gate instead of accruing.
+# - SonarAnalyzer's parameterized rules (line length, complexity, parameter count, ...) cannot be
+#   configured through .editorconfig. Their thresholds live in `SonarLint.xml`, wired in as an
+#   AdditionalFile by Directory.Build.props.
 #
 # Strategy used here:
-# - Errors: only for rules that should block CI or prevent risky patterns.
-# - Warnings: important maintainability/readability issues.
-# - Suggestions/Silent: style nudges that should not disrupt delivery.
-# - None: rules that are too noisy or overlap with formatter/editor defaults.
+# - Warning: correctness, security, performance, and maintainability issues that must be fixed.
+# - Suggestion/Silent: style nudges that should not disrupt delivery.
+# - None: rules that are too noisy, duplicate another analyzer, or contradict a project decision.
 # ============================================================
 
 root = true
@@ -44,192 +43,275 @@ indent_style = space
 indent_size = 4
 
 # ============================================================
-# Core Roslynator style options
-# These option names and allowed values are defined by Roslynator.
+# Formatting conventions
+# Neither Meziantou nor Sonar owns whitespace, so these are the Roslyn-native style options and are
+# enforced at build time by EnforceCodeStyleInBuild.
 # ============================================================
 
-# Prefer explicit accessibility on all declarations.
-# This is usually desirable in enterprise code because visibility
-# is part of the public contract and should not be implicit.
-roslynator_accessibility_modifiers = explicit
+# Always use braces, even for single-line blocks (matches existing guard clauses).
+csharp_prefer_braces = true:warning
 
-# Keep braces multi-line for clarity and diff stability.
-roslynator_accessor_braces_style = multi_line
-roslynator_block_braces_style = multi_line
+# Block bodies read better than expression bodies for anything non-trivial: easier to debug,
+# annotate, and extend. Accessors and lambdas stay expression-bodied.
+csharp_style_expression_bodied_methods = false:suggestion
+csharp_style_expression_bodied_constructors = false:suggestion
+csharp_style_expression_bodied_operators = false:suggestion
+csharp_style_expression_bodied_local_functions = false:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:silent
+csharp_style_expression_bodied_indexers = when_on_single_line:silent
+csharp_style_expression_bodied_accessors = when_on_single_line:silent
+csharp_style_expression_bodied_lambdas = when_on_single_line:silent
 
-# Use file-scoped namespace spacing that reads cleanly.
-roslynator_blank_line_after_file_scoped_namespace_declaration = true
-
-# Group using directives visually.
-roslynator_blank_line_between_using_directives = separate_groups
-
-# Keep expression-bodied members controlled rather than pervasive.
-# In enterprise codebases, full block bodies are often easier to debug,
-# annotate, and extend.
-roslynator_body_style = block
-roslynator_use_block_body_when_declaration_spans_over_multiple_lines = true
-roslynator_use_block_body_when_expression_spans_over_multiple_lines = true
-
-# Prefer modern null checking style.
-roslynator_null_check_style = pattern_matching
-
-# Keep doc comment summaries multi-line for easier maintenance.
-roslynator_doc_comment_summary_style = multi_line
-
-# Prefer String.Empty over literal empty string when normalizing style.
-roslynator_empty_string_style = field
-
-# Keep maximum line length aligned with common enterprise practice.
-# Roslynator's documented default is 140.
-roslynator_max_line_length = 140
-roslynator_tab_length = 4
-roslynator_new_line_at_end_of_file = true
-
-# Private fields are named without a leading underscore, which is what every field in the solution
-# already does; `this.` disambiguates where it matters. This option only configures Roslynator's
-# code fix — it raises no diagnostic — so leaving it at `true` meant the file asked for a convention
-# nothing enforced and no code followed.
-roslynator_prefix_field_identifier_with_underscore = false
-
-# Prefer trailing commas in multi-line constructs to improve diffs.
-roslynator_trailing_comma_style = include
-
-# Prefer collection expressions where applicable, and prefer var whenever possible.
-roslynator_use_collection_expression = true
-roslynator_use_var = always
-roslynator_use_var_instead_of_implicit_object_creation = false
+# Prefer var everywhere (matches the whole codebase).
 csharp_style_var_for_built_in_types = true:suggestion
 csharp_style_var_when_type_is_apparent = true:suggestion
 csharp_style_var_elsewhere = true:suggestion
 
-# Prefer implicit object/array creation only when obvious.
-roslynator_array_creation_type_style = implicit_when_type_is_obvious
-roslynator_object_creation_type_style = implicit_when_type_is_obvious
-roslynator_object_creation_parentheses_style = include
+# Prefer target-typed / collection expressions where the type is obvious.
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
 
-# Prefer method groups where they are clean and obvious.
-roslynator_use_anonymous_function_or_method_group = method_group
+# Line-break placement: operators lead the continuation line.
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_else = true
+csharp_new_line_before_finally = true
+csharp_new_line_between_query_expression_clauses = true
 
-# Normalize enum flag style for readability.
-roslynator_enum_flag_value_style = shift_operator
-roslynator_enum_has_flag_style = operator
-
-# Use modern collection/loop/readability conventions.
-roslynator_infinite_loop_style = while
-
-# Keep operator line breaks consistent.
-roslynator_arrow_token_new_line = before
-roslynator_binary_operator_new_line = before
-roslynator_conditional_operator_new_line = before
-roslynator_equals_token_new_line = before
-roslynator_null_conditional_operator_new_line = before
-
-# Conditional style: allow concise conditions when obvious.
-roslynator_conditional_operator_condition_parentheses_style = omit_when_condition_is_single_token
-
-# Prefer line break before while in do/while for clarity.
-roslynator_new_line_before_while_in_do_statement = true
+# Using directives: System first, then one blank-line-separated group per root namespace, which is
+# the shape every file in the solution already uses.
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
 
 # ============================================================
-# Roslynator analyzers - baseline policy
+# Meziantou.Analyzer
+# ------------------------------------------------------------
+# Escalations first (rules that ship at `info`/`none` but encode something this codebase cares
+# about), then the deliberate opt-outs.
 # ============================================================
 
-# Hardened baseline: Roslynator analyzers enabled by default are treated as warnings so
-# maintainability/readability issues are surfaced and resolved rather than silently accrued.
-dotnet_analyzer_diagnostic.category-roslynator.severity = warning
-
 # ------------------------------------------------------------
-# Escalated maintainability and correctness-oriented rules
+# Correctness and API misuse
 # ------------------------------------------------------------
 
-# Use nameof operator
-dotnet_diagnostic.rcs1015.severity = warning
+# MA0015: Specify the parameter name in ArgumentException
+dotnet_diagnostic.MA0015.severity = warning
 
-# Simplify argument null check
-dotnet_diagnostic.rcs1255.severity = warning
+# MA0016: Prefer returning a collection abstraction instead of an implementation
+dotnet_diagnostic.MA0016.severity = warning
 
-# Invalid argument null check
-dotnet_diagnostic.rcs1256.severity = warning
+# MA0020: Use direct methods instead of LINQ methods
+dotnet_diagnostic.MA0020.severity = warning
 
-# Duplicate word in a comment
-dotnet_diagnostic.rcs1243.severity = warning
+# MA0022: Return Task.FromResult instead of returning null
+dotnet_diagnostic.MA0022.severity = warning
 
-# Fix documentation comment tag
-dotnet_diagnostic.rcs1247.severity = warning
+# MA0040: Forward the CancellationToken parameter to methods that take one
+dotnet_diagnostic.MA0032.severity = suggestion
+dotnet_diagnostic.MA0040.severity = warning
 
-# Remove redundant catch block
-dotnet_diagnostic.rcs1265.severity = warning
+# MA0042: Do not use blocking calls in an async method
+dotnet_diagnostic.MA0042.severity = warning
 
-# Unnecessary null-forgiving operator
-dotnet_diagnostic.rcs1249.severity = warning
+# MA0046: Use EventHandler<T> to declare events
+dotnet_diagnostic.MA0046.severity = warning
 
-# Unnecessary conditional access
-dotnet_diagnostic.rcs9003.severity = warning
+# MA0048: File name must match type name
+dotnet_diagnostic.MA0048.severity = warning
 
-# Unnecessary null check
-dotnet_diagnostic.rcs9005.severity = warning
+# MA0053: Make class sealed (matches the `internal sealed` implementation convention)
+dotnet_diagnostic.MA0053.severity = warning
 
-# Call Any instead of Count
-dotnet_diagnostic.rcs9004.severity = suggestion
+# MA0055: Do not use finalizer
+dotnet_diagnostic.MA0055.severity = warning
 
-# Use property SyntaxNode.SpanStart
-dotnet_diagnostic.rcs9002.severity = suggestion
+# MA0056: Do not call overridable members in a constructor
+dotnet_diagnostic.MA0056.severity = warning
+
+# MA0060: The value returned by Stream.Read/Stream.Write is not used
+dotnet_diagnostic.MA0060.severity = warning
+
+# MA0062: Non-flags enums should not be marked with "FlagsAttribute"
+dotnet_diagnostic.MA0062.severity = warning
+
+# MA0069: Non-constant static fields should not be visible
+dotnet_diagnostic.MA0069.severity = warning
+
+# MA0074: Avoid implicit culture-sensitive methods
+dotnet_diagnostic.MA0074.severity = warning
+
+# MA0079/MA0080: Flow the CancellationToken through async enumerables
+dotnet_diagnostic.MA0079.severity = warning
+dotnet_diagnostic.MA0080.severity = warning
+
+# MA0099: Use Explicit enum value instead of 0
+dotnet_diagnostic.MA0099.severity = warning
+
+# MA0110: Use the Regex source generator
+dotnet_diagnostic.MA0110.severity = warning
+
+# MA0134: Observe the result of a fire-and-forget Task
+dotnet_diagnostic.MA0134.severity = warning
+
+# MA0158/MA0159: Use System.Threading.Lock / prefer the modern locking primitives
+dotnet_diagnostic.MA0158.severity = warning
+dotnet_diagnostic.MA0159.severity = warning
 
 # ------------------------------------------------------------
-# Formatting and style normalization rules
-# Keep visible, but do not make them disruptive.
+# Performance
 # ------------------------------------------------------------
 
-# Add/remove blank line between using directives
-dotnet_diagnostic.rcs0015.severity = suggestion
+# MA0028: Optimize StringBuilder usage
+dotnet_diagnostic.MA0028.severity = warning
 
-# Format accessor braces
-dotnet_diagnostic.rcs0020.severity = suggestion
+# MA0029/MA0031: Combine LINQ methods / optimize Enumerable.Count usage
+dotnet_diagnostic.MA0029.severity = warning
+dotnet_diagnostic.MA0031.severity = warning
 
-# Format block braces
-dotnet_diagnostic.rcs0021.severity = suggestion
+# MA0089: Optimize string method usage
+dotnet_diagnostic.MA0089.severity = warning
 
-# Place new line after/before binary operator
-dotnet_diagnostic.rcs0027.severity = silent
+# MA0098: Use "Span.Slice" / range indexer instead of a substring copy
+dotnet_diagnostic.MA0098.severity = warning
 
-# Place new line after/before ?: operator
-dotnet_diagnostic.rcs0028.severity = silent
+# ------------------------------------------------------------
+# Style
+# ------------------------------------------------------------
 
-# Place new line after/before arrow token
-dotnet_diagnostic.rcs0032.severity = silent
+# MA0007: Add a comma after the last value in a multi-line initializer
+dotnet_diagnostic.MA0007.severity = warning
 
-# Add/remove new line before while in do statement
-dotnet_diagnostic.rcs0051.severity = silent
+# MA0154: Use langword in XML comment (<see langword="null"/> rather than <c>null</c>)
+dotnet_diagnostic.MA0154.severity = warning
 
-# Place new line after/before equals token
-dotnet_diagnostic.rcs0052.severity = silent
+# MA0001/MA0002: StringComparison and IEqualityComparer<string> are missing. CA1307 stays advisory
+# because it also fires on comparisons where culture cannot matter, but the Meziantou pair is clean
+# across the solution today, so it is kept as a gate: an implicitly culture-sensitive comparison on a
+# manifest path or a chunk name is a correctness bug, not a style preference.
+dotnet_diagnostic.MA0001.severity = warning
+dotnet_diagnostic.MA0002.severity = warning
 
-# Normalize max line length / wrapping-related formatting
-dotnet_diagnostic.rcs0056.severity = suggestion
+# MA0026: Fix TODO comment — visible, but never blocking. A developer has to be able to land a TODO.
+dotnet_diagnostic.MA0026.severity = suggestion
 
-# Ensure final newline
-dotnet_diagnostic.rcs0058.severity = suggestion
+# ------------------------------------------------------------
+# Meziantou rules intentionally disabled
+# ------------------------------------------------------------
 
-# Normalize conditional null-check style
-dotnet_diagnostic.rcs1248.severity = suggestion
+# MA0004: Use Task.ConfigureAwait — mirrors the CA2007 decision below. This is an Avalonia app
+# whose continuations must resume on the UI thread; the engine below the UI has no synchronization
+# context to capture, so ConfigureAwait(false) would be noise on every await in the solution.
+dotnet_diagnostic.MA0004.severity = none
 
-# Format documentation comment summary
-dotnet_diagnostic.rcs1253.severity = suggestion
+# MA0011: IFormatProvider is missing — mirrors the CA1305 decision below.
+dotnet_diagnostic.MA0011.severity = none
 
-# Normalize enum flag value
-dotnet_diagnostic.rcs1254.severity = suggestion
+# MA0003: Add parameter name to argument — too noisy for the call-site density here.
+dotnet_diagnostic.MA0003.severity = none
 
-# Use var or explicit type
-dotnet_diagnostic.rcs1264.severity = suggestion
+# MA0006: Use String.Equals instead of == — `==` on string is already ordinal; the rewrite adds
+# ceremony without changing semantics.
+dotnet_diagnostic.MA0006.severity = none
 
-# Use raw string literal where appropriate
-dotnet_diagnostic.rcs1266.severity = suggestion
+# MA0018: Do not declare static members on generic types — mirrors the CA1000 decision below
+# (Result<T>.Success / .Failure factories are the intended API shape).
+dotnet_diagnostic.MA0018.severity = none
 
-# Use string interpolation instead of string.Concat
-dotnet_diagnostic.rcs1267.severity = suggestion
+# MA0045: Do not use blocking calls in a sync method — the fix is to virally make callers async;
+# MA0042 already guards the case that actually deadlocks.
+dotnet_diagnostic.MA0045.severity = none
 
-# Simplify numeric comparison
-dotnet_diagnostic.rcs1268.severity = suggestion
+# MA0051: Method is too long. The four engine entry points in ChunkedBackupService run 100-260 lines
+# each because they are a single linear pipeline over one archive with key material live in scope;
+# splitting them would spread the zeroing responsibility over more frames, not less. S3776 (cognitive
+# complexity, threshold 15 in SonarLint.xml) is clean across all of them and is the better-targeted
+# gate: it measures branching, which is what actually makes a method hard to review.
+dotnet_diagnostic.MA0051.severity = none
+
+# ============================================================
+# SonarAnalyzer.CSharp
+# ------------------------------------------------------------
+# Sonar ships its "Sonar way" profile enabled by default, so only the deliberate deviations are
+# listed. Thresholds for parameterized rules live in SonarLint.xml.
+# ============================================================
+
+# S103: Lines should not be too long — threshold pinned to 140 in SonarLint.xml.
+dotnet_diagnostic.S103.severity = warning
+
+# S1135: Track uses of "TODO" tags — visible, but never blocking (mirrors MA0026).
+dotnet_diagnostic.S1135.severity = suggestion
+
+# ------------------------------------------------------------
+# Dead-code and redundancy rules kept at warning even though a CA/IDE rule overlaps.
+#
+# The overlapping IDE rules (IDE0052 unread private field, IDE0059 unnecessary assignment) resolve to
+# `suggestion` here, so dropping the Sonar rule as a "duplicate" would quietly lower the gate rather
+# than deduplicate it. All four are clean across the solution today, so they cost nothing and they
+# fail the build on the next dead store.
+# ------------------------------------------------------------
+
+# S1854: Unused assignments should be removed (overlaps IDE0059, which is only a suggestion)
+dotnet_diagnostic.S1854.severity = warning
+
+# S1481: Unused local variables should be removed (overlaps IDE0059)
+dotnet_diagnostic.S1481.severity = warning
+
+# S4487: Unread "private" fields should be removed (overlaps IDE0052, which is only a suggestion)
+dotnet_diagnostic.S4487.severity = warning
+
+# S125: Sections of code should not be commented out. The codebase carries no `//` comments at all,
+# only XML docs, so this rule enforces that convention rather than merely observing it.
+dotnet_diagnostic.S125.severity = warning
+
+# ------------------------------------------------------------
+# Sonar rules that genuinely duplicate a CA rule already enabled at warning by AnalysisMode=All.
+# Keeping both would report every finding twice.
+# ------------------------------------------------------------
+
+# S3903 duplicates CA1050 (type should be in a namespace)
+dotnet_diagnostic.S3903.severity = none
+
+# S2325 duplicates CA1822 (member can be static)
+dotnet_diagnostic.S2325.severity = none
+
+# S3260 duplicates MA0053 (non-derived private class should be sealed)
+dotnet_diagnostic.S3260.severity = none
+
+# S1128 duplicates IDE0005 (unnecessary using directive), which is set to warning above
+dotnet_diagnostic.S1128.severity = none
+
+# ------------------------------------------------------------
+# The one Sonar rule disabled on design grounds rather than duplication
+# ------------------------------------------------------------
+
+# S3267: "Loops should be simplified with LINQ expressions" would trade the allocation-free loops in
+# the chunking and hashing paths for LINQ pipelines that allocate an enumerator and a closure per
+# call. It reports nothing today; it is off so it cannot force that rewrite later. CLAUDE.md orders
+# the trade-off as security first, performance second — a LINQ pipeline over chunk buffers loses on
+# the second and gains nothing on the first.
+dotnet_diagnostic.S3267.severity = none
+
+# ------------------------------------------------------------
+# Sonar security and correctness rules escalated above their default
+# ------------------------------------------------------------
+
+# S2245: Using pseudorandom number generators is security-sensitive
+dotnet_diagnostic.S2245.severity = warning
+
+# S4790: Using weak hashing algorithms is security-sensitive — SHA-256 is used throughout, and a
+# regression to SHA-1/MD5 must fail the build in a project whose threat model is the archive.
+dotnet_diagnostic.S4790.severity = warning
+
+# S2053: Hashes should include an unpredictable salt
+dotnet_diagnostic.S2053.severity = warning
+
+# S5542/S5547: Encryption algorithms and modes should be robust
+dotnet_diagnostic.S5542.severity = warning
+dotnet_diagnostic.S5547.severity = warning
+
+# S6781: JWT secret keys should not be disclosed — not applicable today, but free insurance.
+dotnet_diagnostic.S6781.severity = warning
 
 # ------------------------------------------------------------
 # SDK CA rules explicitly suppressed
@@ -277,92 +359,6 @@ dotnet_diagnostic.CA2225.severity = none
 # CA1000: Do not declare static members on generic types
 dotnet_diagnostic.CA1000.severity = none
 
-# ------------------------------------------------------------
-# Rules intentionally disabled to avoid enterprise noise
-# ------------------------------------------------------------
-
-# Add blank line after embedded statement
-dotnet_diagnostic.rcs0001.severity = none
-
-# Add blank line after #region
-dotnet_diagnostic.rcs0002.severity = none
-
-# Add blank line before #endregion
-dotnet_diagnostic.rcs0005.severity = none
-
-# Add blank line before using directive list
-dotnet_diagnostic.rcs0006.severity = none
-
-# Add blank line between accessors
-dotnet_diagnostic.rcs0007.severity = none
-
-# Add blank line between closing brace and next statement
-dotnet_diagnostic.rcs0008.severity = none
-
-# Add blank line between declarations
-dotnet_diagnostic.rcs0010.severity = none
-
-# Add/remove blank line between single-line accessors
-dotnet_diagnostic.rcs0011.severity = none
-
-# Put attribute list on its own line
-dotnet_diagnostic.rcs0016.severity = none
-
-# Format type declaration braces
-dotnet_diagnostic.rcs0023.severity = none
-
-# Put constructor initializer on its own line
-dotnet_diagnostic.rcs0029.severity = none
-
-# Put embedded statement on its own line
-dotnet_diagnostic.rcs0030.severity = none
-
-# Put enum member on its own line
-dotnet_diagnostic.rcs0031.severity = none
-
-# Put statement on its own line
-dotnet_diagnostic.rcs0033.severity = none
-
-# Remove new line before base list
-dotnet_diagnostic.rcs0039.severity = none
-
-# Use carriage return + linefeed as new line
-dotnet_diagnostic.rcs0044.severity = none
-
-# Use linefeed as new line
-dotnet_diagnostic.rcs0045.severity = none
-
-# Use spaces instead of tab
-dotnet_diagnostic.rcs0046.severity = none
-
-# Add blank line after top comment
-dotnet_diagnostic.rcs0049.severity = none
-
-# Add blank line before top declaration
-dotnet_diagnostic.rcs0050.severity = none
-
-# Merge else with nested if
-dotnet_diagnostic.rcs1006.severity = none
-
-# Add braces
-# Usually covered by existing team standards or IDE analyzers.
-dotnet_diagnostic.rcs1007.severity = none
-
-# Use predefined type
-dotnet_diagnostic.rcs1013.severity = none
-
-# Use implicitly/explicitly typed array
-dotnet_diagnostic.rcs1014.severity = suggestion
-
-# Normalize expression-bodied member style
-dotnet_diagnostic.rcs1016.severity = none
-
-# Use implicit/explicit object creation
-dotnet_diagnostic.rcs1250.severity = suggestion
-
-# Normalize usage of infinite loop
-dotnet_diagnostic.rcs1252.severity = none
-
 # ============================================================
 # Hardened quality gates
 # ------------------------------------------------------------
@@ -371,9 +367,9 @@ dotnet_diagnostic.rcs1252.severity = none
 # forcing a large refactor.
 #
 # Severity note: the IDE-prefixed (IDExxxx) and dotnet_naming_* rules below are reported by the IDE
-# and by `dotnet format`. To also enforce them during `dotnet build`, set
-# <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> in a Directory.Build.props. The Roslynator
-# (RCS) and CA rules already run at build time.
+# and by `dotnet format`. They also run during `dotnet build` because
+# <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> is set in Directory.Build.props. The
+# Meziantou (MA), Sonar (S), and CA rules already run at build time unconditionally.
 # ============================================================
 
 # ------------------------------------------------------------
@@ -390,15 +386,8 @@ dotnet_style_namespace_match_folder = true:warning
 # Remove unnecessary using directives (ImplicitUsings is enabled, so leftovers are noise).
 dotnet_diagnostic.IDE0005.severity = warning
 
-# Always require explicit accessibility modifiers (reinforces roslynator_accessibility_modifiers).
+# Always require explicit accessibility modifiers.
 dotnet_style_require_accessibility_modifiers = always:warning
-
-# ------------------------------------------------------------
-# Braces and blocks
-# ------------------------------------------------------------
-
-# Always use braces, even for single-line blocks (matches existing guard clauses).
-csharp_prefer_braces = true:warning
 
 # ------------------------------------------------------------
 # Modern pattern matching and null handling
@@ -482,13 +471,9 @@ dotnet_naming_symbols.constant_symbol.applicable_accessibilities = *
 dotnet_naming_symbols.constant_symbol.required_modifiers = const
 
 # ------------------------------------------------------------
-# Optional: generated code exclusion
+# Generated code
+# Roslyn skips analyzers on files marked generated; the tooling-generated Avalonia and resx
+# partials are matched by name here so neither analyzer reports on them.
 # ------------------------------------------------------------
-[*.g.cs]
-dotnet_analyzer_diagnostic.category-roslynator.severity = none
-
-[*.designer.cs]
-dotnet_analyzer_diagnostic.category-roslynator.severity = none
-
-[*.generated.cs]
-dotnet_analyzer_diagnostic.category-roslynator.severity = none
+[*.{g,i,designer,generated}.cs]
+generated_code = true

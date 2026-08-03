@@ -79,7 +79,14 @@ internal sealed class BackupBenchmarkService(
     )
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.DataBytes);
+        if (request.DataBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                request.DataBytes,
+                "The amount of data to estimate for must be greater than zero."
+            );
+        }
 
         var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
         var compressionStrategy =
@@ -228,6 +235,7 @@ internal sealed class BackupBenchmarkService(
         await foreach (
             var chunk in chunkingStrategy
                 .ChunkAsync(stream, cancellationToken)
+                .Take(1)
                 .ConfigureAwait(false)
         )
         {
@@ -241,8 +249,6 @@ internal sealed class BackupBenchmarkService(
                     cancellationToken
                 )
                 .ConfigureAwait(false);
-
-            break;
         }
     }
 
@@ -353,7 +359,7 @@ internal sealed class BackupBenchmarkService(
     /// </summary>
     /// <remarks>
     /// Every intermediate buffer, including the chunk hash, nonce, associated data, and ciphertext, is zeroed
-    /// in a <c>finally</c> block so the benchmark leaves no derived material in memory.
+    /// in a <see langword="finally"/> block so the benchmark leaves no derived material in memory.
     /// </remarks>
     /// <param name="chunk">The chunk produced by the chunking strategy.</param>
     /// <param name="fileHasher">The running whole-file hash the chunk is appended to.</param>

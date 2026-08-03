@@ -3,13 +3,13 @@ using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Desktop.Views;
+using BackupZCrypt.Domain.Services.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -86,6 +86,26 @@ internal sealed class App : Avalonia.Application
     /// <param name="services">The provider used to resolve the <see cref="ISettingsService"/>.</param>
     private static void ApplyLanguagePreference(ServiceProvider services)
     {
+        var culture = TryResolvePreferredCulture(services);
+
+        if (culture is null)
+        {
+            return;
+        }
+
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+
+    /// <summary>
+    /// Reads the stored language preference and turns it into a culture.
+    /// </summary>
+    /// <param name="services">The provider used to resolve the <see cref="ISettingsService"/>.</param>
+    /// <returns>
+    /// The preferred culture, or <see langword="null"/> when no preference is stored or it cannot be read.
+    /// </returns>
+    private static CultureInfo? TryResolvePreferredCulture(ServiceProvider services)
+    {
         try
         {
             var settingsService = services.GetRequiredService<ISettingsService>();
@@ -94,15 +114,13 @@ internal sealed class App : Avalonia.Application
                 .GetAwaiter()
                 .GetResult();
 
-            if (!string.IsNullOrWhiteSpace(language.LanguageCode))
-            {
-                CultureInfo culture = new(language.LanguageCode);
-                CultureInfo.CurrentUICulture = culture;
-                CultureInfo.DefaultThreadCurrentUICulture = culture;
-            }
+            return string.IsNullOrWhiteSpace(language.LanguageCode)
+                ? null
+                : new CultureInfo(language.LanguageCode);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            return null;
         }
     }
 }

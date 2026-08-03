@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -375,13 +376,7 @@ internal sealed class ManifestService(
         }
         catch
         {
-            try
-            {
-                fileOperationsService.DeleteFile(tempPath);
-            }
-            catch
-            {
-            }
+            _ = fileOperationsService.TryDeleteFile(tempPath);
 
             throw;
         }

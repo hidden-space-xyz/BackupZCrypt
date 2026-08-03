@@ -8,8 +8,8 @@ using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -380,7 +380,11 @@ public sealed class OperationViewModelBaseTests
             )
             .Returns(callInfo =>
             {
-                var progress = callInfo.Arg<IProgress<BackupStatus>>();
+                var progress =
+                    callInfo.Arg<IProgress<BackupStatus>>()
+                    ?? throw new InvalidOperationException(
+                        "The orchestrator was invoked without a progress reporter."
+                    );
 
                 progress.Report(new BackupStatus(0, 10, 0, 0, TimeSpan.Zero));
                 indeterminateWhileScanning = sut.IsProgressIndeterminate;

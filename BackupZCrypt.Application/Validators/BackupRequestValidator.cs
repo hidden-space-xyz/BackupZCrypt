@@ -1,8 +1,9 @@
-using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -204,8 +205,9 @@ internal sealed class BackupRequestValidator(
                     }
                 }
             }
-            catch
+            catch (Exception exception) when (exception is not OutOfMemoryException)
             {
+                return errors;
             }
         }
 
@@ -255,16 +257,8 @@ internal sealed class BackupRequestValidator(
                 )
                 {
                     var totalSize = sourceFiles.Sum(f =>
-                    {
-                        try
-                        {
-                            return fileOperations.GetFileSize(f);
-                        }
-                        catch
-                        {
-                            return 0;
-                        }
-                    });
+                        fileOperations.TryGetFileSize(f, out var fileSize) ? fileSize : 0
+                    );
 
                     var requiredSpace = (long)(totalSize * 1.2);
                     var available = systemStorage.GetAvailableFreeSpace(destinationDrive);
@@ -315,8 +309,9 @@ internal sealed class BackupRequestValidator(
                 }
             }
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
+            return warnings;
         }
 
         return warnings;

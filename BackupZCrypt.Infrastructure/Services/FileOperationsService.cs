@@ -49,7 +49,7 @@ internal sealed class FileOperationsService : IFileOperationsService
                         !entry.IsDirectory
                         && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName),
                     ShouldRecursePredicate = static (ref entry) =>
-                        (entry.Attributes & FileAttributes.ReparsePoint) == 0,
+                        (entry.Attributes & FileAttributes.ReparsePoint) == FileAttributes.None,
                 };
 
                 return enumerable.ToArray();

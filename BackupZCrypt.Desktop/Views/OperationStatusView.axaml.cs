@@ -98,35 +98,32 @@ internal sealed partial class OperationStatusView : UserControl
             return;
         }
 
-        try
-        {
-            await TryShowDialogAsync();
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-        }
+        _ = await TryShowDialogAsync();
     }
 
     /// <summary>
     /// Shows the operation dialog over the owning window, unless one is already open, the view model
     /// has nothing to report, or the control is not yet attached to a window.
     /// </summary>
-    /// <returns>A task that completes when the dialog is dismissed, or immediately when none is shown.</returns>
-    private async Task TryShowDialogAsync()
+    /// <returns>
+    /// <see langword="true"/> if the dialog was shown and dismissed; <see langword="false"/> if there was
+    /// nothing to show or the dialog failed to open.
+    /// </returns>
+    private async Task<bool> TryShowDialogAsync()
     {
         if (dialogOpen || viewModel is null)
         {
-            return;
+            return false;
         }
 
         if (!viewModel.IsRunning && !viewModel.ShowWarnings && !viewModel.HasResult)
         {
-            return;
+            return false;
         }
 
         if (TopLevel.GetTopLevel(this) is not Window owner)
         {
-            return;
+            return false;
         }
 
         dialogOpen = true;
@@ -134,6 +131,12 @@ internal sealed partial class OperationStatusView : UserControl
         {
             var dialog = new OperationDialog { DataContext = viewModel };
             await dialog.ShowDialog(owner);
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return false;
         }
         finally
         {

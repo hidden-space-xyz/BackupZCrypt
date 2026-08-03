@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Label="Code quality analyzers (dev-only, PrivateAssets in each project)">
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Roslynator.Formatting.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.138" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.31.0.145097" />
   </ItemGroup>
   <ItemGroup Label="Composition - dependency injection">
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />

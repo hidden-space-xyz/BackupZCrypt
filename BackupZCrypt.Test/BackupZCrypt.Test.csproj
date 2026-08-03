@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Remove="Roslynator.Analyzers" />
-    <PackageReference Remove="Roslynator.Formatting.Analyzers" />
+    <PackageReference Remove="Meziantou.Analyzer" />
+    <PackageReference Remove="SonarAnalyzer.CSharp" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,6 @@
-using BackupZCrypt.Domain.ValueObjects.Localization;
 using System.Diagnostics.CodeAnalysis;
+
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.ValueObjects;
 
