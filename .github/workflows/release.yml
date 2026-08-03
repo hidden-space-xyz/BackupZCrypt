@@ -1,21 +1,18 @@
 name: Release
 
-# Publishes a GitHub Release every time master receives a commit that is worth releasing.
+# Publishes a GitHub Release whenever master carries a version that has not been released yet.
 #
-# The version is derived from the commit history (Conventional Commits) since the previous
-# `v*` tag: a breaking change bumps MAJOR, `feat:` bumps MINOR and `fix:` / `refactor:` /
-# `bump:` bump PATCH. Pushes that only carry `docs:`, `chore:`, `test:`, ... are skipped.
+# The version is owned by the repository, not by this workflow: it is the `<Version>` property in
+# `Directory.Build.props`, read back through MSBuild so wherever the property is set still wins.
+# Bumping that property is what publishes a release — a push to master whose version already has a
+# `v<version>` tag releases nothing. Release notes are still grouped from the Conventional Commit
+# subjects since the previous tag.
 
 on:
   push:
     branches:
       - master
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Explicit version to publish (e.g. 1.2.0). Leave empty to derive it from the commit history."
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -34,11 +31,11 @@ env:
 
 jobs:
   prepare:
-    name: Analyse commits
+    name: Resolve version
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.analyse.outputs.should_release }}
-      version: ${{ steps.analyse.outputs.version }}
+      version: ${{ steps.declared.outputs.version }}
       tag: ${{ steps.analyse.outputs.tag }}
       previous_tag: ${{ steps.analyse.outputs.previous_tag }}
     steps:
@@ -48,10 +45,33 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Compute version and build release notes
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # MSBuild is asked for the evaluated property rather than the file being parsed, so moving
+      # <Version> into a .csproj later needs no change here. Evaluating a property needs no restore.
+      - name: Read the declared version
+        id: declared
+        run: |
+          set -euo pipefail
+
+          raw="$(dotnet msbuild "$DESKTOP_PROJECT" -getProperty:Version -nologo)"
+          version="$(printf '%s\n' "$raw" | tr -d '\r' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -n1 || true)"
+
+          if [ -z "$version" ]; then
+            echo "::error::Could not read a MAJOR.MINOR.PATCH <Version> for ${DESKTOP_PROJECT}. MSBuild returned: ${raw}"
+            exit 1
+          fi
+
+          echo "Declared version : $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Gate the release and build the notes
         id: analyse
         env:
-          MANUAL_VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.declared.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -105,65 +125,50 @@ jobs:
             breaking=true
           fi
 
-          # ---------------------------------------------------------------- next version
-          first_release=false
-          if [ -n "$previous_tag" ]; then
-            base="${previous_tag#v}"
-            base="${base%%-*}"
-            IFS='.' read -r major minor patch <<< "$base"
-            major="${major:-0}"; minor="${minor:-0}"; patch="${patch:-0}"
-          else
-            first_release=true
-            major=1; minor=0; patch=0
-          fi
-
-          level="none"
-          if [ "$first_release" = "true" ]; then
-            level="initial"
-          elif [ "$breaking" = "true" ]; then
-            major=$((major + 1)); minor=0; patch=0; level="major"
-          elif [ -s "$work/feat" ]; then
-            minor=$((minor + 1)); patch=0; level="minor"
-          elif [ -s "$work/fix" ] || [ -s "$work/refactor" ] || [ -s "$work/bump" ]; then
-            patch=$((patch + 1)); level="patch"
-          fi
-
-          manual="${MANUAL_VERSION:-}"
-          manual="${manual//[[:space:]]/}"
-          manual="${manual#v}"
-          if [ -n "$manual" ]; then
-            if [[ ! "$manual" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "::error::Invalid version '$manual'. Expected MAJOR.MINOR.PATCH."
-              exit 1
-            fi
-            version="$manual"
-            level="manual"
-          else
-            # A manual run always publishes something, even without releasable commits.
-            if [ "$level" = "none" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-              patch=$((patch + 1)); level="patch"
-            fi
-            version="${major}.${minor}.${patch}"
-          fi
+          # ---------------------------------------------------------------- release gate
+          version="$VERSION"
           tag="v${version}"
 
-          # ---------------------------------------------------------------- release gate
+          version_gt() {
+            local left right index
+            IFS='.' read -r -a left <<< "$1"
+            IFS='.' read -r -a right <<< "$2"
+            for index in 0 1 2; do
+              if (( ${left[index]:-0} > ${right[index]:-0} )); then return 0; fi
+              if (( ${left[index]:-0} < ${right[index]:-0} )); then return 1; fi
+            done
+            return 1
+          }
+
+          # The highest release in the repository, which is not necessarily the nearest ancestor tag.
+          latest_released=""
+          while read -r candidate; do
+            [ -n "$candidate" ] || continue
+            if [ -z "$latest_released" ] || version_gt "${candidate#v}" "$latest_released"; then
+              latest_released="${candidate#v}"
+            fi
+          done < <(git tag --list 'v[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+
           should_release=true
-          if [ "$level" = "none" ]; then
-            echo "::notice::No feat/fix/refactor/bump commits since ${previous_tag:-the first commit}. Nothing to release."
-            should_release=false
-          elif git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
-            if [ "$level" = "manual" ]; then
-              echo "::error::Tag ${tag} already exists."
+          if git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "::error::Version ${version} is already published as ${tag}. Raise <Version> in Directory.Build.props first."
               exit 1
             fi
-            echo "::warning::Tag ${tag} already exists. Nothing to release."
+            echo "::notice::Version ${version} is already published as ${tag}. Raise <Version> in Directory.Build.props to publish a new release."
             should_release=false
+          elif [ -n "$latest_released" ] && ! version_gt "$version" "$latest_released"; then
+            echo "::error::Declared version ${version} is older than the latest release v${latest_released}. Raise <Version> in Directory.Build.props."
+            exit 1
           fi
 
-          echo "Bump level   : $level"
-          echo "Next version : $version ($tag)"
-          echo "Release      : $should_release"
+          if [ -n "$latest_released" ]; then
+            echo "Latest release : v$latest_released"
+          else
+            echo "Latest release : <none>"
+          fi
+          echo "Publishing     : $version ($tag)"
+          echo "Release        : $should_release"
 
           # ---------------------------------------------------------------- release notes
           emit() {
@@ -219,7 +224,6 @@ jobs:
 
           {
             echo "should_release=$should_release"
-            echo "version=$version"
             echo "tag=$tag"
             echo "previous_tag=$previous_tag"
           } >> "$GITHUB_OUTPUT"

@@ -153,9 +153,13 @@ You can make valuable contributions too:
 3. Implement your changes with documentation and tests
 4. Submit a pull request
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). Landing them on
-`master` publishes a release automatically: `feat:` raises the minor version, `fix:` / `refactor:` /
-`bump:` raise the patch version, and a `!` marker or a `BREAKING CHANGE:` footer raises the major
-one. Those four prefixes are also what the generated release notes are built from.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). `feat:`,
+`fix:`, `refactor:` and `bump:` are the four prefixes the generated release notes are built from,
+and a `!` marker or a `BREAKING CHANGE:` footer puts a warning banner at the top of them.
+
+The release version is chosen by hand — it is the `<Version>` property in `Directory.Build.props`.
+Landing a commit on `master` publishes `v<version>` as a GitHub Release, and publishes nothing if
+that tag already exists: raising the property is what cuts a release, and a merge that leaves it
+untouched ships no release at all. A version below the latest release fails the workflow.
 
 We especially welcome contributions for UI and security improvements.
