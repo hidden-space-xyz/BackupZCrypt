@@ -1,5 +1,4 @@
 <p align="center">
-<a href="https://github.com/hidden-space-xyz/BackupZCrypt/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2ea043" /></a>
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
@@ -84,16 +83,7 @@ dotnet test BackupZCrypt.sln
 ```
 
 The suite is designed to run unattended on CI: no test depends on wall-clock timing, throughput, or a
-specific locale, and every temporary file lives in a directory the test owns and deletes. To collect a
-coverage report, pass the settings file at the repository root:
-
-```bash
-dotnet test BackupZCrypt.sln --collect:"XPlat Code Coverage" --settings coverlet.runsettings
-```
-
-`coverlet.runsettings` excludes only the Avalonia UI shell — the XAML code-behind, the entry point, and
-the platform adapters — which cannot run without a real window and render platform. Every layer that
-carries a cryptographic or data-integrity guarantee is measured in full.
+specific locale, and every temporary file lives in a directory the test owns and deletes.
 
 ### Cross-Platform Archives
 
@@ -161,5 +151,6 @@ The release version is chosen by hand — it is the `<Version>` property in `Dir
 Landing a commit on `master` publishes `v<version>` as a GitHub Release, and publishes nothing if
 that tag already exists: raising the property is what cuts a release, and a merge that leaves it
 untouched ships no release at all. A version below the latest release fails the workflow.
+[`.github/workflows/README.md`](.github/workflows/README.md) documents both pipelines in full.
 
 We especially welcome contributions for UI and security improvements.
