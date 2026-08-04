@@ -9,7 +9,7 @@ namespace BackupZCrypt.Application.ValueObjects.Settings;
 /// <param name="EncryptionAlgorithm">The encryption algorithm preselected for new backups.</param>
 /// <param name="KeyDerivationAlgorithm">The key derivation algorithm preselected for new backups.</param>
 /// <param name="CompressionMode">The compression mode preselected for new backups.</param>
-public sealed record BackupCreationSettings(
+public sealed record class BackupCreationSettings(
     EncryptionAlgorithm EncryptionAlgorithm = EncryptionAlgorithm.Aes,
     KeyDerivationAlgorithm KeyDerivationAlgorithm = KeyDerivationAlgorithm.Argon2id,
     CompressionMode CompressionMode = CompressionMode.None

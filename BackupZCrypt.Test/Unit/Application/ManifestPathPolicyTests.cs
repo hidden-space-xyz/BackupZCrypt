@@ -107,10 +107,7 @@ public sealed class ManifestPathPolicyTests
         Assert.That(
             platformPath,
             Is.EqualTo(
-                string.Join(
-                    Path.DirectorySeparatorChar,
-                    new[] { "docs", "sub", "deep.txt" }
-                )
+                string.Join(Path.DirectorySeparatorChar, "docs", "sub", "deep.txt")
             ),
             "An archive written on either platform must rebuild the same tree on this one."
         );

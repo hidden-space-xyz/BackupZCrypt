@@ -30,15 +30,19 @@ public sealed class StrategyRegistrationTests
     /// Supplies every declared encryption algorithm, so a new member automatically becomes a case.
     /// </summary>
     /// <returns>Every value of <see cref="EncryptionAlgorithm"/>.</returns>
-    private static IEnumerable<EncryptionAlgorithm> EncryptionAlgorithms() =>
-        Enum.GetValues<EncryptionAlgorithm>();
+    private static EncryptionAlgorithm[] EncryptionAlgorithms()
+    {
+        return Enum.GetValues<EncryptionAlgorithm>();
+    }
 
     /// <summary>
     /// Supplies every declared key derivation algorithm, so a new member automatically becomes a case.
     /// </summary>
     /// <returns>Every value of <see cref="KeyDerivationAlgorithm"/>.</returns>
-    private static IEnumerable<KeyDerivationAlgorithm> KeyDerivationAlgorithms() =>
-        Enum.GetValues<KeyDerivationAlgorithm>();
+    private static KeyDerivationAlgorithm[] KeyDerivationAlgorithms()
+    {
+        return Enum.GetValues<KeyDerivationAlgorithm>();
+    }
 
     /// <summary>
     /// Supplies every compression mode that is expected to resolve to a strategy.
@@ -52,8 +56,10 @@ public sealed class StrategyRegistrationTests
     /// callers' job.
     /// </remarks>
     /// <returns>Every value of <see cref="CompressionMode"/> except <see cref="CompressionMode.None"/>.</returns>
-    private static IEnumerable<CompressionMode> CompressionModes() =>
-        Enum.GetValues<CompressionMode>().Where(mode => mode != CompressionMode.None);
+    private static IEnumerable<CompressionMode> CompressionModes()
+    {
+        return Enum.GetValues<CompressionMode>().Where(mode => mode is not CompressionMode.None);
+    }
 
     [TestCaseSource(nameof(EncryptionAlgorithms))]
     public void Create_EveryEncryptionAlgorithm_ResolvesStrategyWithMatchingId(

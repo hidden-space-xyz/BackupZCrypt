@@ -9,7 +9,7 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <param name="MasterSalt">The master salt bound into the preamble as associated data.</param>
 /// <param name="Nonce">The nonce used to encrypt the manifest payload.</param>
 /// <param name="EncryptedPayload">The AEAD-encrypted manifest document with its tag appended.</param>
-public sealed record ManifestPreamble(
+public sealed record class ManifestPreamble(
     Domain.Enums.EncryptionAlgorithm Algorithm,
     Domain.Enums.KeyDerivationAlgorithm KeyDerivation,
     byte[] MasterSalt,

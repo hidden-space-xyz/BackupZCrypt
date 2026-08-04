@@ -104,15 +104,18 @@ public sealed class SettingsServiceTests
         Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
 
         var onDisk = await File.ReadAllTextAsync(filePath);
-        Assert.That(
-            onDisk,
-            Is.Not.EqualTo(fileContent),
-            "The unusable settings file was returned as defaults but never replaced on disk."
-        );
-        Assert.That(
-            JsonSerializer.Deserialize<BackupCreationSettings>(onDisk, SettingsFileOptions),
-            Is.EqualTo(BackupCreationSettings.DefaultValue)
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                onDisk,
+                Is.Not.EqualTo(fileContent),
+                "The unusable settings file was returned as defaults but never replaced on disk."
+            );
+            Assert.That(
+                JsonSerializer.Deserialize<BackupCreationSettings>(onDisk, SettingsFileOptions),
+                Is.EqualTo(BackupCreationSettings.DefaultValue)
+            );
+        }
     }
 
     [Test]

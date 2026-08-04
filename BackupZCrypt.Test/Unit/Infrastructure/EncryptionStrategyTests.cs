@@ -60,7 +60,9 @@ public sealed class EncryptionStrategyTests
     /// Supplies every production AEAD cipher as a test case so all of them satisfy the same contract.
     /// </summary>
     /// <returns>One strategy instance per supported encryption algorithm.</returns>
-    private static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers() =>
+    private static IEnumerable<IEncryptionAlgorithmStrategy> RealCiphers()
+    {
+        return
         [
             new AesEncryptionStrategy(),
             new ChaCha20EncryptionStrategy(),
@@ -68,6 +70,7 @@ public sealed class EncryptionStrategyTests
             new SerpentEncryptionStrategy(),
             new TwofishEncryptionStrategy(),
         ];
+    }
 
     /// <summary>
     /// Produces plaintext from a fixed seed so a failing case reproduces byte for byte.
@@ -187,7 +190,7 @@ public sealed class EncryptionStrategyTests
         IEncryptionAlgorithmStrategy cipher
     )
     {
-        var tagOnly = cipher.EncryptChunk(ReadOnlySpan<byte>.Empty, Key, Nonce, AssociatedData);
+        var tagOnly = cipher.EncryptChunk([], Key, Nonce, AssociatedData);
 
         using (Assert.EnterMultipleScope())
         {

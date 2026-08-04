@@ -76,7 +76,7 @@ public sealed class SettingsViewModelTests
             Assert.That(sut.EncryptionOptions.Select(static option => option.Id), Is.Ordered);
             Assert.That(
                 sut.LanguageOptions.Select(static option => option.Code),
-                Is.EqualTo(new string?[] { null, "en", "es" })
+                Is.EqualTo<string?>([null, "en", "es"])
             );
         }
     }
@@ -96,25 +96,25 @@ public sealed class SettingsViewModelTests
 
         await sut.OnNavigatedToAsync();
 
-        var loaded = (
-            Encryption: sut.SelectedEncryption.Id,
-            KeyDerivation: sut.SelectedKeyDerivation.Id,
-            Compression: sut.SelectedCompression.Id,
-            Language: sut.SelectedLanguage.Code
+        var (loadedEncryption, loadedKeyDerivation, loadedCompression, loadedLanguage) = (
+            sut.SelectedEncryption.Id,
+            sut.SelectedKeyDerivation.Id,
+            sut.SelectedCompression.Id,
+            sut.SelectedLanguage.Code
         );
 
         sut.SelectedCompression = sut.CompressionOptions.First(static option =>
-            option.Id == CompressionMode.None
+            option.Id is CompressionMode.None
         );
 
         await sut.OnNavigatedToAsync();
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(loaded.Encryption, Is.EqualTo(EncryptionAlgorithm.Serpent));
-            Assert.That(loaded.KeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
-            Assert.That(loaded.Compression, Is.EqualTo(CompressionMode.ZstdBest));
-            Assert.That(loaded.Language, Is.EqualTo("es"));
+            Assert.That(loadedEncryption, Is.EqualTo(EncryptionAlgorithm.Serpent));
+            Assert.That(loadedKeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
+            Assert.That(loadedCompression, Is.EqualTo(CompressionMode.ZstdBest));
+            Assert.That(loadedLanguage, Is.EqualTo("es"));
             Assert.That(sut.SelectedCompression.Id, Is.EqualTo(CompressionMode.None));
         }
     }
@@ -156,8 +156,8 @@ public sealed class SettingsViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(savedDefaults, Is.EqualTo(new[] { stored }));
-            Assert.That(savedLanguages, Is.EqualTo(new[] { new LanguageSettings(languageCode) }));
+            Assert.That(savedDefaults, Is.EqualTo([stored]));
+            Assert.That(savedLanguages, Is.EqualTo([new LanguageSettings(languageCode)]));
             Assert.That(sut.ShowSavedNotice, Is.True);
             Assert.That(sut.ShowRestartNote, Is.EqualTo(expectRestartNote));
         }
@@ -305,7 +305,7 @@ public sealed class SettingsViewModelTests
     /// Builds one substituted strategy per encryption algorithm so every algorithm is selectable.
     /// </summary>
     /// <returns>The substituted encryption strategies.</returns>
-    private static IEnumerable<IEncryptionAlgorithmStrategy> EncryptionStrategies()
+    private static List<IEncryptionAlgorithmStrategy> EncryptionStrategies()
     {
         List<IEncryptionAlgorithmStrategy> strategies = [];
 
@@ -323,7 +323,7 @@ public sealed class SettingsViewModelTests
     /// Builds one substituted strategy per key-derivation algorithm.
     /// </summary>
     /// <returns>The substituted key-derivation strategies.</returns>
-    private static IEnumerable<IKeyDerivationAlgorithmStrategy> KeyDerivationStrategies()
+    private static List<IKeyDerivationAlgorithmStrategy> KeyDerivationStrategies()
     {
         List<IKeyDerivationAlgorithmStrategy> strategies = [];
 
@@ -342,13 +342,13 @@ public sealed class SettingsViewModelTests
     /// which the page adds itself.
     /// </summary>
     /// <returns>The substituted compression strategies.</returns>
-    private static IEnumerable<ICompressionStrategy> CompressionStrategies()
+    private static List<ICompressionStrategy> CompressionStrategies()
     {
         List<ICompressionStrategy> strategies = [];
 
         foreach (var id in Enum.GetValues<CompressionMode>())
         {
-            if (id == CompressionMode.None)
+            if (id is CompressionMode.None)
             {
                 continue;
             }

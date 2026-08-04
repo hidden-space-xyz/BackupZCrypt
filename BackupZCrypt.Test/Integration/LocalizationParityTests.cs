@@ -43,7 +43,7 @@ public sealed class LocalizationParityTests
 
         var missing = Enum.GetNames<MessageCode>()
             .Where(code => !englishKeys.Contains(code))
-            .OrderBy(code => code, StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         Assert.That(
@@ -61,16 +61,16 @@ public sealed class LocalizationParityTests
         var spanishKeys = ReadResxKeys(SpanishResxPath);
 
         var onlyInEnglish = englishKeys
-            .Except(spanishKeys)
-            .OrderBy(k => k, StringComparer.Ordinal)
+            .Except(spanishKeys, StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
         var onlyInSpanish = spanishKeys
-            .Except(englishKeys)
-            .OrderBy(k => k, StringComparer.Ordinal)
+            .Except(englishKeys, StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         Assert.That(
-            onlyInEnglish.Count == 0 && onlyInSpanish.Count == 0,
+            onlyInEnglish.Count is 0 && onlyInSpanish.Count is 0,
             Is.True,
             "Strings.resx and Strings.es.resx must contain the identical set of keys.\n"
                 + $"Only in English: {Describe(onlyInEnglish)}\n"
@@ -90,16 +90,16 @@ public sealed class LocalizationParityTests
             .ToHashSet(StringComparer.Ordinal);
 
         var missing = requested
-            .Except(englishKeys)
-            .OrderBy(static k => k, StringComparer.Ordinal)
+            .Except(englishKeys, StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
         var orphaned = englishKeys
-            .Except(requested)
-            .OrderBy(static k => k, StringComparer.Ordinal)
+            .Except(requested, StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         Assert.That(
-            missing.Count == 0 && orphaned.Count == 0,
+            missing.Count is 0 && orphaned.Count is 0,
             Is.True,
             "Strings.Get and Strings.GetByKey both fall back to returning the key itself, so a "
                 + "missing entry ships the raw identifier as visible UI text instead of failing.\n"
@@ -139,6 +139,6 @@ public sealed class LocalizationParityTests
     /// <returns>The comma-separated keys, or "(none)" when the list is empty.</returns>
     private static string Describe(List<string> keys)
     {
-        return keys.Count == 0 ? "(none)" : string.Join(", ", keys);
+        return keys.Count is 0 ? "(none)" : string.Join(", ", keys);
     }
 }

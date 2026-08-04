@@ -68,28 +68,38 @@ public sealed class OnDiskFormatTests
             );
 
         Assert.That(
-            result.IsSuccess && result.Value!.IsSuccess,
+            result.IsSuccess && result.Value.IsSuccess,
             Is.True,
             $"The committed '{fixture.Name}' archive no longer restores. The on-disk format changed; "
                 + "every archive a user already wrote is unreadable by this build."
         );
 
+        var restoredContents = new List<(string RelativePath, string Expected, string? Actual)>();
+
+        foreach (var (relativePath, expected) in OnDiskFormatFixtures.SourceTree)
+        {
+            var restoredFile = Path.Combine(
+                restored.Path,
+                relativePath.Replace('/', Path.DirectorySeparatorChar)
+            );
+            var actual = File.Exists(restoredFile)
+                ? await File.ReadAllTextAsync(restoredFile, Encoding.UTF8)
+                : null;
+
+            restoredContents.Add((relativePath, expected, actual));
+        }
+
         using (Assert.EnterMultipleScope())
         {
-            foreach (var (relativePath, expected) in OnDiskFormatFixtures.SourceTree)
+            foreach (var (relativePath, expected, actual) in restoredContents)
             {
-                var restoredFile = Path.Combine(
-                    restored.Path,
-                    relativePath.Replace('/', Path.DirectorySeparatorChar)
-                );
-
                 Assert.That(
-                    File.Exists(restoredFile),
-                    Is.True,
+                    actual,
+                    Is.Not.Null,
                     $"'{relativePath}' is missing from the restored tree."
                 );
                 Assert.That(
-                    File.ReadAllText(restoredFile, Encoding.UTF8),
+                    actual,
                     Is.EqualTo(expected),
                     $"'{relativePath}' restored with different content than it was backed up with."
                 );
@@ -121,7 +131,7 @@ public sealed class OnDiskFormatTests
             );
 
         Assert.That(
-            result.IsSuccess && result.Value!.IsSuccess,
+            result.IsSuccess && result.Value.IsSuccess,
             Is.True,
             $"Verification of the committed '{fixture.Name}' archive failed."
         );

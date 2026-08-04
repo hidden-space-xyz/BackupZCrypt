@@ -488,6 +488,7 @@ public sealed class ExistingBackupViewModelTests
                 this.filePicker,
                 this.manifestService
             ),
+            BackupOperation.Create => throw new ArgumentOutOfRangeException(nameof(operation)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation)),
         };
     }

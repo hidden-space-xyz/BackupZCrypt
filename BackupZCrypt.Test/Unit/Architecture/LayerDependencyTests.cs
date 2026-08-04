@@ -24,6 +24,11 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 public sealed class LayerDependencyTests
 {
     /// <summary>
+    /// The directory separators an MSBuild <c>Include</c> attribute may use, recognized on every platform.
+    /// </summary>
+    private static readonly char[] ProjectPathSeparators = ['\\', '/'];
+
+    /// <summary>
     /// The project references each project is allowed to declare, straight from the CLAUDE.md table.
     /// </summary>
     private static readonly Dictionary<string, string[]> AllowedProjectReferences = new(
@@ -139,7 +144,7 @@ public sealed class LayerDependencyTests
     /// <returns>The referenced project's name, without directories or extension.</returns>
     private static string ProjectNameOf(string include)
     {
-        var lastSegment = include.Split(['\\', '/'])[^1];
+        var lastSegment = include.Split(ProjectPathSeparators)[^1];
 
         return Path.GetFileNameWithoutExtension(lastSegment);
     }

@@ -141,7 +141,7 @@ public sealed class BackupVerifyTests
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(e => e.Code == MessageCode.IntegrityErrorFormat)
+                Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
             );
             Assert.That(
                 Snapshot(destination.Path),
@@ -183,7 +183,7 @@ public sealed class BackupVerifyTests
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(e => e.Code == MessageCode.IntegrityErrorFormat)
+                Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
             );
         }
     }

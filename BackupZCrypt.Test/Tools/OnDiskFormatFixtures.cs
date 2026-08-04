@@ -10,7 +10,7 @@ namespace BackupZCrypt.Test.Tools;
 /// <param name="Encryption">The AEAD cipher the archive was written with.</param>
 /// <param name="KeyDerivation">The key derivation function the archive was written with.</param>
 /// <param name="Compression">The compression mode applied to chunks before encryption.</param>
-public sealed record OnDiskFormatFixture(
+public sealed record class OnDiskFormatFixture(
     string Name,
     EncryptionAlgorithm Encryption,
     KeyDerivationAlgorithm KeyDerivation,

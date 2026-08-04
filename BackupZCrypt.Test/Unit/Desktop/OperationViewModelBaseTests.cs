@@ -168,7 +168,7 @@ public sealed class OperationViewModelBaseTests
         {
             Assert.That(sut.ShowWarnings, Is.True);
             Assert.That(sut.HasResult, Is.False);
-            Assert.That(sut.Warnings, Is.EqualTo(new[] { MessageLocalizer.Localize(warning) }));
+            Assert.That(sut.Warnings, Is.EqualTo([MessageLocalizer.Localize(warning)]));
         }
     }
 
@@ -253,7 +253,7 @@ public sealed class OperationViewModelBaseTests
             Assert.That(gateOpened, Is.True);
             Assert.That(
                 requests.Select(static request => request.ProceedOnWarnings),
-                Is.EqualTo(new[] { false, true })
+                Is.EqualTo([false, true])
             );
             Assert.That(sut.ShowWarnings, Is.False);
             Assert.That(sut.Warnings, Is.Empty);
@@ -608,7 +608,7 @@ public sealed class OperationViewModelBaseTests
 
         Assert.That(
             requests.Select(static r => r.Password),
-            Is.EqualTo(new[] { "secret" }),
+            Is.EqualTo(["secret"]),
             "The request must carry the real password: clearing it before CreateRequest ran would "
                 + "silently send an empty one to the engine."
         );

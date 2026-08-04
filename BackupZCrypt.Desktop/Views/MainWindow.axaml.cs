@@ -79,7 +79,7 @@ internal sealed partial class MainWindow : Window
     private void ToggleMaximize()
     {
         WindowState =
-            WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            WindowState is WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ internal sealed partial class MainWindow : Window
 
         if (change.Property == WindowStateProperty)
         {
-            var maximized = WindowState == WindowState.Maximized;
+            var maximized = WindowState is WindowState.Maximized;
 
             Padding = maximized ? OffScreenMargin : default;
 

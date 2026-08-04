@@ -41,7 +41,7 @@ internal sealed class BackupOrchestrator(
         CancellationToken cancellationToken = default
     )
     {
-        if (request.Operation == BackupOperation.Verify)
+        if (request.Operation is BackupOperation.Verify)
         {
             return await ExecuteVerifyAsync(request, progress, cancellationToken);
         }
@@ -63,7 +63,7 @@ internal sealed class BackupOrchestrator(
             }
 
             if (
-                request.Operation == BackupOperation.Update
+                request.Operation is BackupOperation.Update
                 && !fileOperationsService.DirectoryExists(destinationPath)
             )
             {
@@ -71,7 +71,7 @@ internal sealed class BackupOrchestrator(
             }
 
             if (
-                request.Operation == BackupOperation.Create
+                request.Operation is BackupOperation.Create
                 && fileOperationsService.DirectoryExists(destinationPath)
             )
             {
@@ -143,6 +143,7 @@ internal sealed class BackupOrchestrator(
                 progress,
                 cancellationToken
             ),
+            BackupOperation.Verify => throw new ArgumentOutOfRangeException(nameof(request)),
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
     }
@@ -194,17 +195,15 @@ internal sealed class BackupOrchestrator(
             }
 
             var sourceError = CheckSourceDirectory(sourcePath);
-            if (sourceError is not null)
-            {
-                return Result<BackupResult>.Failure(sourceError.Value);
-            }
 
-            return await chunkedBackupService.VerifyAsync(
-                sourcePath,
-                request,
-                progress,
-                cancellationToken
-            );
+            return sourceError is not null
+                ? Result<BackupResult>.Failure(sourceError.Value)
+                : await chunkedBackupService.VerifyAsync(
+                    sourcePath,
+                    request,
+                    progress,
+                    cancellationToken
+                );
         }
         catch (OperationCanceledException)
         {
@@ -224,11 +223,19 @@ internal sealed class BackupOrchestrator(
     /// <returns>The message code describing the problem, or <see langword="null"/> when the path is a directory.</returns>
     private MessageCode? CheckSourceDirectory(string sourcePath)
     {
-        if (fileOperationsService.DirectoryExists(sourcePath))
-        {
-            return null;
-        }
+        return fileOperationsService.DirectoryExists(sourcePath)
+            ? null
+            : ClassifyMissingSourceDirectory(sourcePath);
+    }
 
+    /// <summary>
+    /// Classifies a source path that is known not to be a directory, distinguishing one that points at
+    /// an existing file from one that does not exist at all.
+    /// </summary>
+    /// <param name="sourcePath">The normalized source path that failed the directory check.</param>
+    /// <returns>The message code describing why the path cannot be used as a source directory.</returns>
+    private MessageCode ClassifyMissingSourceDirectory(string sourcePath)
+    {
         return fileOperationsService.FileExists(sourcePath)
             ? MessageCode.SourceMustBeDirectory
             : MessageCode.SourcePathNotExist;

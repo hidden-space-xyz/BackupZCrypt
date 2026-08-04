@@ -8,7 +8,7 @@ namespace BackupZCrypt.Application.ValueObjects.Password;
 /// <param name="HasDigit">Whether the password contains an ASCII decimal digit.</param>
 /// <param name="HasSpecial">Whether the password contains one of the recognized ASCII punctuation or symbol characters.</param>
 /// <param name="HasOther">Whether the password contains a non-ASCII (Unicode) character.</param>
-public sealed record PasswordComposition(
+public sealed record class PasswordComposition(
     bool HasUpper,
     bool HasLower,
     bool HasDigit,
@@ -20,9 +20,9 @@ public sealed record PasswordComposition(
     /// Gets the number of distinct character classes present in the password.
     /// </summary>
     public int CategoryCount =>
-        (this.HasUpper ? 1 : 0)
-        + (this.HasLower ? 1 : 0)
-        + (this.HasDigit ? 1 : 0)
-        + (this.HasSpecial ? 1 : 0)
-        + (this.HasOther ? 1 : 0);
+        Convert.ToInt32(this.HasUpper)
+        + Convert.ToInt32(this.HasLower)
+        + Convert.ToInt32(this.HasDigit)
+        + Convert.ToInt32(this.HasSpecial)
+        + Convert.ToInt32(this.HasOther);
 }

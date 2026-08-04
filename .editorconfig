@@ -232,6 +232,26 @@ dotnet_diagnostic.CA1819.severity = none
 
 dotnet_diagnostic.CA1863.severity = none
 
+dotnet_diagnostic.MA0104.severity = none
+
+dotnet_diagnostic.MA0109.severity = none
+
+dotnet_diagnostic.MA0155.severity = none
+
+dotnet_diagnostic.MA0173.severity = none
+
+dotnet_diagnostic.MA0157.severity = none
+
+dotnet_diagnostic.MA0175.severity = none
+
+dotnet_diagnostic.MA0181.severity = none
+
+dotnet_diagnostic.MA0182.severity = none
+
+dotnet_diagnostic.S1200.severity = none
+
+dotnet_diagnostic.IDE0051.severity = none
+
 [*.{g,i,designer,generated}.cs]
 generated_code = true
 
@@ -245,3 +265,5 @@ dotnet_diagnostic.S4144.severity = none
 dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.MA0048.severity = none
 dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.MA0191.severity = none
+dotnet_diagnostic.CA5394.severity = none

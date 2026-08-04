@@ -60,6 +60,7 @@ internal static class AlgorithmMetadataProvider
             CompressionMode.ZstdFast => Strings.ZstdFastDisplayName,
             CompressionMode.Zstd => Strings.ZstdDisplayName,
             CompressionMode.ZstdBest => Strings.ZstdBestDisplayName,
+            CompressionMode.None => Strings.NoneCompressionName,
             _ => Strings.NoneCompressionName,
         };
     }
@@ -113,6 +114,7 @@ internal static class AlgorithmMetadataProvider
             CompressionMode.ZstdFast => Strings.ZstdFastSummary,
             CompressionMode.Zstd => Strings.ZstdSummary,
             CompressionMode.ZstdBest => Strings.ZstdBestSummary,
+            CompressionMode.None => Strings.NoneCompressionDescription,
             _ => Strings.NoneCompressionDescription,
         };
     }
@@ -163,6 +165,7 @@ internal static class AlgorithmMetadataProvider
             CompressionMode.ZstdFast => Strings.ZstdFastDescription,
             CompressionMode.Zstd => Strings.ZstdDescription,
             CompressionMode.ZstdBest => Strings.ZstdBestDescription,
+            CompressionMode.None => Strings.NoneCompressionDescription,
             _ => Strings.NoneCompressionDescription,
         };
     }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -126,7 +127,7 @@ public sealed class ManifestServiceTests
 
             files.Add(
                 new ChunkManifestFileEntry(
-                    $"file{index}.txt",
+                    string.Create(CultureInfo.InvariantCulture, $"file{index}.txt"),
                     hash,
                     index,
                     [new ChunkManifestChunkRef(hash, index, Convert.ToBase64String(new byte[EncryptionConstants.NonceSize]))]
@@ -333,8 +334,11 @@ public sealed class ManifestServiceTests
         );
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
-        Assert.That(errors, Is.Empty, "saving a well-formed manifest reported errors");
-        Assert.That(preamble, Is.Not.Null, "a manifest that was just written could not be parsed back");
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(errors, Is.Empty, "saving a well-formed manifest reported errors");
+            Assert.That(preamble, Is.Not.Null, "a manifest that was just written could not be parsed back");
+        }
 
         var decrypted = manifestService.DecryptChunkManifest(preamble!, key);
         Assert.That(decrypted, Is.Not.Null, "a manifest that was just written could not be decrypted with the key it was written under");
@@ -349,7 +353,7 @@ public sealed class ManifestServiceTests
             Assert.That(decrypted.MasterSalt, Is.EqualTo(masterSalt));
             Assert.That(
                 decrypted.Files.Select(static file => file.OriginalPath),
-                Is.EqualTo(new[] { "a.txt", "docs/notes.md", "z.txt" }),
+                Is.EqualTo(["a.txt", "docs/notes.md", "z.txt"]),
                 "entries must be stored in ordinal path order so the same content always yields the same manifest"
             );
 
@@ -825,7 +829,7 @@ public sealed class ManifestServiceTests
     [Test]
     public async Task DetectManifestKindAsync_ManifestReadFailsMidStream_ReportsMissingAndStillClosesTheStream()
     {
-        var stream = new FailingReadStream();
+        await using var stream = new FailingReadStream();
         var fileOperations = Substitute.For<IFileOperationsService>();
         _ = fileOperations.DirectoryExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);

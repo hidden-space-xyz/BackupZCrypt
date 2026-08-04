@@ -106,7 +106,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.EncryptionErrorFormat)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.EncryptionErrorFormat)
             );
         }
 
@@ -118,7 +118,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(reports[0].ProcessedBytes, Is.Zero, "The first report is the pre-loop baseline.");
             Assert.That(
                 reports,
-                Has.All.Matches<BackupStatus>(r => r.TotalFiles == 3 && r.TotalBytes == totalBytes),
+                Has.All.Matches<BackupStatus>(r => r.TotalFiles is 3 && r.TotalBytes == totalBytes),
                 "A progress report disagreed with the totals the run was started with."
             );
             Assert.That(
@@ -141,6 +141,9 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
+        var restoredKeepA = await File.ReadAllTextAsync(Path.Combine(restored.Path, "keep-a.txt"));
+        var restoredKeepB = await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "keep-b.txt"));
+
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
@@ -148,11 +151,8 @@ public sealed class ChunkedBackupFailurePathTests
                 Is.True,
                 "The archive written around a failed file did not restore cleanly."
             );
-            Assert.That(File.ReadAllText(Path.Combine(restored.Path, "keep-a.txt")), Is.EqualTo(KeepAContent));
-            Assert.That(
-                File.ReadAllText(Path.Combine(restored.Path, "dir", "keep-b.txt")),
-                Is.EqualTo(KeepBContent)
-            );
+            Assert.That(restoredKeepA, Is.EqualTo(KeepAContent));
+            Assert.That(restoredKeepB, Is.EqualTo(KeepBContent));
             Assert.That(
                 File.Exists(Path.Combine(restored.Path, "doomed.txt")),
                 Is.False,
@@ -185,7 +185,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.IsSuccess, Is.False, "A backup that captured no file at all was reported as a result.");
             Assert.That(
                 CollectCodes(result),
-                Is.EquivalentTo(new[] { MessageCode.AllFilesFailed, MessageCode.EncryptionErrorFormat }),
+                Is.EquivalentTo([MessageCode.AllFilesFailed, MessageCode.EncryptionErrorFormat]),
                 "A total failure must name both the overall outcome and the file that caused it."
             );
         }
@@ -217,7 +217,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.NoFilesInSourceDirectory)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.NoFilesInSourceDirectory)
             );
 
             Assert.That(
@@ -324,7 +324,7 @@ public sealed class ChunkedBackupFailurePathTests
 
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.DecryptionErrorFormat),
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.DecryptionErrorFormat),
                 "A restore failure must not be reported as an encryption failure: the user is reading "
                     + "files out, and being told the file could not be encrypted is simply wrong."
             );
@@ -366,7 +366,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.IsSuccess, Is.False, "A chunk that fails authentication did not abort the restore.");
             Assert.That(
                 CollectCodes(result),
-                Is.EquivalentTo(new[] { MessageCode.InvalidPassword }),
+                Is.EquivalentTo([MessageCode.InvalidPassword]),
                 "A chunk that fails authentication must surface as an authentication failure and nothing else."
             );
         }
@@ -401,6 +401,10 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
+        var restoredA = await File.ReadAllTextAsync(Path.Combine(restored.Path, "a.txt"));
+        var restoredB = await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "b.txt"));
+        var restoredUnrelated = await File.ReadAllTextAsync(Path.Combine(restored.Path, "unrelated.txt"));
+
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
@@ -409,13 +413,13 @@ public sealed class ChunkedBackupFailurePathTests
                 "Restoring over an existing destination did not succeed."
             );
             Assert.That(
-                File.ReadAllText(Path.Combine(restored.Path, "a.txt")),
+                restoredA,
                 Is.EqualTo(RestoredA),
                 "The stale file, deliberately longer than the archived copy, was not replaced with exactly that content."
             );
-            Assert.That(File.ReadAllText(Path.Combine(restored.Path, "dir", "b.txt")), Is.EqualTo(RestoredB));
+            Assert.That(restoredB, Is.EqualTo(RestoredB));
             Assert.That(
-                File.ReadAllText(Path.Combine(restored.Path, "unrelated.txt")),
+                restoredUnrelated,
                 Is.EqualTo(Unrelated),
                 "The restore touched a file the archive knows nothing about."
             );
@@ -467,7 +471,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.EncryptionErrorFormat)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.EncryptionErrorFormat)
             );
         }
 
@@ -479,6 +483,9 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
+        var restoredStable = await File.ReadAllTextAsync(Path.Combine(restored.Path, "stable.txt"));
+        var restoredRevised = await File.ReadAllTextAsync(Path.Combine(restored.Path, "revised.txt"));
+
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
@@ -486,8 +493,8 @@ public sealed class ChunkedBackupFailurePathTests
                 Is.True,
                 "The archive left behind by a partially failed update is not restorable."
             );
-            Assert.That(File.ReadAllText(Path.Combine(restored.Path, "stable.txt")), Is.EqualTo(StableContent));
-            Assert.That(File.ReadAllText(Path.Combine(restored.Path, "revised.txt")), Is.EqualTo(RevisedContent));
+            Assert.That(restoredStable, Is.EqualTo(StableContent));
+            Assert.That(restoredRevised, Is.EqualTo(RevisedContent));
 
             Assert.That(
                 File.Exists(Path.Combine(restored.Path, "doomed.txt")),
@@ -569,7 +576,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.ManifestRequiredForUpdate)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.ManifestRequiredForUpdate)
             );
             Assert.That(
                 File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
@@ -610,7 +617,7 @@ public sealed class ChunkedBackupFailurePathTests
             Assert.That(result.Errors, Has.Count.EqualTo(1));
             Assert.That(
                 result.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code == MessageCode.InvalidPassword)
+                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.InvalidPassword)
             );
 
             Assert.That(
@@ -673,6 +680,8 @@ public sealed class ChunkedBackupFailurePathTests
         {
             BackupOperation.Update => (source.Path, archive.Path),
             BackupOperation.Restore => (archive.Path, restored.Path),
+            BackupOperation.Verify => (archive.Path, string.Empty),
+            BackupOperation.Create => (archive.Path, string.Empty),
             _ => (archive.Path, string.Empty),
         };
 
@@ -698,6 +707,8 @@ public sealed class ChunkedBackupFailurePathTests
                     progress,
                     cts.Token
                 ),
+                BackupOperation.Verify => service.VerifyAsync(operationSource, request, progress, cts.Token),
+                BackupOperation.Create => service.VerifyAsync(operationSource, request, progress, cts.Token),
                 _ => service.VerifyAsync(operationSource, request, progress, cts.Token),
             };
         }
@@ -909,21 +920,21 @@ public sealed class ChunkedBackupFailurePathTests
         /// <summary>
         /// Serializes both the hook and the forwarded reports.
         /// </summary>
-        private readonly Lock _gate = new();
+        private readonly Lock gate = new();
 
         /// <summary>
         /// Whether the one-shot hook has already run.
         /// </summary>
-        private bool _hookFired;
+        private bool hookFired;
 
         /// <inheritdoc/>
         public void Report(BackupStatus value)
         {
-            lock (_gate)
+            lock (this.gate)
             {
-                if (!_hookFired)
+                if (!this.hookFired)
                 {
-                    _hookFired = true;
+                    this.hookFired = true;
                     onFirstReport?.Invoke();
                 }
 

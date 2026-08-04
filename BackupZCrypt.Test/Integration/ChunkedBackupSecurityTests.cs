@@ -229,7 +229,7 @@ public sealed class ChunkedBackupSecurityTests
         var nonceMac = HMACSHA256.HashData(chunkNonceKey, chunkHash);
 
         var distinctSubKeys = new[] { chunkEncryptionKey, chunkNonceKey, namingKey, manifestKey }
-            .Select(k => Convert.ToHexStringLower(k))
+            .Select(Convert.ToHexStringLower)
             .ToHashSet(StringComparer.Ordinal);
 
         using (Assert.EnterMultipleScope())
@@ -448,7 +448,7 @@ public sealed class ChunkedBackupSecurityTests
         var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
 
         Assert.That(
-            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(),
+            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(StringComparer.Ordinal),
             Has.Exactly(1).Items,
             "The fixture relies on both files deduplicating to one shared chunk."
         );

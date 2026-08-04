@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -62,9 +61,18 @@ public sealed class OnDiskFormatFixtureGenerator
         using var provider = TestHost.CreateProvider();
         var factory = provider.GetRequiredService<IKeyDerivationServiceFactory>();
 
-        foreach (var kdf in Enum.GetValues<KeyDerivationAlgorithm>())
+        var algorithms = Enum.GetValues<KeyDerivationAlgorithm>();
+
+        Assert.That(
+            algorithms,
+            Is.Not.Empty,
+            "There is no key derivation algorithm left to print vectors for."
+        );
+
+        foreach (var kdf in algorithms)
         {
             var masterKey = factory.Create(kdf).DeriveKey(Password, salt, EncryptionConstants.KeySize);
+            Assert.That(masterKey, Has.Length.EqualTo(EncryptionConstants.KeySize / 8));
             TestContext.Out.WriteLine($"{kdf} master key: {Convert.ToHexStringLower(masterKey)}");
 
             foreach (var label in OnDiskFormatFixtures.SubKeyLabels)
@@ -76,6 +84,7 @@ public sealed class OnDiskFormatFixtureGenerator
                     subKey,
                     Encoding.UTF8.GetBytes(label)
                 );
+                Assert.That(subKey, Has.Length.EqualTo(EncryptionConstants.KeySize / 8));
                 TestContext.Out.WriteLine($"  {label}: {Convert.ToHexStringLower(subKey)}");
             }
 
@@ -85,6 +94,15 @@ public sealed class OnDiskFormatFixtureGenerator
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
         var namingKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNamingKeyHex);
         var nonceKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNonceKeyHex);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(chunkHash, Has.Length.EqualTo(SHA256.HashSizeInBytes));
+            Assert.That(
+                HMACSHA256.HashData(nonceKey, chunkHash),
+                Has.Length.AtLeast(EncryptionConstants.NonceSize)
+            );
+        }
 
         TestContext.Out.WriteLine($"chunk hash: {Convert.ToHexStringLower(chunkHash)}");
         TestContext.Out.WriteLine(
@@ -120,7 +138,7 @@ public sealed class OnDiskFormatFixtureGenerator
             _ = source.WriteText(relativePath, content);
         }
 
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
 
         var result = await provider
             .GetRequiredService<IBackupOrchestrator>()
@@ -141,11 +159,6 @@ public sealed class OnDiskFormatFixtureGenerator
             );
 
         Assert.That(result.IsSuccess, Is.True, $"Could not generate the '{fixture.Name}' fixture.");
-        TestContext.Out.WriteLine(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"Regenerated {fixture.Name} at {target}"
-            )
-        );
+        await TestContext.Out.WriteLineAsync($"Regenerated {fixture.Name} at {target}");
     }
 }

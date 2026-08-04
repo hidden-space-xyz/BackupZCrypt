@@ -62,8 +62,10 @@ public sealed class BackupRequestValidatorTests
     /// Creates a validator wired to the substituted file, storage, and password services.
     /// </summary>
     /// <returns>The system under test.</returns>
-    private BackupRequestValidator CreateSut() =>
-        new(this.fileOperations, this.systemStorage, this.passwordService);
+    private BackupRequestValidator CreateSut()
+    {
+        return new(this.fileOperations, this.systemStorage, this.passwordService);
+    }
 
     /// <summary>
     /// Builds a request whose fields are each individually valid, so a test only varies the one it
@@ -79,8 +81,9 @@ public sealed class BackupRequestValidatorTests
         string destination,
         string password = "Str0ng-Passw0rd!",
         BackupOperation operation = BackupOperation.Create
-    ) =>
-        new(
+    )
+    {
+        return new(
             source,
             destination,
             password,
@@ -89,22 +92,27 @@ public sealed class BackupRequestValidatorTests
             KeyDerivationAlgorithm.Argon2id,
             operation
         );
+    }
 
     /// <summary>
     /// Projects validation messages down to their codes so assertions ignore format arguments.
     /// </summary>
     /// <param name="messages">The errors or warnings returned by the validator.</param>
     /// <returns>The code of each message, in the order reported.</returns>
-    private static IReadOnlyList<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages) =>
-        messages.Select(m => m.Code).ToList();
+    private static List<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages)
+    {
+        return [.. messages.Select(m => m.Code)];
+    }
 
     /// <summary>
     /// Builds a path the running platform cannot resolve to an absolute form: one longer than
     /// Windows can address, and one carrying an embedded null character everywhere else.
     /// </summary>
     /// <returns>A raw path that fails normalization.</returns>
-    private static string UnnormalizablePath() =>
-        OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+    private static string UnnormalizablePath()
+    {
+        return OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+    }
 
     [Test]
     public async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
@@ -358,7 +366,7 @@ public sealed class BackupRequestValidatorTests
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
 
-        Assert.That(Codes(errors), Is.EqualTo(new[] { MessageCode.SourceDirectoryEmpty }));
+        Assert.That(Codes(errors), Is.EqualTo([MessageCode.SourceDirectoryEmpty]));
     }
 
     /// <summary>
@@ -404,7 +412,7 @@ public sealed class BackupRequestValidatorTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(Codes(errors), Is.EqualTo(new[] { expectedCode }));
+            Assert.That(Codes(errors), Is.EqualTo([expectedCode]));
             Assert.That(errors[0].Args, Is.EqualTo(expectedArgs));
         }
     }
@@ -417,7 +425,7 @@ public sealed class BackupRequestValidatorTests
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(ValidRequest(SourceDir, string.Empty));
 
-        Assert.That(Codes(errors), Is.EqualTo(new[] { MessageCode.DestinationPathEmpty }));
+        Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationPathEmpty]));
 
         _ = this.systemStorage.DidNotReceive().GetPathRoot(Arg.Any<string>());
     }
@@ -436,10 +444,7 @@ public sealed class BackupRequestValidatorTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(
-                Codes(errors),
-                Is.EqualTo(new[] { MessageCode.DestinationDriveNotAccessibleFormat })
-            );
+            Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationDriveNotAccessibleFormat]));
             Assert.That(errors[0].Args, Is.EqualTo(new object[] { driveRoot }));
         }
     }
@@ -461,18 +466,23 @@ public sealed class BackupRequestValidatorTests
     [Test]
     public async Task AnalyzeErrors_DestinationRootLookupThrows_ReportsDestinationInvalidWithMessage()
     {
+        static ArgumentException RootLookupFailure(string fullPath)
+        {
+            return new ArgumentException($"bad root: {fullPath}", nameof(fullPath));
+        }
+
+        var lookupFailure = RootLookupFailure(DestinationDir);
+
         this.StubReadableSource();
-        _ = this.systemStorage
-            .GetPathRoot(DestinationDir)
-            .Returns(_ => throw new ArgumentException("bad root"));
+        _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(_ => throw lookupFailure);
 
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(Codes(errors), Is.EqualTo(new[] { MessageCode.DestinationInvalidFormat }));
-            Assert.That(errors[0].Args, Is.EqualTo(new object[] { "bad root" }));
+            Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationInvalidFormat]));
+            Assert.That(errors[0].Args, Is.EqualTo(new object[] { lookupFailure.Message }));
         }
     }
 
@@ -820,7 +830,7 @@ public sealed class BackupRequestValidatorTests
 
         Assert.That(
             Codes(warnings),
-            Is.EqualTo(new[] { MessageCode.WeakPasswordWarning }),
+            Is.EqualTo([MessageCode.WeakPasswordWarning]),
             "the one measurable file needs exactly the 1,200,000 bytes the drive reports, so no space warning "
                 + "is due: the unmeasurable file has to count as zero instead of aborting the estimate"
         );
@@ -857,7 +867,7 @@ public sealed class BackupRequestValidatorTests
 
         Assert.That(
             Codes(warnings),
-            Is.EqualTo(new[] { MessageCode.WeakPasswordWarning }),
+            Is.EqualTo([MessageCode.WeakPasswordWarning]),
             "querying free space on an unknown root or an offline drive is what throws in the first place, so "
                 + "the guard has to short-circuit before asking at all"
         );

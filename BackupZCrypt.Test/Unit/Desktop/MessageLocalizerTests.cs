@@ -21,11 +21,18 @@ public sealed partial class MessageLocalizerTests
     private const string FormatSuffix = "Format";
 
     /// <summary>
-    /// Matches the opening of a <c>string.Format</c> placeholder and captures its argument index.
+    /// The match timeout the placeholder pattern runs under, mirroring the bound the production
+    /// patterns carry so no regex in the solution is left unbounded.
     /// </summary>
-    /// <returns>The placeholder pattern.</returns>
-    [GeneratedRegex(@"\{(\d+)")]
-    private static partial Regex PlaceholderPattern();
+    private const int RegexTimeoutMilliseconds = 1000;
+
+    /// <summary>
+    /// Gets the pattern matching the opening of a <c>string.Format</c> placeholder, capturing its
+    /// argument index.
+    /// </summary>
+    /// <value>The placeholder pattern.</value>
+    [GeneratedRegex(@"\{(?<index>\d+)", RegexOptions.ExplicitCapture, RegexTimeoutMilliseconds)]
+    private static partial Regex PlaceholderPattern { get; }
 
     [Test]
     public void Localize_EveryMessageCode_ResolvesToLocalizedTextRatherThanTheCodeName()
@@ -62,7 +69,7 @@ public sealed partial class MessageLocalizerTests
             var format = Strings.GetByKey(name);
             var arguments = ArgumentsFor(name);
 
-            if (arguments.Length == 0)
+            if (arguments.Length is 0)
             {
                 offenders.Add($"{name} (named Format but its resource declares no placeholder)");
                 continue;
@@ -78,7 +85,7 @@ public sealed partial class MessageLocalizerTests
             {
                 offenders.Add($"{name} (dropped an argument, rendering '{text}')");
             }
-            else if (PlaceholderPattern().IsMatch(text))
+            else if (PlaceholderPattern.IsMatch(text))
             {
                 offenders.Add($"{name} (left an unsubstituted placeholder in '{text}')");
             }
@@ -96,8 +103,10 @@ public sealed partial class MessageLocalizerTests
     public void Localize_EveryCodeNotNamedFormat_RendersWithoutLeavingAPlaceholder()
     {
         var offenders = Enum.GetValues<MessageCode>()
-            .Where(static code => !code.ToString().EndsWith(FormatSuffix, StringComparison.Ordinal))
-            .Where(static code => PlaceholderPattern().IsMatch(MessageLocalizer.Localize(new LocalizableMessage(code))))
+            .Where(static code =>
+                !code.ToString().EndsWith(FormatSuffix, StringComparison.Ordinal)
+                && PlaceholderPattern.IsMatch(MessageLocalizer.Localize(new LocalizableMessage(code)))
+            )
             .Select(static code => code.ToString())
             .ToList();
 
@@ -148,12 +157,18 @@ public sealed partial class MessageLocalizerTests
     /// <returns>One argument per placeholder index, or an empty array when the resource takes none.</returns>
     private static object[] ArgumentsFor(string key)
     {
-        var highestIndex = PlaceholderPattern()
+        var highestIndex = PlaceholderPattern
             .Matches(Strings.GetByKey(key))
-            .Select(static match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
+            .Select(static match =>
+                int.Parse(match.Groups["index"].Value, CultureInfo.InvariantCulture)
+            )
             .DefaultIfEmpty(-1)
             .Max();
 
-        return [.. Enumerable.Range(0, highestIndex + 1).Select(static index => (object)$"ARG{index}")];
+        return
+        [
+            .. Enumerable.Range(0, highestIndex + 1)
+                .Select(static index => (object)string.Create(CultureInfo.InvariantCulture, $"ARG{index}")),
+        ];
     }
 }

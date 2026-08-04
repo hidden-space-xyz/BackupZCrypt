@@ -1,7 +1,5 @@
 using System.Globalization;
 
-using Avalonia.Data.Converters;
-
 using BackupZCrypt.Desktop.Converters;
 using BackupZCrypt.Domain.Enums;
 
@@ -17,7 +15,7 @@ public sealed class PasswordConvertersTests
     [Test]
     public void RevealToPasswordChar_MasksUnlessTheUserAskedToReveal()
     {
-        var converter = (IValueConverter)PasswordConverters.RevealToPasswordChar;
+        var converter = PasswordConverters.RevealToPasswordChar;
 
         using (Assert.EnterMultipleScope())
         {
@@ -60,7 +58,7 @@ public sealed class PasswordConvertersTests
 
         Assert.That(
             matched,
-            Is.EqualTo(new[] { expectedBand }),
+            Is.EqualTo([expectedBand]),
             "Each strength must light exactly one style class: none leaves the bar on the default "
                 + "accent colour, and two would let style order decide the colour."
         );

@@ -296,7 +296,7 @@ public sealed class BackupRestoreRoundtripTests
             Assert.That(result.IsSuccess, Is.False, "Restore without a manifest unexpectedly succeeded.");
             Assert.That(
                 result.Errors,
-                Has.Some.Matches<LocalizableMessage>(e => e.Code == MessageCode.ManifestRequiredForDecryption)
+                Has.Some.Matches<LocalizableMessage>(e => e.Code is MessageCode.ManifestRequiredForDecryption)
             );
         }
     }
@@ -447,7 +447,7 @@ public sealed class BackupRestoreRoundtripTests
     /// <returns>The assertion message.</returns>
     private static string DescribeErrors(string prefix, IReadOnlyList<LocalizableMessage> errors)
     {
-        return errors.Count == 0
+        return errors.Count is 0
             ? prefix
             : $"{prefix}: {string.Join(", ", errors.Select(e => e.Code))}";
     }

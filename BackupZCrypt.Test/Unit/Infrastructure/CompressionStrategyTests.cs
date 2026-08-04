@@ -30,12 +30,15 @@ public sealed class CompressionStrategyTests
     /// Supplies every Zstandard level as a test case so each behaves identically from the caller's view.
     /// </summary>
     /// <returns>One strategy instance per supported compression level.</returns>
-    private static IEnumerable<ICompressionStrategy> Levels() =>
+    private static IEnumerable<ICompressionStrategy> Levels()
+    {
+        return
         [
             new ZstdFastCompressionStrategy(),
             new ZstdCompressionStrategy(),
             new ZstdBestCompressionStrategy(),
         ];
+    }
 
     /// <summary>
     /// Produces incompressible-looking bytes from a fixed seed so failures reproduce exactly.

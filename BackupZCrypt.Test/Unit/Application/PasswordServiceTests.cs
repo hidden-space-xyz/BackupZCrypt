@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -156,7 +158,7 @@ public sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_ExcludeSimilarCharacters_OmitsAmbiguousCharacters()
     {
-        const string ambiguous = "il1Lo0O";
+        const string Ambiguous = "il1Lo0O";
 
         var password = this.sut.GeneratePassword(
             200,
@@ -168,7 +170,7 @@ public sealed class PasswordServiceTests
 
         Assert.That(
             password,
-            Has.None.Matches<char>(c => ambiguous.Contains(c, StringComparison.Ordinal))
+            Has.None.Matches<char>(c => Ambiguous.Contains(c, StringComparison.Ordinal))
         );
     }
 
@@ -192,14 +194,14 @@ public sealed class PasswordServiceTests
     [Test]
     public void GeneratePassword_SuccessiveCalls_ProduceDifferentResults()
     {
-        const PasswordGenerationOptions options =
+        const PasswordGenerationOptions Options =
             PasswordGenerationOptions.IncludeUppercase
             | PasswordGenerationOptions.IncludeLowercase
             | PasswordGenerationOptions.IncludeNumbers
             | PasswordGenerationOptions.IncludeSpecialCharacters;
 
-        var first = this.sut.GeneratePassword(32, options);
-        var second = this.sut.GeneratePassword(32, options);
+        var first = this.sut.GeneratePassword(32, Options);
+        var second = this.sut.GeneratePassword(32, Options);
 
         Assert.That(second, Is.Not.EqualTo(first));
     }
@@ -217,16 +219,23 @@ public sealed class PasswordServiceTests
         var analysis = this.sut.AnalyzePasswordStrength(password);
 
         var expectedEntropy = (password.Length * Math.Log2(expectedPoolSize)) - expectedPenalty;
-        var expectedScore = Math.Round(expectedEntropy / MaxEntropyBits * 100.0, 2);
+        var expectedScore = Math.Round(
+            expectedEntropy / MaxEntropyBits * 100.0,
+            2,
+            MidpointRounding.ToEven
+        );
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
                 analysis.Entropy,
                 Is.EqualTo(expectedEntropy).Within(1e-9),
-                $"'{password}' contains no repeat, sequence, common word, or year, so its entropy must be exactly "
-                    + $"{password.Length} characters drawn from a {expectedPoolSize}-symbol alphabet, less the "
-                    + $"{expectedPenalty}-bit penalty charged for spanning too few character classes"
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"'{password}' contains no repeat, sequence, common word, or year, so its entropy must be exactly "
+                        + $"{password.Length} characters drawn from a {expectedPoolSize}-symbol alphabet, less the "
+                        + $"{expectedPenalty}-bit penalty charged for spanning too few character classes"
+                )
             );
             Assert.That(analysis.Score, Is.EqualTo(expectedScore).Within(1e-9));
             Assert.That(
@@ -240,11 +249,11 @@ public sealed class PasswordServiceTests
     [Test]
     public void AnalyzePasswordStrength_SixteenCharactersOfEveryClass_AddsTheAllRoundBonusOnTopOfTheEntropyScore()
     {
-        const string password = "Tk9#vQ2!wR5@mZ7$";
+        const string Password = "Tk9#vQ2!wR5@mZ7$";
 
-        var analysis = this.sut.AnalyzePasswordStrength(password);
+        var analysis = this.sut.AnalyzePasswordStrength(Password);
 
-        var expectedEntropy = password.Length * Math.Log2(94);
+        var expectedEntropy = Password.Length * Math.Log2(94);
         var scoreWithoutBonus = expectedEntropy / MaxEntropyBits * 100.0;
 
         using (Assert.EnterMultipleScope())
@@ -252,7 +261,7 @@ public sealed class PasswordServiceTests
             Assert.That(analysis.Entropy, Is.EqualTo(expectedEntropy).Within(1e-9));
             Assert.That(
                 analysis.Score,
-                Is.EqualTo(Math.Round(scoreWithoutBonus + 5.0, 2)).Within(1e-9),
+                Is.EqualTo(Math.Round(scoreWithoutBonus + 5.0, 2, MidpointRounding.ToEven)).Within(1e-9),
                 "a 16-character password that uses all four classes and clears 90 bits must earn the 5-point "
                     + "bonus for being strong on every axis at once"
             );
@@ -263,14 +272,14 @@ public sealed class PasswordServiceTests
     [Test]
     public void AnalyzePasswordStrength_NonAsciiCharacter_CreditsTheUnicodePoolInsteadOfIgnoringIt()
     {
-        const string ascii = "kfmxbvzqh";
+        const string Ascii = "kfmxbvzqh";
 
-        const string accented = "kfmxbvzq\u00E9";
+        const string Accented = "kfmxbvzq\u00E9";
 
-        var asciiAnalysis = this.sut.AnalyzePasswordStrength(ascii);
-        var accentedAnalysis = this.sut.AnalyzePasswordStrength(accented);
+        var asciiAnalysis = this.sut.AnalyzePasswordStrength(Ascii);
+        var accentedAnalysis = this.sut.AnalyzePasswordStrength(Accented);
 
-        var expectedEntropy = (accented.Length * Math.Log2(26 + 50)) - 10.0;
+        var expectedEntropy = (Accented.Length * Math.Log2(26 + 50)) - 10.0;
 
         using (Assert.EnterMultipleScope())
         {

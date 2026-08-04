@@ -51,8 +51,10 @@ internal sealed class SettingsService(
     /// <typeparam name="T">The settings type whose file path is requested.</typeparam>
     /// <returns>The absolute path to the settings file.</returns>
     public string GetFilePath<T>()
-        where T : class, ISettings<T> =>
-        Path.GetFullPath(Path.Combine(this.BaseDirectoryPath, T.FileName));
+        where T : class, ISettings<T>
+    {
+        return Path.GetFullPath(Path.Combine(this.BaseDirectoryPath, T.FileName));
+    }
 
     /// <summary>
     /// Loads the persisted settings, recreating and saving the defaults when the file is absent or corrupted.

@@ -61,7 +61,7 @@ public sealed class CrossPlatformManifestTests
             );
             Assert.That(
                 manifestPaths,
-                Is.EquivalentTo(new[] { "root.txt", "docs/notes.md", "docs/sub/deep.txt" })
+                Is.EquivalentTo(["root.txt", "docs/notes.md", "docs/sub/deep.txt"])
             );
         }
 
@@ -71,16 +71,19 @@ public sealed class CrossPlatformManifestTests
             .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(restored.Path, f).Replace('\\', '/'))
             .ToList();
+        var deepContent = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "docs", "sub", "deep.txt")
+        );
 
-        Assert.That(
-            restoredPaths,
-            Is.EquivalentTo(manifestPaths),
-            "The restored tree does not mirror the structure the manifest recorded."
-        );
-        Assert.That(
-            File.ReadAllText(Path.Combine(restored.Path, "docs", "sub", "deep.txt")),
-            Is.EqualTo("deep")
-        );
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                restoredPaths,
+                Is.EquivalentTo(manifestPaths),
+                "The restored tree does not mirror the structure the manifest recorded."
+            );
+            Assert.That(deepContent, Is.EqualTo("deep"));
+        }
     }
 
     [Test]
@@ -115,12 +118,12 @@ public sealed class CrossPlatformManifestTests
             );
             Assert.That(
                 restoredNames,
-                Is.EquivalentTo(new[] { "notes.md" }),
+                Is.EquivalentTo(["notes.md"]),
                 "The separator survived into the file name instead of creating a directory."
             );
         }
 
-        Assert.That(File.ReadAllText(restoredFile), Is.EqualTo("# notes"));
+        Assert.That(await File.ReadAllTextAsync(restoredFile), Is.EqualTo("# notes"));
     }
 
     [Test]
@@ -155,7 +158,7 @@ public sealed class CrossPlatformManifestTests
             Assert.That(
                 result.Errors,
                 Has.Some.Matches<LocalizableMessage>(static e =>
-                    e.Code == MessageCode.UnexpectedErrorFormat
+                    e.Code is MessageCode.UnexpectedErrorFormat
                 )
             );
             Assert.That(

@@ -128,32 +128,6 @@ internal sealed partial class PasswordService : IPasswordService
     private const int RegexTimeoutMilliseconds = 1000;
 
     /// <summary>
-    /// The regex that detects an ASCII uppercase letter.
-    /// </summary>
-    private static readonly Regex UpperCaseRegex = UpperCaseRegexFactory();
-
-    /// <summary>
-    /// The regex that detects an ASCII lowercase letter.
-    /// </summary>
-    private static readonly Regex LowerCaseRegex = LowerCaseRegexFactory();
-
-    /// <summary>
-    /// The regex that detects a decimal digit.
-    /// </summary>
-    private static readonly Regex NumberRegex = NumberRegexFactory();
-
-    /// <summary>
-    /// The regex that detects a recognized punctuation character.
-    /// </summary>
-    private static readonly Regex SpecialCharRegex = SpecialCharRegexFactory();
-
-    /// <summary>
-    /// The regex that matches a standalone four-digit year in the 1900-2099 range, since birth and current
-    /// years are among the most guessable substrings a password can contain.
-    /// </summary>
-    private static readonly Regex YearRegex = YearRegexFactory();
-
-    /// <summary>
     /// The well-known words and keyboard runs that each cost a fixed entropy penalty when found in a password.
     /// </summary>
     private static readonly string[] CommonSubstrings =
@@ -243,7 +217,12 @@ internal sealed partial class PasswordService : IPasswordService
         var strength = GetStrengthFromScore(score);
         var tips = BuildTips(compositionFlags, trimmed);
 
-        return new PasswordStrengthAnalysis(strength, Math.Round(score, 2), entropy, tips);
+        return new PasswordStrengthAnalysis(
+            strength,
+            Math.Round(score, 2, MidpointRounding.ToEven),
+            entropy,
+            tips
+        );
     }
 
     /// <summary>
@@ -259,7 +238,7 @@ internal sealed partial class PasswordService : IPasswordService
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
-        if (options == PasswordGenerationOptions.None)
+        if (options is PasswordGenerationOptions.None)
         {
             throw new ArgumentException(
                 "At least one character type must be selected.",
@@ -517,12 +496,12 @@ internal sealed partial class PasswordService : IPasswordService
     /// <returns>The penalty in bits.</returns>
     private static double HomogeneousClassPenalty(PasswordComposition flags, string password)
     {
-        if (flags.CategoryCount <= 1)
+        return flags.CategoryCount switch
         {
-            return Math.Min(20, password.Length * 2);
-        }
-
-        return flags.CategoryCount == 2 && password.Length < 10 ? 10 : 0;
+            <= 1 => Math.Min(20, password.Length * 2),
+            2 when password.Length < 10 => 10,
+            _ => 0,
+        };
     }
 
     /// <summary>
@@ -536,14 +515,7 @@ internal sealed partial class PasswordService : IPasswordService
 
         foreach (var c in input)
         {
-            if (LeetMap.TryGetValue(c, out var mapped))
-            {
-                _ = sb.Append(mapped);
-            }
-            else
-            {
-                _ = sb.Append(c);
-            }
+            _ = sb.Append(LeetMap.TryGetValue(c, out var mapped) ? mapped : c);
         }
 
         return sb.ToString();
@@ -664,37 +636,38 @@ internal sealed partial class PasswordService : IPasswordService
     }
 
     /// <summary>
-    /// Builds the source-generated regex matching a single ASCII uppercase letter.
+    /// Gets the source-generated regex that detects an ASCII uppercase letter.
     /// </summary>
-    /// <returns>The generated regex.</returns>
+    /// <value>The generated regex.</value>
     [GeneratedRegex("[A-Z]", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex UpperCaseRegexFactory();
+    private static partial Regex UpperCaseRegex { get; }
 
     /// <summary>
-    /// Builds the source-generated regex matching a single ASCII lowercase letter.
+    /// Gets the source-generated regex that detects an ASCII lowercase letter.
     /// </summary>
-    /// <returns>The generated regex.</returns>
+    /// <value>The generated regex.</value>
     [GeneratedRegex("[a-z]", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex LowerCaseRegexFactory();
+    private static partial Regex LowerCaseRegex { get; }
 
     /// <summary>
-    /// Builds the source-generated regex matching a single decimal digit.
+    /// Gets the source-generated regex that detects a decimal digit.
     /// </summary>
-    /// <returns>The generated regex.</returns>
+    /// <value>The generated regex.</value>
     [GeneratedRegex("[0-9]", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex NumberRegexFactory();
+    private static partial Regex NumberRegex { get; }
 
     /// <summary>
-    /// Builds the source-generated regex matching a single recognized punctuation character.
+    /// Gets the source-generated regex that detects a recognized punctuation character.
     /// </summary>
-    /// <returns>The generated regex.</returns>
+    /// <value>The generated regex.</value>
     [GeneratedRegex(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex SpecialCharRegexFactory();
+    private static partial Regex SpecialCharRegex { get; }
 
     /// <summary>
-    /// Builds the source-generated regex matching a standalone four-digit year between 1900 and 2099.
+    /// Gets the source-generated regex that matches a standalone four-digit year in the 1900-2099 range, since
+    /// birth and current years are among the most guessable substrings a password can contain.
     /// </summary>
-    /// <returns>The generated regex.</returns>
+    /// <value>The generated regex.</value>
     [GeneratedRegex(@"\b(?:19|20)\d{2}\b", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex YearRegexFactory();
+    private static partial Regex YearRegex { get; }
 }

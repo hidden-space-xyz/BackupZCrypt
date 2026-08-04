@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Infrastructure.Strategies.Chunking;
@@ -97,7 +98,10 @@ public sealed class FastCdcChunkingTests
     /// </summary>
     /// <param name="input">The bytes to feed through the chunker.</param>
     /// <returns>The chunks in the order they were produced.</returns>
-    private static Task<List<byte[]>> DrainAsync(byte[] input) => DrainAsync(new MemoryStream(input));
+    private static Task<List<byte[]>> DrainAsync(byte[] input)
+    {
+        return DrainAsync(new MemoryStream(input));
+    }
 
     /// <summary>
     /// Hashes the chunks in order, which compares a split against the original far more cheaply than
@@ -198,7 +202,7 @@ public sealed class FastCdcChunkingTests
         {
             Assert.That(
                 chunks.Select(chunk => chunk.Length).ToArray(),
-                Is.EqualTo(new[] { 357111, 691465 }),
+                Is.EqualTo([357111, 691465]),
                 "The strict-mask cut point moved, which is an on-disk format change."
             );
             Assert.That(
@@ -208,9 +212,14 @@ public sealed class FastCdcChunkingTests
                     + "arm it exists for."
             );
             Assert.That(
-                chunks[0].Length,
-                Is.GreaterThan(ChunkMinSize).And.LessThan(ChunkTargetSize),
-                "The cut point left the window where the strict mask applies."
+                chunks[0],
+                Has.Length.GreaterThan(ChunkMinSize),
+                "The cut point fell below the window where the strict mask applies."
+            );
+            Assert.That(
+                chunks[0],
+                Has.Length.LessThan(ChunkTargetSize),
+                "The cut point rose above the window where the strict mask applies."
             );
         }
     }
@@ -224,7 +233,7 @@ public sealed class FastCdcChunkingTests
 
         Assert.That(
             chunks.Select(chunk => chunk.Length).ToArray(),
-            Is.EqualTo(new[] { ChunkMaxSize, ChunkMaxSize, Length - (2 * ChunkMaxSize) }),
+            Is.EqualTo([ChunkMaxSize, ChunkMaxSize, Length - (2 * ChunkMaxSize)]),
             "Input that never finds a cut point was not cut at the maximum chunk size, so the "
                 + "chunker buffers without bound."
         );
@@ -236,7 +245,9 @@ public sealed class FastCdcChunkingTests
         var input = RandomBytes(4 * 1024 * 1024, seed: 23);
 
         var reference = await DrainAsync(new MemoryStream(input));
-        var dripped = await DrainAsync(new DripStream(input, maxBytesPerRead: 997));
+
+        using var drippedStream = new DripStream(input, maxBytesPerRead: 997);
+        var dripped = await DrainAsync(drippedStream);
 
         using (Assert.EnterMultipleScope())
         {
@@ -268,10 +279,15 @@ public sealed class FastCdcChunkingTests
             originalHashes.Contains(Convert.ToHexString(SHA256.HashData(chunk)))
         );
 
+        var sharedSummary = string.Create(
+            CultureInfo.InvariantCulture,
+            $"Only {shared} of {modifiedChunks.Count} chunks survived a 1 KiB insertion: the chunker "
+        );
+
         Assert.That(
             shared,
             Is.GreaterThanOrEqualTo(6),
-            $"Only {shared} of {modifiedChunks.Count} chunks survived a 1 KiB insertion: the chunker "
+            sharedSummary
                 + "no longer resynchronises, so deduplication across updates has collapsed. This is "
                 + "the property content-defined chunking exists for, and every other case in this "
                 + "file would still pass if the rolling hash degenerated into fixed-size splitting."
@@ -279,7 +295,7 @@ public sealed class FastCdcChunkingTests
     }
 
     [Test]
-    public void ChunkAsync_CancelledToken_ThrowsOperationCanceledException()
+    public void Chunk_CancelledToken_ThrowsOperationCanceledException()
     {
         var strategy = new FastCdcChunkingStrategy();
         using var cts = new CancellationTokenSource();
@@ -291,12 +307,13 @@ public sealed class FastCdcChunkingTests
 
             await foreach (var _ in strategy.ChunkAsync(source, cts.Token))
             {
+                Assert.Fail("A cancelled token must not yield a chunk.");
             }
         });
     }
 
     [Test]
-    public void ChunkAsync_NullSource_ThrowsArgumentNullException()
+    public void Chunk_NullSource_ThrowsArgumentNullException()
     {
         var strategy = new FastCdcChunkingStrategy();
 
@@ -304,6 +321,7 @@ public sealed class FastCdcChunkingTests
         {
             await foreach (var _ in strategy.ChunkAsync(null!))
             {
+                Assert.Fail("A null source must not yield a chunk.");
             }
         });
     }
@@ -397,14 +415,21 @@ public sealed class FastCdcChunkingTests
         }
 
         /// <inheritdoc/>
-        public override long Seek(long offset, SeekOrigin origin) =>
+        public override long Seek(long offset, SeekOrigin origin)
+        {
             throw new NotSupportedException();
+        }
 
         /// <inheritdoc/>
-        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
 
         /// <inheritdoc/>
-        public override void Write(byte[] buffer, int offset, int count) =>
+        public override void Write(byte[] buffer, int offset, int count)
+        {
             throw new NotSupportedException();
+        }
     }
 }

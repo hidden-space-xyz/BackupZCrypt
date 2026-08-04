@@ -31,7 +31,10 @@ public sealed class TempDir : IDisposable
     /// </summary>
     /// <param name="parts">The ordered path segments to append to the root.</param>
     /// <returns>The combined absolute path.</returns>
-    public string Combine(params string[] parts) => System.IO.Path.Combine([Path, .. parts]);
+    public string Combine(params string[] parts)
+    {
+        return System.IO.Path.Combine([Path, .. parts]);
+    }
 
     /// <summary>
     /// Writes the supplied bytes to a path inside the temporary directory, creating any missing
@@ -54,16 +57,19 @@ public sealed class TempDir : IDisposable
     /// <param name="relativePath">The path of the file relative to the temporary directory root.</param>
     /// <param name="content">The text to encode as UTF-8 and write.</param>
     /// <returns>The absolute path of the file that was written.</returns>
-    public string WriteText(string relativePath, string content) =>
-        WriteFile(relativePath, Encoding.UTF8.GetBytes(content));
+    public string WriteText(string relativePath, string content)
+    {
+        return WriteFile(relativePath, Encoding.UTF8.GetBytes(content));
+    }
 
     /// <summary>
     /// Recursively deletes the temporary directory and everything under it.
     /// </summary>
     /// <remarks>
     /// Cleanup is best effort: a file still locked by the operating system, an antivirus scanner, or
-    /// a leaked handle raises an I/O or access error that is swallowed, so temp-file noise can never
-    /// fail an otherwise passing test. The directory then lingers until the platform reclaims it.
+    /// a leaked handle raises an I/O or access error that is reported to the test output and then
+    /// swallowed, so temp-file noise can never fail an otherwise passing test. The directory then
+    /// lingers until the platform reclaims it.
     /// </remarks>
     public void Dispose()
     {
@@ -74,11 +80,9 @@ public sealed class TempDir : IDisposable
                 Directory.Delete(Path, recursive: true);
             }
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            TestContext.Out.WriteLine($"TempDir cleanup failed for '{Path}': {ex.Message}");
         }
     }
 }

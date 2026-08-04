@@ -10,7 +10,7 @@ namespace BackupZCrypt.Application.ValueObjects.Password;
 /// <param name="Score">The normalized strength score from 0 to 100.</param>
 /// <param name="Entropy">The estimated effective entropy in bits after penalties.</param>
 /// <param name="Tips">The localizable suggestions for improving the password.</param>
-public sealed record PasswordStrengthAnalysis(
+public sealed record class PasswordStrengthAnalysis(
     PasswordStrength Strength,
     double Score,
     double Entropy,

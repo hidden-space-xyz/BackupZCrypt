@@ -6,7 +6,7 @@ namespace BackupZCrypt.Domain.ValueObjects.Backup;
 /// The immutable outcome of a completed backup or restore operation, including timing,
 /// counts, and any accumulated errors and warnings.
 /// </summary>
-public sealed record BackupResult
+public sealed record class BackupResult
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BackupResult"/> class.
@@ -97,7 +97,7 @@ public sealed record BackupResult
     /// Gets the fraction of files processed successfully, from 0 to 1; 1 when there were no files.
     /// </summary>
     public double SuccessRate =>
-        this.TotalFiles == 0 ? 1.0 : (double)this.ProcessedFiles / this.TotalFiles;
+        this.TotalFiles is 0 ? 1.0 : (double)this.ProcessedFiles / this.TotalFiles;
 
     /// <summary>
     /// Gets a value indicating whether some, but not all, files were processed successfully.

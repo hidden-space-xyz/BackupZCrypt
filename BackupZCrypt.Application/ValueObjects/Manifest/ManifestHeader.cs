@@ -8,7 +8,7 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <param name="EncryptionAlgorithm">The encryption algorithm used for the backup.</param>
 /// <param name="KeyDerivationAlgorithm">The key derivation algorithm used for the backup.</param>
 /// <param name="Compression">The compression mode applied to the backup content.</param>
-public sealed record ManifestHeader(
+public sealed record class ManifestHeader(
     EncryptionAlgorithm EncryptionAlgorithm,
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     CompressionMode Compression

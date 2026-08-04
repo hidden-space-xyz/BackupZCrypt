@@ -5,4 +5,4 @@ namespace BackupZCrypt.Desktop.Models;
 /// </summary>
 /// <param name="Name">The unit symbol shown to the user (for example, <c>MB</c>, <c>GB</c>, <c>TB</c>).</param>
 /// <param name="BytesPerUnit">The number of bytes in one unit, using binary (1024-based) multiples.</param>
-internal sealed record DataSizeUnitOption(string Name, long BytesPerUnit);
+internal sealed record class DataSizeUnitOption(string Name, long BytesPerUnit);

@@ -7,7 +7,7 @@ namespace BackupZCrypt.Application.ValueObjects.Settings;
 /// </summary>
 /// <param name="LastSourcePath">The last source path the user selected, or <see langword="null"/> if none.</param>
 /// <param name="LastDestinationPath">The last destination path the user selected, or <see langword="null"/> if none.</param>
-public sealed record RecentPathSettings(
+public sealed record class RecentPathSettings(
     string? LastSourcePath = null,
     string? LastDestinationPath = null
 ) : ISettings<RecentPathSettings>

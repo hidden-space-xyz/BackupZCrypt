@@ -25,7 +25,7 @@ namespace BackupZCrypt.Domain.ValueObjects.Backup;
 /// <param name="Operation">The kind of operation to perform.</param>
 /// <param name="Compression">The compression mode applied to chunks before encryption; used only when creating.</param>
 /// <param name="ProceedOnWarnings">Whether to continue when validation produces non-fatal warnings.</param>
-public sealed record BackupRequest(
+public sealed record class BackupRequest(
     string SourcePath,
     string DestinationPath,
     string Password,
@@ -67,8 +67,9 @@ public sealed record BackupRequest(
         string destinationPath,
         string password,
         bool proceedOnWarnings
-    ) =>
-        new(
+    )
+    {
+        return new(
             backupPath,
             destinationPath,
             password,
@@ -79,6 +80,7 @@ public sealed record BackupRequest(
             CompressionMode.None,
             proceedOnWarnings
         );
+    }
 
     /// <summary>
     /// Builds a request that updates an existing archive from a source directory.
@@ -93,8 +95,9 @@ public sealed record BackupRequest(
         string backupPath,
         string password,
         bool proceedOnWarnings
-    ) =>
-        new(
+    )
+    {
+        return new(
             sourcePath,
             backupPath,
             password,
@@ -105,6 +108,7 @@ public sealed record BackupRequest(
             CompressionMode.None,
             proceedOnWarnings
         );
+    }
 
     /// <summary>
     /// Builds a request that verifies an archive without writing anything.
@@ -117,8 +121,9 @@ public sealed record BackupRequest(
         string backupPath,
         string password,
         bool proceedOnWarnings
-    ) =>
-        new(
+    )
+    {
+        return new(
             backupPath,
             string.Empty,
             password,
@@ -129,6 +134,7 @@ public sealed record BackupRequest(
             CompressionMode.None,
             proceedOnWarnings
         );
+    }
 
     /// <summary>
     /// Writes the record's members for <see cref="object.ToString"/>, substituting a placeholder for

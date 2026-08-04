@@ -8,4 +8,4 @@ namespace BackupZCrypt.Desktop.Models;
 /// <param name="Id">The compression mode identifier.</param>
 /// <param name="Name">The localized display name.</param>
 /// <param name="Description">The localized description or summary.</param>
-internal sealed record CompressionOption(CompressionMode Id, string Name, string Description);
+internal sealed record class CompressionOption(CompressionMode Id, string Name, string Description);

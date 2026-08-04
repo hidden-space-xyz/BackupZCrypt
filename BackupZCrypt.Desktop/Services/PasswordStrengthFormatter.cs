@@ -59,7 +59,7 @@ internal static class PasswordStrengthFormatter
                     .Select(static tip => MessageLocalizer.Localize(new LocalizableMessage(tip)))
             );
         }
-        else if (analysis.Strength == PasswordStrength.Strong)
+        else if (analysis.Strength is PasswordStrength.Strong)
         {
             _ = sb.Append(" // ").Append(Strings.GoodJob);
         }

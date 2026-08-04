@@ -7,7 +7,7 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <param name="FileHash">The Base64-encoded SHA-256 hash of the whole file, used to verify restores.</param>
 /// <param name="TotalSize">The original file size in bytes.</param>
 /// <param name="Chunks">The ordered chunk references that reconstruct the file.</param>
-public sealed record ChunkManifestFileEntry(
+public sealed record class ChunkManifestFileEntry(
     string OriginalPath,
     string FileHash,
     long TotalSize,

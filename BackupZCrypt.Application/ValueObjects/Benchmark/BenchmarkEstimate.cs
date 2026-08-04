@@ -15,7 +15,7 @@ namespace BackupZCrypt.Application.ValueObjects.Benchmark;
 /// The measured one-time cost of deriving the master key with the selected key derivation function.
 /// </param>
 /// <param name="DataBytes">The amount of source data the estimate was computed for, in bytes.</param>
-public sealed record BenchmarkEstimate(
+public sealed record class BenchmarkEstimate(
     TimeSpan EstimatedDuration,
     double ThroughputBytesPerSecond,
     TimeSpan KeyDerivationDuration,

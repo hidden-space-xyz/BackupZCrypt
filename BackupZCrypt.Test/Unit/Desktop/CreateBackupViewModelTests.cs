@@ -44,7 +44,7 @@ public sealed class CreateBackupViewModelTests
     /// A password of exactly the longest accepted length, so the pair of rules can be probed on both
     /// sides of the upper bound without either side restating the constant.
     /// </summary>
-    private static readonly string LongestAcceptedPassword = new string('a', 1000);
+    private static readonly string LongestAcceptedPassword = new('a', 1000);
 
     /// <summary>
     /// The password and confirmation pairs that probe every boundary of the duplicated rules:
@@ -99,7 +99,7 @@ public sealed class CreateBackupViewModelTests
         var destination = temp.Combine("destination");
         _ = Directory.CreateDirectory(destination);
 
-        using var provider = TestHost.CreateProvider();
+        await using var provider = TestHost.CreateProvider();
         var validator = provider.GetRequiredService<IBackupRequestValidator>();
 
         var sut = CreateSut();
@@ -167,17 +167,16 @@ public sealed class CreateBackupViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(requestedLengths, Is.EqualTo(new[] { 50 }));
+            Assert.That(requestedLengths, Is.EqualTo([50]));
             Assert.That(
                 requestedOptions,
                 Is.EqualTo(
-                    new[]
-                    {
+                    [
                         PasswordGenerationOptions.IncludeUppercase
                             | PasswordGenerationOptions.IncludeLowercase
                             | PasswordGenerationOptions.IncludeNumbers
                             | PasswordGenerationOptions.IncludeSpecialCharacters,
-                    }
+                    ]
                 )
             );
             Assert.That(sut.Password, Is.EqualTo("GENERATED-PASSWORD"));
@@ -208,7 +207,7 @@ public sealed class CreateBackupViewModelTests
         {
             Assert.That(enabledWithoutPassword, Is.False);
             Assert.That(enabledWithPassword, Is.True);
-            Assert.That(copied, Is.EqualTo(new[] { "  pass word  " }));
+            Assert.That(copied, Is.EqualTo(["  pass word  "]));
             Assert.That(sut.CopyPasswordCommand.CanExecute(null), Is.False);
         }
     }

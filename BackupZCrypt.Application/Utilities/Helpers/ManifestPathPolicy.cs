@@ -70,7 +70,7 @@ internal static class ManifestPathPolicy
             StringSplitOptions.RemoveEmptyEntries
         );
 
-        if (pathSegments.Any(static segment => segment == ".."))
+        if (pathSegments.Any(static segment => string.Equals(segment, "..", StringComparison.Ordinal)))
         {
             throw new InvalidDataException("Manifest entry path contains traversal segments.");
         }
@@ -126,7 +126,10 @@ internal static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
     /// <returns>The path with every separator normalized to <c>/</c>.</returns>
-    internal static string ToManifestPath(string relativePath) => relativePath.Replace('\\', '/');
+    internal static string ToManifestPath(string relativePath)
+    {
+        return relativePath.Replace('\\', '/');
+    }
 
     /// <summary>
     /// Converts a manifest entry path back into a path the running platform can resolve.

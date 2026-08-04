@@ -3,7 +3,7 @@ namespace BackupZCrypt.Domain.ValueObjects.Backup;
 /// <summary>
 /// An immutable snapshot of the progress of an in-flight backup or restore operation.
 /// </summary>
-public sealed record BackupStatus
+public sealed record class BackupStatus
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BackupStatus"/> class.

@@ -64,7 +64,7 @@ public sealed class FileSystemServiceTests
 
         Assert.That(
             files,
-            Is.EquivalentTo(new[] { root, child, grandchild }),
+            Is.EquivalentTo([root, child, grandchild]),
             "Enumeration must return the written paths verbatim. The comparison is deliberately ordinal: the "
                 + "manifest's relative paths are computed from these strings, so on the case-sensitive file "
                 + "systems CI runs on a difference in casing is a real defect rather than noise."
@@ -84,7 +84,7 @@ public sealed class FileSystemServiceTests
 
         var files = await service.GetFilesAsync(dir.Path, "*.txt");
 
-        Assert.That(files, Is.EquivalentTo(new[] { rootText, nestedText }));
+        Assert.That(files, Is.EquivalentTo([rootText, nestedText]));
     }
 
     [Test]

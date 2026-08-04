@@ -77,138 +77,18 @@ internal sealed class BackupRequestValidator(
             return errors;
         }
 
-        if (string.IsNullOrWhiteSpace(sourcePath))
-        {
-            errors.Add(new LocalizableMessage(MessageCode.SourcePathEmpty));
-        }
-        else if (fileOperations.FileExists(sourcePath))
-        {
-            errors.Add(new LocalizableMessage(MessageCode.SourceMustBeDirectory));
-        }
-        else if (!fileOperations.DirectoryExists(sourcePath))
-        {
-            errors.Add(new LocalizableMessage(MessageCode.SourcePathNotExistFormat, sourcePath));
-        }
-        else
-        {
-            try
-            {
-                var files = await fileOperations.GetFilesAsync(sourcePath, "*", cancellationToken);
-                if (files.Length == 0)
-                {
-                    errors.Add(new LocalizableMessage(MessageCode.SourceDirectoryEmpty));
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                errors.Add(new LocalizableMessage(MessageCode.SourceAccessDenied));
-            }
-            catch (Exception ex)
-            {
-                errors.Add(new LocalizableMessage(MessageCode.SourceAccessErrorFormat, ex.Message));
-            }
-        }
+        await ValidateSourcePathAsync(sourcePath, errors, cancellationToken);
+        ValidateDestinationDrive(destinationPath, errors);
+        ValidatePassword(request, errors);
+        ValidateConfirmPassword(request, errors);
 
-        if (string.IsNullOrWhiteSpace(destinationPath))
+        try
         {
-            errors.Add(new LocalizableMessage(MessageCode.DestinationPathEmpty));
+            ValidatePathOverlap(sourcePath, destinationPath, errors);
         }
-        else
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            try
-            {
-                var drive = systemStorage.GetPathRoot(destinationPath);
-
-                if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
-                {
-                    errors.Add(
-                        new LocalizableMessage(
-                            MessageCode.DestinationDriveNotAccessibleFormat,
-                            drive
-                        )
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                errors.Add(
-                    new LocalizableMessage(MessageCode.DestinationInvalidFormat, ex.Message)
-                );
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Password))
-        {
-            errors.Add(new LocalizableMessage(MessageCode.PasswordRequired));
-        }
-        else
-        {
-            if (request.Password.Length < PasswordConstants.MinLength)
-            {
-                errors.Add(new LocalizableMessage(MessageCode.PasswordTooShort));
-            }
-
-            if (request.Password.Length > PasswordConstants.MaxLength)
-            {
-                errors.Add(new LocalizableMessage(MessageCode.PasswordTooLong));
-            }
-
-            if (request.Password.Trim() != request.Password)
-            {
-                errors.Add(new LocalizableMessage(MessageCode.PasswordLeadingTrailingSpaces));
-            }
-        }
-
-        if (request.Operation == BackupOperation.Create)
-        {
-            if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
-            {
-                errors.Add(new LocalizableMessage(MessageCode.ConfirmPasswordRequired));
-            }
-            else if (
-                !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
-            )
-            {
-                errors.Add(new LocalizableMessage(MessageCode.PasswordMismatch));
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(sourcePath) && !string.IsNullOrWhiteSpace(destinationPath))
-        {
-            try
-            {
-                if (fileOperations.DirectoryExists(sourcePath))
-                {
-                    if (string.Equals(sourcePath, destinationPath, PathComparer))
-                    {
-                        errors.Add(
-                            new LocalizableMessage(MessageCode.SourceDestinationSameDirectory)
-                        );
-                    }
-                    else if (
-                        destinationPath.StartsWith(
-                            sourcePath + Path.DirectorySeparatorChar,
-                            PathComparer
-                        )
-                    )
-                    {
-                        errors.Add(new LocalizableMessage(MessageCode.DestinationInsideSource));
-                    }
-                    else if (
-                        sourcePath.StartsWith(
-                            destinationPath + Path.DirectorySeparatorChar,
-                            PathComparer
-                        )
-                    )
-                    {
-                        errors.Add(new LocalizableMessage(MessageCode.SourceInsideDestination));
-                    }
-                }
-            }
-            catch (Exception exception) when (exception is not OutOfMemoryException)
-            {
-                return errors;
-            }
+            return errors;
         }
 
         return errors;
@@ -242,72 +122,14 @@ internal sealed class BackupRequestValidator(
 
         try
         {
-            if (fileOperations.DirectoryExists(sourcePath))
-            {
-                var sourceFiles = await fileOperations.GetFilesAsync(
-                    sourcePath,
-                    "*",
-                    cancellationToken
-                );
-
-                var destinationDrive = systemStorage.GetPathRoot(destinationPath);
-                if (
-                    !string.IsNullOrEmpty(destinationDrive)
-                    && systemStorage.IsDriveReady(destinationDrive)
-                )
-                {
-                    var totalSize = sourceFiles.Sum(f =>
-                        fileOperations.TryGetFileSize(f, out var fileSize) ? fileSize : 0
-                    );
-
-                    var requiredSpace = (long)(totalSize * 1.2);
-                    var available = systemStorage.GetAvailableFreeSpace(destinationDrive);
-                    if (available >= 0 && available < requiredSpace)
-                    {
-                        warnings.Add(
-                            new LocalizableMessage(
-                                MessageCode.LowDiskSpaceFormat,
-                                ByteSizeFormatter.Format(available),
-                                ByteSizeFormatter.Format(requiredSpace)
-                            )
-                        );
-                    }
-                }
-            }
-
-            var existingFileCount = 0;
-
-            if (fileOperations.DirectoryExists(destinationPath))
-            {
-                var existingFiles = await fileOperations.GetFilesAsync(
-                    destinationPath,
-                    "*",
-                    cancellationToken
-                );
-                existingFileCount = existingFiles.Length;
-            }
-
-            if (
-                existingFileCount > 0
-                && request.Operation is BackupOperation.Create or BackupOperation.Restore
-            )
-            {
-                warnings.Add(
-                    new LocalizableMessage(
-                        MessageCode.DestinationExistingFilesFormat,
-                        existingFileCount.ToString("N0")
-                    )
-                );
-            }
-
-            if (request.Operation == BackupOperation.Create)
-            {
-                var strength = passwordService.AnalyzePasswordStrength(request.Password);
-                if (strength.Score < 60)
-                {
-                    warnings.Add(new LocalizableMessage(MessageCode.WeakPasswordWarning));
-                }
-            }
+            await CheckFreeSpaceAsync(sourcePath, destinationPath, warnings, cancellationToken);
+            await CheckExistingDestinationFilesAsync(
+                request,
+                destinationPath,
+                warnings,
+                cancellationToken
+            );
+            CheckPasswordStrength(request, warnings);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -315,5 +137,304 @@ internal sealed class BackupRequestValidator(
         }
 
         return warnings;
+    }
+
+    /// <summary>
+    /// Reports the blocking problems of the source path: empty, a file rather than a directory,
+    /// missing, unreadable, or holding no files at all.
+    /// </summary>
+    /// <param name="sourcePath">The normalized source path.</param>
+    /// <param name="errors">The list the findings are appended to.</param>
+    /// <param name="cancellationToken">A token to cancel the listing.</param>
+    /// <returns>A task that completes once the source has been inspected.</returns>
+    private async Task ValidateSourcePathAsync(
+        string sourcePath,
+        List<LocalizableMessage> errors,
+        CancellationToken cancellationToken
+    )
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourcePathEmpty));
+            return;
+        }
+
+        if (fileOperations.FileExists(sourcePath))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceMustBeDirectory));
+            return;
+        }
+
+        if (!fileOperations.DirectoryExists(sourcePath))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourcePathNotExistFormat, sourcePath));
+            return;
+        }
+
+        try
+        {
+            var files = await fileOperations.GetFilesAsync(sourcePath, "*", cancellationToken);
+            if (files.Length is 0)
+            {
+                errors.Add(new LocalizableMessage(MessageCode.SourceDirectoryEmpty));
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceAccessDenied));
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceAccessErrorFormat, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Reports an empty destination path, or a destination whose drive cannot be reached.
+    /// </summary>
+    /// <remarks>
+    /// A root that cannot be determined at all is not an error on its own; only a known root that
+    /// reports itself as not ready is.
+    /// </remarks>
+    /// <param name="destinationPath">The normalized destination path.</param>
+    /// <param name="errors">The list the findings are appended to.</param>
+    private void ValidateDestinationDrive(string destinationPath, List<LocalizableMessage> errors)
+    {
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.DestinationPathEmpty));
+            return;
+        }
+
+        try
+        {
+            var drive = systemStorage.GetPathRoot(destinationPath);
+
+            if (!string.IsNullOrEmpty(drive) && !systemStorage.IsDriveReady(drive))
+            {
+                errors.Add(
+                    new LocalizableMessage(MessageCode.DestinationDriveNotAccessibleFormat, drive)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.DestinationInvalidFormat, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Reports a missing password, one outside the accepted length range, or one padded with spaces
+    /// a user cannot see.
+    /// </summary>
+    /// <param name="request">The backup request carrying the password.</param>
+    /// <param name="errors">The list the findings are appended to.</param>
+    private static void ValidatePassword(BackupRequest request, List<LocalizableMessage> errors)
+    {
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.PasswordRequired));
+            return;
+        }
+
+        if (request.Password.Length < PasswordConstants.MinLength)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.PasswordTooShort));
+        }
+
+        if (request.Password.Length > PasswordConstants.MaxLength)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.PasswordTooLong));
+        }
+
+        if (request.Password.Trim() != request.Password)
+        {
+            errors.Add(new LocalizableMessage(MessageCode.PasswordLeadingTrailingSpaces));
+        }
+    }
+
+    /// <summary>
+    /// Reports a missing or mismatched confirmation password, which only a create has to supply.
+    /// </summary>
+    /// <param name="request">The backup request carrying both password fields.</param>
+    /// <param name="errors">The list the findings are appended to.</param>
+    private static void ValidateConfirmPassword(
+        BackupRequest request,
+        List<LocalizableMessage> errors
+    )
+    {
+        if (request.Operation is not BackupOperation.Create)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.ConfirmPasswordRequired));
+        }
+        else if (
+            !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
+        )
+        {
+            errors.Add(new LocalizableMessage(MessageCode.PasswordMismatch));
+        }
+    }
+
+    /// <summary>
+    /// Reports a destination that is the source itself, sits inside it, or contains it.
+    /// </summary>
+    /// <remarks>
+    /// The probe is best-effort and the caller owns its failure handling: an exception raised here
+    /// leaves the errors gathered so far untouched rather than blocking the backup.
+    /// </remarks>
+    /// <param name="sourcePath">The normalized source path.</param>
+    /// <param name="destinationPath">The normalized destination path.</param>
+    /// <param name="errors">The list the findings are appended to.</param>
+    private void ValidatePathOverlap(
+        string sourcePath,
+        string destinationPath,
+        List<LocalizableMessage> errors
+    )
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return;
+        }
+
+        if (!fileOperations.DirectoryExists(sourcePath))
+        {
+            return;
+        }
+
+        if (string.Equals(sourcePath, destinationPath, PathComparer))
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceDestinationSameDirectory));
+        }
+        else if (
+            destinationPath.StartsWith(sourcePath + Path.DirectorySeparatorChar, PathComparer)
+        )
+        {
+            errors.Add(new LocalizableMessage(MessageCode.DestinationInsideSource));
+        }
+        else if (
+            sourcePath.StartsWith(destinationPath + Path.DirectorySeparatorChar, PathComparer)
+        )
+        {
+            errors.Add(new LocalizableMessage(MessageCode.SourceInsideDestination));
+        }
+    }
+
+    /// <summary>
+    /// Warns when the destination drive reports less free space than the source is estimated to need.
+    /// </summary>
+    /// <remarks>
+    /// A file whose size cannot be read counts as zero bytes, and a negative free-space reading means
+    /// the volume cannot be queried at all, so it is left alone rather than treated as full.
+    /// </remarks>
+    /// <param name="sourcePath">The normalized source path.</param>
+    /// <param name="destinationPath">The normalized destination path.</param>
+    /// <param name="warnings">The list the findings are appended to.</param>
+    /// <param name="cancellationToken">A token to cancel the listing.</param>
+    /// <returns>A task that completes once the estimate has been made.</returns>
+    private async Task CheckFreeSpaceAsync(
+        string sourcePath,
+        string destinationPath,
+        List<LocalizableMessage> warnings,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!fileOperations.DirectoryExists(sourcePath))
+        {
+            return;
+        }
+
+        var sourceFiles = await fileOperations.GetFilesAsync(sourcePath, "*", cancellationToken);
+
+        var destinationDrive = systemStorage.GetPathRoot(destinationPath);
+        if (string.IsNullOrEmpty(destinationDrive) || !systemStorage.IsDriveReady(destinationDrive))
+        {
+            return;
+        }
+
+        var totalSize = sourceFiles.Sum(f =>
+            fileOperations.TryGetFileSize(f, out var fileSize) ? fileSize : 0
+        );
+
+        var requiredSpace = (long)(totalSize * 1.2);
+        var available = systemStorage.GetAvailableFreeSpace(destinationDrive);
+        if (available >= 0 && available < requiredSpace)
+        {
+            warnings.Add(
+                new LocalizableMessage(
+                    MessageCode.LowDiskSpaceFormat,
+                    ByteSizeFormatter.Format(available),
+                    ByteSizeFormatter.Format(requiredSpace)
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Warns when a create or a restore is about to write into a destination that already holds files.
+    /// </summary>
+    /// <param name="request">The backup request whose operation decides whether the warning applies.</param>
+    /// <param name="destinationPath">The normalized destination path.</param>
+    /// <param name="warnings">The list the findings are appended to.</param>
+    /// <param name="cancellationToken">A token to cancel the listing.</param>
+    /// <returns>A task that completes once the destination has been listed.</returns>
+    private async Task CheckExistingDestinationFilesAsync(
+        BackupRequest request,
+        string destinationPath,
+        List<LocalizableMessage> warnings,
+        CancellationToken cancellationToken
+    )
+    {
+        var existingFileCount = 0;
+
+        if (fileOperations.DirectoryExists(destinationPath))
+        {
+            var existingFiles = await fileOperations.GetFilesAsync(
+                destinationPath,
+                "*",
+                cancellationToken
+            );
+            existingFileCount = existingFiles.Length;
+        }
+
+        if (
+            existingFileCount > 0
+            && request.Operation is BackupOperation.Create or BackupOperation.Restore
+        )
+        {
+            warnings.Add(
+                new LocalizableMessage(
+                    MessageCode.DestinationExistingFilesFormat,
+                    existingFileCount.ToString("N0")
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Warns when a create is about to protect an archive with a weak password.
+    /// </summary>
+    /// <remarks>
+    /// Only a create is checked: every other operation is opening an archive whose password was
+    /// already chosen, so warning about it would be advice the user can no longer act on.
+    /// </remarks>
+    /// <param name="request">The backup request carrying the password.</param>
+    /// <param name="warnings">The list the findings are appended to.</param>
+    private void CheckPasswordStrength(BackupRequest request, List<LocalizableMessage> warnings)
+    {
+        if (request.Operation is not BackupOperation.Create)
+        {
+            return;
+        }
+
+        var strength = passwordService.AnalyzePasswordStrength(request.Password);
+        if (strength.Score < 60)
+        {
+            warnings.Add(new LocalizableMessage(MessageCode.WeakPasswordWarning));
+        }
     }
 }

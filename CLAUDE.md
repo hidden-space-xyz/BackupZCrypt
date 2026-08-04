@@ -120,6 +120,14 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
 `BackupZCrypt.Domain/Constants/EncryptionConstants.cs` (256-bit keys, 32-byte salt, 12-byte nonce,
 128-bit tag).
 
+`ChunkedBackupService` is one `internal sealed partial class` spread over four files, split purely to
+get under S104's 1200-line limit — the seams are organizational, not architectural, and no behavior
+moved with them: `ChunkedBackupService.cs` (create/update entry points and orchestration),
+`.Keys.cs` (salt generation and the HKDF sub-key derivation, `DerivedKeySet`/`ChunkCipherSet`),
+`.Chunks.cs` (chunking, per-chunk compress-then-encrypt, content-addressed store), and `.Restore.cs`
+(restore and verify). A method belongs in the file matching its role; adding a fifth file is fine,
+but do not let a partial split stand in for the extract-class redesign S1200 actually asks for.
+
 - **Key hierarchy.** `password + 32-byte random salt` → 256-bit master key via the chosen KDF
   (Argon2id / Scrypt / PBKDF2). `HKDF.Expand(SHA-256)` then derives four purpose-bound sub-keys from
   the master with the context labels `chunk-encryption`, `chunk-nonce`, `chunk-naming`,
@@ -141,7 +149,7 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
 - **Hardening already in place** — preserve it: key material is wiped with
   `CryptographicOperations.ZeroMemory`, hashes/salts compared with
   `CryptographicOperations.FixedTimeEquals`, manifest paths validated by
-  `ValidateRelativeManifestPath` and restore paths confined by `ResolveSafeDestinationPath`
+  `ManifestPathPolicy.ValidateRelative` and restore paths confined by `ManifestPathPolicy.ResolveSafeDestination`
   (no traversal / no escaping the destination), and decompression is bounded to the manifest's
   declared size. Restore and verify re-check each file's total size and SHA-256 against the manifest.
 
@@ -175,6 +183,85 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
   Repo-local deviations go in the `.editorconfig` sections **after** line 176, never inside the shared
   range — and prefer fixing the code over adding a suppression. **None of the four files carries
   comments**: the rationale for a rule or a suppression belongs in this document, not inline.
+- **Rules scoped off, and why.** Each of these was triaged as unsatisfiable in code, not merely noisy;
+  the rest of the analyzer set was fixed rather than suppressed. Do not re-enable one without
+  addressing the reason. In the repo-local `[*.cs]` section:
+  - `MA0181` (explicit casts) ships **disabled** upstream precisely because casts are sometimes
+    necessary, and is live here only through `MeziantouAnalysisMode=all-warnings`. Every site is a
+    value conversion (`(int)duration.TotalSeconds`, `(double)ProcessedFiles / TotalFiles`), an
+    `enum`↔`byte` conversion that **is** the pinned preamble encoding (`ManifestService`, plus the
+    golden vectors in `OnDiskFormatTests` and `ChunkedBackupSecurityTests`), `(byte[])Key.Clone()`, a
+    target-typed collection expression, or `(Control)Activator.CreateInstance(type)!` in `ViewLocator`.
+    The suggested `as` / `is` replacements do not apply to numeric or enum conversions, and at the
+    reference sites would trade a hard failure for a silent `null`.
+  - `MA0182` (type never used) is a false positive manufactured by the mandated architecture: 24 of the
+    33 sites are `internal sealed` implementations whose only use site is `DependencyInjection.cs` in
+    another assembly via `InternalsVisibleTo`, and the other 9 are Desktop types Roslyn cannot see
+    referenced — the `x:Class` code-behind classes, `ViewLocator` (instantiated from `App.axaml`, and
+    itself resolving views by `Type.GetType`), and `PasswordConverters` bound from markup. Acting on it
+    deletes working code and breaks the app.
+  - `MA0109` (consider a `Span`/`Memory` overload) is advisory, and every site is a `byte[]` contract at
+    a layer boundary: `IEncryptionAlgorithmStrategy`, `IKeyDerivationAlgorithmStrategy`,
+    `IManifestService`, `IFileOperationsService`, `ManifestPreamble`. Satisfying it widens the public
+    Domain and Application surface and adds overloads to five cipher and three KDF strategies — an API
+    design change on the crypto path whose `byte[]` shape the `CryptographicOperations.ZeroMemory`
+    wiping and the pinned format code are built around.
+  - `MA0173` (`LazyInitializer.EnsureInitialized`) pattern-matches the CAS shape without seeing intent.
+    All four sites (`ChunkedBackupService` L204, L485, L686, L707) are one idiom —
+    `Interlocked.CompareExchange(ref fatalError, …, null)` followed by `linkedCts.CancelAsync()` — a
+    first-writer-wins fatal-error latch shared across `Parallel.ForEachAsync` workers, not lazy
+    initialization: the return value is deliberately discarded and the message is built eagerly from the
+    caught exception. The rewrite would allocate a closure per fault, add an unsynchronized fast-path
+    read, and rename the latch after an API that means something else.
+  - `MA0155` (`async void`) has one occurrence, `OperationStatusView.axaml.cs` L87, whose signature is
+    fixed by the Avalonia `PropertyChanged` delegate — an event handler cannot return `Task`. Its
+    `<remarks>` already records why the fault is swallowed: escaping it would be rethrown on the
+    dispatcher and kill the process mid-backup. Fire-and-forget trades it for an unobserved exception
+    plus `MA0042`/`CA2012`, and moving dialog ownership into the ViewModel is a redesign.
+  - `MA0104` fires on `Domain/Enums/CompressionMode.cs` colliding **by name only** with
+    `System.IO.Compression.CompressionMode`, which no file in the solution imports, so there is no
+    ambiguity to resolve. The rename reaches 131 references across 39 files — the public Domain API, the
+    encrypted manifest payload types, the persisted `BackupCreationSettings` JSON, the Desktop options
+    and ViewModels, and 20 test files including `OnDiskFormatFixtures` — and degrades the domain
+    vocabulary, since `CompressionMode` is exactly the right name for "which Zstd level, or none".
+  - `MA0175`/`MA0174` and `MA0157`/`MA0156` are **mutually exclusive pairs**. Each pair ships disabled
+    upstream and both halves go live together under `MeziantouAnalysisMode=all-warnings`, so no source
+    text satisfies both and exactly one of each must be scoped off — silencing a rule here buys the
+    other one's enforcement, it does not lose coverage. `MA0174` wants `record class`, `MA0175` wants
+    bare `record`: `MA0175` is off, so the 25 record declarations carry the explicit `class` keyword,
+    matching the `.editorconfig`'s explicit-accessibility house style. `MA0156` wants the `Async`
+    suffix on an `IAsyncEnumerable<T>`-returning method, `MA0157` forbids it: `MA0157` is off, so
+    `IChunkingStrategy.ChunkAsync` and `FastCdcChunkingStrategy.ChunkCoreAsync` keep the suffix every
+    other asynchronous member in the solution uses. Flipping either choice is a mechanical rename plus
+    swapping which id is `none`; do not change one without the other.
+  - `S1200` (class coupling ≤ 30) targets the two classes that are high-coupling **by mandate**:
+    `DependencyInjection`, the composition root whose job is to name all 41 concrete types, and
+    `ChunkedBackupService`, whose 73 dependencies are dominated by the BCL primitives a file-format
+    engine cannot avoid (`byte[]`, `Stream`, `SHA256`, `HMACSHA256`, `IncrementalHash`, `ArrayPool`,
+    `Concurrent*`, seven exception types) plus the manifest value objects. Note that S1200 counts per
+    partial **declaration**, not per class symbol — splitting either type across partial files silences
+    it without removing one dependency, which is exactly why that must not be the remedy; getting under
+    30 needs a real extract-class redesign of the pinned-format crypto path. `ChunkedBackupService` is
+    now four partial files (see below), so this rule would fall silent on its own — the explicit `none`
+    is what keeps that from reading as a fixed coupling problem.
+  - `IDE0051` fires on `BackupRequest.PrintMembers`, which is not dead code but the record's
+    compiler-recognized hook, hand-written so the generated `ToString()` prints
+    `Password = ***, ConfirmPassword = ***`. It is invoked only from generated code the rule does not
+    analyse; deleting it puts the user's password into every log line, exception message, and debugger
+    watch that formats a request, and the only alternative is unsealing a Domain value object so the
+    hook becomes `protected virtual`. Re-scope this one to `BackupRequest.cs` if genuine unused private
+    members elsewhere need to warn again.
+
+  In the `[BackupZCrypt.Test/**/*.cs]` section:
+  - `MA0191` fires on the three argument-validation tests that pass `null!` to a non-nullable parameter
+    to assert the guard fires (`BackupBenchmarkServiceTests` L118, `FastCdcChunkingTests` L305,
+    `KeyDerivationStrategyTests` L83). The `!` is not optional — dropping it just trades `MA0191` for
+    `CS8625`, which is also on.
+  - `CA5394` (insecure randomness) has no site in the five src projects; all five are `new Random(seed)`
+    in private test-data helpers whose whole purpose is a reproducible byte sequence, which the pinned
+    FastCDC cut-point vectors and the compression-ratio assertions depend on. `RandomNumberGenerator`
+    cannot be seeded, and every real key, salt, and nonce already comes from `RandomNumberGenerator.Fill`
+    in Infrastructure. Scoped to the test section so a `new Random` in src still warns.
 - **Warnings print on every build.** MSBuild normally skips `CoreCompile` when a project is up to date,
   so the analyzers never run and a warm `dotnet build` reports `0 Warning(s)` with live violations
   present — which also made the old `-warnaserror` CI gate produce false greens over a warm `obj/`.

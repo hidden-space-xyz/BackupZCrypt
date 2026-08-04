@@ -13,7 +13,7 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// compared in constant time after decryption to detect tampering.
 /// </param>
 /// <param name="Files">The serialized file entries contained in the backup.</param>
-internal sealed record ChunkManifestDocument(
+internal sealed record class ChunkManifestDocument(
     EncryptionAlgorithm EncryptionAlgorithm,
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     CompressionMode Compression,

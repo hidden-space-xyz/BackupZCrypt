@@ -13,7 +13,7 @@ public interface ISettings<TSelf>
     /// <summary>
     /// Gets the default instance used when no persisted settings exist or the stored file is corrupted.
     /// </summary>
-    public abstract static TSelf DefaultValue { get; }
+    public static abstract TSelf DefaultValue { get; }
 
     /// <summary>
     /// Gets the file name (without directory) under which this settings type is stored.
@@ -25,5 +25,5 @@ public interface ISettings<TSelf>
             + "precisely what gives every settings type its own file name. S2743 targets shared mutable "
             + "static state in generic classes, which this is not."
     )]
-    public abstract static string FileName { get; }
+    public static abstract string FileName { get; }
 }

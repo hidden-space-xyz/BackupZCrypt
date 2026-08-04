@@ -9,4 +9,4 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// </param>
 /// <param name="Size">The plaintext length of the chunk in bytes.</param>
 /// <param name="Nonce">The Base64-encoded nonce used to encrypt the chunk.</param>
-public sealed record ChunkManifestChunkRef(string Hash, int Size, string Nonce);
+public sealed record class ChunkManifestChunkRef(string Hash, int Size, string Nonce);

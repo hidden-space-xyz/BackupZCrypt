@@ -72,8 +72,10 @@ public sealed class BackupOrchestratorTests
     /// Creates an orchestrator wired to the substituted validator, file system, and backup service.
     /// </summary>
     /// <returns>The system under test.</returns>
-    private BackupOrchestrator CreateSut() =>
-        new(this.validator, this.fileOperations, this.chunkedBackupService);
+    private BackupOrchestrator CreateSut()
+    {
+        return new(this.validator, this.fileOperations, this.chunkedBackupService);
+    }
 
     /// <summary>
     /// Builds a request whose fields are individually valid so a test only varies what it exercises.
@@ -90,8 +92,9 @@ public sealed class BackupOrchestratorTests
         string? source = null,
         string? destination = null,
         string password = "Correct-Horse-Battery-Staple-42"
-    ) =>
-        new(
+    )
+    {
+        return new(
             source ?? SourceDir,
             destination ?? DestinationDir,
             password,
@@ -102,6 +105,7 @@ public sealed class BackupOrchestratorTests
             CompressionMode.None,
             proceedOnWarnings
         );
+    }
 
     /// <summary>
     /// Appends a redundant <c>.</c> segment so the raw path differs from its normalized form, letting
@@ -109,38 +113,49 @@ public sealed class BackupOrchestratorTests
     /// </summary>
     /// <param name="path">The already-normalized path to perturb.</param>
     /// <returns>A path that normalizes back to <paramref name="path"/>.</returns>
-    private static string Unnormalized(string path) => path + Path.DirectorySeparatorChar + ".";
+    private static string Unnormalized(string path)
+    {
+        return path + Path.DirectorySeparatorChar + ".";
+    }
 
     /// <summary>
     /// Builds a path the running platform cannot resolve to an absolute form: one longer than
     /// Windows can address, and one carrying an embedded null character everywhere else.
     /// </summary>
     /// <returns>A raw path that fails normalization.</returns>
-    private static string UnnormalizablePath() =>
-        OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+    private static string UnnormalizablePath()
+    {
+        return OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+    }
 
     /// <summary>
     /// Projects messages down to their codes so assertions ignore format arguments.
     /// </summary>
     /// <param name="messages">The errors or warnings to project.</param>
     /// <returns>The code of each message, in the order reported.</returns>
-    private static IReadOnlyList<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages) =>
-        messages.Select(m => m.Code).ToList();
+    private static List<MessageCode> Codes(IReadOnlyList<LocalizableMessage> messages)
+    {
+        return [.. messages.Select(m => m.Code)];
+    }
 
     /// <summary>
     /// Builds the successful outcome the substituted backup service reports.
     /// </summary>
     /// <returns>A successful result carrying a successful <see cref="BackupResult"/>.</returns>
-    private static Result<BackupResult> SuccessResult() =>
-        Result<BackupResult>.Success(new BackupResult(true, TimeSpan.Zero, 0, 0, 0));
+    private static Result<BackupResult> SuccessResult()
+    {
+        return Result<BackupResult>.Success(new BackupResult(true, TimeSpan.Zero, 0, 0, 0));
+    }
 
     /// <summary>
     /// Builds the validator's return shape from bare codes, since these tests only assert on codes.
     /// </summary>
     /// <param name="codes">The codes the substituted validator should report.</param>
     /// <returns>One message per code, in the order given.</returns>
-    private static IReadOnlyList<LocalizableMessage> Messages(params MessageCode[] codes) =>
-        codes.Select(code => new LocalizableMessage(code)).ToList();
+    private static List<LocalizableMessage> Messages(params MessageCode[] codes)
+    {
+        return [.. codes.Select(code => new LocalizableMessage(code))];
+    }
 
     /// <summary>
     /// Makes the substituted validator report neither errors nor warnings.
@@ -207,7 +222,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.Value.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Value.Errors),
-                Is.EqualTo(new[] { MessageCode.PasswordTooShort })
+                Is.EqualTo([MessageCode.PasswordTooShort])
             );
             Assert.That(result.Value.Warnings, Is.Empty);
         }
@@ -316,11 +331,11 @@ public sealed class BackupOrchestratorTests
 
         Assert.That(result.Value.IsSuccess, Is.True);
 
-        await this.chunkedBackupService.Received(operation == BackupOperation.Create ? 1 : 0)
+        await this.chunkedBackupService.Received(operation is BackupOperation.Create ? 1 : 0)
             .CreateAsync(SourceDir, DestinationDir, request, this.progress, cancellation.Token);
-        await this.chunkedBackupService.Received(operation == BackupOperation.Update ? 1 : 0)
+        await this.chunkedBackupService.Received(operation is BackupOperation.Update ? 1 : 0)
             .UpdateAsync(SourceDir, DestinationDir, request, this.progress, cancellation.Token);
-        await this.chunkedBackupService.Received(operation == BackupOperation.Restore ? 1 : 0)
+        await this.chunkedBackupService.Received(operation is BackupOperation.Restore ? 1 : 0)
             .RestoreAsync(SourceDir, DestinationDir, request, this.progress, cancellation.Token);
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
@@ -349,7 +364,7 @@ public sealed class BackupOrchestratorTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.False);
-            Assert.That(Codes(result.Errors), Is.EqualTo(new[] { expectedCode }));
+            Assert.That(Codes(result.Errors), Is.EqualTo([expectedCode]));
         }
 
         await this.fileOperations.DidNotReceive()
@@ -374,7 +389,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { MessageCode.BackupDestinationMustExist })
+                Is.EqualTo([MessageCode.BackupDestinationMustExist])
             );
         }
 
@@ -413,7 +428,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { MessageCode.UnexpectedErrorFormat })
+                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
             );
             Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "boom" }));
         }
@@ -435,7 +450,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { MessageCode.UnexpectedErrorFormat })
+                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
             );
         }
 
@@ -545,7 +560,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.Value.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Value.Errors),
-                Is.EqualTo(new[] { MessageCode.PasswordRequired })
+                Is.EqualTo([MessageCode.PasswordRequired])
             );
         }
 
@@ -576,7 +591,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.Value.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Value.Errors),
-                Is.EqualTo(new[] { MessageCode.InvalidPathFormat }),
+                Is.EqualTo([MessageCode.InvalidPathFormat]),
                 "verify skips the request validator entirely, so this check is the only thing standing between "
                     + "an unresolvable path and a raw exception from the file-system probe below it"
             );
@@ -610,7 +625,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { expectedCode }),
+                Is.EqualTo([expectedCode]),
                 "a backup is a directory of chunks, so pointing verify at a single file is a different user "
                     + "mistake from pointing it at nothing, and telling the two apart is the whole message"
             );
@@ -646,7 +661,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { MessageCode.UnexpectedErrorFormat })
+                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
             );
             Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "verify boom" }));
         }
@@ -673,7 +688,7 @@ public sealed class BackupOrchestratorTests
             Assert.That(result.IsSuccess, Is.False);
             Assert.That(
                 Codes(result.Errors),
-                Is.EqualTo(new[] { MessageCode.SourcePathNotExist }),
+                Is.EqualTo([MessageCode.SourcePathNotExist]),
                 "normalization failing must not swap the path for something else: the raw value is probed, "
                     + "found missing, and reported, because silently substituting a resolvable path would point "
                     + "a destructive create at a directory the user never named"

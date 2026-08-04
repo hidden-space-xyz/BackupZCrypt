@@ -78,7 +78,7 @@ internal sealed class ManifestService(
                 .ReadAsync(firstByte.AsMemory(0, 1), cancellationToken)
                 .ConfigureAwait(false);
 
-            return read == 0 ? ManifestKind.Missing : ManifestKind.Encrypted;
+            return read is 0 ? ManifestKind.Missing : ManifestKind.Encrypted;
         }
         catch (OperationCanceledException)
         {
@@ -162,10 +162,13 @@ internal sealed class ManifestService(
             if (
                 preamble.MasterSalt.Length != EncryptionConstants.SaltSize
                 || preamble.Nonce.Length != EncryptionConstants.NonceSize
-                || preamble.EncryptedPayload.Length == 0
-                || !Enum.IsDefined(preamble.Algorithm)
-                || !Enum.IsDefined(preamble.KeyDerivation)
+                || preamble.EncryptedPayload.Length is 0
             )
+            {
+                return null;
+            }
+
+            if (!Enum.IsDefined(preamble.Algorithm) || !Enum.IsDefined(preamble.KeyDerivation))
             {
                 return null;
             }
@@ -186,17 +189,22 @@ internal sealed class ManifestService(
 
             var document = JsonSerializer.Deserialize<ChunkManifestDocument>(plaintext);
 
-            return document is null
-                || document.EncryptionAlgorithm != preamble.Algorithm
-                || document.KeyDerivationAlgorithm != preamble.KeyDerivation
-                || !TryDecodeBase64(
+            if (document is null)
+            {
+                return null;
+            }
+
+            var documentMatchesPreamble =
+                document.EncryptionAlgorithm == preamble.Algorithm
+                && document.KeyDerivationAlgorithm == preamble.KeyDerivation
+                && TryDecodeBase64(
                     document.MasterSalt,
                     EncryptionConstants.SaltSize,
                     out documentMasterSalt
                 )
-                || !CryptographicOperations.FixedTimeEquals(documentMasterSalt, preamble.MasterSalt)
-                ? null
-                : ToChunkManifestData(document);
+                && CryptographicOperations.FixedTimeEquals(documentMasterSalt, preamble.MasterSalt);
+
+            return documentMatchesPreamble ? ToChunkManifestData(document) : null;
         }
         catch
         {
@@ -280,15 +288,16 @@ internal sealed class ManifestService(
                 manifestData.Header.KeyDerivationAlgorithm,
                 manifestData.Header.Compression,
                 manifestData.MasterSalt,
-                manifestData
-                    .Files.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)
-                    .Select(static f => new ChunkManifestFileEntrySerialized(
-                        f.OriginalPath,
-                        f.FileHash,
-                        f.TotalSize,
-                        [.. f.Chunks]
-                    ))
-                    .ToList()
+                [
+                    .. manifestData
+                        .Files.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)
+                        .Select(static f => new ChunkManifestFileEntrySerialized(
+                            f.OriginalPath,
+                            f.FileHash,
+                            f.TotalSize,
+                            [.. f.Chunks]
+                        )),
+                ]
             );
 
             manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
@@ -427,7 +436,7 @@ internal sealed class ManifestService(
     /// </returns>
     private static bool TryDecodeBase64(string value, int expectedLength, out byte[] decoded)
     {
-        decoded = Array.Empty<byte>();
+        decoded = [];
 
         if (string.IsNullOrWhiteSpace(value))
         {

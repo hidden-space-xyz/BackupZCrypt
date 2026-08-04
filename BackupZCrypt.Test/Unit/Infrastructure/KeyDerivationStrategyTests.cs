@@ -46,12 +46,15 @@ public sealed class KeyDerivationStrategyTests
     /// same contract.
     /// </summary>
     /// <returns>One strategy instance per supported key-derivation algorithm.</returns>
-    private static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs() =>
+    private static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs()
+    {
+        return
         [
             new Argon2IdKeyDerivationStrategy(),
             new Pbkdf2KeyDerivationStrategy(),
             new ScryptKeyDerivationStrategy(),
         ];
+    }
 
     [TestCaseSource(nameof(Kdfs))]
     public void DeriveKey_DeterministicCorrectLength_AndSensitiveToSaltAndPassword(

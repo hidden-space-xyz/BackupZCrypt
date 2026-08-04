@@ -90,7 +90,7 @@ internal sealed class BackupBenchmarkService(
 
         var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
         var compressionStrategy =
-            request.Compression == CompressionMode.None
+            request.Compression is CompressionMode.None
                 ? null
                 : compressionServiceFactory.Create(request.Compression);
         var keyDerivationStrategy = keyDerivationServiceFactory.Create(

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace BackupZCrypt.Application.Utilities.Formatters;
 
 /// <summary>
@@ -34,6 +36,6 @@ public static class ByteSizeFormatter
             suffixIndex++;
         }
 
-        return $"{size:F1} {Suffixes[suffixIndex]}";
+        return string.Create(CultureInfo.CurrentCulture, $"{size:F1} {Suffixes[suffixIndex]}");
     }
 }

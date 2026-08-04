@@ -42,11 +42,13 @@ public sealed class AlgorithmMetadataProviderTests
         var noneDescription = Strings.NoneCompressionDescription;
 
         var unlabeled = Enum.GetValues<CompressionMode>()
-            .Where(static mode => mode != CompressionMode.None)
             .Where(mode =>
-                string.Equals(AlgorithmMetadataProvider.GetName(mode), noneName, StringComparison.Ordinal)
-                || string.Equals(AlgorithmMetadataProvider.GetSummary(mode), noneDescription, StringComparison.Ordinal)
-                || string.Equals(AlgorithmMetadataProvider.GetDescription(mode), noneDescription, StringComparison.Ordinal)
+                mode is not CompressionMode.None
+                && (
+                    string.Equals(AlgorithmMetadataProvider.GetName(mode), noneName, StringComparison.Ordinal)
+                    || string.Equals(AlgorithmMetadataProvider.GetSummary(mode), noneDescription, StringComparison.Ordinal)
+                    || string.Equals(AlgorithmMetadataProvider.GetDescription(mode), noneDescription, StringComparison.Ordinal)
+                )
             )
             .Select(static mode => mode.ToString())
             .ToList();

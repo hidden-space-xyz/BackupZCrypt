@@ -485,13 +485,13 @@ internal abstract partial class OperationViewModelBase(
 
         var operation = result.Value;
 
-        if (operation.HasErrors && operation.TotalFiles == 0 && operation.ProcessedFiles == 0)
+        if (operation.HasErrors && operation.TotalFiles is 0 && operation.ProcessedFiles is 0)
         {
             ShowFailure(operation.Errors);
             return;
         }
 
-        if (operation.HasWarnings && !proceedOnWarnings && operation.ProcessedFiles == 0)
+        if (operation.HasWarnings && !proceedOnWarnings && operation.ProcessedFiles is 0)
         {
             foreach (var warning in operation.Warnings)
             {

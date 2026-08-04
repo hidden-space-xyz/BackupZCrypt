@@ -49,10 +49,10 @@ public sealed class UpdateBackupTests
             Assert.That(ChunkFiles(destination.Path), Has.Length.EqualTo(3));
         }
 
-        const string modifiedContent = "MODIFIED content that is clearly different from the original";
-        _ = source.WriteText("changing.txt", modifiedContent);
-        const string addedContent = "freshly added file";
-        _ = source.WriteText(Path.Combine("dir", "added.txt"), addedContent);
+        const string ModifiedContent = "MODIFIED content that is clearly different from the original";
+        _ = source.WriteText("changing.txt", ModifiedContent);
+        const string AddedContent = "freshly added file";
+        _ = source.WriteText(Path.Combine("dir", "added.txt"), AddedContent);
 
         var updateResult = await orchestrator.ExecuteAsync(
             NewRequest(source.Path, destination.Path, BackupOperation.Update),
@@ -101,7 +101,7 @@ public sealed class UpdateBackupTests
             );
             Assert.That(
                 await File.ReadAllTextAsync(Path.Combine(restored.Path, "changing.txt")),
-                Is.EqualTo(modifiedContent)
+                Is.EqualTo(ModifiedContent)
             );
             Assert.That(
                 await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "keep.txt")),
@@ -109,7 +109,7 @@ public sealed class UpdateBackupTests
             );
             Assert.That(
                 await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "added.txt")),
-                Is.EqualTo(addedContent)
+                Is.EqualTo(AddedContent)
             );
         }
     }
@@ -158,7 +158,7 @@ public sealed class UpdateBackupTests
 
             Assert.That(
                 updateResult.Value.TotalFiles,
-                Is.EqualTo(0),
+                Is.Zero,
                 "The only surviving file is unchanged, so nothing at all has to be re-chunked."
             );
 

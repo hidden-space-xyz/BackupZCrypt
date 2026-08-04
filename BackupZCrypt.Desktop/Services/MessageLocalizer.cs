@@ -25,7 +25,7 @@ internal static class MessageLocalizer
     {
         var format = Strings.GetByKey(message.Code.ToString());
 
-        return message.Args.Count == 0
+        return message.Args.Count is 0
             ? format
             : string.Format(CultureInfo.CurrentUICulture, format, [.. message.Args]);
     }

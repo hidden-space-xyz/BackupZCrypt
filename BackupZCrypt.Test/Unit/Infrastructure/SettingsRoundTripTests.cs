@@ -47,7 +47,9 @@ public sealed class SettingsRoundTripTests
     /// the default value with it.
     /// </summary>
     /// <returns>Recent path settings with exactly one member populated.</returns>
-    private static IEnumerable<TestCaseData> PartiallyPopulatedRecentPaths() =>
+    private static IEnumerable<TestCaseData> PartiallyPopulatedRecentPaths()
+    {
+        return
         [
             new TestCaseData(new RecentPathSettings(SourcePath, null)).SetName(
                 "SaveThenGetOrCreate_RecentPathsWithUnsetDestination_PreservesNullAndTheSetMember"
@@ -56,6 +58,7 @@ public sealed class SettingsRoundTripTests
                 "SaveThenGetOrCreate_RecentPathsWithUnsetSource_PreservesNullAndTheSetMember"
             ),
         ];
+    }
 
     [Test]
     public void GetFilePath_EverySettingsType_ResolvesToADistinctFileInsideTheBaseDirectory()

@@ -376,17 +376,11 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
                         )
                         .ConfigureAwait(false);
 
-                    if (bytesRead == 0)
-                    {
-                        eof = true;
-                    }
-                    else
-                    {
-                        bufferedLength += bytesRead;
-                    }
+                    eof = bytesRead is 0;
+                    bufferedLength += bytesRead;
                 }
 
-                if (bufferedLength == 0)
+                if (bufferedLength is 0)
                 {
                     yield break;
                 }

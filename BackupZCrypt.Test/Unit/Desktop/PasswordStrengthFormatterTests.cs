@@ -138,7 +138,7 @@ public sealed class PasswordStrengthFormatterTests
         string caption;
         try
         {
-            CultureInfo.CurrentCulture = commaCulture!;
+            CultureInfo.CurrentCulture = commaCulture;
             caption = PasswordStrengthFormatter.Format(
                 new PasswordStrengthAnalysis(PasswordStrength.Good, 70, 72.53, [])
             );
@@ -175,7 +175,9 @@ public sealed class PasswordStrengthFormatterTests
         try
         {
             var candidate = CultureInfo.GetCultureInfo("es-ES");
-            return candidate.NumberFormat.NumberDecimalSeparator == "," ? candidate : null;
+            return string.Equals(candidate.NumberFormat.NumberDecimalSeparator, ",", StringComparison.Ordinal)
+                ? candidate
+                : null;
         }
         catch (CultureNotFoundException)
         {

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace BackupZCrypt.Application.Utilities.Formatters;
 
 /// <summary>
@@ -19,26 +21,28 @@ public static class DurationFormatter
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(duration, TimeSpan.Zero);
 
-        if (duration.TotalSeconds < 1)
+        return duration switch
         {
-            return $"{duration.TotalSeconds:0.0} s";
-        }
-
-        if (duration.TotalMinutes < 1)
-        {
-            return $"{(int)duration.TotalSeconds} s";
-        }
-
-        if (duration.TotalHours < 1)
-        {
-            return $"{(int)duration.TotalMinutes} min {duration.Seconds} s";
-        }
-
-        if (duration.TotalDays < 1)
-        {
-            return $"{(int)duration.TotalHours} h {duration.Minutes} min";
-        }
-
-        return $"{(int)duration.TotalDays} d {duration.Hours} h";
+            { TotalSeconds: < 1 } => string.Create(
+                CultureInfo.CurrentCulture,
+                $"{duration.TotalSeconds:0.0} s"
+            ),
+            { TotalMinutes: < 1 } => string.Create(
+                CultureInfo.CurrentCulture,
+                $"{(int)duration.TotalSeconds} s"
+            ),
+            { TotalHours: < 1 } => string.Create(
+                CultureInfo.CurrentCulture,
+                $"{(int)duration.TotalMinutes} min {duration.Seconds} s"
+            ),
+            { TotalDays: < 1 } => string.Create(
+                CultureInfo.CurrentCulture,
+                $"{(int)duration.TotalHours} h {duration.Minutes} min"
+            ),
+            _ => string.Create(
+                CultureInfo.CurrentCulture,
+                $"{(int)duration.TotalDays} d {duration.Hours} h"
+            ),
+        };
     }
 }

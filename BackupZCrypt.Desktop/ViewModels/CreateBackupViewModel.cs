@@ -236,13 +236,13 @@ internal sealed partial class CreateBackupViewModel(
     [RelayCommand]
     private void GeneratePassword()
     {
-        const PasswordGenerationOptions options =
+        const PasswordGenerationOptions Options =
             PasswordGenerationOptions.IncludeUppercase
             | PasswordGenerationOptions.IncludeLowercase
             | PasswordGenerationOptions.IncludeNumbers
             | PasswordGenerationOptions.IncludeSpecialCharacters;
 
-        var generated = passwordService.GeneratePassword(GeneratedPasswordLength, options);
+        var generated = passwordService.GeneratePassword(GeneratedPasswordLength, Options);
 
         Password = generated;
         ConfirmPassword = generated;
