@@ -1,4 +1,5 @@
 <p align="center">
+<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F" />
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
@@ -6,9 +7,10 @@
 <img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge" />
 </p>
 
- # 🔐 BackupZCrypt
+# 🔐 BackupZCrypt
 
-**BackupZCrypt is a chunk-based encrypted backup tool that protects your files with military-grade encryption.**
+**BackupZCrypt splits your files into chunks, deduplicates them, and encrypts every chunk
+individually under a key that only your password can produce.**
 
 ## 📋 What BackupZCrypt Does For You
 
@@ -18,17 +20,19 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **☁️ Secure Cloud Storage** — Safely store encrypted backups on any cloud like Dropbox, Google Drive, or OneDrive
 - **⚡ Efficient Updates** — Only changed chunks are re-encrypted and synced, saving time and bandwidth
 - **🔒 Control Your Privacy** — Keep your data private, even when sharing devices or storage
-- **✅ Peace of Mind** — Industry-standard authenticated encryption means your files stay private and tamper-proof
+- **✅ Peace of Mind** — Authenticated encryption means your files stay private *and* tamper-evident
 
 ## ⭐ Features
 
 - **🧩 Content-Defined Chunking** — Files are split into variable-size chunks using a gear-hash algorithm (FastCDC)
 - **🔄 Multiple Encryption Algorithms** — AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM — all in authenticated encryption (AEAD) mode
 - **🔑 Multiple Key Derivation Algorithms** — Argon2id, Scrypt, and PBKDF2
-- **🗜️ Optional Zstandard Compression** — Three compression presets (Fast, Normal, Best) applied per-chunk before encryption.
+- **🗜️ Optional Zstandard Compression** — Three presets (Fast, Normal, Best) applied per chunk before encryption
+- **🎲 Password Generator** — One click produces a 50-character password from a cryptographic random source
 - **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
 - **🛡️ Integrity Verification** — Check that a backup is complete and undamaged without restoring it
 - **⏱️ Backup Time Estimator** — Benchmarks the selected algorithms on your own hardware
+- **🌐 Portable Archives** — A backup written on one operating system restores identically on the other two
 - **🌍 Localized Interface** — Available in English and Spanish
 - **💻 Local Processing Only** — Your files and passwords never leave your computer
 - **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
@@ -40,7 +44,18 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 - **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
 - **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
 - **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without writing any files
-- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language.
+- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
+
+Settings are stored as plain JSON under `%LocalAppData%\BackupZCrypt` on Windows and the equivalent
+local application data directory on Linux and macOS. They hold preferences only — never your password.
+
+## 📸 Screenshots
+
+<p align="center">
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/9ca7d357-7b6b-4ae0-9d9e-e26d221f8185" />
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/f1629057-b395-40cb-a7d8-e76e168e9edc" />
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/e0c659c2-b0cc-4547-96d8-1aa20902472a" />
+</p>
 
 ## ⬇️ Download
 
@@ -49,17 +64,59 @@ Every asset is a self-contained single-file executable — no .NET runtime requi
 
 | Platform | Asset |
 | --- | --- |
-| 🪟 Windows x64 | `BackupZCrypt-<version>-win-x64.zip` |
-| 🐧 Linux x64 | `BackupZCrypt-<version>-linux-x64.tar.gz` |
-| 🍎 macOS Intel | `BackupZCrypt-<version>-osx-x64.tar.gz` |
-| 🍎 macOS Apple Silicon | `BackupZCrypt-<version>-osx-arm64.tar.gz` |
+| 🪟 Windows x64 | `BackupZCrypt-v<version>-win-x64.zip` |
+| 🐧 Linux x64 | `BackupZCrypt-v<version>-linux-x64.tar.gz` |
+| 🍎 macOS Intel | `BackupZCrypt-v<version>-osx-x64.tar.gz` |
+| 🍎 macOS Apple Silicon | `BackupZCrypt-v<version>-osx-arm64.tar.gz` |
 
-On Linux and macOS run `chmod +x BackupZCrypt` after extracting. Every release also publishes a
-`SHA256SUMS.txt` — verify your download before running it:
+On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
+
+Every release also publishes a `SHA256SUMS.txt`. Download it next to the archive and verify before
+running:
 
 ```bash
+# Linux
 sha256sum --check --ignore-missing SHA256SUMS.txt
 ```
+
+```bash
+# macOS
+shasum -a 256 --check --ignore-missing SHA256SUMS.txt
+```
+
+```powershell
+# Windows — compare the printed hash with the matching line in SHA256SUMS.txt
+Get-FileHash .\BackupZCrypt-v<version>-win-x64.zip -Algorithm SHA256
+```
+
+## 🔒 Security
+
+### How your data is protected
+
+| Layer | What BackupZCrypt does |
+| --- | --- |
+| **Key derivation** | Your password and a 32-byte random salt produce a 256-bit master key through Argon2id (256 MiB, 4 passes), Scrypt (N = 2¹⁸, r = 8, p = 1) or PBKDF2-SHA256 (800,000 iterations) |
+| **Key separation** | HKDF-SHA256 splits that master key into four purpose-bound sub-keys, so the key that names a chunk cannot decrypt it |
+| **Chunk encryption** | Each chunk is compressed, then sealed with the chosen AEAD cipher under a 96-bit nonce derived from its own content hash, carrying a 128-bit authentication tag |
+| **File names** | Chunks are stored under `HMAC-SHA256(naming key, content hash)`, so the names in your backup folder reveal nothing about their contents |
+| **Manifest** | The file list is a separately encrypted, authenticated document. Only its 34-byte header — cipher, key derivation function and salt — is readable, and that header is bound into the ciphertext so it cannot be swapped |
+| **Restore** | Entry paths are validated and confined to the destination, decompression is bounded by the declared size, and every restored file's SHA-256 is re-checked against the manifest |
+
+Key material is wiped from memory after use, and hashes and salts are compared in constant time.
+
+Backups are portable between operating systems: the manifest records paths with `/` separators
+regardless of the platform that wrote it, and restore accepts either separator, so an archive created
+on Windows rebuilds the same directory tree on Linux and macOS.
+
+BackupZCrypt contains no networking code. There is no telemetry, no update check, and no account —
+nothing to opt out of.
+
+### Before you start
+
+- 🔑 Everything rests on your password — use the built-in generator, or a long passphrase kept somewhere safe
+- ⚠️ There is no password recovery and no back door. Lose the password and the backup is unreadable, permanently
+- 🧪 Verify a fresh backup, and restore it once for real. A backup you have never restored is an assumption
+- 🔄 Keep your operating system and BackupZCrypt updated
 
 ## 🛠️ Building from Source
 
@@ -76,6 +133,8 @@ dotnet build BackupZCrypt.sln
 dotnet run --project BackupZCrypt.Desktop
 ```
 
+Building never produces a distributable — the portable packages come only from the release workflow.
+
 ### Running the Tests
 
 ```bash
@@ -84,12 +143,6 @@ dotnet test BackupZCrypt.sln
 
 The suite is designed to run unattended on CI: no test depends on wall-clock timing, throughput, or a
 specific locale, and every temporary file lives in a directory the test owns and deletes.
-
-### Cross-Platform Archives
-
-Backups are portable between operating systems. The manifest records file paths with `/` separators
-regardless of the platform that wrote it, and restore accepts either separator, so an archive created on
-Windows rebuilds the same directory tree on Linux and macOS.
 
 ### Project Structure
 
@@ -102,33 +155,13 @@ Windows rebuilds the same directory tree on Linux and macOS.
 | `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
 | `BackupZCrypt.Test` | NUnit suite: unit, integration, architecture, and on-disk format tests |
 
-## 🚀 Roadmap
-
-BackupZCrypt is constantly evolving. Here's what we're planning for future releases:
-
-- **👥 Community-Driven Development** — We highly value community suggestions and contributions to guide the project's future
-
-## 📸 Screenshots
-
-<p align="center">
-  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/9ca7d357-7b6b-4ae0-9d9e-e26d221f8185" />
-  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/f1629057-b395-40cb-a7d8-e76e168e9edc" />
-  <img width="30%" alt="image" src="https://github.com/user-attachments/assets/e0c659c2-b0cc-4547-96d8-1aa20902472a" />
-</p>
-
-## 🔍 Security Notes
-
-- 🔑 Your security depends on your password strength — use long, complex passwords
-- 🔄 Keep your operating system and BackupZCrypt updated
-- ⚠️ There is no password recovery. If you forget your password, your encrypted files cannot be decrypted
-
 ## 💡 How to Contribute
 
-- We welcome contributions from everyone, regardless of your technical background!
-- Every contribution matters and helps make this project better for everyone!
+We welcome contributions from everyone, regardless of technical background — community suggestions
+are what guide where this project goes next.
 
-#### For Non-Developers
-You can make valuable contributions too:
+### For Non-Developers
+
 - **Report Bugs**: Found something that doesn't work? Let us know by opening an issue.
 - **Suggest Features**: Have ideas for new features or improvements? We'd love to hear them.
 - **Translations**: Help translate the application into your language.
@@ -136,16 +169,29 @@ You can make valuable contributions too:
 - **Spread the Word**: Share the project on social media, blog about it, or tell your friends.
 - **User Testing**: Try new features and provide feedback.
 
-#### For Developers
+### For Developers
 
 1. Fork the repository
 2. Create a feature branch from `develop`
-3. Implement your changes with documentation and tests
-4. Submit a pull request
+3. Implement your changes, with XML documentation and tests
+4. Open a pull request against `develop` — `master` only receives release merges
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). `feat:`,
 `fix:`, `refactor:` and `bump:` are the four prefixes the generated release notes are built from,
 and a `!` marker or a `BREAKING CHANGE:` footer puts a warning banner at the top of them.
+
+Automated checks run on pull requests into `master` only, so run the same three locally before
+opening yours:
+
+```bash
+dotnet build BackupZCrypt.sln
+dotnet test BackupZCrypt.sln
+dotnet format whitespace BackupZCrypt.sln --verify-no-changes
+```
+
+We especially welcome contributions for UI and security improvements.
+
+### For Maintainers
 
 The release version is chosen by hand — it is the `<Version>` property in `Directory.Build.props`.
 Landing a commit on `master` publishes `v<version>` as a GitHub Release, and publishes nothing if
@@ -153,4 +199,7 @@ that tag already exists: raising the property is what cuts a release, and a merg
 untouched ships no release at all. A version below the latest release fails the workflow.
 [`.github/workflows/README.md`](.github/workflows/README.md) documents both pipelines in full.
 
-We especially welcome contributions for UI and security improvements.
+## 📜 License
+
+BackupZCrypt is released under the [GNU General Public License v3.0](LICENSE). You are free to use,
+study, modify and redistribute it, and any derivative work must carry the same license.
