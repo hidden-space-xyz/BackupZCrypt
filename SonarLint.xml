@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AnalysisInput>
+  <Rules>
+
+    <Rule>
+      <Key>S103</Key>
+      <Parameters>
+        <Parameter><Key>maximumLineLength</Key><Value>140</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S104</Key>
+      <Parameters>
+        <Parameter><Key>maximumFileLocThreshold</Key><Value>1200</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S107</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>10</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S110</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>5</Value></Parameter>
+        <Parameter><Key>filteredClasses</Key><Value>System.Exception, System.EventArgs, Avalonia.*, Microsoft.AspNetCore.*, Microsoft.EntityFrameworkCore.*, CommunityToolkit.Mvvm.*</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S134</Key>
+      <Parameters>
+        <Parameter><Key>maximumNestingLevel</Key><Value>3</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S138</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>120</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1067</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>3</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1151</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>8</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1192</Key>
+      <Parameters>
+        <Parameter><Key>threshold</Key><Value>5</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1200</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>30</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1479</Key>
+      <Parameters>
+        <Parameter><Key>maximum</Key><Value>30</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S1541</Key>
+      <Parameters>
+        <Parameter><Key>maximumFunctionComplexityThreshold</Key><Value>15</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S2068</Key>
+      <Parameters>
+        <Parameter><Key>credentialWords</Key><Value>password, passwd, pwd, passphrase</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S2342</Key>
+      <Parameters>
+        <Parameter><Key>format</Key><Value>^([A-Z]{1,3}[a-z0-9]+)*([A-Z]{2})?$</Value></Parameter>
+        <Parameter><Key>flagsAttributeFormat</Key><Value>^([A-Z]{1,3}[a-z0-9]+)*([A-Z]{2})?s$</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S2436</Key>
+      <Parameters>
+        <Parameter><Key>max</Key><Value>2</Value></Parameter>
+        <Parameter><Key>maxMethod</Key><Value>3</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S3776</Key>
+      <Parameters>
+        <Parameter><Key>threshold</Key><Value>15</Value></Parameter>
+        <Parameter><Key>propertyThreshold</Key><Value>3</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S5693</Key>
+      <Parameters>
+        <Parameter><Key>fileUploadSizeLimit</Key><Value>8388608</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S6418</Key>
+      <Parameters>
+        <Parameter><Key>secretWords</Key><Value>api[_\-]?key, auth, credential, secret, token, salt, passphrase, private[_\-]?key</Value></Parameter>
+        <Parameter><Key>randomnessSensibility</Key><Value>3</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S6664</Key>
+      <Parameters>
+        <Parameter><Key>debugThreshold</Key><Value>4</Value></Parameter>
+        <Parameter><Key>errorThreshold</Key><Value>1</Value></Parameter>
+        <Parameter><Key>informationThreshold</Key><Value>2</Value></Parameter>
+        <Parameter><Key>warningThreshold</Key><Value>1</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+    <Rule>
+      <Key>S6669</Key>
+      <Parameters>
+        <Parameter><Key>format</Key><Value>^_?[Ll]og(ger)?$</Value></Parameter>
+      </Parameters>
+    </Rule>
+
+  </Rules>
+</AnalysisInput>

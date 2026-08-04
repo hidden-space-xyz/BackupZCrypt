@@ -1,77 +1,192 @@
-# ============================================================
-# Enterprise .editorconfig for .NET
-# Analyzers: Microsoft CodeAnalysis (CA/IDE) + Meziantou.Analyzer (MA) + SonarAnalyzer.CSharp (S)
-# ============================================================
-# Purpose:
-# - Establish consistent coding conventions across the solution.
-# - Use Meziantou.Analyzer and SonarAnalyzer.CSharp as the quality gate for correctness,
-#   performance, and maintainability.
-# - Keep the gate strict, but avoid noise that duplicates another analyzer or fights a
-#   deliberate architectural decision documented in CLAUDE.md.
-#
-# Notes:
-# - Analyzer severities are controlled with:
-#     dotnet_diagnostic.<ID>.severity
-# - Meziantou ships many rules at `info`; anything this codebase should actually honour is
-#   escalated to `warning` below so it fails the "zero warnings" gate instead of accruing.
-# - SonarAnalyzer's parameterized rules (line length, complexity, parameter count, ...) cannot be
-#   configured through .editorconfig. Their thresholds live in `SonarLint.xml`, wired in as an
-#   AdditionalFile by Directory.Build.props.
-#
-# Strategy used here:
-# - Warning: correctness, security, performance, and maintainability issues that must be fixed.
-# - Suggestion/Silent: style nudges that should not disrupt delivery.
-# - None: rules that are too noisy, duplicate another analyzer, or contradict a project decision.
-# ============================================================
-
 root = true
 
-# ------------------------------------------------------------
-# Global defaults
-# ------------------------------------------------------------
+[*.cs]
+dotnet_analyzer_diagnostic.severity = warning
+
+dotnet_analyzer_diagnostic.category-Style.severity = warning
+dotnet_analyzer_diagnostic.category-CodeQuality.severity = warning
+dotnet_analyzer_diagnostic.category-Compiler.severity = warning
+
+dotnet_diagnostic.CA1856.severity = warning
+dotnet_diagnostic.CA2252.severity = warning
+dotnet_diagnostic.MA0037.severity = warning
+dotnet_diagnostic.MA0039.severity = warning
+dotnet_diagnostic.MA0049.severity = warning
+
+dotnet_diagnostic.S103.severity = warning
+dotnet_diagnostic.S104.severity = warning
+dotnet_diagnostic.S107.severity = warning
+dotnet_diagnostic.S110.severity = warning
+dotnet_diagnostic.S134.severity = warning
+dotnet_diagnostic.S1067.severity = warning
+dotnet_diagnostic.S1151.severity = warning
+dotnet_diagnostic.S1192.severity = warning
+dotnet_diagnostic.S1200.severity = warning
+dotnet_diagnostic.S1312.severity = warning
+dotnet_diagnostic.S1479.severity = warning
+dotnet_diagnostic.S1541.severity = warning
+dotnet_diagnostic.S2342.severity = warning
+dotnet_diagnostic.S2436.severity = warning
+dotnet_diagnostic.S3776.severity = warning
+dotnet_diagnostic.S6664.severity = warning
+dotnet_diagnostic.S6669.severity = warning
+
+dotnet_diagnostic.CA1031.severity = none
+
+dotnet_diagnostic.CA1062.severity = none
+
+dotnet_diagnostic.CA1303.severity = none
+
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.MA0004.severity = none
+
+dotnet_diagnostic.CA1515.severity = none
+
+dotnet_diagnostic.CA1848.severity = none
+
+dotnet_diagnostic.MA0051.severity = none
+
+dotnet_diagnostic.MA0038.severity = none
+
+dotnet_diagnostic.MA0003.severity = none
+
+dotnet_diagnostic.MA0177.severity = none
+
+dotnet_diagnostic.IDE0058.severity = suggestion
+
+dotnet_diagnostic.MA0026.severity = suggestion
+dotnet_diagnostic.S1135.severity = suggestion
+
+csharp_style_namespace_declarations = file_scoped
+csharp_using_directive_placement = outside_namespace
+dotnet_style_namespace_match_folder = true
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+dotnet_style_require_accessibility_modifiers = always
+
+csharp_prefer_braces = true
+csharp_style_expression_bodied_methods = false
+csharp_style_expression_bodied_constructors = false
+csharp_style_expression_bodied_operators = false
+csharp_style_expression_bodied_local_functions = false
+csharp_style_expression_bodied_properties = when_on_single_line
+csharp_style_expression_bodied_indexers = when_on_single_line
+csharp_style_expression_bodied_accessors = when_on_single_line
+csharp_style_expression_bodied_lambdas = when_on_single_line
+
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+
+csharp_style_prefer_pattern_matching = true
+csharp_style_pattern_matching_over_is_with_cast_check = true
+csharp_style_pattern_matching_over_as_with_null_check = true
+csharp_style_prefer_not_pattern = true
+csharp_style_prefer_null_check_over_type_check = true
+csharp_style_conditional_delegate_call = true
+dotnet_style_null_propagation = true
+dotnet_style_coalesce_expression = true
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true
+
+csharp_style_implicit_object_creation_when_type_is_apparent = true
+dotnet_style_prefer_collection_expression = when_types_loosely_match
+dotnet_style_object_initializer = true
+dotnet_style_collection_initializer = true
+dotnet_style_prefer_auto_properties = true
+dotnet_style_prefer_compound_assignment = true
+dotnet_style_prefer_simplified_boolean_expressions = true
+csharp_prefer_simple_using_statement = true
+csharp_style_inlined_variable_declaration = true
+csharp_style_prefer_index_operator = true
+csharp_style_prefer_range_operator = true
+csharp_style_deconstructed_variable_declaration = true
+dotnet_style_prefer_conditional_expression_over_assignment = true
+dotnet_style_prefer_conditional_expression_over_return = true
+
+dotnet_style_readonly_field = true
+csharp_prefer_static_local_function = true
+csharp_style_prefer_readonly_struct = true
+csharp_style_prefer_readonly_struct_member = true
+
+dotnet_code_quality_unused_parameters = all
+csharp_style_unused_value_expression_statement_preference = discard_variable
+csharp_style_unused_value_assignment_preference = discard_variable
+
+dotnet_diagnostic.IDE1006.severity = warning
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.camel_case.capitalization = camel_case
+dotnet_naming_style.i_prefixed.capitalization = pascal_case
+dotnet_naming_style.i_prefixed.required_prefix = I
+dotnet_naming_style.t_prefixed.capitalization = pascal_case
+dotnet_naming_style.t_prefixed.required_prefix = T
+
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+dotnet_naming_rule.interfaces_rule.symbols = interfaces
+dotnet_naming_rule.interfaces_rule.style = i_prefixed
+dotnet_naming_rule.interfaces_rule.severity = warning
+
+dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
+dotnet_naming_rule.type_parameters_rule.symbols = type_parameters
+dotnet_naming_rule.type_parameters_rule.style = t_prefixed
+dotnet_naming_rule.type_parameters_rule.severity = warning
+
+dotnet_naming_symbols.types.applicable_kinds = namespace, class, struct, interface, enum, delegate
+dotnet_naming_symbols.types.applicable_accessibilities = *
+dotnet_naming_rule.types_rule.symbols = types
+dotnet_naming_rule.types_rule.style = pascal_case
+dotnet_naming_rule.types_rule.severity = warning
+
+dotnet_naming_symbols.members.applicable_kinds = property, event
+dotnet_naming_symbols.members.applicable_accessibilities = *
+dotnet_naming_rule.members_rule.symbols = members
+dotnet_naming_rule.members_rule.style = pascal_case
+dotnet_naming_rule.members_rule.severity = warning
+
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_rule.constants_rule.symbols = constants
+dotnet_naming_rule.constants_rule.style = pascal_case
+dotnet_naming_rule.constants_rule.severity = warning
+
+dotnet_naming_symbols.static_fields.applicable_kinds = field
+dotnet_naming_symbols.static_fields.applicable_accessibilities = *
+dotnet_naming_symbols.static_fields.required_modifiers = static
+dotnet_naming_rule.static_fields_rule.symbols = static_fields
+dotnet_naming_rule.static_fields_rule.style = pascal_case
+dotnet_naming_rule.static_fields_rule.severity = warning
+
+dotnet_naming_symbols.non_private_fields.applicable_kinds = field
+dotnet_naming_symbols.non_private_fields.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
+dotnet_naming_rule.non_private_fields_rule.symbols = non_private_fields
+dotnet_naming_rule.non_private_fields_rule.style = pascal_case
+dotnet_naming_rule.non_private_fields_rule.severity = warning
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = camel_case
+dotnet_naming_rule.private_fields_rule.severity = warning
+
+dotnet_naming_symbols.locals_and_parameters.applicable_kinds = local, parameter
+dotnet_naming_rule.locals_and_parameters_rule.symbols = locals_and_parameters
+dotnet_naming_rule.locals_and_parameters_rule.style = camel_case
+dotnet_naming_rule.locals_and_parameters_rule.severity = warning
+
 [*]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# ------------------------------------------------------------
-# C# files
-# ------------------------------------------------------------
+
 [*.cs]
 indent_style = space
 indent_size = 4
+dotnet_diagnostic.IDE0055.severity = warning
 
-# ============================================================
-# Formatting conventions
-# Neither Meziantou nor Sonar owns whitespace, so these are the Roslyn-native style options and are
-# enforced at build time by EnforceCodeStyleInBuild.
-# ============================================================
-
-# Always use braces, even for single-line blocks (matches existing guard clauses).
-csharp_prefer_braces = true:warning
-
-# Block bodies read better than expression bodies for anything non-trivial: easier to debug,
-# annotate, and extend. Accessors and lambdas stay expression-bodied.
-csharp_style_expression_bodied_methods = false:suggestion
-csharp_style_expression_bodied_constructors = false:suggestion
-csharp_style_expression_bodied_operators = false:suggestion
-csharp_style_expression_bodied_local_functions = false:suggestion
-csharp_style_expression_bodied_properties = when_on_single_line:silent
-csharp_style_expression_bodied_indexers = when_on_single_line:silent
-csharp_style_expression_bodied_accessors = when_on_single_line:silent
-csharp_style_expression_bodied_lambdas = when_on_single_line:silent
-
-# Prefer var everywhere (matches the whole codebase).
-csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = true:suggestion
-
-# Prefer target-typed / collection expressions where the type is obvious.
-csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
-dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
-
-# Line-break placement: operators lead the continuation line.
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
 csharp_new_line_before_catch = true
@@ -79,401 +194,54 @@ csharp_new_line_before_else = true
 csharp_new_line_before_finally = true
 csharp_new_line_between_query_expression_clauses = true
 
-# Using directives: System first, then one blank-line-separated group per root namespace, which is
-# the shape every file in the solution already uses.
-dotnet_sort_system_directives_first = true
-dotnet_separate_import_directive_groups = true
-
-# ============================================================
-# Meziantou.Analyzer
-# ------------------------------------------------------------
-# Escalations first (rules that ship at `info`/`none` but encode something this codebase cares
-# about), then the deliberate opt-outs.
-# ============================================================
-
-# ------------------------------------------------------------
-# Correctness and API misuse
-# ------------------------------------------------------------
-
-# MA0015: Specify the parameter name in ArgumentException
-dotnet_diagnostic.MA0015.severity = warning
-
-# MA0016: Prefer returning a collection abstraction instead of an implementation
-dotnet_diagnostic.MA0016.severity = warning
-
-# MA0020: Use direct methods instead of LINQ methods
-dotnet_diagnostic.MA0020.severity = warning
-
-# MA0022: Return Task.FromResult instead of returning null
-dotnet_diagnostic.MA0022.severity = warning
-
-# MA0040: Forward the CancellationToken parameter to methods that take one
-dotnet_diagnostic.MA0032.severity = suggestion
-dotnet_diagnostic.MA0040.severity = warning
-
-# MA0042: Do not use blocking calls in an async method
-dotnet_diagnostic.MA0042.severity = warning
-
-# MA0046: Use EventHandler<T> to declare events
-dotnet_diagnostic.MA0046.severity = warning
-
-# MA0048: File name must match type name
-dotnet_diagnostic.MA0048.severity = warning
-
-# MA0053: Make class sealed (matches the `internal sealed` implementation convention)
-dotnet_diagnostic.MA0053.severity = warning
-
-# MA0055: Do not use finalizer
-dotnet_diagnostic.MA0055.severity = warning
-
-# MA0056: Do not call overridable members in a constructor
-dotnet_diagnostic.MA0056.severity = warning
-
-# MA0060: The value returned by Stream.Read/Stream.Write is not used
-dotnet_diagnostic.MA0060.severity = warning
-
-# MA0062: Non-flags enums should not be marked with "FlagsAttribute"
-dotnet_diagnostic.MA0062.severity = warning
-
-# MA0069: Non-constant static fields should not be visible
-dotnet_diagnostic.MA0069.severity = warning
-
-# MA0074: Avoid implicit culture-sensitive methods
-dotnet_diagnostic.MA0074.severity = warning
-
-# MA0079/MA0080: Flow the CancellationToken through async enumerables
-dotnet_diagnostic.MA0079.severity = warning
-dotnet_diagnostic.MA0080.severity = warning
-
-# MA0099: Use Explicit enum value instead of 0
-dotnet_diagnostic.MA0099.severity = warning
-
-# MA0110: Use the Regex source generator
-dotnet_diagnostic.MA0110.severity = warning
-
-# MA0134: Observe the result of a fire-and-forget Task
-dotnet_diagnostic.MA0134.severity = warning
-
-# MA0158/MA0159: Use System.Threading.Lock / prefer the modern locking primitives
-dotnet_diagnostic.MA0158.severity = warning
-dotnet_diagnostic.MA0159.severity = warning
-
-# ------------------------------------------------------------
-# Performance
-# ------------------------------------------------------------
-
-# MA0028: Optimize StringBuilder usage
-dotnet_diagnostic.MA0028.severity = warning
-
-# MA0029/MA0031: Combine LINQ methods / optimize Enumerable.Count usage
-dotnet_diagnostic.MA0029.severity = warning
-dotnet_diagnostic.MA0031.severity = warning
-
-# MA0089: Optimize string method usage
-dotnet_diagnostic.MA0089.severity = warning
-
-# MA0098: Use "Span.Slice" / range indexer instead of a substring copy
-dotnet_diagnostic.MA0098.severity = warning
-
-# ------------------------------------------------------------
-# Style
-# ------------------------------------------------------------
-
-# MA0007: Add a comma after the last value in a multi-line initializer
-dotnet_diagnostic.MA0007.severity = warning
-
-# MA0154: Use langword in XML comment (<see langword="null"/> rather than <c>null</c>)
-dotnet_diagnostic.MA0154.severity = warning
-
-# MA0001/MA0002: StringComparison and IEqualityComparer<string> are missing. CA1307 stays advisory
-# because it also fires on comparisons where culture cannot matter, but the Meziantou pair is clean
-# across the solution today, so it is kept as a gate: an implicitly culture-sensitive comparison on a
-# manifest path or a chunk name is a correctness bug, not a style preference.
-dotnet_diagnostic.MA0001.severity = warning
-dotnet_diagnostic.MA0002.severity = warning
-
-# MA0026: Fix TODO comment — visible, but never blocking. A developer has to be able to land a TODO.
-dotnet_diagnostic.MA0026.severity = suggestion
-
-# ------------------------------------------------------------
-# Meziantou rules intentionally disabled
-# ------------------------------------------------------------
-
-# MA0004: Use Task.ConfigureAwait — mirrors the CA2007 decision below. This is an Avalonia app
-# whose continuations must resume on the UI thread; the engine below the UI has no synchronization
-# context to capture, so ConfigureAwait(false) would be noise on every await in the solution.
-dotnet_diagnostic.MA0004.severity = none
-
-# MA0011: IFormatProvider is missing — mirrors the CA1305 decision below.
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = suggestion
 dotnet_diagnostic.MA0011.severity = none
 
-# MA0003: Add parameter name to argument — too noisy for the call-site density here.
-dotnet_diagnostic.MA0003.severity = none
-
-# MA0006: Use String.Equals instead of == — `==` on string is already ordinal; the rewrite adds
-# ceremony without changing semantics.
-dotnet_diagnostic.MA0006.severity = none
-
-# MA0018: Do not declare static members on generic types — mirrors the CA1000 decision below
-# (Result<T>.Success / .Failure factories are the intended API shape).
-dotnet_diagnostic.MA0018.severity = none
-
-# MA0045: Do not use blocking calls in a sync method — the fix is to virally make callers async;
-# MA0042 already guards the case that actually deadlocks.
-dotnet_diagnostic.MA0045.severity = none
-
-# MA0051: Method is too long. The four engine entry points in ChunkedBackupService run 100-260 lines
-# each because they are a single linear pipeline over one archive with key material live in scope;
-# splitting them would spread the zeroing responsibility over more frames, not less. S3776 (cognitive
-# complexity, threshold 15 in SonarLint.xml) is clean across all of them and is the better-targeted
-# gate: it measures branching, which is what actually makes a method hard to review.
-dotnet_diagnostic.MA0051.severity = none
-
-# ============================================================
-# SonarAnalyzer.CSharp
-# ------------------------------------------------------------
-# Sonar ships its "Sonar way" profile enabled by default, so only the deliberate deviations are
-# listed. Thresholds for parameterized rules live in SonarLint.xml.
-# ============================================================
-
-# S103: Lines should not be too long — threshold pinned to 140 in SonarLint.xml.
-dotnet_diagnostic.S103.severity = warning
-
-# S1135: Track uses of "TODO" tags — visible, but never blocking (mirrors MA0026).
-dotnet_diagnostic.S1135.severity = suggestion
-
-# ------------------------------------------------------------
-# Dead-code and redundancy rules kept at warning even though a CA/IDE rule overlaps.
-#
-# The overlapping IDE rules (IDE0052 unread private field, IDE0059 unnecessary assignment) resolve to
-# `suggestion` here, so dropping the Sonar rule as a "duplicate" would quietly lower the gate rather
-# than deduplicate it. All four are clean across the solution today, so they cost nothing and they
-# fail the build on the next dead store.
-# ------------------------------------------------------------
-
-# S1854: Unused assignments should be removed (overlaps IDE0059, which is only a suggestion)
-dotnet_diagnostic.S1854.severity = warning
-
-# S1481: Unused local variables should be removed (overlaps IDE0059)
-dotnet_diagnostic.S1481.severity = warning
-
-# S4487: Unread "private" fields should be removed (overlaps IDE0052, which is only a suggestion)
-dotnet_diagnostic.S4487.severity = warning
-
-# S125: Sections of code should not be commented out. The codebase carries no `//` comments at all,
-# only XML docs, so this rule enforces that convention rather than merely observing it.
-dotnet_diagnostic.S125.severity = warning
-
-# ------------------------------------------------------------
-# Sonar rules that genuinely duplicate a CA rule already enabled at warning by AnalysisMode=All.
-# Keeping both would report every finding twice.
-# ------------------------------------------------------------
-
-# S3903 duplicates CA1050 (type should be in a namespace)
-dotnet_diagnostic.S3903.severity = none
-
-# S2325 duplicates CA1822 (member can be static)
-dotnet_diagnostic.S2325.severity = none
-
-# S3260 duplicates MA0053 (non-derived private class should be sealed)
-dotnet_diagnostic.S3260.severity = none
-
-# S1128 duplicates IDE0005 (unnecessary using directive), which is set to warning above
-dotnet_diagnostic.S1128.severity = none
-
-# ------------------------------------------------------------
-# The one Sonar rule disabled on design grounds rather than duplication
-# ------------------------------------------------------------
-
-# S3267: "Loops should be simplified with LINQ expressions" would trade the allocation-free loops in
-# the chunking and hashing paths for LINQ pipelines that allocate an enumerator and a closure per
-# call. It reports nothing today; it is off so it cannot force that rewrite later. CLAUDE.md orders
-# the trade-off as security first, performance second — a LINQ pipeline over chunk buffers loses on
-# the second and gains nothing on the first.
-dotnet_diagnostic.S3267.severity = none
-
-# ------------------------------------------------------------
-# Sonar security and correctness rules escalated above their default
-# ------------------------------------------------------------
-
-# S2245: Using pseudorandom number generators is security-sensitive
-dotnet_diagnostic.S2245.severity = warning
-
-# S4790: Using weak hashing algorithms is security-sensitive — SHA-256 is used throughout, and a
-# regression to SHA-1/MD5 must fail the build in a project whose threat model is the archive.
-dotnet_diagnostic.S4790.severity = warning
-
-# S2053: Hashes should include an unpredictable salt
-dotnet_diagnostic.S2053.severity = warning
-
-# S5542/S5547: Encryption algorithms and modes should be robust
-dotnet_diagnostic.S5542.severity = warning
-dotnet_diagnostic.S5547.severity = warning
-
-# S6781: JWT secret keys should not be disclosed — not applicable today, but free insurance.
-dotnet_diagnostic.S6781.severity = warning
-
-# ------------------------------------------------------------
-# SDK CA rules explicitly suppressed
-# ------------------------------------------------------------
-
-# CA1031: Do not catch general exception types
-dotnet_diagnostic.CA1031.severity = none
-
-# CA1032: Implement standard exception constructors
-dotnet_diagnostic.CA1032.severity = none
-
-# CA1305: Specify IFormatProvider
-dotnet_diagnostic.CA1305.severity = none
-
-# CA1307: Specify StringComparison for clarity
-dotnet_diagnostic.CA1307.severity = suggestion
-
-# CA1308: Normalize strings to uppercase
 dotnet_diagnostic.CA1308.severity = none
 
-# CA1720: Identifier contains type name
-dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.MA0006.severity = none
 
-# CA1724: Type names should not match namespaces
-dotnet_diagnostic.CA1724.severity = none
-
-# CA1819: Properties should not return arrays
-dotnet_diagnostic.CA1819.severity = none
-
-# CA1863: Cache CompositeFormat
-dotnet_diagnostic.CA1863.severity = none
-
-# CA2007: Do not directly await a Task
-dotnet_diagnostic.CA2007.severity = none
-
-# CA2201: Do not raise reserved exception types
-dotnet_diagnostic.CA2201.severity = none
-
-# CA2215: Dispose methods should call base class Dispose
-dotnet_diagnostic.CA2215.severity = none
-
-# CA2225: Operator overloads have named alternates
-dotnet_diagnostic.CA2225.severity = none
-
-# CA1000: Do not declare static members on generic types
+dotnet_diagnostic.MA0018.severity = none
 dotnet_diagnostic.CA1000.severity = none
 
-# ============================================================
-# Hardened quality gates
-# ------------------------------------------------------------
-# These raise the bar on correctness, modern C#, immutability, and naming. They reflect patterns
-# the codebase already follows, so they lock in current quality and block regressions rather than
-# forcing a large refactor.
-#
-# Severity note: the IDE-prefixed (IDExxxx) and dotnet_naming_* rules below are reported by the IDE
-# and by `dotnet format`. They also run during `dotnet build` because
-# <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> is set in Directory.Build.props. The
-# Meziantou (MA), Sonar (S), and CA rules already run at build time unconditionally.
-# ============================================================
+dotnet_diagnostic.MA0045.severity = none
 
-# ------------------------------------------------------------
-# Language and file shape
-# ------------------------------------------------------------
+dotnet_diagnostic.MA0032.severity = suggestion
 
-# Require file-scoped namespaces (matches the whole codebase).
-csharp_style_namespace_declarations = file_scoped:warning
+dotnet_diagnostic.S3267.severity = none
 
-# Keep using directives outside the namespace and folders aligned with namespaces.
-csharp_using_directive_placement = outside_namespace:warning
-dotnet_style_namespace_match_folder = true:warning
+dotnet_diagnostic.S3903.severity = none
+dotnet_diagnostic.S2325.severity = none
+dotnet_diagnostic.S3260.severity = none
+dotnet_diagnostic.S1128.severity = none
 
-# Remove unnecessary using directives (ImplicitUsings is enabled, so leftovers are noise).
-dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.CA1032.severity = none
 
-# Always require explicit accessibility modifiers.
-dotnet_style_require_accessibility_modifiers = always:warning
+dotnet_diagnostic.CA2201.severity = none
 
-# ------------------------------------------------------------
-# Modern pattern matching and null handling
-# ------------------------------------------------------------
-csharp_style_prefer_pattern_matching = true:warning
-csharp_style_pattern_matching_over_is_with_cast_check = true:warning
-csharp_style_pattern_matching_over_as_with_null_check = true:warning
-csharp_style_prefer_not_pattern = true:warning
-csharp_style_prefer_null_check_over_type_check = true:warning
-csharp_style_conditional_delegate_call = true:warning
-dotnet_style_null_propagation = true:warning
-dotnet_style_coalesce_expression = true:warning
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+dotnet_diagnostic.CA2215.severity = none
 
-# ------------------------------------------------------------
-# Expression-level preferences
-# ------------------------------------------------------------
-dotnet_style_object_initializer = true:warning
-dotnet_style_collection_initializer = true:warning
-dotnet_style_prefer_auto_properties = true:warning
-dotnet_style_prefer_compound_assignment = true:warning
-dotnet_style_prefer_simplified_boolean_expressions = true:warning
-csharp_prefer_simple_using_statement = true:warning
-csharp_style_inlined_variable_declaration = true:warning
-csharp_style_prefer_index_operator = true:warning
-csharp_style_prefer_range_operator = true:warning
-csharp_style_deconstructed_variable_declaration = true:suggestion
-dotnet_style_prefer_conditional_expression_over_assignment = true:suggestion
-dotnet_style_prefer_conditional_expression_over_return = true:suggestion
+dotnet_diagnostic.CA2225.severity = none
 
-# ------------------------------------------------------------
-# Immutability and encapsulation
-# ------------------------------------------------------------
-dotnet_style_readonly_field = true:warning
-csharp_prefer_static_local_functions = true:warning
-csharp_style_prefer_readonly_struct = true:warning
-csharp_style_prefer_readonly_struct_member = true:warning
+dotnet_diagnostic.CA1720.severity = none
 
-# ------------------------------------------------------------
-# Dead code
-# ------------------------------------------------------------
-dotnet_code_quality_unused_parameters = all:warning
-csharp_style_unused_value_expression_statement_preference = discard_variable:suggestion
-csharp_style_unused_value_assignment_preference = discard_variable:suggestion
+dotnet_diagnostic.CA1724.severity = none
 
-# ------------------------------------------------------------
-# Naming conventions (IDE1006)
-# Methods are intentionally excluded so test names like Method_Scenario_Expected stay valid.
-# ------------------------------------------------------------
-dotnet_diagnostic.IDE1006.severity = warning
+dotnet_diagnostic.CA1819.severity = none
 
-# Interfaces must be PascalCase prefixed with I.
-dotnet_naming_rule.interfaces_begin_with_i.severity = warning
-dotnet_naming_rule.interfaces_begin_with_i.symbols = interface_symbol
-dotnet_naming_rule.interfaces_begin_with_i.style = prefix_interface_with_i
-dotnet_naming_symbols.interface_symbol.applicable_kinds = interface
-dotnet_naming_symbols.interface_symbol.applicable_accessibilities = *
-dotnet_naming_style.prefix_interface_with_i.required_prefix = I
-dotnet_naming_style.prefix_interface_with_i.capitalization = pascal_case
+dotnet_diagnostic.CA1863.severity = none
 
-# Types must be PascalCase.
-dotnet_naming_rule.types_are_pascal_case.severity = warning
-dotnet_naming_rule.types_are_pascal_case.symbols = type_symbol
-dotnet_naming_rule.types_are_pascal_case.style = pascal_case_style
-dotnet_naming_symbols.type_symbol.applicable_kinds = class, struct, enum, delegate
-dotnet_naming_symbols.type_symbol.applicable_accessibilities = *
-dotnet_naming_style.pascal_case_style.capitalization = pascal_case
-
-# Properties, events, and constants must be PascalCase.
-dotnet_naming_rule.members_are_pascal_case.severity = warning
-dotnet_naming_rule.members_are_pascal_case.symbols = member_symbol
-dotnet_naming_rule.members_are_pascal_case.style = pascal_case_style
-dotnet_naming_symbols.member_symbol.applicable_kinds = property, event
-dotnet_naming_symbols.member_symbol.applicable_accessibilities = *
-
-dotnet_naming_rule.constants_are_pascal_case.severity = warning
-dotnet_naming_rule.constants_are_pascal_case.symbols = constant_symbol
-dotnet_naming_rule.constants_are_pascal_case.style = pascal_case_style
-dotnet_naming_symbols.constant_symbol.applicable_kinds = field
-dotnet_naming_symbols.constant_symbol.applicable_accessibilities = *
-dotnet_naming_symbols.constant_symbol.required_modifiers = const
-
-# ------------------------------------------------------------
-# Generated code
-# Roslyn skips analyzers on files marked generated; the tooling-generated Avalonia and resx
-# partials are matched by name here so neither analyzer reports on them.
-# ------------------------------------------------------------
 [*.{g,i,designer,generated}.cs]
 generated_code = true
+
+[BackupZCrypt.Test/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.MA0053.severity = none
+dotnet_diagnostic.S2068.severity = none
+dotnet_diagnostic.S6418.severity = none
+dotnet_diagnostic.S1192.severity = none
+dotnet_diagnostic.S4144.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.CS1591.severity = none

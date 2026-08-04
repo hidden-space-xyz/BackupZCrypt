@@ -5,17 +5,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <AnalysisMode>Default</AnalysisMode>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Remove="Meziantou.Analyzer" />
-    <PackageReference Remove="SonarAnalyzer.CSharp" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />

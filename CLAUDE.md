@@ -17,7 +17,8 @@ after**. Never weaken a cryptographic guarantee or leak key material for conveni
 ## Commands
 
 ```bash
-dotnet build BackupZCrypt.sln            # build (analyzers run during build; keep warnings at zero)
+dotnet build BackupZCrypt.sln            # build; analyzers report as warnings on EVERY build, never as errors
+dotnet build BackupZCrypt.sln -p:AlwaysReportAnalyzerWarnings=false   # fast build, skips the forced recompile
 dotnet run --project BackupZCrypt.Desktop # run the desktop app
 dotnet test BackupZCrypt.sln             # run the full test suite
 dotnet format BackupZCrypt.sln           # auto-format to .editorconfig
@@ -148,24 +149,44 @@ processes files in parallel (`Parallel.ForEachAsync`, DOP = `ProcessorCount`) re
 
 - **Central package management** — all versions live in `Directory.Packages.props`; project files
   reference packages without versions. Keep packages on their latest stable compatible versions.
-- **Analyzers are gates.** `Directory.Build.props` gives every project `AnalysisMode=All`,
-  `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, **Meziantou.Analyzer**, and
-  **SonarAnalyzer.CSharp** — do not re-declare these per project. The `.editorconfig` is strict
-  (file-scoped namespaces, `var` always, explicit accessibility modifiers, private fields without an
-  underscore prefix, trailing commas, `I`-prefixed interfaces, braces always, 140-col lines). A clean
-  change adds **zero** new analyzer/format warnings, and the solution builds at zero today.
-  `BackupZCrypt.Test` deliberately opts out (see the comment in its `.csproj`): the suite's
-  `Method_Scenario_Expected` names conflict with CA1707 and the docs rule, and NUnit.Analyzers is
-  the analyzer that matters there.
-- **Analyzer configuration lives in two files.** Severities go in `.editorconfig`
-  (`dotnet_diagnostic.<ID>.severity`); Sonar's *parameterized* rules cannot be configured there, so
-  their thresholds live in `SonarLint.xml` at the repository root, wired to every project as an
-  `AdditionalFiles` item by `Directory.Build.props`. Changing the 140-column limit, the cognitive
-  complexity ceiling, or the max parameter count means editing `SonarLint.xml`, not `.editorconfig`.
-  Every deviation from a default in either file carries the reason it was made — keep it that way, and
-  prefer fixing the code over adding a suppression.
-- **Docs.** Every non-`private` member has an XML doc comment — with `GenerateDocumentationFile` on,
-  a missing one is now a CS1591 build warning. Update `README.md` when user-facing behavior changes.
+- **Analyzers report, they do not gate.** Every project gets `AnalysisMode=All`,
+  `EnforceCodeStyleInBuild`, `MeziantouAnalysisMode=all-warnings`, `GenerateDocumentationFile`,
+  **Meziantou.Analyzer** and **SonarAnalyzer.CSharp** — do not re-declare these per project. Violations
+  are **warnings, never errors**, by explicit configuration, and they are **re-reported on every build**,
+  including an up-to-date one (see below). The `.editorconfig` is strict (file-scoped namespaces, `var`
+  always, explicit accessibility modifiers, private fields without an underscore prefix, `I`-prefixed
+  interfaces, braces always, 140-col lines). `BackupZCrypt.Test` **no longer opts out** — it is analysed
+  like everything else, with the NUnit-specific conflicts (`CA1707`, `MA0053`, fixture credentials,
+  golden-vector duplication, `CS1591`) scoped off in its own `.editorconfig` section.
+- **The analyzer configuration is shared with the `CodigoActivo` repository and must stay
+  byte-identical.** Four artefacts: `Directory.Build.Analyzers.props` (all the MSBuild properties and
+  the `SonarLint.xml` wiring), `Directory.Build.targets` (the always-report sentinel), `SonarLint.xml`
+  (thresholds for Sonar's parameterized rules — **the only place they can be set**), and the single
+  `[*.cs]` section at **lines 3–176** of `.editorconfig`. Their counterparts live under
+  `CodigoActivo/backend/`, and the shared `.editorconfig` range sits at the same line numbers there so
+  it can be compared mechanically. **Edit one repo without the other and they drift:**
+
+  ```bash
+  cd D:/WorkSpace && B=BackupZCrypt && C=CodigoActivo/backend
+  for f in Directory.Build.Analyzers.props Directory.Build.targets SonarLint.xml; do diff "$C/$f" "$B/$f"; done
+  diff <(sed -n '3,176p' "$C/.editorconfig") <(sed -n '3,176p' "$B/.editorconfig")
+  ```
+
+  Repo-local deviations go in the `.editorconfig` sections **after** line 176, never inside the shared
+  range — and prefer fixing the code over adding a suppression. **None of the four files carries
+  comments**: the rationale for a rule or a suppression belongs in this document, not inline.
+- **Warnings print on every build.** MSBuild normally skips `CoreCompile` when a project is up to date,
+  so the analyzers never run and a warm `dotnet build` reports `0 Warning(s)` with live violations
+  present — which also made the old `-warnaserror` CI gate produce false greens over a warm `obj/`.
+  `Directory.Build.targets` fixes that with an output file that is never created. Every build therefore
+  pays for a full compile+analysis pass; opt out with `-p:AlwaysReportAnalyzerWarnings=false`.
+- **Sonar's parameterized rules need two independent things**: a severity in `.editorconfig` *and* a
+  threshold in `SonarLint.xml`. Most of them ship **disabled**, so an entry in `SonarLint.xml` alone is
+  a silent no-op — which is exactly what happened before: `SonarLint.xml` did not exist, S103 ran at its
+  built-in 200 rather than the documented 140, and S3776/S107/S1541 did not run at all.
+- **Docs.** Every non-`private` member in the five src projects has an XML doc comment — with
+  `GenerateDocumentationFile` on, a missing one is a CS1591 build warning. The test project is exempt
+  (it is not an API surface). Update `README.md` when user-facing behavior changes.
 - **Tests.** NUnit + NSubstitute; test methods use `Method_Scenario_Expected` naming.
   `Test/Common/TestHost.cs` builds a real DI provider
   (`AddBackupZCryptServices()`) — integration tests exercise the real

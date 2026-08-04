@@ -1,5 +1,7 @@
 <Project>
 
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.Analyzers.props" />
+
   <PropertyGroup>
     <Version>1.1.1</Version>
   </PropertyGroup>
@@ -11,15 +13,6 @@
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <AnalysisMode>All</AnalysisMode>
-    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
-    <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Meziantou.Analyzer">
       <PrivateAssets>all</PrivateAssets>
@@ -29,15 +22,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <!--
-    SonarAnalyzer reads the thresholds of its parameterized rules (line length, cognitive
-    complexity, parameter count, ...) from a file named SonarLint.xml supplied as an AdditionalFile.
-    Severities stay in .editorconfig; only parameters live in the XML.
-  -->
-  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)SonarLint.xml')">
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" Link="SonarLint.xml" Visible="false" />
   </ItemGroup>
 
 </Project>

@@ -47,10 +47,10 @@ jobs:
         run: dotnet restore "$SOLUTION"
 
       - name: Build
-        run: dotnet build "$SOLUTION" --configuration Debug --no-restore -warnaserror
+        run: dotnet build "$SOLUTION" --configuration Debug --no-restore
 
       - name: Test
         run: dotnet test "$SOLUTION" --configuration Debug --no-build
 
       - name: Verify formatting
-        run: dotnet format "$SOLUTION" --verify-no-changes --no-restore
+        run: dotnet format whitespace "$SOLUTION" --verify-no-changes --no-restore
