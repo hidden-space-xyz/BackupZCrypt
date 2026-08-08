@@ -59,4 +59,13 @@ public class Result
     {
         return new(false, [new LocalizableMessage(code, args)]);
     }
+
+    /// <summary>
+    /// Creates a successful result.
+    /// </summary>
+    /// <returns>A successful result carrying no errors.</returns>
+    public static Result Success()
+    {
+        return new(true, []);
+    }
 }

@@ -3,13 +3,14 @@ using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Desktop.Views;
-using BackupZCrypt.Domain.Services.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -83,7 +84,7 @@ internal sealed class App : Avalonia.Application
     /// Failures are deliberately swallowed: a missing, unreadable, or invalid language preference must leave the
     /// application on the system default UI culture rather than block startup.
     /// </remarks>
-    /// <param name="services">The provider used to resolve the <see cref="ISettingsService"/>.</param>
+    /// <param name="services">The provider used to resolve the language settings handler.</param>
     private static void ApplyLanguagePreference(ServiceProvider services)
     {
         var culture = TryResolvePreferredCulture(services);
@@ -100,7 +101,7 @@ internal sealed class App : Avalonia.Application
     /// <summary>
     /// Reads the stored language preference and turns it into a culture.
     /// </summary>
-    /// <param name="services">The provider used to resolve the <see cref="ISettingsService"/>.</param>
+    /// <param name="services">The provider used to resolve the language settings handler.</param>
     /// <returns>
     /// The preferred culture, or <see langword="null"/> when no preference is stored or it cannot be read.
     /// </returns>
@@ -108,9 +109,13 @@ internal sealed class App : Avalonia.Application
     {
         try
         {
-            var settingsService = services.GetRequiredService<ISettingsService>();
+            var languageQuery = services.GetRequiredService<
+                IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings>
+            >();
 
-            var language = Task.Run(() => settingsService.GetOrCreateAsync<LanguageSettings>())
+            var language = Task.Run(
+                    () => languageQuery.HandleAsync(new GetSettingsQuery<LanguageSettings>())
+                )
                 .GetAwaiter()
                 .GetResult();
 

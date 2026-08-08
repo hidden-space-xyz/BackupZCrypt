@@ -1,4 +1,7 @@
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -29,7 +32,9 @@ public sealed class UpdateBackupTests
     public async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -39,13 +44,10 @@ public sealed class UpdateBackupTests
         _ = source.WriteText("changing.txt", "original content");
         _ = source.WriteText(Path.Combine("dir", "keep.txt"), "nested keep");
 
-        var createResult = await orchestrator.ExecuteAsync(
-            NewRequest(source.Path, destination.Path, BackupOperation.Create),
-            new RecordingProgress<BackupStatus>()
-        );
+        var createResult = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path));
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
+            Assert.That(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess, Is.True);
             Assert.That(ChunkFiles(destination.Path), Has.Length.EqualTo(3));
         }
 
@@ -54,25 +56,25 @@ public sealed class UpdateBackupTests
         const string AddedContent = "freshly added file";
         _ = source.WriteText(Path.Combine("dir", "added.txt"), AddedContent);
 
-        var updateResult = await orchestrator.ExecuteAsync(
-            NewRequest(source.Path, destination.Path, BackupOperation.Update),
-            new RecordingProgress<BackupStatus>()
-        );
+        var updateResult = await updateHandler.HandleAsync(NewUpdateCommand(source.Path, destination.Path));
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                    updateResult.IsSuccess && updateResult.Value.IsSuccess,
+                    updateResult.IsSuccess && updateResult.Value.Completion!.IsSuccess,
                     Is.True,
                     "Update did not succeed."
                 );
 
             Assert.That(
-                updateResult.Value.TotalFiles,
+                updateResult.Value.Completion!.TotalFiles,
                 Is.EqualTo(2),
                 "Only the modified and the added file may be re-chunked; the two untouched files are carried "
                     + "over from the previous manifest without being read back through the chunking pipeline."
             );
-            Assert.That(updateResult.Value.ProcessedFiles, Is.EqualTo(updateResult.Value.TotalFiles));
+            Assert.That(
+                updateResult.Value.Completion.ProcessedFiles,
+                Is.EqualTo(updateResult.Value.Completion.TotalFiles)
+            );
 
             Assert.That(
                 ChunkFiles(destination.Path),
@@ -83,14 +85,11 @@ public sealed class UpdateBackupTests
             );
         }
 
-        var restoreResult = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
-            new RecordingProgress<BackupStatus>()
-        );
+        var restoreResult = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                    restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                    restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
                     Is.True,
                     "Restore of the updated backup did not succeed."
                 );
@@ -118,7 +117,9 @@ public sealed class UpdateBackupTests
     public async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -129,14 +130,11 @@ public sealed class UpdateBackupTests
         var survivorRelativePath = Path.Combine("dir", "twin-b.txt");
         _ = source.WriteText(survivorRelativePath, SharedContent);
 
-        var createResult = await orchestrator.ExecuteAsync(
-            NewRequest(source.Path, destination.Path, BackupOperation.Create),
-            new RecordingProgress<BackupStatus>()
-        );
+        var createResult = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path));
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True);
-            Assert.That(createResult.Value.TotalFiles, Is.EqualTo(3));
+            Assert.That(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess, Is.True);
+            Assert.That(createResult.Value.Completion!.TotalFiles, Is.EqualTo(3));
             Assert.That(
                 ChunkFiles(destination.Path),
                 Has.Length.EqualTo(2),
@@ -147,17 +145,14 @@ public sealed class UpdateBackupTests
         File.Delete(uniquePath);
         File.Delete(twinPath);
 
-        var updateResult = await orchestrator.ExecuteAsync(
-            NewRequest(source.Path, destination.Path, BackupOperation.Update),
-            new RecordingProgress<BackupStatus>()
-        );
+        var updateResult = await updateHandler.HandleAsync(NewUpdateCommand(source.Path, destination.Path));
         using (Assert.EnterMultipleScope())
         {
             Assert.That(updateResult.IsSuccess, Is.True);
-            Assert.That(updateResult.Value.IsSuccess, Is.True, "Update did not succeed.");
+            Assert.That(updateResult.Value.Completion!.IsSuccess, Is.True, "Update did not succeed.");
 
             Assert.That(
-                updateResult.Value.TotalFiles,
+                updateResult.Value.Completion.TotalFiles,
                 Is.Zero,
                 "The only surviving file is unchanged, so nothing at all has to be re-chunked."
             );
@@ -171,19 +166,20 @@ public sealed class UpdateBackupTests
             );
         }
 
-        var restoreResult = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
-            new RecordingProgress<BackupStatus>()
-        );
+        var restoreResult = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
                 Is.True,
                 "Restore after the pruning update did not succeed."
             );
 
-            Assert.That(restoreResult.Value.TotalFiles, Is.EqualTo(1), "The deleted entries were not dropped.");
+            Assert.That(
+                restoreResult.Value.Completion!.TotalFiles,
+                Is.EqualTo(1),
+                "The deleted entries were not dropped."
+            );
             Assert.That(
                 Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories),
                 Has.Length.EqualTo(1)
@@ -210,29 +206,56 @@ public sealed class UpdateBackupTests
     }
 
     /// <summary>
-    /// Builds an AES, PBKDF2, and Zstd request that proceeds past advisory warnings, so create,
-    /// update, and restore all run against identical cryptographic options.
+    /// Builds an AES, PBKDF2, and Zstd create command that proceeds past advisory warnings and
+    /// records progress into a fresh sink.
     /// </summary>
-    /// <param name="sourcePath">The tree to back up, or the backup directory to restore from.</param>
-    /// <param name="destinationPath">The directory the backup or the restored files are written to.</param>
-    /// <param name="operation">The operation to dispatch.</param>
-    /// <returns>The assembled request.</returns>
-    private static BackupRequest NewRequest(
-        string sourcePath,
-        string destinationPath,
-        BackupOperation operation
-    )
+    /// <param name="sourcePath">The tree to back up.</param>
+    /// <param name="destinationPath">The directory the backup is written to.</param>
+    /// <returns>The assembled command.</returns>
+    private static CreateBackupCommand NewCreateCommand(string sourcePath, string destinationPath)
     {
-        return new BackupRequest(
+        return new CreateBackupCommand(
             sourcePath,
             destinationPath,
             Password,
             Password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            operation,
             CompressionMode.Zstd,
             ProceedOnWarnings: true
-        );
+        )
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
+    }
+
+    /// <summary>
+    /// Builds an update command that proceeds past advisory warnings and records progress into a
+    /// fresh sink; the archive's own algorithms govern the run.
+    /// </summary>
+    /// <param name="sourcePath">The tree whose current contents feed the update.</param>
+    /// <param name="backupPath">The existing backup directory to update.</param>
+    /// <returns>The assembled command.</returns>
+    private static UpdateBackupCommand NewUpdateCommand(string sourcePath, string backupPath)
+    {
+        return new UpdateBackupCommand(sourcePath, backupPath, Password, ProceedOnWarnings: true)
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
+    }
+
+    /// <summary>
+    /// Builds a restore command that proceeds past advisory warnings and records progress into a
+    /// fresh sink; the archive's own algorithms govern the run.
+    /// </summary>
+    /// <param name="backupPath">The backup directory to restore from.</param>
+    /// <param name="destinationPath">The directory the restored files are written to.</param>
+    /// <returns>The assembled command.</returns>
+    private static RestoreBackupCommand NewRestoreCommand(string backupPath, string destinationPath)
+    {
+        return new RestoreBackupCommand(backupPath, destinationPath, Password, ProceedOnWarnings: true)
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
     }
 }

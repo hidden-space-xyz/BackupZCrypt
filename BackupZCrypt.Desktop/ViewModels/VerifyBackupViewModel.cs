@@ -1,9 +1,13 @@
-using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.Input;
@@ -15,16 +19,18 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// decrypting and re-hashing every chunk, without writing any files. Only the backup location and
 /// its password are required.
 /// </summary>
-/// <param name="orchestrator">The orchestrator that executes the verify operation.</param>
-/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="verifyBackup">The handler that answers the verify-backup query.</param>
+/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
+/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
 /// <param name="filePicker">The folder picker service.</param>
-/// <param name="manifestService">The service used to detect the kind of manifest at the backup path.</param>
+/// <param name="detectManifestKind">The handler that detects the kind of manifest at the backup path.</param>
 internal sealed partial class VerifyBackupViewModel(
-    IBackupOrchestrator orchestrator,
-    ISettingsService settingsService,
+    IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>> verifyBackup,
+    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
+    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
     IFilePickerService filePicker,
-    IManifestService manifestService
-) : ExistingBackupViewModelBase(orchestrator, settingsService, filePicker, manifestService)
+    IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind
+) : ExistingBackupViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker, detectManifestKind)
 {
     /// <summary>
     /// Gets the backup location, which for a verification is the source path.
@@ -76,13 +82,26 @@ internal sealed partial class VerifyBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the verify request.
+    /// Builds the verify-backup query from the current inputs and dispatches it to its handler.
+    /// Verification skips validation and never raises advisory warnings, so the proceed flag carries
+    /// no information for it and is deliberately ignored.
     /// </summary>
-    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
-    protected override BackupRequest CreateRequest(bool proceedOnWarnings)
+    /// <param name="proceedOnWarnings">Ignored: verification never stops at warnings.</param>
+    /// <param name="progress">The sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome of the verification.</returns>
+    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
+        bool proceedOnWarnings,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
     {
-        return BackupRequest.ForVerify(SourcePath, Password, proceedOnWarnings);
+        var query = new VerifyBackupQuery(SourcePath, Password)
+        {
+            Progress = progress,
+        };
+
+        return verifyBackup.HandleAsync(query, cancellationToken);
     }
 
     /// <summary>

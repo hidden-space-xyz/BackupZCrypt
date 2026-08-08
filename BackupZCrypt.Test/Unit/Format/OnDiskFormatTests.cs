@@ -1,8 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Factories.Interfaces;
@@ -60,15 +65,17 @@ public sealed class OnDiskFormatTests
         using var restored = new TempDir();
 
         var result = await provider
-            .GetRequiredService<IBackupOrchestrator>()
-            .ExecuteAsync(
-                RequestFor(archive, restored.Path, BackupOperation.Restore),
-                new RecordingProgress<BackupStatus>(),
+            .GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>()
+            .HandleAsync(
+                new RestoreBackupCommand(archive, restored.Path, Password, ProceedOnWarnings: true)
+                {
+                    Progress = new RecordingProgress<BackupStatus>(),
+                },
                 CancellationToken.None
             );
 
         Assert.That(
-            result.IsSuccess && result.Value.IsSuccess,
+            result.IsSuccess && result.Value.Completion!.IsSuccess,
             Is.True,
             $"The committed '{fixture.Name}' archive no longer restores. The on-disk format changed; "
                 + "every archive a user already wrote is unreadable by this build."
@@ -123,15 +130,17 @@ public sealed class OnDiskFormatTests
         await using var provider = TestHost.CreateProvider();
 
         var result = await provider
-            .GetRequiredService<IBackupOrchestrator>()
-            .ExecuteAsync(
-                RequestFor(archive, archive, BackupOperation.Verify),
-                new RecordingProgress<BackupStatus>(),
+            .GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>()
+            .HandleAsync(
+                new VerifyBackupQuery(archive, Password)
+                {
+                    Progress = new RecordingProgress<BackupStatus>(),
+                },
                 CancellationToken.None
             );
 
         Assert.That(
-            result.IsSuccess && result.Value.IsSuccess,
+            result.IsSuccess && result.Value.Completion!.IsSuccess,
             Is.True,
             $"Verification of the committed '{fixture.Name}' archive failed."
         );
@@ -332,31 +341,5 @@ public sealed class OnDiskFormatTests
         );
 
         return path;
-    }
-
-    /// <summary>
-    /// Builds a request against a fixture archive using the algorithms it was written with.
-    /// </summary>
-    /// <param name="sourcePath">The archive to read from.</param>
-    /// <param name="destinationPath">Where the operation writes, or the archive itself for verify.</param>
-    /// <param name="operation">The operation to perform.</param>
-    /// <returns>The assembled request.</returns>
-    private static BackupRequest RequestFor(
-        string sourcePath,
-        string destinationPath,
-        BackupOperation operation
-    )
-    {
-        return new BackupRequest(
-            sourcePath,
-            destinationPath,
-            Password,
-            Password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            operation,
-            CompressionMode.None,
-            ProceedOnWarnings: true
-        );
     }
 }

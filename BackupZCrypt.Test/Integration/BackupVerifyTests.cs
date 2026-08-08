@@ -1,7 +1,11 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -16,8 +20,8 @@ namespace BackupZCrypt.Test.Integration;
 /// Integration tests for the backup verify operation.
 /// </summary>
 /// <remarks>
-/// Verify reconstructs every file into <see cref="Stream.Null"/>, so it must neither write to the
-/// destination it was handed nor rewrite, prune, or repair a single byte of the archive it is reading.
+/// Verify reconstructs every file into <see cref="Stream.Null"/>, so it must neither write to any
+/// directory nor rewrite, prune, or repair a single byte of the archive it is reading.
 /// </remarks>
 public sealed class BackupVerifyTests
 {
@@ -41,32 +45,25 @@ public sealed class BackupVerifyTests
     )
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var scratch = new TempDir();
-        await CreateBackupAsync(orchestrator, source, destination, compression);
+        await CreateBackupAsync(createHandler, source, destination, compression);
 
         var archiveBefore = Snapshot(destination.Path);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(
-                destination.Path,
-                BackupOperation.Verify,
-                compression,
-                destinationPath: scratch.Path
-            ),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.IsSuccess, Is.True);
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(SourceFileCount));
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(result.Value.TotalFiles));
-            Assert.That(result.Value.Errors, Is.Empty);
+            Assert.That(result.Value.Completion!.IsSuccess, Is.True);
+            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
+            Assert.That(result.Value.Completion.ProcessedFiles, Is.EqualTo(result.Value.Completion.TotalFiles));
+            Assert.That(result.Value.Completion.Errors, Is.Empty);
 
             Assert.That(
                 Directory.GetFileSystemEntries(scratch.Path),
@@ -85,16 +82,14 @@ public sealed class BackupVerifyTests
     public async Task Verify_WrongPassword_FailsWithInvalidPasswordAndReportsNoVerifiedFiles()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(orchestrator, source, destination, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, BackupOperation.Verify, password: "a-different-password-1"),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path, password: "a-different-password-1"));
 
         using (Assert.EnterMultipleScope())
         {
@@ -114,11 +109,12 @@ public sealed class BackupVerifyTests
     public async Task Verify_CorruptedChunk_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(orchestrator, source, destination, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
 
         var chunkFile = ChunkFiles(destination.Path)[0];
         var bytes = await File.ReadAllBytesAsync(chunkFile);
@@ -127,20 +123,17 @@ public sealed class BackupVerifyTests
 
         var archiveBefore = Snapshot(destination.Path);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, BackupOperation.Verify),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.IsSuccess, Is.False);
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(SourceFileCount));
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(SourceFileCount - 1));
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
+            Assert.That(result.Value.Completion!.IsSuccess, Is.False);
+            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
+            Assert.That(result.Value.Completion.ProcessedFiles, Is.EqualTo(SourceFileCount - 1));
+            Assert.That(result.Value.Completion.Errors, Has.Count.EqualTo(1));
             Assert.That(
-                result.Value.Errors,
+                result.Value.Completion.Errors,
                 Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
             );
             Assert.That(
@@ -155,34 +148,32 @@ public sealed class BackupVerifyTests
     public async Task Verify_ChunkFileMissing_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(orchestrator, source, destination, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
 
         File.Delete(ChunkFiles(destination.Path)[0]);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, BackupOperation.Verify),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.IsSuccess, Is.False);
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(SourceFileCount));
+            Assert.That(result.Value.Completion!.IsSuccess, Is.False);
+            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
             Assert.That(
-                result.Value.ProcessedFiles,
+                result.Value.Completion.ProcessedFiles,
                 Is.EqualTo(SourceFileCount - 1),
                 "A chunk that is absent rather than corrupt surfaces as an I/O failure instead of a "
                     + "cryptographic one, and that arm of the per-file error handling must still finish the "
                     + "run and salvage every file whose chunks are intact."
             );
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
+            Assert.That(result.Value.Completion.Errors, Has.Count.EqualTo(1));
             Assert.That(
-                result.Value.Errors,
+                result.Value.Completion.Errors,
                 Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
             );
         }
@@ -192,15 +183,12 @@ public sealed class BackupVerifyTests
     public async Task Verify_MissingManifest_FailsWithManifestRequired()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var backup = new TempDir();
         _ = backup.WriteText("stray.txt", "not a manifest");
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(backup.Path, BackupOperation.Verify),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(backup.Path));
 
         Assert.That(CollectCodes(result), Does.Contain(MessageCode.ManifestRequiredForDecryption));
     }
@@ -209,14 +197,11 @@ public sealed class BackupVerifyTests
     public async Task Verify_MissingSource_FailsWithSourcePathNotExist()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         var missing = Path.Combine(Path.GetTempPath(), "bzc-missing", Guid.NewGuid().ToString("N"));
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(missing, BackupOperation.Verify),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(missing));
 
         Assert.That(CollectCodes(result), Does.Contain(MessageCode.SourcePathNotExist));
     }
@@ -225,14 +210,11 @@ public sealed class BackupVerifyTests
     public async Task Verify_EmptyPassword_ReportsPasswordRequired()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var backup = new TempDir();
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(backup.Path, BackupOperation.Verify, password: string.Empty),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await verifyHandler.HandleAsync(NewVerifyQuery(backup.Path, password: string.Empty));
 
         Assert.That(CollectCodes(result), Does.Contain(MessageCode.PasswordRequired));
     }
@@ -242,13 +224,13 @@ public sealed class BackupVerifyTests
     /// so the verify tests have an intact backup to work against. Fails the test if creation does not
     /// succeed.
     /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the create operation.</param>
+    /// <param name="createHandler">The handler that executes the create command.</param>
     /// <param name="source">The directory the sample files are written to.</param>
     /// <param name="destination">The directory the backup is written to.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
     /// <returns>A task that completes once the backup exists.</returns>
     private static async Task CreateBackupAsync(
-        IBackupOrchestrator orchestrator,
+        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createHandler,
         TempDir source,
         TempDir destination,
         CompressionMode compression
@@ -258,14 +240,11 @@ public sealed class BackupVerifyTests
         _ = source.WriteText("b.txt", new string('b', 8192));
         _ = source.WriteText(Path.Combine("sub", "c.txt"), "hello world");
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(source.Path, BackupOperation.Create, compression, destinationPath: destination.Path),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path, compression));
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(result.IsSuccess && result.Value.IsSuccess, Is.True, "Backup creation failed.");
+            Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Backup creation failed.");
             Assert.That(
                 ChunkFiles(destination.Path),
                 Has.Length.EqualTo(SourceFileCount),
@@ -275,33 +254,42 @@ public sealed class BackupVerifyTests
     }
 
     /// <summary>
-    /// Builds an AES plus PBKDF2 request that proceeds past advisory warnings.
+    /// Builds an AES plus PBKDF2 create command that proceeds past advisory warnings and reports
+    /// progress to a throwaway sink.
     /// </summary>
-    /// <param name="sourcePath">The tree to back up, or the backup directory to verify.</param>
-    /// <param name="operation">The operation to dispatch.</param>
+    /// <param name="sourcePath">The tree to back up.</param>
+    /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
-    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
-    /// <param name="destinationPath">The output directory, left empty for read-only verify runs.</param>
-    /// <returns>The assembled request.</returns>
-    private static BackupRequest NewRequest(
-        string sourcePath,
-        BackupOperation operation,
-        CompressionMode compression = CompressionMode.None,
-        string password = Password,
-        string destinationPath = ""
-    )
+    /// <returns>The assembled command.</returns>
+    private static CreateBackupCommand NewCreateCommand(string sourcePath, string destinationPath, CompressionMode compression)
     {
-        return new BackupRequest(
+        return new CreateBackupCommand(
             sourcePath,
             destinationPath,
-            password,
-            password,
+            Password,
+            Password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            operation,
             compression,
             ProceedOnWarnings: true
-        );
+        )
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
+    }
+
+    /// <summary>
+    /// Builds a verify query that reports progress to a throwaway sink.
+    /// </summary>
+    /// <param name="backupPath">The backup directory to verify.</param>
+    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
+    /// <returns>The assembled query.</returns>
+    private static VerifyBackupQuery NewVerifyQuery(string backupPath, string password = Password)
+    {
+        return new VerifyBackupQuery(backupPath, password)
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
     }
 
     /// <summary>
@@ -345,18 +333,18 @@ public sealed class BackupVerifyTests
     }
 
     /// <summary>
-    /// Gathers the orchestrator's own error codes together with the per-file codes of the inner
-    /// backup result, which is only read when the outer result succeeded because
+    /// Gathers the handler's own error codes together with the per-file codes of the completed engine
+    /// result, which is only read when the outer result succeeded with a completion because
     /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
     /// </summary>
-    /// <param name="result">The orchestrator outcome to inspect.</param>
+    /// <param name="result">The handler outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>
-    private static HashSet<MessageCode> CollectCodes(Result<BackupResult> result)
+    private static HashSet<MessageCode> CollectCodes(Result<BackupOutcome> result)
     {
         var codes = result.Errors.Select(static e => e.Code).ToHashSet();
-        if (result.IsSuccess)
+        if (result.IsSuccess && result.Value.Completion is not null)
         {
-            foreach (var error in result.Value.Errors)
+            foreach (var error in result.Value.Completion.Errors)
             {
                 _ = codes.Add(error.Code);
             }

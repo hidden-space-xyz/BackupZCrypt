@@ -1,8 +1,12 @@
-using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.Input;
@@ -13,16 +17,18 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the update page: re-scans the source path and updates the existing backup stored at
 /// the destination path.
 /// </summary>
-/// <param name="orchestrator">The orchestrator that executes the update operation.</param>
-/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="updateBackup">The handler that executes the update-backup command.</param>
+/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
+/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
 /// <param name="filePicker">The folder picker service.</param>
-/// <param name="manifestService">The service used to detect the kind of manifest at the backup path.</param>
+/// <param name="detectManifestKind">The handler that detects the kind of manifest at the backup path.</param>
 internal sealed partial class UpdateBackupViewModel(
-    IBackupOrchestrator orchestrator,
-    ISettingsService settingsService,
+    ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>> updateBackup,
+    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
+    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
     IFilePickerService filePicker,
-    IManifestService manifestService
-) : ExistingBackupViewModelBase(orchestrator, settingsService, filePicker, manifestService)
+    IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind
+) : ExistingBackupViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker, detectManifestKind)
 {
     /// <summary>
     /// Gets the backup location, which for an update is the destination path.
@@ -47,13 +53,24 @@ internal sealed partial class UpdateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the update request.
+    /// Builds the update-backup command from the current inputs and dispatches it to its handler.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
-    protected override BackupRequest CreateRequest(bool proceedOnWarnings)
+    /// <param name="progress">The sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome of the operation.</returns>
+    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
+        bool proceedOnWarnings,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
     {
-        return BackupRequest.ForUpdate(SourcePath, DestinationPath, Password, proceedOnWarnings);
+        var command = new UpdateBackupCommand(SourcePath, DestinationPath, Password, proceedOnWarnings)
+        {
+            Progress = progress,
+        };
+
+        return updateBackup.HandleAsync(command, cancellationToken);
     }
 
     /// <summary>

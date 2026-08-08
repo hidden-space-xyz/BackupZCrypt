@@ -1,7 +1,10 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -37,7 +40,8 @@ public sealed class CrossPlatformManifestTests
     public async Task CreateThenRestore_NestedTree_RecordsForwardSlashPathsAndRebuildsTheSameStructure()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -47,7 +51,7 @@ public sealed class CrossPlatformManifestTests
         _ = source.WriteText(Path.Combine("docs", "notes.md"), "# notes");
         _ = source.WriteText(Path.Combine("docs", "sub", "deep.txt"), "deep");
 
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path);
 
         var manifest = await ReadManifestAsync(provider, destination.Path);
         var manifestPaths = manifest.Files.Select(static f => f.OriginalPath).ToList();
@@ -65,7 +69,7 @@ public sealed class CrossPlatformManifestTests
             );
         }
 
-        await RestoreBackupAsync(orchestrator, destination.Path, restored.Path);
+        await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
 
         var restoredPaths = Directory
             .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
@@ -90,7 +94,8 @@ public sealed class CrossPlatformManifestTests
     public async Task Restore_ForeignManifestEntryWithBackslashSeparators_RebuildsNestedDirectoriesNotAFlatName()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -98,10 +103,10 @@ public sealed class CrossPlatformManifestTests
 
         _ = source.WriteText(Path.Combine("docs", "notes.md"), "# notes");
 
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path);
         await RewriteManifestPathsAsync(provider, destination.Path, static _ => "docs\\notes.md");
 
-        await RestoreBackupAsync(orchestrator, destination.Path, restored.Path);
+        await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
 
         var restoredFile = Path.Combine(restored.Path, "docs", "notes.md");
         var restoredNames = Directory
@@ -130,22 +135,25 @@ public sealed class CrossPlatformManifestTests
     public async Task Restore_ManifestPathWithWindowsTraversal_IsRejectedAndWritesNothing()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var restored = new TempDir();
 
         _ = source.WriteText("payload.txt", "payload");
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path);
 
         var escapedName = "bzc-escaped-" + Guid.NewGuid().ToString("N") + ".txt";
         var escapeTarget = Path.Combine(Path.GetTempPath(), escapedName);
         await RewriteManifestPathsAsync(provider, destination.Path, _ => "..\\..\\" + escapedName);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
-            new RecordingProgress<BackupStatus>()
+        var result = await restoreHandler.HandleAsync(
+            new RestoreBackupCommand(destination.Path, restored.Path, Password, ProceedOnWarnings: true)
+            {
+                Progress = new RecordingProgress<BackupStatus>(),
+            }
         );
 
         using (Assert.EnterMultipleScope())
@@ -178,72 +186,60 @@ public sealed class CrossPlatformManifestTests
     }
 
     /// <summary>
-    /// Backs up a source tree and fails the test if creation did not succeed, so a later assertion
+    /// Backs up a source tree with AES plus PBKDF2, without compression and proceeding past
+    /// advisory warnings, and fails the test if creation did not succeed, so a later assertion
     /// never reports a missing archive as a portability defect.
     /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the create operation.</param>
+    /// <param name="handler">The handler that executes the create command.</param>
     /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <returns>A task that completes once the backup exists.</returns>
     private static async Task CreateBackupAsync(
-        IBackupOrchestrator orchestrator,
+        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> handler,
         string sourcePath,
         string destinationPath
     )
     {
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(sourcePath, destinationPath, BackupOperation.Create),
-            new RecordingProgress<BackupStatus>()
+        var result = await handler.HandleAsync(
+            new CreateBackupCommand(
+                sourcePath,
+                destinationPath,
+                Password,
+                Password,
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.None,
+                ProceedOnWarnings: true
+            )
+            {
+                Progress = new RecordingProgress<BackupStatus>(),
+            }
         );
 
-        Assert.That(result.IsSuccess && result.Value.IsSuccess, Is.True, "Backup creation failed.");
+        Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Backup creation failed.");
     }
 
     /// <summary>
     /// Restores a backup and fails the test if the restore did not fully succeed.
     /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the restore operation.</param>
+    /// <param name="handler">The handler that executes the restore command.</param>
     /// <param name="backupPath">The backup root to restore from.</param>
     /// <param name="destinationPath">The directory the files are reconstructed into.</param>
     /// <returns>A task that completes once the restore has finished.</returns>
     private static async Task RestoreBackupAsync(
-        IBackupOrchestrator orchestrator,
+        ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>> handler,
         string backupPath,
         string destinationPath
     )
     {
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(backupPath, destinationPath, BackupOperation.Restore),
-            new RecordingProgress<BackupStatus>()
+        var result = await handler.HandleAsync(
+            new RestoreBackupCommand(backupPath, destinationPath, Password, ProceedOnWarnings: true)
+            {
+                Progress = new RecordingProgress<BackupStatus>(),
+            }
         );
 
-        Assert.That(result.IsSuccess && result.Value.IsSuccess, Is.True, "Restore failed.");
-    }
-
-    /// <summary>
-    /// Builds an AES plus PBKDF2 request without compression that proceeds past advisory warnings.
-    /// </summary>
-    /// <param name="sourcePath">The tree to back up, or the backup directory to restore from.</param>
-    /// <param name="destinationPath">The directory the backup or the restored files are written to.</param>
-    /// <param name="operation">The operation to dispatch.</param>
-    /// <returns>The assembled request.</returns>
-    private static BackupRequest NewRequest(
-        string sourcePath,
-        string destinationPath,
-        BackupOperation operation
-    )
-    {
-        return new BackupRequest(
-            sourcePath,
-            destinationPath,
-            Password,
-            Password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            operation,
-            CompressionMode.None,
-            ProceedOnWarnings: true
-        );
+        Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Restore failed.");
     }
 
     /// <summary>

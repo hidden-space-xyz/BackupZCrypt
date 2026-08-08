@@ -1,15 +1,18 @@
 using System.Globalization;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -26,14 +29,22 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 public sealed class OperationViewModelBaseTests
 {
     /// <summary>
-    /// The substituted orchestrator every run is dispatched to.
+    /// The substituted handler every run of the test page is dispatched to.
     /// </summary>
-    private readonly IBackupOrchestrator orchestrator = Substitute.For<IBackupOrchestrator>();
+    private readonly ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup =
+        Substitute.For<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
 
     /// <summary>
-    /// The substituted settings service the page reads and writes the recent paths through.
+    /// The substituted handler the page reads the recent paths through.
     /// </summary>
-    private readonly ISettingsService settingsService = Substitute.For<ISettingsService>();
+    private readonly IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery =
+        Substitute.For<IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings>>();
+
+    /// <summary>
+    /// The substituted handler the page persists the recent paths through.
+    /// </summary>
+    private readonly ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPaths =
+        Substitute.For<ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result>>();
 
     /// <summary>
     /// The substituted folder picker, never exercised here but required by the constructor.
@@ -47,7 +58,7 @@ public sealed class OperationViewModelBaseTests
 
     /// <summary>
     /// Installs a synchronization context that runs posted callbacks inline, so the
-    /// <see cref="Progress{T}"/> the page hands to the orchestrator delivers its reports
+    /// <see cref="Progress{T}"/> the page attaches to its message delivers its reports
     /// synchronously instead of on an arbitrary thread pool thread.
     /// </summary>
     [SetUp]
@@ -109,9 +120,11 @@ public sealed class OperationViewModelBaseTests
     )
     {
         var sut = CreateSut();
-        StubOrchestrator(
-            Result<BackupResult>.Success(
-                new BackupResult(succeeded, TimeSpan.FromMinutes(3), 2048, processedFiles, 5)
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(
+                    new BackupResult(succeeded, TimeSpan.FromMinutes(3), 2048, processedFiles, 5)
+                )
             )
         );
 
@@ -149,15 +162,11 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task StartCommand_WhenWarningsArriveBeforeAnyFileWasProcessed_OpensTheConfirmationGate()
+    public async Task StartCommand_WhenTheOutcomeAwaitsConfirmation_OpensTheConfirmationGate()
     {
         var sut = CreateSut();
         LocalizableMessage warning = new(MessageCode.DestinationExistingFilesFormat, 12);
-        StubOrchestrator(
-            Result<BackupResult>.Success(
-                new BackupResult(false, TimeSpan.Zero, 0, 0, 0, warnings: [warning])
-            )
-        );
+        StubHandler(Result<BackupOutcome>.Success(BackupOutcome.AwaitingConfirmation([warning])));
 
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
@@ -173,18 +182,20 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task StartCommand_WhenWarningsArriveAfterFilesWereProcessed_ShowsTheResultInstead()
+    public async Task StartCommand_WhenACompletedRunCarriesWarnings_ShowsTheResultInsteadOfTheGate()
     {
         var sut = CreateSut();
-        StubOrchestrator(
-            Result<BackupResult>.Success(
-                new BackupResult(
-                    false,
-                    TimeSpan.FromSeconds(4),
-                    2048,
-                    3,
-                    5,
-                    warnings: [new LocalizableMessage(MessageCode.DestinationExistingFilesFormat, 12)]
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(
+                    new BackupResult(
+                        false,
+                        TimeSpan.FromSeconds(4),
+                        2048,
+                        3,
+                        5,
+                        warnings: [new LocalizableMessage(MessageCode.DestinationExistingFilesFormat, 12)]
+                    )
                 )
             )
         );
@@ -203,39 +214,29 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task ContinueAnywayCommand_ReRunsTheRequestWithProceedOnWarningsSet()
+    public async Task ContinueAnywayCommand_ReRunsTheMessageWithProceedOnWarningsSet()
     {
-        List<BackupRequest> requests = [];
+        List<CreateBackupCommand> commands = [];
         var sut = CreateSut();
 
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Do<BackupRequest>(requests.Add),
-                Arg.Any<IProgress<BackupStatus>>(),
+            .createBackup.HandleAsync(
+                Arg.Do<CreateBackupCommand>(commands.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
                 Task.FromResult(
-                    Result<BackupResult>.Success(
-                        new BackupResult(
-                            false,
-                            TimeSpan.Zero,
-                            0,
-                            0,
-                            0,
-                            warnings:
-                            [
-                                new LocalizableMessage(
-                                    MessageCode.DestinationExistingFilesFormat,
-                                    12
-                                ),
-                            ]
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.AwaitingConfirmation(
+                            [new LocalizableMessage(MessageCode.DestinationExistingFilesFormat, 12)]
                         )
                     )
                 ),
                 Task.FromResult(
-                    Result<BackupResult>.Success(
-                        new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.Completed(
+                            new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                        )
                     )
                 )
             );
@@ -252,7 +253,7 @@ public sealed class OperationViewModelBaseTests
         {
             Assert.That(gateOpened, Is.True);
             Assert.That(
-                requests.Select(static request => request.ProceedOnWarnings),
+                commands.Select(static command => command.ProceedOnWarnings),
                 Is.EqualTo([false, true])
             );
             Assert.That(sut.ShowWarnings, Is.False);
@@ -263,16 +264,12 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task CancelOperationCommand_CancelsTheTokenTheOrchestratorReceived_AndLeavesThePageIdle()
+    public async Task CancelOperationCommand_CancelsTheTokenTheHandlerReceived_AndLeavesThePageIdle()
     {
         var sut = CreateSut();
 
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
                 var token = callInfo.Arg<CancellationToken>();
@@ -280,7 +277,9 @@ public sealed class OperationViewModelBaseTests
                 token.ThrowIfCancellationRequested();
 
                 return Task.FromResult(
-                    Result<BackupResult>.Success(new BackupResult(true, TimeSpan.Zero, 0, 0, 0))
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.Completed(new BackupResult(true, TimeSpan.Zero, 0, 0, 0))
+                    )
                 );
             });
 
@@ -303,15 +302,11 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task StartCommand_WhenTheOrchestratorThrows_ShowsTheMessageAndReturnsToIdle()
+    public async Task StartCommand_WhenTheHandlerThrows_ShowsTheMessageAndReturnsToIdle()
     {
         var sut = CreateSut();
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Throws(new IOException("disk gone"));
 
         sut.SourcePath = "source";
@@ -342,15 +337,11 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public void StartCommand_WhenTheOrchestratorRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
+    public void StartCommand_WhenTheHandlerRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
     {
         var sut = CreateSut();
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Throws(new OutOfMemoryException());
 
         sut.SourcePath = "source";
@@ -373,17 +364,18 @@ public sealed class OperationViewModelBaseTests
         var percentWhileScanning = -1d;
 
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
-                var progress =
-                    callInfo.Arg<IProgress<BackupStatus>>()
+                var command =
+                    callInfo.Arg<CreateBackupCommand>()
                     ?? throw new InvalidOperationException(
-                        "The orchestrator was invoked without a progress reporter."
+                        "The handler was invoked without a command."
+                    );
+                var progress =
+                    command.Progress
+                    ?? throw new InvalidOperationException(
+                        "The handler received a command without a progress reporter."
                     );
 
                 progress.Report(new BackupStatus(0, 10, 0, 0, TimeSpan.Zero));
@@ -395,8 +387,10 @@ public sealed class OperationViewModelBaseTests
                 );
 
                 return Task.FromResult(
-                    Result<BackupResult>.Success(
-                        new BackupResult(true, TimeSpan.FromSeconds(3725), 1000, 10, 10)
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.Completed(
+                            new BackupResult(true, TimeSpan.FromSeconds(3725), 1000, 10, 10)
+                        )
                     )
                 );
             });
@@ -428,21 +422,19 @@ public sealed class OperationViewModelBaseTests
         var sut = CreateSut();
 
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Returns(
                 Task.FromResult(
-                    Result<BackupResult>.Failure(
+                    Result<BackupOutcome>.Failure(
                         new LocalizableMessage(MessageCode.SourceAccessDenied),
                         new LocalizableMessage(MessageCode.PasswordTooShort)
                     )
                 ),
                 Task.FromResult(
-                    Result<BackupResult>.Success(
-                        new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.Completed(
+                            new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                        )
                     )
                 )
             );
@@ -475,15 +467,17 @@ public sealed class OperationViewModelBaseTests
         var sut = CreateSut();
 
         _ = this
-            .settingsService.SaveAsync(
-                Arg.Do<RecentPathSettings>(saved.Add),
+            .saveRecentPaths.HandleAsync(
+                Arg.Do<SaveSettingsCommand<RecentPathSettings>>(command => saved.Add(command.Settings)),
                 Arg.Any<CancellationToken>()
             )
-            .Returns(Task.CompletedTask);
+            .Returns(Result.Success());
 
-        StubOrchestrator(
-            Result<BackupResult>.Success(
-                new BackupResult(succeeded, TimeSpan.FromSeconds(1), 16, succeeded ? 2 : 1, 2)
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(
+                    new BackupResult(succeeded, TimeSpan.FromSeconds(1), 16, succeeded ? 2 : 1, 2)
+                )
             )
         );
 
@@ -521,12 +515,15 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
-    public async Task OnNavigatedToAsync_WhenTheRecentPathsCannotBeRead_LeavesThePageUsable()
+    public async Task OnNavigatedToAsync_WhenTheHandlerReportsTheDefaults_LeavesThePageUsable()
     {
         var sut = CreateSut();
         _ = this
-            .settingsService.GetOrCreateAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
-            .Throws(new IOException("settings unreadable"));
+            .recentPathsQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(RecentPathSettings.DefaultValue);
 
         await sut.OnNavigatedToAsync();
 
@@ -534,15 +531,10 @@ public sealed class OperationViewModelBaseTests
         {
             Assert.That(sut.SourcePath, Is.Empty);
             Assert.That(sut.DestinationPath, Is.Empty);
-            Assert.That(sut.AppliedRecentPaths, Is.Empty);
+            Assert.That(sut.AppliedRecentPaths, Is.EqualTo([RecentPathSettings.DefaultValue]));
         }
     }
 
-    /// <summary>
-    /// Builds the concrete test page with the remembered paths already stubbed, since an unstubbed
-    /// settings read hands the page a <see langword="null"/> settings object.
-    /// </summary>
-    /// <returns>The system under test.</returns>
     [TestCase(true, 5, 5, "", Description = "cleared once the operation it protected has succeeded")]
     [TestCase(false, 3, 5, "secret", Description = "kept after a partial run, which may be re-run")]
     public async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
@@ -553,14 +545,16 @@ public sealed class OperationViewModelBaseTests
     )
     {
         var sut = CreateSut();
-        StubOrchestrator(
-            Result<BackupResult>.Success(
-                new BackupResult(
-                    succeeded,
-                    TimeSpan.FromSeconds(1),
-                    1024,
-                    processedFiles,
-                    totalFiles
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(
+                    new BackupResult(
+                        succeeded,
+                        TimeSpan.FromSeconds(1),
+                        1024,
+                        processedFiles,
+                        totalFiles
+                    )
                 )
             )
         );
@@ -583,19 +577,20 @@ public sealed class OperationViewModelBaseTests
     [Test]
     public async Task StartCommand_CapturesThePasswordBeforeClearingIt()
     {
-        List<BackupRequest> requests = [];
+        List<CreateBackupCommand> commands = [];
         var sut = CreateSut();
 
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Do<BackupRequest>(requests.Add),
-                Arg.Any<IProgress<BackupStatus>>(),
+            .createBackup.HandleAsync(
+                Arg.Do<CreateBackupCommand>(commands.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
                 Task.FromResult(
-                    Result<BackupResult>.Success(
-                        new BackupResult(true, TimeSpan.FromSeconds(1), 1024, 1, 1)
+                    Result<BackupOutcome>.Success(
+                        BackupOutcome.Completed(
+                            new BackupResult(true, TimeSpan.FromSeconds(1), 1024, 1, 1)
+                        )
                     )
                 )
             );
@@ -607,38 +602,49 @@ public sealed class OperationViewModelBaseTests
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.That(
-            requests.Select(static r => r.Password),
+            commands.Select(static command => command.Password),
             Is.EqualTo(["secret"]),
-            "The request must carry the real password: clearing it before CreateRequest ran would "
-                + "silently send an empty one to the engine."
+            "The message must carry the real password: clearing it before the message was built "
+                + "would silently send an empty one to the engine."
         );
     }
 
+    /// <summary>
+    /// Builds the concrete test page with the remembered paths already stubbed, since an unstubbed
+    /// handler hands the page a <see langword="null"/> settings object.
+    /// </summary>
+    /// <returns>The system under test.</returns>
     private TestOperationViewModel CreateSut()
     {
         _ = this
-            .settingsService.GetOrCreateAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
-            .Returns(
-                Task.FromResult(
-                    new RecentPathSettings("remembered-source", "remembered-destination")
-                )
-            );
+            .recentPathsQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(new RecentPathSettings("remembered-source", "remembered-destination"));
+        _ = this
+            .saveRecentPaths.HandleAsync(
+                Arg.Any<SaveSettingsCommand<RecentPathSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result.Success());
 
-        return new TestOperationViewModel(this.orchestrator, this.settingsService, this.filePicker);
+        return new TestOperationViewModel(
+            this.createBackup,
+            this.recentPathsQuery,
+            this.saveRecentPaths,
+            this.filePicker
+        );
     }
 
     /// <summary>
-    /// Makes every orchestrator call return the same outcome.
+    /// Makes every handler call return the same outcome.
     /// </summary>
-    /// <param name="result">The outcome the orchestrator reports.</param>
-    private void StubOrchestrator(Result<BackupResult> result)
+    /// <param name="result">The outcome the handler reports.</param>
+    private void StubHandler(Result<BackupOutcome> result)
     {
         _ = this
-            .orchestrator.ExecuteAsync(
-                Arg.Any<BackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(result));
     }
 
@@ -662,18 +668,20 @@ public sealed class OperationViewModelBaseTests
     }
 
     /// <summary>
-    /// The minimal concrete page used to exercise the abstract engine: it builds a create request
+    /// The minimal concrete page used to exercise the abstract engine: it builds a create command
     /// from the current inputs and records every recent-path application so the load-once guard is
     /// observable.
     /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the operation.</param>
-    /// <param name="settingsService">The service that reads and persists the recent paths.</param>
+    /// <param name="createBackup">The handler that executes the operation.</param>
+    /// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
+    /// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
     /// <param name="filePicker">The folder picker service.</param>
     private sealed class TestOperationViewModel(
-        IBackupOrchestrator orchestrator,
-        ISettingsService settingsService,
+        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup,
+        IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
+        ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
         IFilePickerService filePicker
-    ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
+    ) : OperationViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker)
     {
         /// <summary>
         /// Gets the recent-path settings handed to the page, one entry per application.
@@ -683,21 +691,29 @@ public sealed class OperationViewModelBaseTests
         /// <inheritdoc/>
         /// <remarks>
         /// Reads the real <c>Password</c> rather than a literal, so a change that cleared it before
-        /// the request was built shows up here instead of hiding behind a stub value.
+        /// the message was built shows up here instead of hiding behind a stub value.
         /// </remarks>
-        protected override BackupRequest CreateRequest(bool proceedOnWarnings)
+        protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
+            bool proceedOnWarnings,
+            IProgress<BackupStatus> progress,
+            CancellationToken cancellationToken
+        )
         {
-            return new BackupRequest(
+            var command = new CreateBackupCommand(
                 SourcePath,
                 DestinationPath,
                 Password,
                 Password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.PBKDF2,
-                BackupOperation.Create,
                 CompressionMode.None,
                 proceedOnWarnings
-            );
+            )
+            {
+                Progress = progress,
+            };
+
+            return createBackup.HandleAsync(command, cancellationToken);
         }
 
         /// <inheritdoc/>

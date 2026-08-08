@@ -1,14 +1,17 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -18,16 +21,16 @@ using CommunityToolkit.Mvvm.Input;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// Shared engine for the create/update/restore/verify pages: request execution with progress reporting,
+/// Shared engine for the create/update/restore/verify pages: message execution with progress reporting,
 /// cancellation, the warnings confirmation flow, and the final result panel. Subclasses only describe
-/// how to build the request.
+/// how to build their message and which handler executes it.
 /// </summary>
-/// <param name="orchestrator">The orchestrator that executes backup operations.</param>
-/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
+/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
 /// <param name="filePicker">The folder picker service.</param>
 internal abstract partial class OperationViewModelBase(
-    IBackupOrchestrator orchestrator,
-    ISettingsService settingsService,
+    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
+    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
     IFilePickerService filePicker
 ) : ViewModelBase
 {
@@ -169,16 +172,11 @@ internal abstract partial class OperationViewModelBase(
     protected IFilePickerService FilePicker { get; } = filePicker;
 
     /// <summary>
-    /// Gets the service that reads and persists user settings.
-    /// </summary>
-    protected ISettingsService SettingsService { get; } = settingsService;
-
-    /// <summary>
     /// Loads and applies the most recently used paths the first time the page is shown.
     /// </summary>
     /// <remarks>
-    /// Recent paths are a convenience only, so a failure to read them is swallowed and the page simply
-    /// starts with empty inputs.
+    /// Recent paths are a convenience only, and the handler absorbs a failure to read them into the
+    /// defaults, so the page simply starts with empty inputs in that case.
     /// </remarks>
     /// <returns>A task that completes once the recent paths have been applied.</returns>
     public override async Task OnNavigatedToAsync()
@@ -190,41 +188,26 @@ internal abstract partial class OperationViewModelBase(
 
         recentPathsLoaded = true;
 
-        var recent = await TryLoadRecentPathsAsync();
+        var recent = await recentPathsQuery.HandleAsync(
+            new GetSettingsQuery<RecentPathSettings>(),
+            CancellationToken.None
+        );
 
-        if (recent is not null)
-        {
-            ApplyRecentPaths(recent);
-        }
+        ApplyRecentPaths(recent);
     }
 
     /// <summary>
-    /// Reads the persisted recently used paths.
-    /// </summary>
-    /// <returns>
-    /// The stored paths, or <see langword="null"/> when they cannot be read, in which case the page starts
-    /// with empty inputs.
-    /// </returns>
-    private async Task<RecentPathSettings?> TryLoadRecentPathsAsync()
-    {
-        try
-        {
-            return await SettingsService.GetOrCreateAsync<RecentPathSettings>(
-                CancellationToken.None
-            );
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Builds the operation request for the current inputs.
+    /// Builds the page's message from the current inputs and dispatches it to the page's handler.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
-    protected abstract BackupRequest CreateRequest(bool proceedOnWarnings);
+    /// <param name="progress">The sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome of the operation.</returns>
+    protected abstract Task<Result<BackupOutcome>> ExecuteOperationAsync(
+        bool proceedOnWarnings,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    );
 
     /// <summary>
     /// Applies the recently used paths to the page inputs. The default implementation does nothing.
@@ -339,7 +322,7 @@ internal abstract partial class OperationViewModelBase(
     }
 
     /// <summary>
-    /// Re-runs the operation after the user acknowledged the warnings, telling the orchestrator to
+    /// Re-runs the operation after the user acknowledged the warnings, telling the pipeline to
     /// proceed past them.
     /// </summary>
     /// <returns>A task that completes once the operation has finished and its result is shown.</returns>
@@ -374,10 +357,11 @@ internal abstract partial class OperationViewModelBase(
     /// a cancellation, or an unexpected exception into the result panel.
     /// </summary>
     /// <remarks>
-    /// The orchestrator funnels its own failures into a <c>Result</c>, so the exception handler is
+    /// The handler funnels its own failures into a <c>Result</c>, so the exception handler is
     /// reached only when something escaped it. The raw exception text is wrapped in the localized
     /// unexpected-error frame rather than shown bare, so the sentence the user reads follows their
-    /// language even when the detail inside it cannot be translated.
+    /// language even when the detail inside it cannot be translated. The progress sink is constructed
+    /// here, on the UI thread, so its callbacks marshal back to it.
     /// </remarks>
     /// <param name="proceedOnWarnings">Whether the request should continue past advisory warnings.</param>
     /// <returns>A task that completes once the result has been presented.</returns>
@@ -392,15 +376,14 @@ internal abstract partial class OperationViewModelBase(
 
         try
         {
-            var request = CreateRequest(proceedOnWarnings);
             Progress<BackupStatus> progress = new(ReportProgress);
 
             var result = await Task.Run(
-                () => orchestrator.ExecuteAsync(request, progress, cts.Token),
+                () => ExecuteOperationAsync(proceedOnWarnings, progress, cts.Token),
                 cts.Token
             );
 
-            HandleResult(result, proceedOnWarnings);
+            HandleResult(result);
         }
         catch (OperationCanceledException)
         {
@@ -470,12 +453,11 @@ internal abstract partial class OperationViewModelBase(
     protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
 
     /// <summary>
-    /// Turns the orchestrator outcome into either a failure list, the warnings confirmation prompt, or
+    /// Turns the handler outcome into either a failure list, the warnings confirmation prompt, or
     /// the success/partial summary, and remembers the used paths when the operation succeeded.
     /// </summary>
-    /// <param name="result">The outcome returned by the orchestrator.</param>
-    /// <param name="proceedOnWarnings">Whether the request already opted to continue past warnings.</param>
-    private void HandleResult(Result<BackupResult> result, bool proceedOnWarnings)
+    /// <param name="result">The outcome returned by the page's handler.</param>
+    private void HandleResult(Result<BackupOutcome> result)
     {
         if (!result.IsSuccess)
         {
@@ -483,17 +465,9 @@ internal abstract partial class OperationViewModelBase(
             return;
         }
 
-        var operation = result.Value;
-
-        if (operation.HasErrors && operation.TotalFiles is 0 && operation.ProcessedFiles is 0)
+        if (result.Value.Completion is not { } operation)
         {
-            ShowFailure(operation.Errors);
-            return;
-        }
-
-        if (operation.HasWarnings && !proceedOnWarnings && operation.ProcessedFiles is 0)
-        {
-            foreach (var warning in operation.Warnings)
+            foreach (var warning in result.Value.PendingWarnings)
             {
                 Warnings.Add(MessageLocalizer.Localize(warning));
             }
@@ -553,9 +527,10 @@ internal abstract partial class OperationViewModelBase(
     /// reference and lets the garbage collector reclaim it eventually. It is not a wipe.
     /// </para>
     /// <para>
-    /// Only on success, and only after <c>CreateRequest</c> has already captured the value. Clearing
-    /// on failure would be actively hostile: the commonest reason to re-run a restore is a mistyped
-    /// password, and the user would have to retype a fifty-character generated one.
+    /// Only on success, and only after <see cref="ExecuteOperationAsync"/> has already captured the
+    /// value into its message. Clearing on failure would be actively hostile: the commonest reason to
+    /// re-run a restore is a mistyped password, and the user would have to retype a fifty-character
+    /// generated one.
     /// </para>
     /// </remarks>
     protected virtual void ClearPassword()
@@ -625,26 +600,24 @@ internal abstract partial class OperationViewModelBase(
     /// Persists the paths of the completed operation so the pages can pre-fill them next time.
     /// </summary>
     /// <remarks>
-    /// Remembering the last-used paths is a best-effort convenience, so a failure here is reported rather
-    /// than thrown: it must not affect the already-completed operation. The write is deliberately not
-    /// cancellable — the operation has finished, and cancelling it must not discard where it ran.
+    /// Remembering the last-used paths is a best-effort convenience, and both handlers absorb their
+    /// own storage failures: it must not affect the already-completed operation. The write is
+    /// deliberately not cancellable — the operation has finished, and cancelling it must not discard
+    /// where it ran.
     /// </remarks>
     /// <returns><see langword="true"/> if the paths were persisted; otherwise <see langword="false"/>.</returns>
     private async Task<bool> TrySaveRecentPathsAsync()
     {
-        try
-        {
-            var recent = await SettingsService.GetOrCreateAsync<RecentPathSettings>(
-                CancellationToken.None
-            );
+        var recent = await recentPathsQuery.HandleAsync(
+            new GetSettingsQuery<RecentPathSettings>(),
+            CancellationToken.None
+        );
 
-            await SettingsService.SaveAsync(BuildRecentPaths(recent), CancellationToken.None);
+        var saved = await saveRecentPathsCommand.HandleAsync(
+            new SaveSettingsCommand<RecentPathSettings>(BuildRecentPaths(recent)),
+            CancellationToken.None
+        );
 
-            return true;
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            return false;
-        }
+        return saved.IsSuccess;
     }
 }

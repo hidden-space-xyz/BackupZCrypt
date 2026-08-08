@@ -1,9 +1,18 @@
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Orchestrators;
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators;
 using BackupZCrypt.Application.Validators.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Benchmark;
+using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Application.ValueObjects.Password;
+using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Domain.Factories;
 using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -27,7 +36,8 @@ public static class DependencyInjection
     /// <summary>
     /// Registers every service the application is built from: the algorithm factories, the
     /// encryption / key-derivation / compression / chunking strategies, the file-system and settings
-    /// adapters, and the use-case orchestrator, services, and validators.
+    /// adapters, and the use-case command and query handlers with the services and validators behind
+    /// them.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -48,6 +58,11 @@ public static class DependencyInjection
     /// Chunking is the one family registered exactly once, by design. The manifest records no chunker
     /// identifier, so a second implementation would change chunk boundaries with nothing on disk to
     /// say which one produced them, destroying deduplication against every archive already written.
+    /// </para>
+    /// <para>
+    /// The command and query handlers are registered as closed generic interfaces, one line per
+    /// message, on purpose: enumerating them keeps the composition root the single honest list of
+    /// supported messages, where assembly scanning would hide it behind reflection.
     /// </para>
     /// </remarks>
     /// <param name="services">The service collection to add the registrations to.</param>
@@ -78,12 +93,58 @@ public static class DependencyInjection
         _ = services.AddSingleton<ISystemStorageService, SystemStorageService>();
         _ = services.AddSingleton<ISettingsService, SettingsService>();
 
-        _ = services.AddSingleton<IBackupOrchestrator, BackupOrchestrator>();
         _ = services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
         _ = services.AddSingleton<IBackupBenchmarkService, BackupBenchmarkService>();
         _ = services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();
         _ = services.AddSingleton<IManifestService, ManifestService>();
         _ = services.AddSingleton<IPasswordService, PasswordService>();
+
+        _ = services.AddSingleton<BackupOperationRunner>();
+
+        _ = services.AddSingleton<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>, CreateBackupCommandHandler>();
+        _ = services.AddSingleton<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>, UpdateBackupCommandHandler>();
+        _ = services.AddSingleton<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>, RestoreBackupCommandHandler>();
+        _ = services.AddSingleton<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>, VerifyBackupQueryHandler>();
+
+        _ = services.AddSingleton<IQueryHandler<DetectManifestKindQuery, ManifestKind>, DetectManifestKindQueryHandler>();
+        _ = services.AddSingleton<
+            ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis>,
+            AnalyzePasswordStrengthQueryHandler
+        >();
+        _ = services.AddSingleton<ISyncQueryHandler<GeneratePasswordQuery, string>, GeneratePasswordQueryHandler>();
+        _ = services.AddSingleton<
+            IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>>,
+            EstimateBackupBenchmarkQueryHandler
+        >();
+
+        _ = services.AddSingleton<
+            IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings>,
+            GetSettingsQueryHandler<BackupCreationSettings>
+        >();
+        _ = services.AddSingleton<
+            IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings>,
+            GetSettingsQueryHandler<LanguageSettings>
+        >();
+        _ = services.AddSingleton<
+            IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings>,
+            GetSettingsQueryHandler<RecentPathSettings>
+        >();
+        _ = services.AddSingleton<
+            ICommandHandler<SaveSettingsCommand<BackupCreationSettings>, Result>,
+            SaveSettingsCommandHandler<BackupCreationSettings>
+        >();
+        _ = services.AddSingleton<
+            ICommandHandler<SaveSettingsCommand<LanguageSettings>, Result>,
+            SaveSettingsCommandHandler<LanguageSettings>
+        >();
+        _ = services.AddSingleton<
+            ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result>,
+            SaveSettingsCommandHandler<RecentPathSettings>
+        >();
+        _ = services.AddSingleton<
+            ISyncQueryHandler<GetSettingsFilePathQuery<BackupCreationSettings>, string>,
+            GetSettingsFilePathQueryHandler<BackupCreationSettings>
+        >();
 
         return services;
     }

@@ -1,18 +1,21 @@
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
+using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 
@@ -24,15 +27,40 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 public sealed class SettingsViewModelTests
 {
     /// <summary>
-    /// The substituted settings service the page loads its defaults from and saves them to.
+    /// The substituted handler the page loads its algorithm defaults from.
     /// </summary>
-    private readonly ISettingsService settingsService = Substitute.For<ISettingsService>();
+    private readonly IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings> creationDefaultsQuery =
+        Substitute.For<IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings>>();
 
     /// <summary>
-    /// The substituted benchmark service behind the estimate.
+    /// The substituted handler the page loads its language preference from.
     /// </summary>
-    private readonly IBackupBenchmarkService benchmarkService =
-        Substitute.For<IBackupBenchmarkService>();
+    private readonly IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings> languageQuery =
+        Substitute.For<IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings>>();
+
+    /// <summary>
+    /// The substituted handler the page persists its algorithm defaults through.
+    /// </summary>
+    private readonly ICommandHandler<SaveSettingsCommand<BackupCreationSettings>, Result> saveCreationDefaults =
+        Substitute.For<ICommandHandler<SaveSettingsCommand<BackupCreationSettings>, Result>>();
+
+    /// <summary>
+    /// The substituted handler the page persists its language preference through.
+    /// </summary>
+    private readonly ICommandHandler<SaveSettingsCommand<LanguageSettings>, Result> saveLanguage =
+        Substitute.For<ICommandHandler<SaveSettingsCommand<LanguageSettings>, Result>>();
+
+    /// <summary>
+    /// The substituted handler resolving the settings file path shown for reference.
+    /// </summary>
+    private readonly ISyncQueryHandler<GetSettingsFilePathQuery<BackupCreationSettings>, string> settingsFilePathQuery =
+        Substitute.For<ISyncQueryHandler<GetSettingsFilePathQuery<BackupCreationSettings>, string>>();
+
+    /// <summary>
+    /// The substituted handler behind the benchmark estimate.
+    /// </summary>
+    private readonly IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>> estimateBenchmark =
+        Substitute.For<IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>>>();
 
     [Test]
     public void Constructor_WithTheRegisteredStrategies_GivesEveryOptionDistinctDisplayText()
@@ -43,8 +71,12 @@ public sealed class SettingsViewModelTests
         var compression = provider.GetServices<ICompressionStrategy>().ToArray();
 
         SettingsViewModel sut = new(
-            this.settingsService,
-            this.benchmarkService,
+            this.creationDefaultsQuery,
+            this.languageQuery,
+            this.saveCreationDefaults,
+            this.saveLanguage,
+            this.settingsFilePathQuery,
+            this.estimateBenchmark,
             encryption,
             keyDerivation,
             compression
@@ -79,6 +111,14 @@ public sealed class SettingsViewModelTests
                 Is.EqualTo<string?>([null, "en", "es"])
             );
         }
+    }
+
+    [Test]
+    public void Constructor_PublishesTheSettingsFilePathTheHandlerResolves()
+    {
+        var sut = CreateSut();
+
+        Assert.That(sut.SettingsFilePath, Is.EqualTo("settings-path.json"));
     }
 
     [Test]
@@ -137,17 +177,21 @@ public sealed class SettingsViewModelTests
         List<BackupCreationSettings> savedDefaults = [];
         List<LanguageSettings> savedLanguages = [];
         _ = this
-            .settingsService.SaveAsync(
-                Arg.Do<BackupCreationSettings>(savedDefaults.Add),
+            .saveCreationDefaults.HandleAsync(
+                Arg.Do<SaveSettingsCommand<BackupCreationSettings>>(command =>
+                    savedDefaults.Add(command.Settings)
+                ),
                 Arg.Any<CancellationToken>()
             )
-            .Returns(Task.CompletedTask);
+            .Returns(Result.Success());
         _ = this
-            .settingsService.SaveAsync(
-                Arg.Do<LanguageSettings>(savedLanguages.Add),
+            .saveLanguage.HandleAsync(
+                Arg.Do<SaveSettingsCommand<LanguageSettings>>(command =>
+                    savedLanguages.Add(command.Settings)
+                ),
                 Arg.Any<CancellationToken>()
             )
-            .Returns(Task.CompletedTask);
+            .Returns(Result.Success());
 
         await sut.OnNavigatedToAsync();
         sut.SelectedLanguage = sut.LanguageOptions.First(option => option.Code == languageCode);
@@ -164,15 +208,17 @@ public sealed class SettingsViewModelTests
     }
 
     [Test]
-    public async Task SaveCommand_WhenTheWriteFails_LeavesTheSavedNoticeHidden()
+    public async Task SaveCommand_WhenTheWriteFails_LeavesTheSavedNoticeHiddenAndSkipsTheLanguage()
     {
         var sut = CreateSut();
         _ = this
-            .settingsService.SaveAsync(
-                Arg.Any<BackupCreationSettings>(),
+            .saveCreationDefaults.HandleAsync(
+                Arg.Any<SaveSettingsCommand<BackupCreationSettings>>(),
                 Arg.Any<CancellationToken>()
             )
-            .Throws(new IOException("settings volume is read-only"));
+            .Returns(
+                Result.Failure(MessageCode.UnexpectedErrorFormat, "settings volume is read-only")
+            );
 
         await sut.OnNavigatedToAsync();
         await sut.SaveCommand.ExecuteAsync(null);
@@ -182,6 +228,9 @@ public sealed class SettingsViewModelTests
             Assert.That(sut.ShowSavedNotice, Is.False);
             Assert.That(sut.ShowRestartNote, Is.False);
         }
+
+        await this.saveLanguage.DidNotReceive()
+            .HandleAsync(Arg.Any<SaveSettingsCommand<LanguageSettings>>(), Arg.Any<CancellationToken>());
     }
 
     [SetCulture("")]
@@ -198,7 +247,7 @@ public sealed class SettingsViewModelTests
     )
     {
         var sut = CreateSut();
-        var requests = StubBenchmark();
+        var queries = StubBenchmark();
 
         sut.BenchmarkDataAmount = amount;
         sut.SelectedDataUnit = sut.DataUnitOptions[unitIndex];
@@ -207,7 +256,7 @@ public sealed class SettingsViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(requests, Is.Empty);
+            Assert.That(queries, Is.Empty);
             Assert.That(sut.HasBenchmarkError, Is.True);
             Assert.That(sut.BenchmarkError, Is.EqualTo(Strings.BenchmarkInvalidAmount));
             Assert.That(sut.ShowBenchmarkResult, Is.False);
@@ -236,7 +285,7 @@ public sealed class SettingsViewModelTests
             LanguageSettings.DefaultValue
         );
 
-        var requests = StubBenchmark();
+        var queries = StubBenchmark();
 
         await sut.OnNavigatedToAsync();
 
@@ -247,17 +296,17 @@ public sealed class SettingsViewModelTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(requests, Has.Count.EqualTo(1));
-            Assert.That(requests[0].DataBytes, Is.EqualTo(expectedBytes));
+            Assert.That(queries, Has.Count.EqualTo(1));
+            Assert.That(queries[0].DataBytes, Is.EqualTo(expectedBytes));
             Assert.That(
-                requests[0].EncryptionAlgorithm,
+                queries[0].EncryptionAlgorithm,
                 Is.EqualTo(EncryptionAlgorithm.Serpent)
             );
             Assert.That(
-                requests[0].KeyDerivationAlgorithm,
+                queries[0].KeyDerivationAlgorithm,
                 Is.EqualTo(KeyDerivationAlgorithm.Scrypt)
             );
-            Assert.That(requests[0].Compression, Is.EqualTo(CompressionMode.ZstdBest));
+            Assert.That(queries[0].Compression, Is.EqualTo(CompressionMode.ZstdBest));
             Assert.That(sut.ShowBenchmarkResult, Is.True);
             Assert.That(sut.HasBenchmarkError, Is.False);
             Assert.That(
@@ -282,11 +331,16 @@ public sealed class SettingsViewModelTests
         var shownAfterTheSuccessfulRun = sut.ShowBenchmarkResult;
 
         _ = this
-            .benchmarkService.EstimateAsync(
-                Arg.Any<BenchmarkRequest>(),
+            .estimateBenchmark.HandleAsync(
+                Arg.Any<EstimateBackupBenchmarkQuery>(),
                 Arg.Any<CancellationToken>()
             )
-            .Throws(new InvalidOperationException("no strategy registered"));
+            .Returns(
+                Result<BenchmarkEstimate>.Failure(
+                    MessageCode.UnexpectedErrorFormat,
+                    "no strategy registered"
+                )
+            );
 
         await sut.RunBenchmarkCommand.ExecuteAsync(null);
 
@@ -363,16 +417,23 @@ public sealed class SettingsViewModelTests
 
     /// <summary>
     /// Builds the page over substituted strategies covering every algorithm, with the stored settings
-    /// stubbed to the built-in defaults.
+    /// stubbed to the built-in defaults and the settings path resolved to a known value.
     /// </summary>
     /// <returns>The system under test.</returns>
     private SettingsViewModel CreateSut()
     {
         StubStoredSettings(BackupCreationSettings.DefaultValue, LanguageSettings.DefaultValue);
+        _ = this
+            .settingsFilePathQuery.Handle(Arg.Any<GetSettingsFilePathQuery<BackupCreationSettings>>())
+            .Returns("settings-path.json");
 
         return new SettingsViewModel(
-            this.settingsService,
-            this.benchmarkService,
+            this.creationDefaultsQuery,
+            this.languageQuery,
+            this.saveCreationDefaults,
+            this.saveLanguage,
+            this.settingsFilePathQuery,
+            this.estimateBenchmark,
             EncryptionStrategies(),
             KeyDerivationStrategies(),
             CompressionStrategies()
@@ -387,28 +448,34 @@ public sealed class SettingsViewModelTests
     private void StubStoredSettings(BackupCreationSettings defaults, LanguageSettings language)
     {
         _ = this
-            .settingsService.GetOrCreateAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(defaults));
+            .creationDefaultsQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(defaults);
         _ = this
-            .settingsService.GetOrCreateAsync<LanguageSettings>(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(language));
+            .languageQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<LanguageSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(language);
     }
 
     /// <summary>
-    /// Makes the benchmark service return a fixed estimate and records every request it receives.
+    /// Makes the benchmark handler return a fixed estimate and records every query it receives.
     /// </summary>
-    /// <returns>The list the captured requests are appended to.</returns>
-    private List<BenchmarkRequest> StubBenchmark()
+    /// <returns>The list the captured queries are appended to.</returns>
+    private List<EstimateBackupBenchmarkQuery> StubBenchmark()
     {
-        List<BenchmarkRequest> requests = [];
+        List<EstimateBackupBenchmarkQuery> queries = [];
 
         _ = this
-            .benchmarkService.EstimateAsync(
-                Arg.Do<BenchmarkRequest>(requests.Add),
+            .estimateBenchmark.HandleAsync(
+                Arg.Do<EstimateBackupBenchmarkQuery>(queries.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
-                Task.FromResult(
+                Result<BenchmarkEstimate>.Success(
                     new BenchmarkEstimate(
                         TimeSpan.FromMinutes(2),
                         50_000_000,
@@ -418,6 +485,6 @@ public sealed class SettingsViewModelTests
                 )
             );
 
-        return requests;
+        return queries;
     }
 }

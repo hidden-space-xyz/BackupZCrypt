@@ -1,9 +1,11 @@
 using System.Globalization;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Orchestrators.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -67,14 +69,15 @@ public sealed class ChunkedBackupSecurityTests
     public async Task RestoreAsync_ManifestEntryEscapesDestination_RejectsEntryAndWritesNothingOutsideRestoreRoot()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var restoreArea = new TempDir();
 
         _ = source.WriteText("a.txt", "payload that must never escape the restore root");
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
         var (preamble, masterKey, manifest) = await OpenManifestAsync(
             provider,
@@ -116,15 +119,12 @@ public sealed class ChunkedBackupSecurityTests
             var crafted = manifest with { Files = [entry with { OriginalPath = entryPath }] };
             await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
-            var result = await orchestrator.ExecuteAsync(
-                NewRequest(destination.Path, caseRoot, BackupOperation.Restore),
-                new RecordingProgress<BackupStatus>()
-            );
+            var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, caseRoot));
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(
-                    result.IsSuccess && result.Value.IsSuccess,
+                    result.IsSuccess && result.Value.Completion!.IsSuccess,
                     Is.False,
                     $"Restore accepted the crafted manifest entry '{entryPath}' ({name})."
                 );
@@ -151,7 +151,7 @@ public sealed class ChunkedBackupSecurityTests
     public async Task CreateAsync_ChunkFileNames_LeakNeitherTheContentHashNorMatchAnotherPassword()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var firstBackup = new TempDir();
@@ -160,9 +160,9 @@ public sealed class ChunkedBackupSecurityTests
         _ = source.WriteText("alpha.txt", "alpha plaintext, one chunk");
         _ = source.WriteText("beta.txt", "beta plaintext, a different chunk");
 
-        await CreateBackupAsync(orchestrator, source.Path, firstBackup.Path, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source.Path, firstBackup.Path, CompressionMode.None);
         await CreateBackupAsync(
-            orchestrator,
+            createHandler,
             source.Path,
             secondBackup.Path,
             CompressionMode.None,
@@ -203,14 +203,14 @@ public sealed class ChunkedBackupSecurityTests
     public async Task DerivedSubKeys_BoundToDifferentPurposes_AreDistinctAndNotInterchangeable()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
         var manifestService = provider.GetRequiredService<IManifestService>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
 
         _ = source.WriteText("only.txt", "sub-key separation probe");
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
         var (preamble, masterKey, manifest) = await OpenManifestAsync(
             provider,
@@ -283,7 +283,8 @@ public sealed class ChunkedBackupSecurityTests
     public async Task RestoreAsync_ManifestPreambleOrPasswordTampered_FailsClosedAndRestoresNothing()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -291,7 +292,7 @@ public sealed class ChunkedBackupSecurityTests
 
         _ = source.WriteText("a.txt", "preamble tamper probe alpha");
         _ = source.WriteText("b.txt", "preamble tamper probe beta");
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
         var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
         var pristine = await File.ReadAllBytesAsync(manifestPath);
@@ -343,15 +344,12 @@ public sealed class ChunkedBackupSecurityTests
             );
             caseIndex++;
 
-            var result = await orchestrator.ExecuteAsync(
-                NewRequest(destination.Path, caseRoot, BackupOperation.Restore, password: casePassword),
-                new RecordingProgress<BackupStatus>()
-            );
+            var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, caseRoot, casePassword));
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(
-                    result.IsSuccess && result.Value.IsSuccess,
+                    result.IsSuccess && result.Value.Completion!.IsSuccess,
                     Is.False,
                     $"Restore succeeded even though the {name}."
                 );
@@ -373,14 +371,15 @@ public sealed class ChunkedBackupSecurityTests
     public async Task RestoreAsync_ManifestUnderDeclaresFileSize_StopsAtTheDeclaredByteBudget()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var restored = new TempDir();
 
         _ = source.WriteText("bomb.txt", new string('z', 5000));
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.Zstd);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.Zstd);
 
         var (preamble, masterKey, manifest) = await OpenManifestAsync(
             provider,
@@ -399,15 +398,12 @@ public sealed class ChunkedBackupSecurityTests
         var understated = manifest with { Files = [entry with { TotalSize = 1L }] };
         await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, understated);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, restored.Path, BackupOperation.Restore, CompressionMode.Zstd),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                result.IsSuccess && result.Value.IsSuccess,
+                result.IsSuccess && result.Value.Completion!.IsSuccess,
                 Is.False,
                 "Restore accepted a chunk that decompresses past the size the manifest declares."
             );
@@ -429,7 +425,8 @@ public sealed class ChunkedBackupSecurityTests
     public async Task RestoreAsync_ManifestRecordsTwoNoncesForOneChunkHash_IsRejectedInsteadOfGuessed()
     {
         await using var provider = TestHost.CreateProvider();
-        var orchestrator = provider.GetRequiredService<IBackupOrchestrator>();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -438,7 +435,7 @@ public sealed class ChunkedBackupSecurityTests
         const string SharedContent = "content whose chunk nonce is derived, not chosen";
         _ = source.WriteText("a.txt", SharedContent);
         _ = source.WriteText("b.txt", SharedContent);
-        await CreateBackupAsync(orchestrator, source.Path, destination.Path, CompressionMode.None);
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
         var (preamble, masterKey, manifest) = await OpenManifestAsync(
             provider,
@@ -477,15 +474,12 @@ public sealed class ChunkedBackupSecurityTests
         };
         await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(destination.Path, restored.Path, BackupOperation.Restore),
-            new RecordingProgress<BackupStatus>()
-        );
+        var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(
-                result.IsSuccess && result.Value.IsSuccess,
+                result.IsSuccess && result.Value.Completion!.IsSuccess,
                 Is.False,
                 "A chunk nonce is a deterministic function of the chunk hash, so a manifest offering two "
                     + "for one hash is crafted and must be rejected rather than resolved by trial decryption."
@@ -499,61 +493,80 @@ public sealed class ChunkedBackupSecurityTests
     }
 
     /// <summary>
-    /// Builds an AES plus PBKDF2 request that proceeds past advisory warnings, matching the cheapest
-    /// key derivation the app offers so the suite stays affordable on CI.
+    /// Builds an AES plus PBKDF2 create command that proceeds past advisory warnings, matching the
+    /// cheapest key derivation the app offers so the suite stays affordable on CI.
     /// </summary>
-    /// <param name="sourcePath">The tree to back up, or the backup directory to read from.</param>
-    /// <param name="destinationPath">The directory the backup or the restored files are written to.</param>
-    /// <param name="operation">The operation to dispatch.</param>
-    /// <param name="compression">The compression mode applied to chunks before encryption.</param>
-    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
-    /// <returns>The assembled request.</returns>
-    private static BackupRequest NewRequest(
-        string sourcePath,
-        string destinationPath,
-        BackupOperation operation,
-        CompressionMode compression = CompressionMode.None,
-        string password = Password
-    )
-    {
-        return new BackupRequest(
-            sourcePath,
-            destinationPath,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            operation,
-            compression,
-            ProceedOnWarnings: true
-        );
-    }
-
-    /// <summary>
-    /// Creates a backup through the real orchestrator and fails the test if it did not succeed, so a
-    /// broken fixture never masquerades as a security finding.
-    /// </summary>
-    /// <param name="orchestrator">The orchestrator that executes the create operation.</param>
-    /// <param name="sourcePath">The directory to back up.</param>
+    /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
     /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
-    /// <returns>A task that completes once the backup exists.</returns>
-    private static async Task CreateBackupAsync(
-        IBackupOrchestrator orchestrator,
+    /// <returns>The assembled command.</returns>
+    private static CreateBackupCommand NewCreateCommand(
         string sourcePath,
         string destinationPath,
         CompressionMode compression,
         string password = Password
     )
     {
-        var result = await orchestrator.ExecuteAsync(
-            NewRequest(sourcePath, destinationPath, BackupOperation.Create, compression, password),
-            new RecordingProgress<BackupStatus>()
+        return new CreateBackupCommand(
+            sourcePath,
+            destinationPath,
+            password,
+            password,
+            EncryptionAlgorithm.Aes,
+            KeyDerivationAlgorithm.PBKDF2,
+            compression,
+            ProceedOnWarnings: true
+        )
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
+    }
+
+    /// <summary>
+    /// Builds a restore command that proceeds past advisory warnings; the cipher, key derivation, and
+    /// compression mode are read from the archive itself rather than carried by the command.
+    /// </summary>
+    /// <param name="backupPath">The backup directory to read from.</param>
+    /// <param name="destinationPath">The directory the restored files are written to.</param>
+    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
+    /// <returns>The assembled command.</returns>
+    private static RestoreBackupCommand NewRestoreCommand(
+        string backupPath,
+        string destinationPath,
+        string password = Password
+    )
+    {
+        return new RestoreBackupCommand(backupPath, destinationPath, password, ProceedOnWarnings: true)
+        {
+            Progress = new RecordingProgress<BackupStatus>(),
+        };
+    }
+
+    /// <summary>
+    /// Creates a backup through the real create handler and fails the test if it did not succeed, so a
+    /// broken fixture never masquerades as a security finding.
+    /// </summary>
+    /// <param name="createHandler">The handler that executes the create command.</param>
+    /// <param name="sourcePath">The directory to back up.</param>
+    /// <param name="destinationPath">The directory the backup is written to.</param>
+    /// <param name="compression">The compression mode applied to chunks before encryption.</param>
+    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
+    /// <returns>A task that completes once the backup exists.</returns>
+    private static async Task CreateBackupAsync(
+        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createHandler,
+        string sourcePath,
+        string destinationPath,
+        CompressionMode compression,
+        string password = Password
+    )
+    {
+        var result = await createHandler.HandleAsync(
+            NewCreateCommand(sourcePath, destinationPath, compression, password)
         );
 
         Assert.That(
-            result.IsSuccess && result.Value.IsSuccess,
+            result.IsSuccess && result.Value.Completion!.IsSuccess,
             Is.True,
             "The fixture could not create the backup under test."
         );
@@ -694,19 +707,20 @@ public sealed class ChunkedBackupSecurityTests
     }
 
     /// <summary>
-    /// Gathers the orchestrator's own error codes together with the per-file codes of the inner backup
-    /// result, which is only read when the outer result succeeded because
-    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
+    /// Gathers the handler's own error codes together with the per-file codes of the completed engine
+    /// result, which is only read when the outer result succeeded and carries a completion, because
+    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure and
+    /// <see cref="BackupOutcome.Completion"/> is <see langword="null"/> while warnings await confirmation.
     /// </summary>
-    /// <param name="result">The orchestrator outcome to inspect.</param>
+    /// <param name="result">The handler outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>
-    private static HashSet<MessageCode> CollectCodes(Result<BackupResult> result)
+    private static HashSet<MessageCode> CollectCodes(Result<BackupOutcome> result)
     {
         var codes = result.Errors.Select(static e => e.Code).ToHashSet();
 
-        if (result.IsSuccess)
+        if (result.IsSuccess && result.Value.Completion is { } completion)
         {
-            foreach (var error in result.Value.Errors)
+            foreach (var error in completion.Errors)
             {
                 _ = codes.Add(error.Code);
             }

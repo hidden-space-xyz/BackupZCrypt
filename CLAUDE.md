@@ -102,16 +102,24 @@ returning the key itself, so a missing entry ships a raw identifier as visible U
 failing. `LocalizationParityTests` is what turns that into a red `dotnet test`: every code needs an
 English key, the en/es key sets must be identical, and there must be no orphans.
 
-**Request flow.** A Desktop ViewModel builds a `BackupRequest` and calls
-`IBackupOrchestrator.ExecuteAsync`. Only **Create** chooses its algorithms; restore, update, and verify
-read the cipher and KDF from the manifest preamble and the compression mode from the manifest header,
-because anything else would derive the wrong key. Build those with `BackupRequest.ForRestore` /
-`.ForUpdate` / `.ForVerify` rather than passing values the operation discards. The orchestrator
-validates (blocking errors vs. advisory warnings gated by `ProceedOnWarnings`), normalizes paths,
-prepares the destination, then dispatches by `BackupOperation` to
+**Request flow (CQRS, no mediator).** Every Desktop→Application interaction is a message with a
+handler: ViewModels inject the closed `ICommandHandler<TCommand, TResult>` /
+`IQueryHandler<TQuery, TResult>` (or `ISyncQueryHandler` for pure per-keystroke work) they need —
+there is no dispatcher and no MediatR, and the composition root enumerates every closed registration.
+The backup operations are `CreateBackupCommand`, `UpdateBackupCommand`, `RestoreBackupCommand`, and
+the read-only `VerifyBackupQuery`, all returning `Result<BackupOutcome>`: failure carries errors,
+success carries either the completed engine `BackupResult` (`Completion`) or the pre-run warnings
+awaiting confirmation (`NeedsWarningConfirmation` — the UI re-sends the message with
+`ProceedOnWarnings` set). Only **Create** chooses its algorithms; update, restore, and verify read
+the cipher and KDF from the manifest preamble and the compression mode from the manifest header, so
+their messages carry no algorithm fields. Handlers map their message onto the internal
+`BackupRequest` and delegate to the shared `BackupOperationRunner`, which validates, normalizes
+paths, prepares the destination, then dispatches to
 `IChunkedBackupService.{Create,Update,Restore,Verify}Async`. Each op processes files in parallel
-(`Parallel.ForEachAsync`, DOP = `ProcessorCount`) reporting through `IProgress<BackupStatus>`. Verify
-is read-only — it reconstructs into `Stream.Null`.
+(`Parallel.ForEachAsync`, DOP = `ProcessorCount`) reporting through the message's optional
+`IProgress<BackupStatus>` sink. Verify is read-only — it reconstructs into `Stream.Null` and skips
+request validation. Settings load/save (`GetSettingsQuery<T>` / `SaveSettingsCommand<T>`), manifest
+detection, password strength/generation, and the benchmark cross the same boundary as messages.
 
 ## Cryptographic design (do not change casually)
 

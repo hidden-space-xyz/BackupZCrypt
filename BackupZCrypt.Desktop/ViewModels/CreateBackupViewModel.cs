@@ -1,12 +1,15 @@
-
-using BackupZCrypt.Application.Orchestrators.Interfaces;
-using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Commands;
+using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Queries;
+using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,18 +21,24 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the create-backup page: collects the source and destination, manages the password
 /// (entry, reveal, generation, copy, and strength feedback), and reflects the algorithm defaults from settings.
 /// </summary>
-/// <param name="orchestrator">The orchestrator that executes the backup operation.</param>
-/// <param name="settingsService">The service that reads and persists user settings.</param>
+/// <param name="createBackup">The handler that executes the create-backup command.</param>
+/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
+/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+/// <param name="creationDefaultsQuery">The handler that loads the saved algorithm defaults.</param>
 /// <param name="filePicker">The folder picker service.</param>
 /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
-/// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
+/// <param name="generatePassword">The handler that generates a random password.</param>
+/// <param name="analyzePasswordStrength">The handler that analyzes password strength.</param>
 internal sealed partial class CreateBackupViewModel(
-    IBackupOrchestrator orchestrator,
-    ISettingsService settingsService,
+    ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup,
+    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
+    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
+    IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings> creationDefaultsQuery,
     IFilePickerService filePicker,
     IClipboardService clipboardService,
-    IPasswordService passwordService
-    ) : OperationViewModelBase(orchestrator, settingsService, filePicker)
+    ISyncQueryHandler<GeneratePasswordQuery, string> generatePassword,
+    ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis> analyzePasswordStrength
+) : OperationViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker)
 {
     /// <summary>
     /// The character count of a generated password, set far above the guessable range because a
@@ -106,8 +115,8 @@ internal sealed partial class CreateBackupViewModel(
     /// currently in flight.
     /// </summary>
     /// <remarks>
-    /// A failure to read the stored defaults is swallowed and leaves the built-in algorithm choices in
-    /// place, so the page always offers a usable configuration.
+    /// The handler absorbs a failure to read the stored defaults into the built-in defaults, so the
+    /// page always offers a usable configuration.
     /// </remarks>
     /// <returns>A task that completes once the encryption state has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
@@ -119,39 +128,16 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
-        var defaults = await TryLoadCreationDefaultsAsync();
-
-        if (defaults is null)
-        {
-            return;
-        }
+        var defaults = await creationDefaultsQuery.HandleAsync(
+            new GetSettingsQuery<BackupCreationSettings>(),
+            CancellationToken.None
+        );
 
         encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
             ? defaults.EncryptionAlgorithm
             : EncryptionAlgorithm.Aes;
         keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
         compressionMode = defaults.CompressionMode;
-    }
-
-    /// <summary>
-    /// Reads the persisted algorithm defaults for a new backup.
-    /// </summary>
-    /// <returns>
-    /// The stored defaults, or <see langword="null"/> when they cannot be read, in which case the page
-    /// keeps the values it was constructed with.
-    /// </returns>
-    private async Task<BackupCreationSettings?> TryLoadCreationDefaultsAsync()
-    {
-        try
-        {
-            return await SettingsService.GetOrCreateAsync<BackupCreationSettings>(
-                CancellationToken.None
-            );
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            return null;
-        }
     }
 
     /// <summary>
@@ -167,23 +153,34 @@ internal sealed partial class CreateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the create-backup request from the current source, destination, password, and configured algorithms.
+    /// Builds the create-backup command from the current source, destination, password, and configured
+    /// algorithms, and dispatches it to its handler.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <returns>The configured <see cref="BackupRequest"/>.</returns>
-    protected override BackupRequest CreateRequest(bool proceedOnWarnings)
+    /// <param name="progress">The sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome of the operation.</returns>
+    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
+        bool proceedOnWarnings,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
     {
-        return new BackupRequest(
+        var command = new CreateBackupCommand(
             SourcePath,
             DestinationPath,
             Password,
             ConfirmPassword,
             encryptionAlgorithm,
             keyDerivationAlgorithm,
-            BackupOperation.Create,
             compressionMode,
             proceedOnWarnings
-        );
+        )
+        {
+            Progress = progress,
+        };
+
+        return createBackup.HandleAsync(command, cancellationToken);
     }
 
     /// <summary>
@@ -242,7 +239,9 @@ internal sealed partial class CreateBackupViewModel(
             | PasswordGenerationOptions.IncludeNumbers
             | PasswordGenerationOptions.IncludeSpecialCharacters;
 
-        var generated = passwordService.GeneratePassword(GeneratedPasswordLength, Options);
+        var generated = generatePassword.Handle(
+            new GeneratePasswordQuery(GeneratedPasswordLength, Options)
+        );
 
         Password = generated;
         ConfirmPassword = generated;
@@ -291,7 +290,7 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
-        var analysis = passwordService.AnalyzePasswordStrength(value);
+        var analysis = analyzePasswordStrength.Handle(new AnalyzePasswordStrengthQuery(value));
 
         HasStrength = true;
         StrengthScore = analysis.Score;
