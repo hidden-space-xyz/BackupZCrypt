@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Formatters;
@@ -409,7 +411,7 @@ internal sealed class BackupRequestValidator(
             warnings.Add(
                 new LocalizableMessage(
                     MessageCode.DestinationExistingFilesFormat,
-                    existingFileCount.ToString("N0")
+                    existingFileCount.ToString("N0", CultureInfo.CurrentCulture)
                 )
             );
         }

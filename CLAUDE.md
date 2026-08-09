@@ -105,9 +105,11 @@ dotnet test BackupZCrypt.sln --filter "FullyQualifiedName~OnDiskFormatFixtureGen
 
 - Every member — including private ones — carries XML documentation; `GenerateDocumentationFile` is
   on and the docs explain *why*, not just *what*. Match this density in new code.
-- Analyzers run at maximum breadth (`AnalysisMode=All`, Meziantou all-warnings, SonarAnalyzer,
-  `.editorconfig` promotes most rules to warning). Warnings are never promoted to errors, but new
-  code is expected not to add any.
+- Analyzers: the built-in .NET analyzers run at `AnalysisLevel=10-recommended` with
+  `AnalysisLevelSecurity=10-all` and `EnforceCodeStyleInBuild`; `TreatWarningsAsErrors` is on, so
+  any new warning fails the build. `.editorconfig` exists only to suppress diagnostics whose
+  correct resolution is to ignore them — each entry carries its justification, and anything
+  fixable is fixed in code instead.
 - Tests are NUnit + NSubstitute, all in `BackupZCrypt.Test` (`Unit/<Layer>/`, `Integration/`,
   `Tools/`). No test may depend on wall-clock timing, throughput, or locale; every temporary file
   lives in a directory the test owns and deletes (`Common/TempDir`).

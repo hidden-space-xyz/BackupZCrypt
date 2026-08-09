@@ -42,7 +42,7 @@ internal static class PasswordStrengthFormatter
         _ = sb.Append(label)
             .Append(" // ")
             .AppendFormat(
-            CultureInfo.CurrentUICulture,
+            CultureInfo.CurrentCulture,
             Strings.EntropyFormat,
             analysis.Entropy.ToString("0.0", CultureInfo.CurrentCulture)
         );

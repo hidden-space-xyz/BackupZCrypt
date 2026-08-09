@@ -2,30 +2,20 @@
 
   <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 
-    <AnalysisLevel>latest</AnalysisLevel>
-    <AnalysisMode>All</AnalysisMode>
+    <AnalysisLevel>10-recommended</AnalysisLevel>
+    <AnalysisLevelSecurity>10-all</AnalysisLevelSecurity>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <MeziantouAnalysisMode>all-warnings</MeziantouAnalysisMode>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RunAnalyzers>true</RunAnalyzers>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <OptimizeImplicitlyTriggeredBuild>false</OptimizeImplicitlyTriggeredBuild>
 
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-    <EffectiveCodeAnalysisTreatWarningsAsErrors>false</EffectiveCodeAnalysisTreatWarningsAsErrors>
-    <WarningsAsErrors></WarningsAsErrors>
-    <MSBuildWarningsAsErrors></MSBuildWarningsAsErrors>
-    <NoWarn></NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
 
   </PropertyGroup>
-
-  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' and Exists('$(MSBuildThisFileDirectory)SonarLint.xml')">
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" Link="SonarLint.xml" Visible="false" />
-  </ItemGroup>
 
 </Project>

@@ -12,6 +12,11 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// </summary>
 public sealed class PasswordConvertersTests
 {
+    /// <summary>
+    /// Every colour band a strength can light, mirroring the style classes the XAML declares.
+    /// </summary>
+    private static readonly string[] Bands = ["danger", "warning", "good", "strong"];
+
     [Test]
     public void RevealToPasswordChar_MasksUnlessTheUserAskedToReveal()
     {
@@ -42,9 +47,7 @@ public sealed class PasswordConvertersTests
         string expectedBand
     )
     {
-        string[] bands = ["danger", "warning", "good", "strong"];
-
-        var matched = bands
+        var matched = Bands
             .Where(band =>
                 (bool)
                     PasswordConverters.StrengthIsBand.Convert(
@@ -69,7 +72,7 @@ public sealed class PasswordConvertersTests
     {
         var unmapped = Enum.GetValues<PasswordStrength>()
             .Where(strength =>
-                !new[] { "danger", "warning", "good", "strong" }
+                !Bands
                     .Any(band =>
                         (bool)
                             PasswordConverters.StrengthIsBand.Convert(

@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace BackupZCrypt.Domain.Services.Interfaces;
 
 /// <summary>
@@ -18,12 +16,5 @@ public interface ISettings<TSelf>
     /// <summary>
     /// Gets the file name (without directory) under which this settings type is stored.
     /// </summary>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S2743:Static fields should not be used in generic types",
-        Justification = "A static abstract interface member resolves per closed type by design: that is "
-            + "precisely what gives every settings type its own file name. S2743 targets shared mutable "
-            + "static state in generic classes, which this is not."
-    )]
     public static abstract string FileName { get; }
 }

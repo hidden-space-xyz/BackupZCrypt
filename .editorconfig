@@ -1,269 +1,39 @@
 root = true
 
-[*.cs]
-dotnet_analyzer_diagnostic.severity = warning
+# This file exists solely for diagnostics whose correct resolution is to ignore them.
+# Every suppression carries its reason; anything fixable is fixed in code instead.
 
-dotnet_analyzer_diagnostic.category-Style.severity = warning
-dotnet_analyzer_diagnostic.category-CodeQuality.severity = warning
-dotnet_analyzer_diagnostic.category-Compiler.severity = warning
+[BackupZCrypt.Application/ValueObjects/ResultOfT.cs]
 
-dotnet_diagnostic.CA1856.severity = warning
-dotnet_diagnostic.CA2252.severity = warning
-dotnet_diagnostic.MA0037.severity = warning
-dotnet_diagnostic.MA0039.severity = warning
-dotnet_diagnostic.MA0049.severity = warning
-
-dotnet_diagnostic.S103.severity = warning
-dotnet_diagnostic.S104.severity = warning
-dotnet_diagnostic.S107.severity = warning
-dotnet_diagnostic.S110.severity = warning
-dotnet_diagnostic.S134.severity = warning
-dotnet_diagnostic.S1067.severity = warning
-dotnet_diagnostic.S1151.severity = warning
-dotnet_diagnostic.S1192.severity = warning
-dotnet_diagnostic.S1200.severity = warning
-dotnet_diagnostic.S1312.severity = warning
-dotnet_diagnostic.S1479.severity = warning
-dotnet_diagnostic.S1541.severity = warning
-dotnet_diagnostic.S2342.severity = warning
-dotnet_diagnostic.S2436.severity = warning
-dotnet_diagnostic.S3776.severity = warning
-dotnet_diagnostic.S6664.severity = warning
-dotnet_diagnostic.S6669.severity = warning
-
-dotnet_diagnostic.CA1031.severity = none
-
-dotnet_diagnostic.CA1062.severity = none
-
-dotnet_diagnostic.CA1303.severity = none
-
-dotnet_diagnostic.CA2007.severity = none
-dotnet_diagnostic.MA0004.severity = none
-
-dotnet_diagnostic.CA1515.severity = none
-
-dotnet_diagnostic.CA1848.severity = none
-
-dotnet_diagnostic.MA0051.severity = none
-
-dotnet_diagnostic.MA0038.severity = none
-
-dotnet_diagnostic.MA0003.severity = none
-
-dotnet_diagnostic.MA0177.severity = none
-
-dotnet_diagnostic.IDE0058.severity = suggestion
-
-dotnet_diagnostic.MA0026.severity = suggestion
-dotnet_diagnostic.S1135.severity = suggestion
-
-csharp_style_namespace_declarations = file_scoped
-csharp_using_directive_placement = outside_namespace
-dotnet_style_namespace_match_folder = true
-dotnet_sort_system_directives_first = true
-dotnet_separate_import_directive_groups = true
-dotnet_style_require_accessibility_modifiers = always
-
-csharp_prefer_braces = true
-csharp_style_expression_bodied_methods = false
-csharp_style_expression_bodied_constructors = false
-csharp_style_expression_bodied_operators = false
-csharp_style_expression_bodied_local_functions = false
-csharp_style_expression_bodied_properties = when_on_single_line
-csharp_style_expression_bodied_indexers = when_on_single_line
-csharp_style_expression_bodied_accessors = when_on_single_line
-csharp_style_expression_bodied_lambdas = when_on_single_line
-
-csharp_style_var_for_built_in_types = true
-csharp_style_var_when_type_is_apparent = true
-csharp_style_var_elsewhere = true
-
-csharp_style_prefer_pattern_matching = true
-csharp_style_pattern_matching_over_is_with_cast_check = true
-csharp_style_pattern_matching_over_as_with_null_check = true
-csharp_style_prefer_not_pattern = true
-csharp_style_prefer_null_check_over_type_check = true
-csharp_style_conditional_delegate_call = true
-dotnet_style_null_propagation = true
-dotnet_style_coalesce_expression = true
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true
-
-csharp_style_implicit_object_creation_when_type_is_apparent = true
-dotnet_style_prefer_collection_expression = when_types_loosely_match
-dotnet_style_object_initializer = true
-dotnet_style_collection_initializer = true
-dotnet_style_prefer_auto_properties = true
-dotnet_style_prefer_compound_assignment = true
-dotnet_style_prefer_simplified_boolean_expressions = true
-csharp_prefer_simple_using_statement = true
-csharp_style_inlined_variable_declaration = true
-csharp_style_prefer_index_operator = true
-csharp_style_prefer_range_operator = true
-csharp_style_deconstructed_variable_declaration = true
-dotnet_style_prefer_conditional_expression_over_assignment = true
-dotnet_style_prefer_conditional_expression_over_return = true
-
-dotnet_style_readonly_field = true
-csharp_prefer_static_local_function = true
-csharp_style_prefer_readonly_struct = true
-csharp_style_prefer_readonly_struct_member = true
-
-dotnet_code_quality_unused_parameters = all
-csharp_style_unused_value_expression_statement_preference = discard_variable
-csharp_style_unused_value_assignment_preference = discard_variable
-
-dotnet_diagnostic.IDE1006.severity = warning
-
-dotnet_naming_style.pascal_case.capitalization = pascal_case
-dotnet_naming_style.camel_case.capitalization = camel_case
-dotnet_naming_style.i_prefixed.capitalization = pascal_case
-dotnet_naming_style.i_prefixed.required_prefix = I
-dotnet_naming_style.t_prefixed.capitalization = pascal_case
-dotnet_naming_style.t_prefixed.required_prefix = T
-
-dotnet_naming_symbols.interfaces.applicable_kinds = interface
-dotnet_naming_symbols.interfaces.applicable_accessibilities = *
-dotnet_naming_rule.interfaces_rule.symbols = interfaces
-dotnet_naming_rule.interfaces_rule.style = i_prefixed
-dotnet_naming_rule.interfaces_rule.severity = warning
-
-dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
-dotnet_naming_rule.type_parameters_rule.symbols = type_parameters
-dotnet_naming_rule.type_parameters_rule.style = t_prefixed
-dotnet_naming_rule.type_parameters_rule.severity = warning
-
-dotnet_naming_symbols.types.applicable_kinds = namespace, class, struct, interface, enum, delegate
-dotnet_naming_symbols.types.applicable_accessibilities = *
-dotnet_naming_rule.types_rule.symbols = types
-dotnet_naming_rule.types_rule.style = pascal_case
-dotnet_naming_rule.types_rule.severity = warning
-
-dotnet_naming_symbols.members.applicable_kinds = property, event
-dotnet_naming_symbols.members.applicable_accessibilities = *
-dotnet_naming_rule.members_rule.symbols = members
-dotnet_naming_rule.members_rule.style = pascal_case
-dotnet_naming_rule.members_rule.severity = warning
-
-dotnet_naming_symbols.constants.applicable_kinds = field, local
-dotnet_naming_symbols.constants.applicable_accessibilities = *
-dotnet_naming_symbols.constants.required_modifiers = const
-dotnet_naming_rule.constants_rule.symbols = constants
-dotnet_naming_rule.constants_rule.style = pascal_case
-dotnet_naming_rule.constants_rule.severity = warning
-
-dotnet_naming_symbols.static_fields.applicable_kinds = field
-dotnet_naming_symbols.static_fields.applicable_accessibilities = *
-dotnet_naming_symbols.static_fields.required_modifiers = static
-dotnet_naming_rule.static_fields_rule.symbols = static_fields
-dotnet_naming_rule.static_fields_rule.style = pascal_case
-dotnet_naming_rule.static_fields_rule.severity = warning
-
-dotnet_naming_symbols.non_private_fields.applicable_kinds = field
-dotnet_naming_symbols.non_private_fields.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
-dotnet_naming_rule.non_private_fields_rule.symbols = non_private_fields
-dotnet_naming_rule.non_private_fields_rule.style = pascal_case
-dotnet_naming_rule.non_private_fields_rule.severity = warning
-
-dotnet_naming_symbols.private_fields.applicable_kinds = field
-dotnet_naming_symbols.private_fields.applicable_accessibilities = private
-dotnet_naming_rule.private_fields_rule.symbols = private_fields
-dotnet_naming_rule.private_fields_rule.style = camel_case
-dotnet_naming_rule.private_fields_rule.severity = warning
-
-dotnet_naming_symbols.locals_and_parameters.applicable_kinds = local, parameter
-dotnet_naming_rule.locals_and_parameters_rule.symbols = locals_and_parameters
-dotnet_naming_rule.locals_and_parameters_rule.style = camel_case
-dotnet_naming_rule.locals_and_parameters_rule.severity = warning
-
-[*]
-charset = utf-8
-end_of_line = lf
-insert_final_newline = true
-trim_trailing_whitespace = true
-
-
-[*.cs]
-indent_style = space
-indent_size = 4
-dotnet_diagnostic.IDE0055.severity = warning
-
-csharp_new_line_before_members_in_object_initializers = true
-csharp_new_line_before_members_in_anonymous_types = true
-csharp_new_line_before_catch = true
-csharp_new_line_before_else = true
-csharp_new_line_before_finally = true
-csharp_new_line_between_query_expression_clauses = true
-
-dotnet_diagnostic.CA1305.severity = none
-dotnet_diagnostic.CA1307.severity = suggestion
-dotnet_diagnostic.MA0011.severity = none
-
-dotnet_diagnostic.CA1308.severity = none
-
-dotnet_diagnostic.MA0006.severity = none
-
-dotnet_diagnostic.MA0018.severity = none
+# Result<T>.Success/Failure are the idiomatic .NET result-pattern factories. The implicit
+# conversion operators already give call sites type inference where it matters, and moving the
+# factories onto the non-generic base type would churn every call site without making any of
+# them clearer or safer. Scoped to this file so any other generic type that grows static
+# members still answers to CA1000.
 dotnet_diagnostic.CA1000.severity = none
 
-dotnet_diagnostic.MA0045.severity = none
+[*.cs]
 
-dotnet_diagnostic.MA0032.severity = suggestion
-
-dotnet_diagnostic.S3267.severity = none
-
-dotnet_diagnostic.S3903.severity = none
-dotnet_diagnostic.S2325.severity = none
-dotnet_diagnostic.S3260.severity = none
-dotnet_diagnostic.S1128.severity = none
-
-dotnet_diagnostic.CA1032.severity = none
-
-dotnet_diagnostic.CA2201.severity = none
-
-dotnet_diagnostic.CA2215.severity = none
-
-dotnet_diagnostic.CA2225.severity = none
-
-dotnet_diagnostic.CA1720.severity = none
-
-dotnet_diagnostic.CA1724.severity = none
-
-dotnet_diagnostic.CA1819.severity = none
-
+# Every flagged composite format string comes from Strings.resx and is re-resolved against the
+# active UI culture on each access. Caching a CompositeFormat, as CA1863 asks, would freeze the
+# first culture seen and silently break the language preference applied at startup.
 dotnet_diagnostic.CA1863.severity = none
 
-dotnet_diagnostic.MA0104.severity = none
+# The pattern is **.cs rather than **/*.cs on purpose: Roslyn's editorconfig globbing requires a
+# real directory level before the '/' in '**/', which would silently exclude any .cs file sitting
+# directly in the project root.
+[BackupZCrypt.Test/**.cs]
 
-dotnet_diagnostic.MA0109.severity = none
-
-dotnet_diagnostic.MA0155.severity = none
-
-dotnet_diagnostic.MA0173.severity = none
-
-dotnet_diagnostic.MA0157.severity = none
-
-dotnet_diagnostic.MA0175.severity = none
-
-dotnet_diagnostic.MA0181.severity = none
-
-dotnet_diagnostic.MA0182.severity = none
-
-dotnet_diagnostic.S1200.severity = none
-
-dotnet_diagnostic.IDE0051.severity = none
-
-[*.{g,i,designer,generated}.cs]
-generated_code = true
-
-[BackupZCrypt.Test/**/*.cs]
+# Test method names deliberately follow the NUnit Method_Scenario_ExpectedOutcome convention,
+# whose readability depends on the underscores CA1707 forbids.
 dotnet_diagnostic.CA1707.severity = none
-dotnet_diagnostic.MA0053.severity = none
-dotnet_diagnostic.S2068.severity = none
-dotnet_diagnostic.S6418.severity = none
-dotnet_diagnostic.S1192.severity = none
-dotnet_diagnostic.S4144.severity = none
-dotnet_diagnostic.CA1861.severity = none
-dotnet_diagnostic.MA0048.severity = none
+
+# NUnit requires test classes and methods to be public, which makes CS1591 demand XML docs for
+# every test. The expressive Method_Scenario_ExpectedOutcome names and assertion messages are the
+# documentation; non-obvious helpers are documented individually.
 dotnet_diagnostic.CS1591.severity = none
-dotnet_diagnostic.MA0191.severity = none
+
+# Tests use System.Random only to generate bulk payloads for chunking, compression, and
+# encryption round-trips. Nothing security-sensitive derives from that randomness, so a
+# cryptographic generator would add cost without adding safety.
 dotnet_diagnostic.CA5394.severity = none

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 using BackupZCrypt.Application.Commands;
@@ -337,6 +338,13 @@ public sealed class OperationViewModelBaseTests
     }
 
     [Test]
+    [SuppressMessage(
+        "Usage",
+        "CA2201:Do not raise reserved exception types",
+        Justification = "Throwing a runtime-reserved exception is the point of the test: it proves "
+            + "that fatal exceptions like OutOfMemoryException escape the page's catch instead of "
+            + "being swallowed and reported as an ordinary failure."
+    )]
     public void StartCommand_WhenTheHandlerRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
     {
         var sut = CreateSut();

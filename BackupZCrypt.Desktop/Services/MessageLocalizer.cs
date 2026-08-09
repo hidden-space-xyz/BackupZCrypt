@@ -27,6 +27,6 @@ internal static class MessageLocalizer
 
         return message.Args.Count is 0
             ? format
-            : string.Format(CultureInfo.CurrentUICulture, format, [.. message.Args]);
+            : string.Format(CultureInfo.CurrentCulture, format, [.. message.Args]);
     }
 }
