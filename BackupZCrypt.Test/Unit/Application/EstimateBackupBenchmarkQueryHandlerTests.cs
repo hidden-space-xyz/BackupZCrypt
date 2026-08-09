@@ -30,8 +30,8 @@ public sealed class EstimateBackupBenchmarkQueryHandlerTests
         return new(this.benchmarkService);
     }
 
-    [Test]
-    public async Task HandleAsync_Query_MapsEveryFieldOntoABenchmarkRequestAndReturnsTheEstimate()
+    [Fact]
+    internal async Task HandleAsync_Query_MapsEveryFieldOntoABenchmarkRequestAndReturnsTheEstimate()
     {
         BenchmarkEstimate estimate = new(TimeSpan.FromSeconds(12), 1_000_000, TimeSpan.FromSeconds(1), 1_000_000_000);
 
@@ -49,19 +49,18 @@ public sealed class EstimateBackupBenchmarkQueryHandlerTests
 
         var result = await this.CreateSut().HandleAsync(query, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value, Is.SameAs(estimate));
-            Assert.That(captured!.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Serpent));
-            Assert.That(captured.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
-            Assert.That(captured.Compression, Is.EqualTo(CompressionMode.ZstdFast));
-            Assert.That(captured.DataBytes, Is.EqualTo(1_000_000_000));
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.Same(estimate, result.Value),
+            () => Assert.Equal(EncryptionAlgorithm.Serpent, captured!.EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, captured!.KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.ZstdFast, captured!.Compression),
+            () => Assert.Equal(1_000_000_000L, captured!.DataBytes)
+        );
     }
 
-    [Test]
-    public async Task HandleAsync_ServiceThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
+    [Fact]
+    internal async Task HandleAsync_ServiceThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
     {
         _ = this.benchmarkService
             .EstimateAsync(Arg.Any<BenchmarkRequest>(), Arg.Any<CancellationToken>())
@@ -76,16 +75,15 @@ public sealed class EstimateBackupBenchmarkQueryHandlerTests
 
         var result = await this.CreateSut().HandleAsync(query, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.UnexpectedErrorFormat));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Single(result.Errors),
+            () => Assert.Equal(MessageCode.UnexpectedErrorFormat, result.Errors[0].Code)
+        );
     }
 
-    [Test]
-    public void HandleAsync_BenchmarkCancelled_PropagatesCancellationInsteadOfMappingIt()
+    [Fact]
+    internal async Task HandleAsync_BenchmarkCancelled_PropagatesCancellationInsteadOfMappingIt()
     {
         _ = this.benchmarkService
             .EstimateAsync(Arg.Any<BenchmarkRequest>(), Arg.Any<CancellationToken>())
@@ -98,7 +96,7 @@ public sealed class EstimateBackupBenchmarkQueryHandlerTests
             1
         );
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut().HandleAsync(query, CancellationToken.None)
         );
     }

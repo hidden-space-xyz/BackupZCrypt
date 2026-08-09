@@ -36,8 +36,8 @@ public sealed class LocalizationParityTests
         "Strings.es.resx"
     );
 
-    [Test]
-    public void EveryMessageCode_HasEnglishResxKey()
+    [Fact]
+    internal void EveryMessageCode_HasEnglishResxKey()
     {
         var englishKeys = ReadResxKeys(EnglishResxPath);
 
@@ -46,16 +46,11 @@ public sealed class LocalizationParityTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.That(
-            missing,
-            Is.Empty,
-            "MessageCode members with no key in Strings.resx (would show the raw enum name): "
-                + string.Join(", ", missing)
-        );
+        Assert.Empty(missing);
     }
 
-    [Test]
-    public void EnglishAndSpanish_HaveIdenticalKeySets()
+    [Fact]
+    internal void EnglishAndSpanish_HaveIdenticalKeySets()
     {
         var englishKeys = ReadResxKeys(EnglishResxPath);
         var spanishKeys = ReadResxKeys(SpanishResxPath);
@@ -69,17 +64,16 @@ public sealed class LocalizationParityTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.That(
+        Assert.True(
             onlyInEnglish.Count is 0 && onlyInSpanish.Count is 0,
-            Is.True,
             "Strings.resx and Strings.es.resx must contain the identical set of keys.\n"
                 + $"Only in English: {Describe(onlyInEnglish)}\n"
                 + $"Only in Spanish: {Describe(onlyInSpanish)}"
         );
     }
 
-    [Test]
-    public void EnglishResx_HoldsExactlyTheKeysTheApplicationAsksFor()
+    [Fact]
+    internal void EnglishResx_HoldsExactlyTheKeysTheApplicationAsksFor()
     {
         var englishKeys = ReadResxKeys(EnglishResxPath);
 
@@ -98,9 +92,8 @@ public sealed class LocalizationParityTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.That(
+        Assert.True(
             missing.Count is 0 && orphaned.Count is 0,
-            Is.True,
             "Strings.Get and Strings.GetByKey both fall back to returning the key itself, so a "
                 + "missing entry ships the raw identifier as visible UI text instead of failing.\n"
                 + $"Asked for but not in Strings.resx: {Describe(missing)}\n"
@@ -116,9 +109,8 @@ public sealed class LocalizationParityTests
     /// <returns>The ordinal-compared set of resource names it declares.</returns>
     private static HashSet<string> ReadResxKeys(string resxPath)
     {
-        Assert.That(
+        Assert.True(
             File.Exists(resxPath),
-            Is.True,
             $"Resx file not found at '{resxPath}'. Confirm it is copied to the test output."
         );
 

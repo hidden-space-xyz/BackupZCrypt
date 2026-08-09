@@ -27,73 +27,56 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 /// </remarks>
 public sealed class SystemStorageServiceTests
 {
-    [Test]
-    public void GetAvailableFreeSpace_EmptyRoot_ReturnsMinusOneWithoutThrowing()
+    [Fact]
+    internal void GetAvailableFreeSpace_EmptyRoot_ReturnsMinusOneWithoutThrowing()
     {
         var service = new SystemStorageService();
 
-        Assert.That(service.GetAvailableFreeSpace(string.Empty), Is.EqualTo(-1));
+        Assert.Equal(-1L, service.GetAvailableFreeSpace(string.Empty));
     }
 
-    [Test]
-    public void IsDriveReady_EmptyRoot_ReturnsFalseWithoutThrowing()
+    [Fact]
+    internal void IsDriveReady_EmptyRoot_ReturnsFalseWithoutThrowing()
     {
         var service = new SystemStorageService();
 
-        Assert.That(service.IsDriveReady(string.Empty), Is.False);
+        Assert.False(service.IsDriveReady(string.Empty));
     }
 
-    [Test]
-    public void GetPathRoot_AndTheDriveQueries_AgreeOnTheVolumeHoldingTheTempDirectory()
+    [Fact]
+    internal void GetPathRoot_AndTheDriveQueries_AgreeOnTheVolumeHoldingTheTempDirectory()
     {
         var service = new SystemStorageService();
         var probe = Path.GetTempPath();
 
         var root = service.GetPathRoot(probe);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(root, Is.Not.Null.And.Not.Empty);
-            Assert.That(
-                probe,
-                Does.StartWith(root!),
-                "The reported root is not a prefix of the path it was derived from."
-            );
-            Assert.That(
-                service.IsDriveReady(root!),
-                Is.True,
-                "The volume holding the temp directory was reported as not ready."
-            );
-            Assert.That(
-                service.GetAvailableFreeSpace(root!),
-                Is.GreaterThan(0),
-                "The volume holding the temp directory reported no free space, so the validator "
-                    + "would refuse every backup."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.NotNull(root),
+            () => Assert.NotEmpty(root!),
+            () => Assert.StartsWith(root!, probe, StringComparison.Ordinal),
+            () =>
+                Assert.True(
+                    service.IsDriveReady(root!),
+                    "The volume holding the temp directory was reported as not ready."
+                ),
+            () =>
+                Assert.True(
+                    service.GetAvailableFreeSpace(root!) > 0,
+                    "The volume holding the temp directory reported no free space, so the validator "
+                        + "would refuse every backup."
+                )
+        );
     }
 
-    [Test]
-    public void GetPathRoot_PathWithNoVolume_ReturnsTheUnknownSentinelWithoutThrowing()
+    [Fact]
+    internal void GetPathRoot_PathWithNoVolume_ReturnsTheUnknownSentinelWithoutThrowing()
     {
         var service = new SystemStorageService();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                service.GetPathRoot(Path.Combine("relative", "destination")),
-                Is.Empty,
-                "An unrooted destination must yield an empty root. BackupRequestValidator gates "
-                    + "both drive checks on string.IsNullOrEmpty(root), and anything else - the "
-                    + "path echoed back, say - would be handed straight to DriveInfo as a drive "
-                    + "name."
-            );
-            Assert.That(
-                service.GetPathRoot(string.Empty),
-                Is.Null,
-                "An empty destination must yield a null root, the other shape of \"no volume\" the "
-                    + "validator gates on."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Empty(service.GetPathRoot(Path.Combine("relative", "destination"))!),
+            () => Assert.Null(service.GetPathRoot(string.Empty))
+        );
     }
 }

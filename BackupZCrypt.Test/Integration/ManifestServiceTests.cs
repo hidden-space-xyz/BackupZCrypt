@@ -29,8 +29,8 @@ namespace BackupZCrypt.Test.Integration;
 /// whole fixture runs without a single key derivation and stays cheap on a slow CI runner.
 /// </para>
 /// <para>
-/// Cancellation of a real file read is asserted with an <c>Is.InstanceOf</c> constraint rather than
-/// <c>ThrowsAsync&lt;T&gt;</c>, because the I/O stack raises <see cref="TaskCanceledException"/>, which
+/// Cancellation of a real file read is asserted with <c>Assert.ThrowsAnyAsync&lt;T&gt;</c> rather than
+/// <c>Assert.ThrowsAsync&lt;T&gt;</c>, because the I/O stack raises <see cref="TaskCanceledException"/>, which
 /// derives from <see cref="OperationCanceledException"/>. Which of the two surfaces is an implementation
 /// detail of the underlying read, so tightening the assertion back to the exact type makes the test fail
 /// on an unrelated change.
@@ -57,43 +57,56 @@ public sealed class ManifestServiceTests
     private static readonly string ValidMasterSalt = Convert.ToBase64String(new byte[EncryptionConstants.SaltSize]);
 
     /// <summary>
+    /// The only two codes a rejected manifest may report, held in a static field because a constant array
+    /// built inline at the assertion site is what <c>CA1861</c> exists to stop.
+    /// </summary>
+    private static readonly MessageCode[] RejectionCodes =
+    [
+        MessageCode.ManifestInvalidMasterSalt,
+        MessageCode.ManifestUnsupportedAlgorithm,
+    ];
+
+    /// <summary>
     /// Supplies manifests that must be rejected before anything is written, varying one field per case:
     /// a master salt of the wrong length, a master salt that is not Base64 at all, and each of the three
     /// algorithm identifiers set to a value outside its enum.
     /// </summary>
     /// <returns>One case per rejected combination of master salt and algorithm identifiers.</returns>
-    private static IEnumerable<TestCaseData> RejectedManifests()
+    public static TheoryData<string, EncryptionAlgorithm, KeyDerivationAlgorithm, CompressionMode> RejectedManifests()
     {
-        yield return new TestCaseData(
-            Convert.ToBase64String(new byte[EncryptionConstants.SaltSize / 2]),
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            CompressionMode.None
-        );
-        yield return new TestCaseData(
-            "not base64 !!",
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            CompressionMode.None
-        );
-        yield return new TestCaseData(
-            ValidMasterSalt,
-            (EncryptionAlgorithm)99,
-            KeyDerivationAlgorithm.PBKDF2,
-            CompressionMode.None
-        );
-        yield return new TestCaseData(
-            ValidMasterSalt,
-            EncryptionAlgorithm.Aes,
-            (KeyDerivationAlgorithm)99,
-            CompressionMode.None
-        );
-        yield return new TestCaseData(
-            ValidMasterSalt,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.PBKDF2,
-            (CompressionMode)99
-        );
+        return new()
+        {
+            {
+                Convert.ToBase64String(new byte[EncryptionConstants.SaltSize / 2]),
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.None
+            },
+            {
+                "not base64 !!",
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.None
+            },
+            {
+                ValidMasterSalt,
+                (EncryptionAlgorithm)99,
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.None
+            },
+            {
+                ValidMasterSalt,
+                EncryptionAlgorithm.Aes,
+                (KeyDerivationAlgorithm)99,
+                CompressionMode.None
+            },
+            {
+                ValidMasterSalt,
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.PBKDF2,
+                (CompressionMode)99
+            },
+        };
     }
 
     /// <summary>
@@ -101,12 +114,15 @@ public sealed class ManifestServiceTests
     /// whitespace only, not Base64 at all, and Base64 that decodes to the wrong number of bytes.
     /// </summary>
     /// <returns>One malformed master salt per case.</returns>
-    private static IEnumerable<string> MalformedDocumentMasterSalts()
+    public static TheoryData<string> MalformedDocumentMasterSalts()
     {
-        yield return string.Empty;
-        yield return "   ";
-        yield return "not base64 !!";
-        yield return Convert.ToBase64String(new byte[EncryptionConstants.SaltSize - 1]);
+        return new()
+        {
+            string.Empty,
+            "   ",
+            "not base64 !!",
+            Convert.ToBase64String(new byte[EncryptionConstants.SaltSize - 1]),
+        };
     }
 
     /// <summary>
@@ -212,8 +228,8 @@ public sealed class ManifestServiceTests
         return new ManifestService(fileOperations, Substitute.For<IEncryptionServiceFactory>());
     }
 
-    [Test]
-    public async Task DetectManifestKindAsync_ManifestPresenceVaries_ReturnsExpectedKind()
+    [Fact]
+    internal async Task DetectManifestKindAsync_ManifestPresenceVaries_ReturnsExpectedKind()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -236,39 +252,18 @@ public sealed class ManifestServiceTests
         );
         var rootlessKind = await manifestService.DetectManifestKindAsync("bare-name-with-no-directory.txt", CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                emptyKind,
-                Is.EqualTo(ManifestKind.Missing),
-                "a directory without a manifest was offered as a restorable backup"
-            );
-            Assert.That(
-                truncatedKind,
-                Is.EqualTo(ManifestKind.Missing),
-                "a zero-byte manifest left by an interrupted write was treated as a restorable backup"
-            );
-            Assert.That(backupKind, Is.EqualTo(ManifestKind.Encrypted));
-            Assert.That(
-                siblingKind,
-                Is.EqualTo(ManifestKind.Encrypted),
-                "a path to a file inside the backup must resolve to the manifest in its parent directory"
-            );
-            Assert.That(
-                absentSiblingKind,
-                Is.EqualTo(ManifestKind.Encrypted),
-                "only the parent directory of the supplied path decides the result, not whether that path exists"
-            );
-            Assert.That(
-                rootlessKind,
-                Is.EqualTo(ManifestKind.Missing),
-                "a bare file name has no parent directory to search for a manifest"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(ManifestKind.Missing, emptyKind),
+            () => Assert.Equal(ManifestKind.Missing, truncatedKind),
+            () => Assert.Equal(ManifestKind.Encrypted, backupKind),
+            () => Assert.Equal(ManifestKind.Encrypted, siblingKind),
+            () => Assert.Equal(ManifestKind.Encrypted, absentSiblingKind),
+            () => Assert.Equal(ManifestKind.Missing, rootlessKind)
+        );
     }
 
-    [Test]
-    public async Task DetectManifestKindAsync_ManifestCannotBeRead_ReportsMissingInsteadOfThrowing()
+    [Fact]
+    internal async Task DetectManifestKindAsync_ManifestCannotBeRead_ReportsMissingInsteadOfThrowing()
     {
         var manifestService = CreateServiceWithFailingManifestRead(new UnauthorizedAccessException("injected read failure"));
 
@@ -277,19 +272,15 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        Assert.That(
-            kind,
-            Is.EqualTo(ManifestKind.Missing),
-            "an unreadable manifest must degrade to Missing rather than crash the folder-picker flow"
-        );
+        Assert.Equal(ManifestKind.Missing, kind);
     }
 
-    [Test]
-    public void DetectManifestKindAsync_ManifestReadCancelled_RethrowsCancellation()
+    [Fact]
+    internal async Task DetectManifestKindAsync_ManifestReadCancelled_RethrowsCancellation()
     {
         var manifestService = CreateServiceWithFailingManifestRead(new OperationCanceledException());
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => manifestService.DetectManifestKindAsync(
                 Path.Combine(Path.GetTempPath(), "bzc-cancelled"),
                 CancellationToken.None
@@ -297,8 +288,8 @@ public sealed class ManifestServiceTests
         );
     }
 
-    [Test]
-    public async Task SaveChunkManifestAsync_RoundTripsThroughDisk_PreservesEveryFieldAndOrdersEntriesOrdinally()
+    [Fact]
+    internal async Task SaveChunkManifestAsync_RoundTripsThroughDisk_PreservesEveryFieldAndOrdersEntriesOrdinally()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -334,41 +325,41 @@ public sealed class ManifestServiceTests
         );
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errors, Is.Empty, "saving a well-formed manifest reported errors");
-            Assert.That(preamble, Is.Not.Null, "a manifest that was just written could not be parsed back");
-        }
+        Assert.Multiple(
+            () => Assert.Empty(errors),
+            () => Assert.NotNull(preamble)
+        );
 
         var decrypted = manifestService.DecryptChunkManifest(preamble!, key);
-        Assert.That(decrypted, Is.Not.Null, "a manifest that was just written could not be decrypted with the key it was written under");
+        Assert.NotNull(decrypted);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(preamble!.Algorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
-            Assert.That(preamble.KeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.PBKDF2));
-            Assert.That(Convert.ToBase64String(preamble.MasterSalt), Is.EqualTo(masterSalt));
-            Assert.That(preamble.Nonce, Has.Length.EqualTo(EncryptionConstants.NonceSize));
-            Assert.That(decrypted!.Header, Is.EqualTo(original.Header), "the header algorithms did not survive the round trip");
-            Assert.That(decrypted.MasterSalt, Is.EqualTo(masterSalt));
-            Assert.That(
-                decrypted.Files.Select(static file => file.OriginalPath),
-                Is.EqualTo(["a.txt", "docs/notes.md", "z.txt"]),
-                "entries must be stored in ordinal path order so the same content always yields the same manifest"
-            );
+        // The expected order is a typed local rather than an inline collection expression so both sides of
+        // the comparison below are string[]: Assert.Equal then compares them element by element, in order.
+        string[] expectedPathOrder = ["a.txt", "docs/notes.md", "z.txt"];
 
-            foreach (var expected in original.Files)
+        Assert.Multiple(
+            () => Assert.Equal(EncryptionAlgorithm.Aes, preamble!.Algorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.PBKDF2, preamble!.KeyDerivation),
+            () => Assert.Equal(masterSalt, Convert.ToBase64String(preamble!.MasterSalt)),
+            () => Assert.Equal(EncryptionConstants.NonceSize, preamble!.Nonce.Length),
+            () => Assert.Equal(original.Header, decrypted!.Header),
+            () => Assert.Equal(masterSalt, decrypted!.MasterSalt),
+            () => Assert.Equal(expectedPathOrder, decrypted!.Files.Select(static file => file.OriginalPath).ToArray()),
+            () =>
             {
-                var actual = decrypted.Files.Single(file => StringComparer.Ordinal.Equals(file.OriginalPath, expected.OriginalPath));
-                Assert.That(actual.FileHash, Is.EqualTo(expected.FileHash), $"{expected.OriginalPath}: file hash");
-                Assert.That(actual.TotalSize, Is.EqualTo(expected.TotalSize), $"{expected.OriginalPath}: total size");
-                Assert.That(actual.Chunks, Is.EqualTo(expected.Chunks), $"{expected.OriginalPath}: chunk references");
+                foreach (var expected in original.Files)
+                {
+                    var actual = decrypted!.Files.Single(file => StringComparer.Ordinal.Equals(file.OriginalPath, expected.OriginalPath));
+                    Assert.Equal(expected.FileHash, actual.FileHash);
+                    Assert.Equal(expected.TotalSize, actual.TotalSize);
+                    Assert.Equal(expected.Chunks, actual.Chunks);
+                }
             }
-        }
+        );
     }
 
-    [Test]
-    public async Task SaveChunkManifestAsync_OverExistingManifest_ReplacesItAndLeavesNoTempFileBehind()
+    [Fact]
+    internal async Task SaveChunkManifestAsync_OverExistingManifest_ReplacesItAndLeavesNoTempFileBehind()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -394,30 +385,24 @@ public sealed class ManifestServiceTests
         );
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
-        Assert.That(preamble, Is.Not.Null, "the replaced manifest could no longer be parsed");
+        Assert.NotNull(preamble);
 
         var reread = manifestService.DecryptChunkManifest(preamble!, secondKey);
-        Assert.That(
-            reread,
-            Is.Not.Null,
-            "the replacement manifest did not read back cleanly, so the write appended to the old one instead of replacing it"
-        );
+        Assert.NotNull(reread);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errors, Is.Empty);
-            Assert.That(Directory.GetFiles(backup.Path), Has.Length.EqualTo(1), "the atomic write left an extra file in the backup root");
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.Empty(errors),
+            () => Assert.Single(Directory.GetFiles(backup.Path)),
+            () => Assert.False(
                 File.Exists(Path.Combine(backup.Path, BackupConstants.ManifestFileName + ".tmp")),
-                Is.False,
                 "the atomic write left its temp manifest behind for the next run to trip over"
-            );
-            Assert.That(reread!.Files, Has.Count.EqualTo(3), "the manifest read back is not the one that was written last");
-        }
+            ),
+            () => Assert.Equal(3, reread!.Files.Count)
+        );
     }
 
-    [Test]
-    public async Task DecryptChunkManifest_KeyOrPreambleTampered_ReturnsNull()
+    [Fact]
+    internal async Task DecryptChunkManifest_KeyOrPreambleTampered_ReturnsNull()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -434,45 +419,24 @@ public sealed class ManifestServiceTests
         );
 
         var stored = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
-        Assert.That(stored, Is.Not.Null, "a manifest that was just written could not be parsed back");
+        Assert.NotNull(stored);
 
         var preamble = stored!;
         var wrongKey = RandomNumberGenerator.GetBytes(KeyLength);
         var alteredSalt = preamble.MasterSalt.ToArray();
         alteredSalt[0] ^= 0xFF;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, key),
-                Is.Not.Null,
-                "the untampered control case must decrypt, otherwise the rejections below prove nothing"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, wrongKey),
-                Is.Null,
-                "a manifest opened with the wrong password must not decrypt"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble with { Algorithm = EncryptionAlgorithm.Twofish }, key),
-                Is.Null,
-                "the unencrypted algorithm byte must be bound into the authentication tag, so downgrading it cannot open the manifest"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble with { KeyDerivation = KeyDerivationAlgorithm.Scrypt }, key),
-                Is.Null,
-                "the unencrypted key derivation byte must be bound into the authentication tag"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble with { MasterSalt = alteredSalt }, key),
-                Is.Null,
-                "a single flipped bit in the unencrypted master salt must invalidate the whole manifest"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.NotNull(manifestService.DecryptChunkManifest(preamble, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble, wrongKey)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { Algorithm = EncryptionAlgorithm.Twofish }, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { KeyDerivation = KeyDerivationAlgorithm.Scrypt }, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { MasterSalt = alteredSalt }, key))
+        );
     }
 
-    [Test]
-    public async Task DecryptChunkManifest_DocumentContradictsPreamble_ReturnsNull()
+    [Fact]
+    internal async Task DecryptChunkManifest_DocumentContradictsPreamble_ReturnsNull()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -500,37 +464,21 @@ public sealed class ManifestServiceTests
             documentKeyDerivation: KeyDerivationAlgorithm.Scrypt
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                manifestService.DecryptChunkManifest(control, key),
-                Is.Not.Null,
-                "the control manifest must decrypt, otherwise the rejections below prove nothing"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(saltEcho, key),
-                Is.Null,
-                "a manifest whose embedded master salt disagrees with its preamble was accepted"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(algorithmEcho, key),
-                Is.Null,
-                "a document declaring a different cipher than the preamble was accepted"
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(keyDerivationEcho, key),
-                Is.Null,
-                "a document declaring a different key derivation than the preamble was accepted"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.NotNull(manifestService.DecryptChunkManifest(control, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(saltEcho, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(algorithmEcho, key)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(keyDerivationEcho, key))
+        );
     }
 
-    [TestCase(0, 0x00, 0x00)]
-    [TestCase(1, 0x00, 0x00)]
-    [TestCase(20, 0x00, 0x00)]
-    [TestCase(100, 0x7F, 0x00)]
-    [TestCase(100, 0x00, 0x7F)]
-    public async Task ReadChunkManifestPreambleAsync_MalformedManifest_ReturnsNull(int length, int algorithmByte, int keyDerivationByte)
+    [Theory]
+    [InlineData(0, 0x00, 0x00)]
+    [InlineData(1, 0x00, 0x00)]
+    [InlineData(20, 0x00, 0x00)]
+    [InlineData(100, 0x7F, 0x00)]
+    [InlineData(100, 0x00, 0x7F)]
+    internal async Task ReadChunkManifestPreambleAsync_MalformedManifest_ReturnsNull(int length, int algorithmByte, int keyDerivationByte)
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -548,16 +496,11 @@ public sealed class ManifestServiceTests
 
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
 
-        Assert.That(
-            preamble,
-            Is.Null,
-            "a truncated manifest or an out-of-range algorithm identifier must fail closed instead of "
-                + "producing a preamble holding garbage salt and nonce slices"
-        );
+        Assert.Null(preamble);
     }
 
-    [Test]
-    public async Task ReadChunkManifestPreambleAsync_MissingOrHeaderOnlyManifest_NeverYieldsAReadableManifest()
+    [Fact]
+    internal async Task ReadChunkManifestPreambleAsync_MissingOrHeaderOnlyManifest_NeverYieldsAReadableManifest()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -572,22 +515,18 @@ public sealed class ManifestServiceTests
 
         var missingPreamble = await manifestService.ReadChunkManifestPreambleAsync(missing.Path, CancellationToken.None);
         var headerOnlyPreamble = await manifestService.ReadChunkManifestPreambleAsync(headerOnly.Path, CancellationToken.None);
-        Assert.That(headerOnlyPreamble, Is.Not.Null, "a manifest carrying a complete header and nonce must still parse");
+        Assert.NotNull(headerOnlyPreamble);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(missingPreamble, Is.Null, "a directory with no manifest must not produce a preamble");
-            Assert.That(headerOnlyPreamble!.EncryptedPayload, Is.Empty);
-            Assert.That(
-                manifestService.DecryptChunkManifest(headerOnlyPreamble, new byte[KeyLength]),
-                Is.Null,
-                "a manifest truncated to its header and nonce must never open, whatever key is supplied"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Null(missingPreamble),
+            () => Assert.Empty(headerOnlyPreamble!.EncryptedPayload),
+            () => Assert.Null(manifestService.DecryptChunkManifest(headerOnlyPreamble!, new byte[KeyLength]))
+        );
     }
 
-    [TestCaseSource(nameof(RejectedManifests))]
-    public async Task SaveChunkManifestAsync_ManifestParametersInvalid_ReportsWriteFailureAndWritesNothing(
+    [Theory]
+    [MemberData(nameof(RejectedManifests))]
+    internal async Task SaveChunkManifestAsync_ManifestParametersInvalid_ReportsWriteFailureAndWritesNothing(
         string masterSalt,
         EncryptionAlgorithm algorithm,
         KeyDerivationAlgorithm keyDerivation,
@@ -613,33 +552,16 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(
-                errors[0].Code,
-                Is.AnyOf(
-                    MessageCode.ManifestInvalidMasterSalt,
-                    MessageCode.ManifestUnsupportedAlgorithm
-                ),
-                "the rejection must name which parameter was wrong, and must carry no untranslatable text"
-            );
-            Assert.That(
-                errors[0].Args,
-                Is.Empty,
-                "these codes describe the whole problem; splicing an English sentence in as a format "
-                    + "argument is what put untranslated text in front of a Spanish user before"
-            );
-            Assert.That(
-                Directory.GetFiles(backup.Path),
-                Is.Empty,
-                "a manifest that would be unreadable forever must not reach the destination directory at all"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Single(errors),
+            () => Assert.Contains(errors[0].Code, RejectionCodes),
+            () => Assert.Empty(errors[0].Args),
+            () => Assert.Empty(Directory.GetFiles(backup.Path))
+        );
     }
 
-    [Test]
-    public async Task SaveChunkManifestAsync_RenameFails_KeepsTheExistingManifestAndDeletesTheTempFile()
+    [Fact]
+    internal async Task SaveChunkManifestAsync_RenameFails_KeepsTheExistingManifestAndDeletesTheTempFile()
     {
         await using var provider = TestHost.CreateProvider();
         var realFileOperations = provider.GetRequiredService<IFileOperationsService>();
@@ -687,36 +609,26 @@ public sealed class ManifestServiceTests
 
         var survivingBytes = await File.ReadAllBytesAsync(manifestPath, CancellationToken.None);
         var preamble = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
-        Assert.That(preamble, Is.Not.Null, "a failed save destroyed the manifest that was already in place");
+        Assert.NotNull(preamble);
 
         var survivor = manifestService.DecryptChunkManifest(preamble!, key);
-        Assert.That(survivor, Is.Not.Null, "the manifest already in place no longer decrypts after an unrelated save failed");
+        Assert.NotNull(survivor);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(errors[0].Code, Is.EqualTo(MessageCode.ManifestWriteFailedFormat));
-            Assert.That(
-                errors[0].Args,
-                Has.Some.EqualTo("injected rename failure"),
-                "the original write failure must be reported, not whatever happened while cleaning up after it"
-            );
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.Single(errors),
+            () => Assert.Equal(MessageCode.ManifestWriteFailedFormat, errors[0].Code),
+            () => Assert.Contains<object>("injected rename failure", errors[0].Args),
+            () => Assert.False(
                 File.Exists(manifestPath + ".tmp"),
-                Is.False,
                 "a failed save left a temp manifest behind for the next run to trip over"
-            );
-            Assert.That(survivingBytes, Is.EqualTo(originalBytes), "a failed save damaged the manifest that was already in place");
-            Assert.That(
-                survivor!.Files,
-                Has.Count.EqualTo(2),
-                "the failed save partially replaced the contents of the manifest already in place"
-            );
-        }
+            ),
+            () => Assert.Equal(originalBytes, survivingBytes),
+            () => Assert.Equal(2, survivor!.Files.Count)
+        );
     }
 
-    [Test]
-    public async Task SaveChunkManifestAsync_RenameAndTempCleanupBothFail_ReportsTheRenameFailureNotTheCleanupFailure()
+    [Fact]
+    internal async Task SaveChunkManifestAsync_RenameAndTempCleanupBothFail_ReportsTheRenameFailureNotTheCleanupFailure()
     {
         await using var provider = TestHost.CreateProvider();
         var realFileOperations = provider.GetRequiredService<IFileOperationsService>();
@@ -749,30 +661,21 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errors, Has.Count.EqualTo(1));
-            Assert.That(errors[0].Code, Is.EqualTo(MessageCode.ManifestWriteFailedFormat));
-            Assert.That(
-                errors[0].Args,
-                Has.Some.EqualTo("injected rename failure"),
-                "a temp file that cannot be cleaned up must not mask the write failure that caused the cleanup"
-            );
-            Assert.That(
-                errors[0].Args,
-                Has.None.EqualTo("injected cleanup failure"),
-                "the reported cause was the failed cleanup rather than the failure that actually broke the save"
-            );
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.Single(errors),
+            () => Assert.Equal(MessageCode.ManifestWriteFailedFormat, errors[0].Code),
+            () => Assert.Contains<object>("injected rename failure", errors[0].Args),
+            () => Assert.DoesNotContain<object>("injected cleanup failure", errors[0].Args),
+            () => Assert.False(
                 File.Exists(Path.Combine(backup.Path, BackupConstants.ManifestFileName)),
-                Is.False,
                 "a save whose rename never happened must not leave a manifest at the destination"
-            );
-        }
+            )
+        );
     }
 
-    [TestCaseSource(nameof(MalformedDocumentMasterSalts))]
-    public async Task DecryptChunkManifest_DocumentMasterSaltIsNotDecodable_ReturnsNull(string documentMasterSalt)
+    [Theory]
+    [MemberData(nameof(MalformedDocumentMasterSalts))]
+    internal async Task DecryptChunkManifest_DocumentMasterSaltIsNotDecodable_ReturnsNull(string documentMasterSalt)
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -783,16 +686,11 @@ public sealed class ManifestServiceTests
 
         var crafted = BuildCraftedPreamble(encryptionServiceFactory, key, preambleSalt, documentMasterSalt);
 
-        Assert.That(
-            manifestService.DecryptChunkManifest(crafted, key),
-            Is.Null,
-            "a document whose embedded master salt cannot be decoded to 32 bytes has nothing to compare against the "
-                + "preamble, so it must be rejected even though its authentication tag verifies"
-        );
+        Assert.Null(manifestService.DecryptChunkManifest(crafted, key));
     }
 
-    [Test]
-    public async Task ReadChunkManifestPreambleAsync_CancelledDuringRead_RethrowsInsteadOfReportingNoManifest()
+    [Fact]
+    internal async Task ReadChunkManifestPreambleAsync_CancelledDuringRead_RethrowsInsteadOfReportingNoManifest()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -811,23 +709,17 @@ public sealed class ManifestServiceTests
         using CancellationTokenSource cancellation = new();
         await cancellation.CancelAsync();
 
-        _ = Assert.ThrowsAsync(
-            Is.InstanceOf<OperationCanceledException>(),
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => manifestService.ReadChunkManifestPreambleAsync(backup.Path, cancellation.Token)
         );
 
         var afterwards = await manifestService.ReadChunkManifestPreambleAsync(backup.Path, CancellationToken.None);
 
-        Assert.That(
-            afterwards,
-            Is.Not.Null,
-            "the manifest itself is intact, so a cancelled read must surface as cancellation rather than as the "
-                + "backup having no manifest at all"
-        );
+        Assert.NotNull(afterwards);
     }
 
-    [Test]
-    public async Task DetectManifestKindAsync_ManifestReadFailsMidStream_ReportsMissingAndStillClosesTheStream()
+    [Fact]
+    internal async Task DetectManifestKindAsync_ManifestReadFailsMidStream_ReportsMissingAndStillClosesTheStream()
     {
         await using var stream = new FailingReadStream();
         var fileOperations = Substitute.For<IFileOperationsService>();
@@ -845,19 +737,13 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                kind,
-                Is.EqualTo(ManifestKind.Missing),
-                "a manifest that opens but cannot be read must degrade to Missing rather than crash the folder-picker flow"
-            );
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.Equal(ManifestKind.Missing, kind),
+            () => Assert.True(
                 stream.WasDisposed,
-                Is.True,
                 "a manifest read that fails part way through must still release the handle it opened"
-            );
-        }
+            )
+        );
     }
 
     /// <summary>

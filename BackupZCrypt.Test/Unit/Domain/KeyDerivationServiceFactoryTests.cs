@@ -32,8 +32,8 @@ public sealed class KeyDerivationServiceFactoryTests
         return strategy;
     }
 
-    [Test]
-    public void Create_UnregisteredAlgorithm_Throws()
+    [Fact]
+    internal void Create_UnregisteredAlgorithm_Throws()
     {
         var factory = new KeyDerivationServiceFactory([Stub(KeyDerivationAlgorithm.Argon2id)]);
 

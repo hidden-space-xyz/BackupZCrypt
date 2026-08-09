@@ -62,8 +62,8 @@ public sealed class SettingsViewModelTests
     private readonly IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>> estimateBenchmark =
         Substitute.For<IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>>>();
 
-    [Test]
-    public void Constructor_WithTheRegisteredStrategies_GivesEveryOptionDistinctDisplayText()
+    [Fact]
+    internal void Constructor_WithTheRegisteredStrategies_GivesEveryOptionDistinctDisplayText()
     {
         using var provider = TestHost.CreateProvider();
         var encryption = provider.GetServices<IEncryptionAlgorithmStrategy>().ToArray();
@@ -96,33 +96,37 @@ public sealed class SettingsViewModelTests
             .. sut.CompressionOptions.Select(static option => option.Description),
         ];
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.EncryptionOptions, Has.Count.EqualTo(encryption.Length));
-            Assert.That(sut.KeyDerivationOptions, Has.Count.EqualTo(keyDerivation.Length));
-            Assert.That(sut.CompressionOptions, Has.Count.EqualTo(compression.Length + 1));
-            Assert.That(sut.CompressionOptions[0].Id, Is.EqualTo(CompressionMode.None));
-            Assert.That(names.Where(string.IsNullOrWhiteSpace), Is.Empty);
-            Assert.That(descriptions.Where(string.IsNullOrWhiteSpace), Is.Empty);
-            Assert.That(names, Is.Unique);
-            Assert.That(sut.EncryptionOptions.Select(static option => option.Id), Is.Ordered);
-            Assert.That(
-                sut.LanguageOptions.Select(static option => option.Code),
-                Is.EqualTo<string?>([null, "en", "es"])
-            );
-        }
+        // Materialized before the assertion block because the ordering check needs to enumerate the
+        // same sequence twice, once sorted and once as built.
+        var encryptionIds = sut.EncryptionOptions.Select(static option => option.Id).ToList();
+
+        Assert.Multiple(
+            () => Assert.Equal(encryption.Length, sut.EncryptionOptions.Count),
+            () => Assert.Equal(keyDerivation.Length, sut.KeyDerivationOptions.Count),
+            () => Assert.Equal(compression.Length + 1, sut.CompressionOptions.Count),
+            () => Assert.Equal(CompressionMode.None, sut.CompressionOptions[0].Id),
+            () => Assert.DoesNotContain(names, string.IsNullOrWhiteSpace),
+            () => Assert.DoesNotContain(descriptions, string.IsNullOrWhiteSpace),
+            () => Assert.Distinct(names),
+            () => Assert.Equal(encryptionIds.Order().ToList(), encryptionIds),
+            () =>
+                Assert.Equal<string?>(
+                    [null, "en", "es"],
+                    sut.LanguageOptions.Select(static option => option.Code)
+                )
+        );
     }
 
-    [Test]
-    public void Constructor_PublishesTheSettingsFilePathTheHandlerResolves()
+    [Fact]
+    internal void Constructor_PublishesTheSettingsFilePathTheHandlerResolves()
     {
         var sut = CreateSut();
 
-        Assert.That(sut.SettingsFilePath, Is.EqualTo("settings-path.json"));
+        Assert.Equal("settings-path.json", sut.SettingsFilePath);
     }
 
-    [Test]
-    public async Task OnNavigatedToAsync_CalledAgain_KeepsTheUnsavedEditInsteadOfReloading()
+    [Fact]
+    internal async Task OnNavigatedToAsync_CalledAgain_KeepsTheUnsavedEditInsteadOfReloading()
     {
         var sut = CreateSut();
         StubStoredSettings(
@@ -149,19 +153,19 @@ public sealed class SettingsViewModelTests
 
         await sut.OnNavigatedToAsync();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(loadedEncryption, Is.EqualTo(EncryptionAlgorithm.Serpent));
-            Assert.That(loadedKeyDerivation, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
-            Assert.That(loadedCompression, Is.EqualTo(CompressionMode.ZstdBest));
-            Assert.That(loadedLanguage, Is.EqualTo("es"));
-            Assert.That(sut.SelectedCompression.Id, Is.EqualTo(CompressionMode.None));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(EncryptionAlgorithm.Serpent, loadedEncryption),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, loadedKeyDerivation),
+            () => Assert.Equal(CompressionMode.ZstdBest, loadedCompression),
+            () => Assert.Equal("es", loadedLanguage),
+            () => Assert.Equal(CompressionMode.None, sut.SelectedCompression.Id)
+        );
     }
 
-    [TestCase("en", false)]
-    [TestCase("es", true)]
-    public async Task SaveCommand_PersistsTheSelectionsAndFlagsARestartOnlyOnALanguageChange(
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("es", true)]
+    internal async Task SaveCommand_PersistsTheSelectionsAndFlagsARestartOnlyOnALanguageChange(
         string languageCode,
         bool expectRestartNote
     )
@@ -198,17 +202,16 @@ public sealed class SettingsViewModelTests
 
         await sut.SaveCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(savedDefaults, Is.EqualTo([stored]));
-            Assert.That(savedLanguages, Is.EqualTo([new LanguageSettings(languageCode)]));
-            Assert.That(sut.ShowSavedNotice, Is.True);
-            Assert.That(sut.ShowRestartNote, Is.EqualTo(expectRestartNote));
-        }
+        Assert.Multiple(
+            () => Assert.Equal<BackupCreationSettings>([stored], savedDefaults),
+            () => Assert.Equal<LanguageSettings>([new LanguageSettings(languageCode)], savedLanguages),
+            () => Assert.True(sut.ShowSavedNotice),
+            () => Assert.Equal(expectRestartNote, sut.ShowRestartNote)
+        );
     }
 
-    [Test]
-    public async Task SaveCommand_WhenTheWriteFails_LeavesTheSavedNoticeHiddenAndSkipsTheLanguage()
+    [Fact]
+    internal async Task SaveCommand_WhenTheWriteFails_LeavesTheSavedNoticeHiddenAndSkipsTheLanguage()
     {
         var sut = CreateSut();
         _ = this
@@ -223,25 +226,25 @@ public sealed class SettingsViewModelTests
         await sut.OnNavigatedToAsync();
         await sut.SaveCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.ShowSavedNotice, Is.False);
-            Assert.That(sut.ShowRestartNote, Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.False(sut.ShowSavedNotice),
+            () => Assert.False(sut.ShowRestartNote)
+        );
 
         await this.saveLanguage.DidNotReceive()
             .HandleAsync(Arg.Any<SaveSettingsCommand<LanguageSettings>>(), Arg.Any<CancellationToken>());
     }
 
     [SetCulture("")]
-    [TestCase("", 1)]
-    [TestCase("   ", 1)]
-    [TestCase("abc", 1)]
-    [TestCase("0", 1)]
-    [TestCase("-5", 1)]
-    [TestCase("0.0000001", 0)]
-    [TestCase("1e12", 2)]
-    public async Task RunBenchmarkCommand_WithAnUnusableAmount_ReportsItAndRunsNothing(
+    [Theory]
+    [InlineData("", 1)]
+    [InlineData("   ", 1)]
+    [InlineData("abc", 1)]
+    [InlineData("0", 1)]
+    [InlineData("-5", 1)]
+    [InlineData("0.0000001", 0)]
+    [InlineData("1e12", 2)]
+    internal async Task RunBenchmarkCommand_WithAnUnusableAmount_ReportsItAndRunsNothing(
         string amount,
         int unitIndex
     )
@@ -254,22 +257,22 @@ public sealed class SettingsViewModelTests
 
         await sut.RunBenchmarkCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(queries, Is.Empty);
-            Assert.That(sut.HasBenchmarkError, Is.True);
-            Assert.That(sut.BenchmarkError, Is.EqualTo(Strings.BenchmarkInvalidAmount));
-            Assert.That(sut.ShowBenchmarkResult, Is.False);
-            Assert.That(sut.IsBenchmarkRunning, Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.Empty(queries),
+            () => Assert.True(sut.HasBenchmarkError),
+            () => Assert.Equal(Strings.BenchmarkInvalidAmount, sut.BenchmarkError),
+            () => Assert.False(sut.ShowBenchmarkResult),
+            () => Assert.False(sut.IsBenchmarkRunning)
+        );
     }
 
     [SetCulture("")]
-    [TestCase("100", 0, 104857600L)]
-    [TestCase("1", 1, 1073741824L)]
-    [TestCase("1.5", 1, 1610612736L)]
-    [TestCase("1", 2, 1099511627776L)]
-    public async Task RunBenchmarkCommand_ConvertsTheAmountAndUnitIntoBytesForTheSelectedAlgorithms(
+    [Theory]
+    [InlineData("100", 0, 104857600L)]
+    [InlineData("1", 1, 1073741824L)]
+    [InlineData("1.5", 1, 1610612736L)]
+    [InlineData("1", 2, 1099511627776L)]
+    internal async Task RunBenchmarkCommand_ConvertsTheAmountAndUnitIntoBytesForTheSelectedAlgorithms(
         string amount,
         int unitIndex,
         long expectedBytes
@@ -294,35 +297,32 @@ public sealed class SettingsViewModelTests
 
         await sut.RunBenchmarkCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(queries, Has.Count.EqualTo(1));
-            Assert.That(queries[0].DataBytes, Is.EqualTo(expectedBytes));
-            Assert.That(
-                queries[0].EncryptionAlgorithm,
-                Is.EqualTo(EncryptionAlgorithm.Serpent)
-            );
-            Assert.That(
-                queries[0].KeyDerivationAlgorithm,
-                Is.EqualTo(KeyDerivationAlgorithm.Scrypt)
-            );
-            Assert.That(queries[0].Compression, Is.EqualTo(CompressionMode.ZstdBest));
-            Assert.That(sut.ShowBenchmarkResult, Is.True);
-            Assert.That(sut.HasBenchmarkError, Is.False);
-            Assert.That(
-                sut.BenchmarkDurationText,
-                Does.Contain(DurationFormatter.Format(TimeSpan.FromMinutes(2)))
-            );
-            Assert.That(
-                sut.BenchmarkThroughputText,
-                Does.Contain(ByteSizeFormatter.Format(50_000_000))
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Single(queries),
+            () => Assert.Equal(expectedBytes, queries[0].DataBytes),
+            () => Assert.Equal(EncryptionAlgorithm.Serpent, queries[0].EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, queries[0].KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.ZstdBest, queries[0].Compression),
+            () => Assert.True(sut.ShowBenchmarkResult),
+            () => Assert.False(sut.HasBenchmarkError),
+            () =>
+                Assert.Contains(
+                    DurationFormatter.Format(TimeSpan.FromMinutes(2)),
+                    sut.BenchmarkDurationText,
+                    StringComparison.Ordinal
+                ),
+            () =>
+                Assert.Contains(
+                    ByteSizeFormatter.Format(50_000_000),
+                    sut.BenchmarkThroughputText,
+                    StringComparison.Ordinal
+                )
+        );
     }
 
     [SetCulture("")]
-    [Test]
-    public async Task RunBenchmarkCommand_WhenTheEstimateFails_ReplacesTheResultAndStaysRunnable()
+    [Fact]
+    internal async Task RunBenchmarkCommand_WhenTheEstimateFails_ReplacesTheResultAndStaysRunnable()
     {
         var sut = CreateSut();
         _ = StubBenchmark();
@@ -344,15 +344,14 @@ public sealed class SettingsViewModelTests
 
         await sut.RunBenchmarkCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(shownAfterTheSuccessfulRun, Is.True);
-            Assert.That(sut.ShowBenchmarkResult, Is.False);
-            Assert.That(sut.HasBenchmarkError, Is.True);
-            Assert.That(sut.BenchmarkError, Is.EqualTo(Strings.BenchmarkFailed));
-            Assert.That(sut.IsBenchmarkRunning, Is.False);
-            Assert.That(sut.RunBenchmarkCommand.CanExecute(null), Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(shownAfterTheSuccessfulRun),
+            () => Assert.False(sut.ShowBenchmarkResult),
+            () => Assert.True(sut.HasBenchmarkError),
+            () => Assert.Equal(Strings.BenchmarkFailed, sut.BenchmarkError),
+            () => Assert.False(sut.IsBenchmarkRunning),
+            () => Assert.True(sut.RunBenchmarkCommand.CanExecute(null))
+        );
     }
 
     /// <summary>

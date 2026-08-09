@@ -45,61 +45,50 @@ public sealed class PasswordStrengthFormatterTests
     /// <summary>
     /// Gets every defined strength, so that adding a member to the enum adds a case here automatically.
     /// </summary>
-    public static IEnumerable<PasswordStrength> DefinedStrengths => Enum.GetValues<PasswordStrength>();
+    public static TheoryData<PasswordStrength> DefinedStrengths => new(Enum.GetValues<PasswordStrength>());
 
-    [TestCaseSource(nameof(DefinedStrengths))]
-    public void Format_ForEachDefinedStrength_LeadsWithThatStrengthsOwnLabel(PasswordStrength strength)
+    [Theory]
+    [MemberData(nameof(DefinedStrengths))]
+    internal void Format_ForEachDefinedStrength_LeadsWithThatStrengthsOwnLabel(PasswordStrength strength)
     {
-        Assert.That(
-            ExpectedLabels,
-            Does.ContainKey(strength),
-            $"PasswordStrength.{strength} has no expected label here; add it alongside the formatter's switch arm."
-        );
+        _ = Assert.Contains(strength, ExpectedLabels);
 
         var expected = ExpectedLabels[strength];
         var caption = PasswordStrengthFormatter.Format(new PasswordStrengthAnalysis(strength, 50, 64.0, []));
 
-        Assert.That(
-            caption,
-            Does.StartWith(expected),
-            $"PasswordStrength.{strength} must be captioned '{expected}' but the caption was '{caption}'."
-        );
+        Assert.StartsWith(expected, caption, StringComparison.Ordinal);
     }
 
-    [Test]
-    public void Format_StrengthOutsideTheEnum_FallsBackToTheWeakestLabel()
+    [Fact]
+    internal void Format_StrengthOutsideTheEnum_FallsBackToTheWeakestLabel()
     {
         var caption = PasswordStrengthFormatter.Format(new PasswordStrengthAnalysis((PasswordStrength)99, 0, 0, []));
 
-        Assert.That(
-            caption,
-            Does.StartWith(Strings.StrengthVeryWeak),
-            "An unrecognized strength must degrade to the weakest label; degrading upwards would tell a user a bad password is safe."
-        );
+        Assert.StartsWith(Strings.StrengthVeryWeak, caption, StringComparison.Ordinal);
     }
 
-    [Test]
-    public void Format_WithMoreTipsThanTheCap_KeepsOnlyTheFirstThree()
+    [Fact]
+    internal void Format_WithMoreTipsThanTheCap_KeepsOnlyTheFirstThree()
     {
         var caption = PasswordStrengthFormatter.Format(
             new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 30.0, SampleTips)
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(caption, Does.Contain(Localize(SampleTips[0])), "The first tip must survive the cap.");
-            Assert.That(caption, Does.Contain(Localize(SampleTips[1])), "The second tip must survive the cap.");
-            Assert.That(caption, Does.Contain(Localize(SampleTips[2])), "The third tip must survive the cap.");
-            Assert.That(caption, Does.Not.Contain(Localize(SampleTips[3])), "The fourth tip must be dropped by the cap.");
-            Assert.That(caption, Does.Not.Contain(Localize(SampleTips[4])), "The fifth tip must be dropped by the cap.");
-        }
+        Assert.Multiple(
+            () => Assert.Contains(Localize(SampleTips[0]), caption, StringComparison.Ordinal),
+            () => Assert.Contains(Localize(SampleTips[1]), caption, StringComparison.Ordinal),
+            () => Assert.Contains(Localize(SampleTips[2]), caption, StringComparison.Ordinal),
+            () => Assert.DoesNotContain(Localize(SampleTips[3]), caption, StringComparison.Ordinal),
+            () => Assert.DoesNotContain(Localize(SampleTips[4]), caption, StringComparison.Ordinal)
+        );
     }
 
-    [TestCase(PasswordStrength.Strong, 0, false, true)]
-    [TestCase(PasswordStrength.Strong, 1, true, false)]
-    [TestCase(PasswordStrength.Weak, 0, false, false)]
-    [TestCase(PasswordStrength.Weak, 2, true, false)]
-    public void Format_SuggestionsAndCongratulation_AreGatedOnTipsFirstAndStrengthSecond(
+    [Theory]
+    [InlineData(PasswordStrength.Strong, 0, false, true)]
+    [InlineData(PasswordStrength.Strong, 1, true, false)]
+    [InlineData(PasswordStrength.Weak, 0, false, false)]
+    [InlineData(PasswordStrength.Weak, 2, true, false)]
+    internal void Format_SuggestionsAndCongratulation_AreGatedOnTipsFirstAndStrengthSecond(
         PasswordStrength strength,
         int tipCount,
         bool expectsSuggestions,
@@ -110,28 +99,25 @@ public sealed class PasswordStrengthFormatterTests
 
         var caption = PasswordStrengthFormatter.Format(analysis);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                caption.Contains(Strings.Suggestions, StringComparison.Ordinal),
-                Is.EqualTo(expectsSuggestions),
-                $"Suggestions must appear only when there are tips. Caption: '{caption}'."
-            );
-            Assert.That(
-                caption.Contains(Strings.GoodJob, StringComparison.Ordinal),
-                Is.EqualTo(expectsCongratulation),
-                $"The congratulation must appear only for a strong password with nothing left to improve. Caption: '{caption}'."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(
+                expectsSuggestions,
+                caption.Contains(Strings.Suggestions, StringComparison.Ordinal)
+            ),
+            () => Assert.Equal(
+                expectsCongratulation,
+                caption.Contains(Strings.GoodJob, StringComparison.Ordinal)
+            )
+        );
     }
 
-    [Test]
-    public void Format_UnderACommaDecimalCulture_RendersEntropyWithThatCulturesSeparator()
+    [Fact]
+    internal void Format_UnderACommaDecimalCulture_RendersEntropyWithThatCulturesSeparator()
     {
         var commaCulture = TryGetCommaDecimalCulture();
         if (commaCulture is null)
         {
-            Assert.Ignore("This runtime exposes no comma-decimal culture, so ambient formatting cannot differ.");
+            Assert.Skip("This runtime exposes no comma-decimal culture, so ambient formatting cannot differ.");
         }
 
         var previousCulture = CultureInfo.CurrentCulture;
@@ -148,15 +134,10 @@ public sealed class PasswordStrengthFormatterTests
             CultureInfo.CurrentCulture = previousCulture;
         }
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                caption,
-                Does.Contain("72,5"),
-                $"Entropy must follow the ambient culture like the rest of the caption. Caption: '{caption}'."
-            );
-            Assert.That(caption, Does.Not.Contain("72.5"), "A hard-coded invariant culture would desync entropy from the caption.");
-        }
+        Assert.Multiple(
+            () => Assert.Contains("72,5", caption, StringComparison.Ordinal),
+            () => Assert.DoesNotContain("72.5", caption, StringComparison.Ordinal)
+        );
     }
 
     /// <summary>

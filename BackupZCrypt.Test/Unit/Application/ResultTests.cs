@@ -16,78 +16,77 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </remarks>
 public sealed class ResultTests
 {
-    [Test]
-    public void Failure_FromCodeAndArgsOrImplicitCode_CarriesSingleMatchingError()
+    [Fact]
+    internal void Failure_FromCodeAndArgsOrImplicitCode_CarriesSingleMatchingError()
     {
         var result = Result.Failure(MessageCode.PasswordTooShort, "extra", 42);
         Result implicitResult = MessageCode.InvalidPassword;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(implicitResult.IsSuccess, Is.False);
-            Assert.That(implicitResult.Errors, Has.Count.EqualTo(1));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Single(result.Errors),
+            () => Assert.False(implicitResult.IsSuccess),
+            () => Assert.Single(implicitResult.Errors)
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.PasswordTooShort));
-            Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "extra", 42 }));
-            Assert.That(implicitResult.Errors[0].Code, Is.EqualTo(MessageCode.InvalidPassword));
-            Assert.That(implicitResult.Errors[0].Args, Is.Empty);
-        }
+        object[] expectedArgs = ["extra", 42];
+
+        Assert.Multiple(
+            () => Assert.Equal(MessageCode.PasswordTooShort, result.Errors[0].Code),
+            () => Assert.Equal(expectedArgs, result.Errors[0].Args),
+            () => Assert.Equal(MessageCode.InvalidPassword, implicitResult.Errors[0].Code),
+            () => Assert.Empty(implicitResult.Errors[0].Args)
+        );
     }
 
-    [Test]
-    public void Failure_WithMessages_PreservesAllErrors()
+    [Fact]
+    internal void Failure_WithMessages_PreservesAllErrors()
     {
         var result = Result.Failure(
             new LocalizableMessage(MessageCode.SourcePathEmpty),
             new LocalizableMessage(MessageCode.PasswordRequired)
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                result.Errors.Select(e => e.Code),
-                Is.EqualTo([MessageCode.SourcePathEmpty, MessageCode.PasswordRequired])
-            );
-        }
+        MessageCode[] expectedCodes = [MessageCode.SourcePathEmpty, MessageCode.PasswordRequired];
+
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Equal(expectedCodes, result.Errors.Select(e => e.Code))
+        );
     }
 
-    [Test]
-    public void GenericSuccess_FromFactoryOrImplicitValue_ExposesValueAndNoErrors()
+    [Fact]
+    internal void GenericSuccess_FromFactoryOrImplicitValue_ExposesValueAndNoErrors()
     {
         var result = Result<int>.Success(7);
         Result<string> implicitResult = "ok";
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value, Is.EqualTo(7));
-            Assert.That(result.Errors, Is.Empty);
-            Assert.That(implicitResult.IsSuccess, Is.True);
-            Assert.That(implicitResult.Value, Is.EqualTo("ok"));
-            Assert.That(implicitResult.Errors, Is.Empty);
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.Equal(7, result.Value),
+            () => Assert.Empty(result.Errors),
+            () => Assert.True(implicitResult.IsSuccess),
+            () => Assert.Equal("ok", implicitResult.Value),
+            () => Assert.Empty(implicitResult.Errors)
+        );
     }
 
-    [Test]
-    public void GenericFailure_FromFactoryOrImplicitCode_CarriesErrorAndBlocksValueAccess()
+    [Fact]
+    internal void GenericFailure_FromFactoryOrImplicitCode_CarriesErrorAndBlocksValueAccess()
     {
         var result = Result<int>.Failure(MessageCode.UnexpectedErrorFormat, "boom");
 
         Result<string> implicitResult = MessageCode.InvalidPassword;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(result.Errors.Select(e => e.Code), Is.EqualTo([MessageCode.UnexpectedErrorFormat]));
-            Assert.That(implicitResult.IsSuccess, Is.False);
-            Assert.That(implicitResult.Errors.Select(e => e.Code), Is.EqualTo([MessageCode.InvalidPassword]));
-        }
+        MessageCode[] expectedCodes = [MessageCode.UnexpectedErrorFormat];
+        MessageCode[] expectedImplicitCodes = [MessageCode.InvalidPassword];
+
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Equal(expectedCodes, result.Errors.Select(e => e.Code)),
+            () => Assert.False(implicitResult.IsSuccess),
+            () => Assert.Equal(expectedImplicitCodes, implicitResult.Errors.Select(e => e.Code))
+        );
 
         _ = Assert.Throws<InvalidOperationException>(() => _ = result.Value);
     }

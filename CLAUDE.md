@@ -98,8 +98,16 @@ Only on a **deliberate** format change, regenerate fixtures with the explicit ma
 treat the diff as the review artefact:
 
 ```bash
-dotnet test BackupZCrypt.sln --filter "FullyQualifiedName~OnDiskFormatFixtureGenerator"
+dotnet run --project BackupZCrypt.Test -- -explicit only -class "*OnDiskFormatFixtureGenerator"
 ```
+
+That is not a `dotnet test` command, and the difference is deliberate. NUnit's `[Explicit]` ran a
+test as soon as a filter named it, so a stray `--filter` could rewrite the fixtures. xUnit reports
+`[Fact(Explicit = true)]` as *not run* no matter how narrowly it is filtered, and only
+`-explicit only` reaches it — which the VSTest runner behind `dotnet test` cannot pass through, so
+the maintenance tool is invoked through the v3 assembly's own runner instead. Regenerating the
+committed archives now takes an unmistakable command, which is the right shape for the one action
+in this repo that can silently destroy backwards compatibility.
 
 ## Conventions
 
@@ -110,9 +118,22 @@ dotnet test BackupZCrypt.sln --filter "FullyQualifiedName~OnDiskFormatFixtureGen
   any new warning fails the build. `.editorconfig` exists only to suppress diagnostics whose
   correct resolution is to ignore them — each entry carries its justification, and anything
   fixable is fixed in code instead.
-- Tests are NUnit + NSubstitute, all in `BackupZCrypt.Test` (`Unit/<Layer>/`, `Integration/`,
+- Tests are xUnit v3 + NSubstitute, all in `BackupZCrypt.Test` (`Unit/<Layer>/`, `Integration/`,
   `Tools/`). No test may depend on wall-clock timing, throughput, or locale; every temporary file
   lives in a directory the test owns and deletes (`Common/TempDir`).
+- Test classes are `public sealed` because xUnit only discovers public classes; every test method
+  and helper inside them is `internal`. That is deliberate: `CA1707` and `CS1591` only judge
+  externally visible members, so keeping the methods internal is what lets the
+  `Method_Scenario_ExpectedOutcome` names and their missing XML docs pass the analyzers without an
+  `.editorconfig` suppression. `[MemberData]` sources are the one exception — xUnit requires them
+  to be `public static`, so they carry an XML doc comment.
+- The assembly opts out of xUnit's per-class parallelism (`AssemblyHooks.cs`): two fixtures mutate
+  process-global state, and the integration tests would otherwise contend for the same disk.
+- xUnit only accepts a message on `Assert.True`, `Assert.False`, `Assert.Fail` and `Assert.Skip`.
+  Elsewhere the assertion has to speak for itself — prefer `Assert.Equal`'s diff over an
+  `Assert.True` that carries prose but reports nothing useful when it fails.
+- Inside a `[Fact]`/`[Theory]` body, pass `TestContext.Current.CancellationToken` to anything that
+  accepts a token; `xUnit1051` enforces it, and it is what makes a hung test cancellable.
 - Commit messages follow Conventional Commits; `feat:`, `fix:`, `refactor:` and `bump:` are the
   prefixes release notes are built from.
 - Branch from `develop` and open PRs against `develop`; `master` only receives release merges.

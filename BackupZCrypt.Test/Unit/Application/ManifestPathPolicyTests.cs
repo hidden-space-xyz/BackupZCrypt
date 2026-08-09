@@ -17,104 +17,99 @@ public sealed class ManifestPathPolicyTests
     /// Entry paths that must be rejected however they arrive, in either separator notation.
     /// </summary>
     /// <returns>One rejected path per case.</returns>
-    private static IEnumerable<string> RejectedPaths()
+    public static TheoryData<string> RejectedPaths()
     {
-        yield return string.Empty;
-        yield return "   ";
-        yield return "../escape.txt";
-        yield return "..\\escape.txt";
-        yield return "docs/../../escape.txt";
-        yield return "docs\\..\\..\\escape.txt";
-        yield return "a/../../b/../../escape.txt";
+        return new()
+        {
+            string.Empty,
+            "   ",
+            "../escape.txt",
+            "..\\escape.txt",
+            "docs/../../escape.txt",
+            "docs\\..\\..\\escape.txt",
+            "a/../../b/../../escape.txt",
+        };
     }
 
-    [TestCaseSource(nameof(RejectedPaths))]
-    public void ValidateRelative_TraversalAndEmptyPaths_AreRejectedOnEveryPlatform(string path)
+    [Theory]
+    [MemberData(nameof(RejectedPaths))]
+    internal void ValidateRelative_TraversalAndEmptyPaths_AreRejectedOnEveryPlatform(string path)
     {
         _ = Assert.Throws<InvalidDataException>(() => ManifestPathPolicy.ValidateRelative(path));
     }
 
-    [Test]
-    public void ValidateRelative_BackslashTraversal_IsRejectedEvenWhereBackslashIsALegalNameCharacter()
+    [Fact]
+    internal void ValidateRelative_BackslashTraversal_IsRejectedEvenWhereBackslashIsALegalNameCharacter()
     {
         _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ValidateRelative("..\\..\\escape.txt"),
-            "On Unix '\\' is an ordinary file-name character, so a check that split only on the host "
-                + "separator would read this as one harmless file name and let it through."
+            () => ManifestPathPolicy.ValidateRelative("..\\..\\escape.txt")
         );
     }
 
-    [TestCase("root.txt")]
-    [TestCase("docs/notes.md")]
-    [TestCase("docs\\notes.md")]
-    [TestCase("docs/sub/deep.txt")]
-    [TestCase("a.b/c..d/e.txt")]
-    public void ValidateRelative_OrdinaryRelativePaths_AreAccepted(string path)
+    [Theory]
+    [InlineData("root.txt")]
+    [InlineData("docs/notes.md")]
+    [InlineData("docs\\notes.md")]
+    [InlineData("docs/sub/deep.txt")]
+    [InlineData("a.b/c..d/e.txt")]
+    internal void ValidateRelative_OrdinaryRelativePaths_AreAccepted(string path)
     {
-        Assert.DoesNotThrow(() => ManifestPathPolicy.ValidateRelative(path));
+        Assert.Null(Record.Exception(() => ManifestPathPolicy.ValidateRelative(path)));
     }
 
-    [Test]
-    public void ValidateRelative_RootedPath_IsRejected()
+    [Fact]
+    internal void ValidateRelative_RootedPath_IsRejected()
     {
         var rooted = Path.Combine(Path.GetTempPath(), "escape.txt");
 
         _ = Assert.Throws<InvalidDataException>(() => ManifestPathPolicy.ValidateRelative(rooted));
     }
 
-    [Test]
-    public void ResolveSafeDestination_OrdinaryEntry_LandsInsideTheRoot()
+    [Fact]
+    internal void ResolveSafeDestination_OrdinaryEntry_LandsInsideTheRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "bzc-policy-root");
 
         var resolved = ManifestPathPolicy.ResolveSafeDestination(root, "docs/sub/deep.txt");
 
-        Assert.That(
+        Assert.StartsWith(
+            Path.GetFullPath(root) + Path.DirectorySeparatorChar,
             resolved,
-            Does.StartWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar),
-            "A well-formed entry must resolve inside the destination it was restored into."
+            StringComparison.Ordinal
         );
     }
 
-    [Test]
-    public void ResolveSafeDestination_SiblingWhoseNameSharesThePrefix_IsNotTreatedAsInside()
+    [Fact]
+    internal void ResolveSafeDestination_SiblingWhoseNameSharesThePrefix_IsNotTreatedAsInside()
     {
         var root = Path.Combine(Path.GetTempPath(), "bzc-root");
 
         _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt"),
-            "'bzc-root-evil' starts with 'bzc-root' as a string but is a different directory; the "
-                + "root is compared with a trailing separator precisely so this is not accepted."
+            () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt")
         );
     }
 
-    [Test]
-    public void ToManifestPath_AlwaysWritesForwardSlashes()
+    [Fact]
+    internal void ToManifestPath_AlwaysWritesForwardSlashes()
     {
-        Assert.That(
-            ManifestPathPolicy.ToManifestPath("docs\\sub\\deep.txt"),
-            Is.EqualTo("docs/sub/deep.txt"),
-            "An archive must record the same entry text whichever platform wrote it."
-        );
+        Assert.Equal("docs/sub/deep.txt", ManifestPathPolicy.ToManifestPath("docs\\sub\\deep.txt"));
     }
 
-    [TestCase("docs/sub/deep.txt")]
-    [TestCase("docs\\sub\\deep.txt")]
-    public void ToPlatformPath_AcceptsEitherNotation_AndYieldsHostSeparators(string manifestPath)
+    [Theory]
+    [InlineData("docs/sub/deep.txt")]
+    [InlineData("docs\\sub\\deep.txt")]
+    internal void ToPlatformPath_AcceptsEitherNotation_AndYieldsHostSeparators(string manifestPath)
     {
         var platformPath = ManifestPathPolicy.ToPlatformPath(manifestPath);
 
-        Assert.That(
-            platformPath,
-            Is.EqualTo(
-                string.Join(Path.DirectorySeparatorChar, "docs", "sub", "deep.txt")
-            ),
-            "An archive written on either platform must rebuild the same tree on this one."
+        Assert.Equal(
+            string.Join(Path.DirectorySeparatorChar, "docs", "sub", "deep.txt"),
+            platformPath
         );
     }
 
-    [Test]
-    public void ToManifestPathThenToPlatformPath_RoundTripsAnEntry()
+    [Fact]
+    internal void ToManifestPathThenToPlatformPath_RoundTripsAnEntry()
     {
         var original = Path.Combine("docs", "sub", "deep.txt");
 
@@ -122,6 +117,6 @@ public sealed class ManifestPathPolicyTests
             ManifestPathPolicy.ToManifestPath(original)
         );
 
-        Assert.That(roundTripped, Is.EqualTo(original));
+        Assert.Equal(original, roundTripped);
     }
 }

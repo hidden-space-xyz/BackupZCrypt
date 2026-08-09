@@ -34,8 +34,8 @@ public sealed partial class MessageLocalizerTests
     [GeneratedRegex(@"\{(?<index>\d+)", RegexOptions.ExplicitCapture, RegexTimeoutMilliseconds)]
     private static partial Regex PlaceholderPattern { get; }
 
-    [Test]
-    public void Localize_EveryMessageCode_ResolvesToLocalizedTextRatherThanTheCodeName()
+    [Fact]
+    internal void Localize_EveryMessageCode_ResolvesToLocalizedTextRatherThanTheCodeName()
     {
         var offenders = new List<string>();
 
@@ -50,16 +50,11 @@ public sealed partial class MessageLocalizerTests
             }
         }
 
-        Assert.That(
-            offenders,
-            Is.Empty,
-            "MessageCode members that resolved to nothing or to their own name, which is what the UI would then show: "
-                + string.Join(", ", offenders)
-        );
+        Assert.Empty(offenders);
     }
 
-    [Test]
-    public void Localize_EveryCodeNamedFormat_SubstitutesEveryArgumentItWasGiven()
+    [Fact]
+    internal void Localize_EveryCodeNamedFormat_SubstitutesEveryArgumentItWasGiven()
     {
         var offenders = new List<string>();
 
@@ -91,16 +86,11 @@ public sealed partial class MessageLocalizerTests
             }
         }
 
-        Assert.That(
-            offenders,
-            Is.Empty,
-            "Format-suffixed MessageCode members whose arguments were not consumed as the convention promises: "
-                + string.Join("; ", offenders)
-        );
+        Assert.Empty(offenders);
     }
 
-    [Test]
-    public void Localize_EveryCodeNotNamedFormat_RendersWithoutLeavingAPlaceholder()
+    [Fact]
+    internal void Localize_EveryCodeNotNamedFormat_RendersWithoutLeavingAPlaceholder()
     {
         var offenders = Enum.GetValues<MessageCode>()
             .Where(static code =>
@@ -110,33 +100,18 @@ public sealed partial class MessageLocalizerTests
             .Select(static code => code.ToString())
             .ToList();
 
-        Assert.That(
-            offenders,
-            Is.Empty,
-            "MessageCode members whose resource contains a placeholder but whose name does not end in "
-                + $"'{FormatSuffix}', so no arguments are ever applied and the UI shows a literal '{{0}}': "
-                + string.Join(", ", offenders)
-        );
+        Assert.Empty(offenders);
     }
 
-    [Test]
-    public void Localize_CodeWithNoMatchingResource_FallsBackToTheCodeItselfInsteadOfThrowing()
+    [Fact]
+    internal void Localize_CodeWithNoMatchingResource_FallsBackToTheCodeItselfInsteadOfThrowing()
     {
         var unmapped = (MessageCode)(-1);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                MessageLocalizer.Localize(new LocalizableMessage(unmapped)),
-                Is.EqualTo("-1"),
-                "An unmapped code must degrade to its own identifier rather than to an empty caption."
-            );
-            Assert.That(
-                MessageLocalizer.Localize(new LocalizableMessage(unmapped, "detail")),
-                Is.EqualTo("-1"),
-                "An unmapped code carrying arguments must not throw either: this runs while the app is already reporting a failure."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal("-1", MessageLocalizer.Localize(new LocalizableMessage(unmapped))),
+            () => Assert.Equal("-1", MessageLocalizer.Localize(new LocalizableMessage(unmapped, "detail")))
+        );
     }
 
     /// <summary>

@@ -27,9 +27,10 @@ public sealed class DetectManifestKindQueryHandlerTests
         return new(this.manifestService);
     }
 
-    [TestCase(ManifestKind.Missing)]
-    [TestCase(ManifestKind.Encrypted)]
-    public async Task HandleAsync_ProbeSucceeds_ReturnsTheDetectedKind(ManifestKind kind)
+    [Theory]
+    [InlineData(ManifestKind.Missing)]
+    [InlineData(ManifestKind.Encrypted)]
+    internal async Task HandleAsync_ProbeSucceeds_ReturnsTheDetectedKind(ManifestKind kind)
     {
         _ = this.manifestService
             .DetectManifestKindAsync("some-backup", Arg.Any<CancellationToken>())
@@ -38,11 +39,11 @@ public sealed class DetectManifestKindQueryHandlerTests
         var result = await this.CreateSut()
             .HandleAsync(new DetectManifestKindQuery("some-backup"), CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo(kind));
+        Assert.Equal(kind, result);
     }
 
-    [Test]
-    public async Task HandleAsync_ProbeThrows_ReportsMissingInsteadOfLeakingTheException()
+    [Fact]
+    internal async Task HandleAsync_ProbeThrows_ReportsMissingInsteadOfLeakingTheException()
     {
         _ = this.manifestService
             .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -51,17 +52,17 @@ public sealed class DetectManifestKindQueryHandlerTests
         var result = await this.CreateSut()
             .HandleAsync(new DetectManifestKindQuery("locked-backup"), CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo(ManifestKind.Missing));
+        Assert.Equal(ManifestKind.Missing, result);
     }
 
-    [Test]
-    public void HandleAsync_ProbeCancelled_PropagatesCancellationInsteadOfMappingIt()
+    [Fact]
+    internal async Task HandleAsync_ProbeCancelled_PropagatesCancellationInsteadOfMappingIt()
     {
         _ = this.manifestService
             .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new OperationCanceledException());
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut()
                 .HandleAsync(new DetectManifestKindQuery("some-backup"), CancellationToken.None)
         );

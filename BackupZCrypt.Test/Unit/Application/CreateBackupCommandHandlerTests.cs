@@ -83,8 +83,8 @@ public sealed class CreateBackupCommandHandlerTests
             .Returns(empty);
     }
 
-    [Test]
-    public async Task HandleAsync_Command_MapsEveryFieldOntoACreateRequestAndForwardsTheProgress()
+    [Fact]
+    internal async Task HandleAsync_Command_MapsEveryFieldOntoACreateRequestAndForwardsTheProgress()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -116,20 +116,19 @@ public sealed class CreateBackupCommandHandlerTests
 
         var result = await this.CreateSut().HandleAsync(command, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(captured!.SourcePath, Is.EqualTo(SourceDir));
-            Assert.That(captured.DestinationPath, Is.EqualTo(DestinationDir));
-            Assert.That(captured.Password, Is.EqualTo("Correct-Horse-Battery-Staple-42"));
-            Assert.That(captured.ConfirmPassword, Is.EqualTo("Correct-Horse-Battery-Staple-42"));
-            Assert.That(captured.EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Twofish));
-            Assert.That(captured.KeyDerivationAlgorithm, Is.EqualTo(KeyDerivationAlgorithm.Scrypt));
-            Assert.That(captured.Operation, Is.EqualTo(BackupOperation.Create));
-            Assert.That(captured.Compression, Is.EqualTo(CompressionMode.ZstdBest));
-            Assert.That(captured.ProceedOnWarnings, Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.True(result.Value.Completion!.IsSuccess),
+            () => Assert.Equal(SourceDir, captured!.SourcePath),
+            () => Assert.Equal(DestinationDir, captured!.DestinationPath),
+            () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.Password),
+            () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.ConfirmPassword),
+            () => Assert.Equal(EncryptionAlgorithm.Twofish, captured!.EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, captured!.KeyDerivationAlgorithm),
+            () => Assert.Equal(BackupOperation.Create, captured!.Operation),
+            () => Assert.Equal(CompressionMode.ZstdBest, captured!.Compression),
+            () => Assert.True(captured!.ProceedOnWarnings)
+        );
 
         await this.chunkedBackupService.Received(1)
             .CreateAsync(
@@ -141,8 +140,8 @@ public sealed class CreateBackupCommandHandlerTests
             );
     }
 
-    [Test]
-    public void ToString_OfTheCommand_RedactsThePasswordAndConfirmation()
+    [Fact]
+    internal void ToString_OfTheCommand_RedactsThePasswordAndConfirmation()
     {
         var command = new CreateBackupCommand(
             SourceDir,
@@ -155,10 +154,9 @@ public sealed class CreateBackupCommandHandlerTests
 
         var text = command.ToString();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(text, Does.Not.Contain("hunter2-secret"));
-            Assert.That(text, Does.Contain("***"));
-        }
+        Assert.Multiple(
+            () => Assert.DoesNotContain("hunter2-secret", text, StringComparison.Ordinal),
+            () => Assert.Contains("***", text, StringComparison.Ordinal)
+        );
     }
 }

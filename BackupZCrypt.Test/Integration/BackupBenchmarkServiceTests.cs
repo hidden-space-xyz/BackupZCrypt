@@ -64,9 +64,10 @@ public sealed class BackupBenchmarkServiceTests
     /// <param name="compression">The compression mode to measure.</param>
     /// <param name="encryption">The AEAD cipher to measure.</param>
     /// <returns>A task that completes when the estimate has been checked.</returns>
-    [TestCase(CompressionMode.None, EncryptionAlgorithm.Aes)]
-    [TestCase(CompressionMode.Zstd, EncryptionAlgorithm.ChaCha20)]
-    public async Task EstimateAsync_ForSupportedOptions_ReturnsSelfConsistentEstimate(
+    [Theory]
+    [InlineData(CompressionMode.None, EncryptionAlgorithm.Aes)]
+    [InlineData(CompressionMode.Zstd, EncryptionAlgorithm.ChaCha20)]
+    internal async Task EstimateAsync_ForSupportedOptions_ReturnsSelfConsistentEstimate(
         CompressionMode compression,
         EncryptionAlgorithm encryption
     )
@@ -75,7 +76,8 @@ public sealed class BackupBenchmarkServiceTests
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
 
         var estimate = await service.EstimateAsync(
-            NewRequest(OneGigabyte, compression, encryption)
+            NewRequest(OneGigabyte, compression, encryption),
+            TestContext.Current.CancellationToken
         );
 
         var recomputed = BackupBenchmarkService.ComputeEstimatedDuration(
@@ -84,49 +86,54 @@ public sealed class BackupBenchmarkServiceTests
             estimate.DataBytes
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(estimate.DataBytes, Is.EqualTo(OneGigabyte));
-            Assert.That(
-                estimate.KeyDerivationDuration,
-                Is.GreaterThan(TimeSpan.Zero),
-                "A full production key derivation was not timed."
-            );
-            Assert.That(estimate.ThroughputBytesPerSecond, Is.GreaterThanOrEqualTo(0));
-            Assert.That(
-                double.IsFinite(estimate.ThroughputBytesPerSecond),
-                Is.True,
-                "A NaN or infinite throughput makes TimeSpan.FromSeconds throw inside the estimate."
-            );
-            Assert.That(
-                estimate.EstimatedDuration,
-                Is.EqualTo(recomputed),
-                "The reported duration is not the one its own reported measurements produce."
-            );
-            Assert.That(estimate.EstimatedDuration, Is.GreaterThanOrEqualTo(estimate.KeyDerivationDuration));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(OneGigabyte, estimate.DataBytes),
+            () =>
+                Assert.True(
+                    estimate.KeyDerivationDuration > TimeSpan.Zero,
+                    "A full production key derivation was not timed."
+                ),
+            () => Assert.True(estimate.ThroughputBytesPerSecond >= 0),
+            () =>
+                Assert.True(
+                    double.IsFinite(estimate.ThroughputBytesPerSecond),
+                    "A NaN or infinite throughput makes TimeSpan.FromSeconds throw inside the estimate."
+                ),
+            () => Assert.Equal(recomputed, estimate.EstimatedDuration),
+            () => Assert.True(estimate.EstimatedDuration >= estimate.KeyDerivationDuration)
+        );
     }
 
-    [Test]
-    public async Task EstimateAsync_InvalidArguments_ThrowMatchingArgumentException()
+    [Fact]
+    internal async Task EstimateAsync_InvalidArguments_ThrowMatchingArgumentException()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
 
-        using (Assert.EnterMultipleScope())
-        {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(() => service.EstimateAsync(null!));
-            _ = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-                () => service.EstimateAsync(NewRequest(0))
-            );
-            _ = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-                () => service.EstimateAsync(NewRequest(-1))
-            );
-        }
+        await Assert.MultipleAsync(
+            async () =>
+            {
+                _ = await Assert.ThrowsAsync<ArgumentNullException>(
+                    () => service.EstimateAsync(null!, TestContext.Current.CancellationToken)
+                );
+            },
+            async () =>
+            {
+                _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+                    () => service.EstimateAsync(NewRequest(0), TestContext.Current.CancellationToken)
+                );
+            },
+            async () =>
+            {
+                _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+                    () => service.EstimateAsync(NewRequest(-1), TestContext.Current.CancellationToken)
+                );
+            }
+        );
     }
 
-    [Test]
-    public async Task EstimateAsync_UnregisteredEncryptionAlgorithm_Throws()
+    [Fact]
+    internal async Task EstimateAsync_UnregisteredEncryptionAlgorithm_Throws()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
@@ -136,11 +143,13 @@ public sealed class BackupBenchmarkServiceTests
             EncryptionAlgorithm = (EncryptionAlgorithm)999,
         };
 
-        _ = Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.EstimateAsync(request));
+        _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => service.EstimateAsync(request, TestContext.Current.CancellationToken)
+        );
     }
 
-    [Test]
-    public async Task EstimateAsync_CancelledToken_Throws()
+    [Fact]
+    internal async Task EstimateAsync_CancelledToken_Throws()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
@@ -148,7 +157,7 @@ public sealed class BackupBenchmarkServiceTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => service.EstimateAsync(NewRequest(OneGigabyte), cts.Token)
         );
     }

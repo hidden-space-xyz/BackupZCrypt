@@ -12,8 +12,8 @@ namespace BackupZCrypt.Test.Unit.Domain;
 /// </remarks>
 public sealed class BackupResultTests
 {
-    [Test]
-    public void ErrorAndWarningFlags_TrackSuppliedCollections()
+    [Fact]
+    internal void ErrorAndWarningFlags_TrackSuppliedCollections()
     {
         var populated = new BackupResult(
             isSuccess: false,
@@ -27,29 +27,33 @@ public sealed class BackupResultTests
 
         var omitted = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(populated.HasErrors, Is.True);
-            Assert.That(populated.HasWarnings, Is.True);
-            Assert.That(populated.Errors.Select(e => e.Code), Is.EqualTo([MessageCode.AllFilesFailed]));
-            Assert.That(
-                populated.Warnings.Select(w => w.Code),
-                Is.EqualTo([MessageCode.WeakPasswordWarning])
-            );
-
-            Assert.That(omitted.HasErrors, Is.False);
-            Assert.That(omitted.HasWarnings, Is.False);
-            Assert.That(omitted.Errors, Is.Empty);
-            Assert.That(omitted.Warnings, Is.Empty);
-        }
+        Assert.Multiple(
+            () => Assert.True(populated.HasErrors),
+            () => Assert.True(populated.HasWarnings),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.AllFilesFailed],
+                    populated.Errors.Select(e => e.Code)
+                ),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.WeakPasswordWarning],
+                    populated.Warnings.Select(w => w.Code)
+                ),
+            () => Assert.False(omitted.HasErrors),
+            () => Assert.False(omitted.HasWarnings),
+            () => Assert.Empty(omitted.Errors),
+            () => Assert.Empty(omitted.Warnings)
+        );
     }
 
-    [TestCase(1d, 100L, 7, 10, 3, 0.7d, 100d, 7d)]
-    [TestCase(1d, 0L, 2, 8, 6, 0.25d, 0d, 2d)]
-    [TestCase(1d, 0L, 0, 0, 0, 1.0d, 0d, 0d)]
-    [TestCase(0d, 1000L, 5, 5, 0, 1.0d, 0d, 0d)]
-    [TestCase(2d, 1000L, 4, 4, 0, 1.0d, 500d, 2d)]
-    public void DerivedMetrics_ComputeExpectedValues(
+    [Theory]
+    [InlineData(1d, 100L, 7, 10, 3, 0.7d, 100d, 7d)]
+    [InlineData(1d, 0L, 2, 8, 6, 0.25d, 0d, 2d)]
+    [InlineData(1d, 0L, 0, 0, 0, 1.0d, 0d, 0d)]
+    [InlineData(0d, 1000L, 5, 5, 0, 1.0d, 0d, 0d)]
+    [InlineData(2d, 1000L, 4, 4, 0, 1.0d, 500d, 2d)]
+    internal void DerivedMetrics_ComputeExpectedValues(
         double elapsedSeconds,
         long totalBytes,
         int processedFiles,
@@ -68,20 +72,20 @@ public sealed class BackupResultTests
             totalFiles
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.FailedFiles, Is.EqualTo(expectedFailedFiles));
-            Assert.That(result.SuccessRate, Is.EqualTo(expectedSuccessRate));
-            Assert.That(result.BytesPerSecond, Is.EqualTo(expectedBytesPerSecond));
-            Assert.That(result.FilesPerSecond, Is.EqualTo(expectedFilesPerSecond));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(expectedFailedFiles, result.FailedFiles),
+            () => Assert.Equal(expectedSuccessRate, result.SuccessRate),
+            () => Assert.Equal(expectedBytesPerSecond, result.BytesPerSecond),
+            () => Assert.Equal(expectedFilesPerSecond, result.FilesPerSecond)
+        );
     }
 
-    [TestCase(0, 10, false)]
-    [TestCase(5, 10, true)]
-    [TestCase(10, 10, false)]
-    [TestCase(0, 0, false)]
-    public void IsPartialSuccess_OnlyTrueWhenStrictlyBetweenZeroAndTotal(
+    [Theory]
+    [InlineData(0, 10, false)]
+    [InlineData(5, 10, true)]
+    [InlineData(10, 10, false)]
+    [InlineData(0, 0, false)]
+    internal void IsPartialSuccess_OnlyTrueWhenStrictlyBetweenZeroAndTotal(
         int processed,
         int total,
         bool expected
@@ -89,15 +93,16 @@ public sealed class BackupResultTests
     {
         var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, processed, total);
 
-        Assert.That(result.IsPartialSuccess, Is.EqualTo(expected));
+        Assert.Equal(expected, result.IsPartialSuccess);
     }
 
-    [TestCase(-1d, 0L, 0, 0, "elapsedTime")]
-    [TestCase(0d, -1L, 0, 0, "totalBytes")]
-    [TestCase(0d, 0L, -1, 0, "processedFiles")]
-    [TestCase(0d, 0L, 0, -1, "totalFiles")]
-    [TestCase(0d, 0L, 5, 3, "processedFiles")]
-    public void Constructor_OutOfRangeArguments_ThrowsNamingTheOffendingParameter(
+    [Theory]
+    [InlineData(-1d, 0L, 0, 0, "elapsedTime")]
+    [InlineData(0d, -1L, 0, 0, "totalBytes")]
+    [InlineData(0d, 0L, -1, 0, "processedFiles")]
+    [InlineData(0d, 0L, 0, -1, "totalFiles")]
+    [InlineData(0d, 0L, 5, 3, "processedFiles")]
+    internal void Constructor_OutOfRangeArguments_ThrowsNamingTheOffendingParameter(
         double elapsedSeconds,
         long totalBytes,
         int processedFiles,
@@ -116,6 +121,6 @@ public sealed class BackupResultTests
                 )
         );
 
-        Assert.That(exception?.ParamName, Is.EqualTo(expectedParamName));
+        Assert.Equal(expectedParamName, exception.ParamName);
     }
 }

@@ -26,8 +26,8 @@ public sealed class GetSettingsFilePathQueryHandlerTests
         return new(this.settingsService);
     }
 
-    [Test]
-    public void Handle_Query_ReturnsThePathTheSettingsServiceResolves()
+    [Fact]
+    internal void Handle_Query_ReturnsThePathTheSettingsServiceResolves()
     {
         _ = this.settingsService
             .GetFilePath<BackupCreationSettings>()
@@ -35,6 +35,6 @@ public sealed class GetSettingsFilePathQueryHandlerTests
 
         var result = this.CreateSut().Handle(new GetSettingsFilePathQuery<BackupCreationSettings>());
 
-        Assert.That(result, Is.EqualTo("some-settings-path.json"));
+        Assert.Equal("some-settings-path.json", result);
     }
 }

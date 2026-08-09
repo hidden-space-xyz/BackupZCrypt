@@ -22,17 +22,24 @@ namespace BackupZCrypt.Test.Tools;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every case is <see cref="ExplicitAttribute"/> so a normal <c>dotnet test</c> never runs it: the
-/// fixtures exist precisely to detect a change in the on-disk format, so regenerating them on each
-/// run would defeat their entire purpose.
+/// Maintenance tool: rewrites the committed format fixtures. Run only on a deliberate format
+/// change. Every case therefore declares <c>Explicit = true</c> on its <see cref="FactAttribute"/>
+/// — xUnit has no class-level form — so a normal <c>dotnet test</c> never runs it: the fixtures
+/// exist precisely to detect a change in the on-disk format, so regenerating them on each run
+/// would defeat their entire purpose.
 /// </para>
 /// <para>
 /// Run it only when the format is changed <b>deliberately</b>, and treat the resulting diff as the
 /// review artefact — a fixture that changes without an intended format change is a data-loss bug:
-/// <c>dotnet test --filter "FullyQualifiedName~OnDiskFormatFixtureGenerator"</c>.
+/// <c>dotnet run --project BackupZCrypt.Test -- -explicit only -class "*OnDiskFormatFixtureGenerator"</c>.
+/// </para>
+/// <para>
+/// That command bypasses <c>dotnet test</c> on purpose. An explicit test stays unrun however
+/// narrowly a <c>--filter</c> names it, and only <c>-explicit only</c> selects it — an option the
+/// VSTest runner cannot forward, so the v3 assembly's own runner is invoked directly. No filter
+/// typo can therefore reach this class by accident.
 /// </para>
 /// </remarks>
-[Explicit("Maintenance tool: rewrites the committed format fixtures. Run only on a deliberate format change.")]
 public sealed class OnDiskFormatFixtureGenerator
 {
     /// <summary>
@@ -44,8 +51,8 @@ public sealed class OnDiskFormatFixtureGenerator
     /// Recreates every fixture archive from the same source tree the pinning tests expect.
     /// </summary>
     /// <returns>A task that completes once every fixture has been rewritten.</returns>
-    [Test]
-    public async Task RegenerateFixtureArchives()
+    [Fact(Explicit = true)]
+    internal async Task RegenerateFixtureArchives()
     {
         foreach (var fixture in OnDiskFormatFixtures.All)
         {
@@ -56,8 +63,8 @@ public sealed class OnDiskFormatFixtureGenerator
     /// <summary>
     /// Prints the golden key-schedule vectors as ready-to-paste C# literals.
     /// </summary>
-    [Test]
-    public void PrintGoldenVectors()
+    [Fact(Explicit = true)]
+    internal void PrintGoldenVectors()
     {
         var salt = OnDiskFormatFixtures.GoldenSalt;
 
@@ -66,17 +73,15 @@ public sealed class OnDiskFormatFixtureGenerator
 
         var algorithms = Enum.GetValues<KeyDerivationAlgorithm>();
 
-        Assert.That(
-            algorithms,
-            Is.Not.Empty,
-            "There is no key derivation algorithm left to print vectors for."
-        );
+        Assert.NotEmpty(algorithms);
 
         foreach (var kdf in algorithms)
         {
             var masterKey = factory.Create(kdf).DeriveKey(Password, salt, EncryptionConstants.KeySize);
-            Assert.That(masterKey, Has.Length.EqualTo(EncryptionConstants.KeySize / 8));
-            TestContext.Out.WriteLine($"{kdf} master key: {Convert.ToHexStringLower(masterKey)}");
+            Assert.Equal(EncryptionConstants.KeySize / 8, masterKey.Length);
+            TestContext.Current.TestOutputHelper?.WriteLine(
+                $"{kdf} master key: {Convert.ToHexStringLower(masterKey)}"
+            );
 
             foreach (var label in OnDiskFormatFixtures.SubKeyLabels)
             {
@@ -87,8 +92,10 @@ public sealed class OnDiskFormatFixtureGenerator
                     subKey,
                     Encoding.UTF8.GetBytes(label)
                 );
-                Assert.That(subKey, Has.Length.EqualTo(EncryptionConstants.KeySize / 8));
-                TestContext.Out.WriteLine($"  {label}: {Convert.ToHexStringLower(subKey)}");
+                Assert.Equal(EncryptionConstants.KeySize / 8, subKey.Length);
+                TestContext.Current.TestOutputHelper?.WriteLine(
+                    $"  {label}: {Convert.ToHexStringLower(subKey)}"
+                );
             }
 
             CryptographicOperations.ZeroMemory(masterKey);
@@ -98,20 +105,21 @@ public sealed class OnDiskFormatFixtureGenerator
         var namingKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNamingKeyHex);
         var nonceKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNonceKeyHex);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(chunkHash, Has.Length.EqualTo(SHA256.HashSizeInBytes));
-            Assert.That(
-                HMACSHA256.HashData(nonceKey, chunkHash),
-                Has.Length.AtLeast(EncryptionConstants.NonceSize)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(SHA256.HashSizeInBytes, chunkHash.Length),
+            () =>
+                Assert.True(
+                    HMACSHA256.HashData(nonceKey, chunkHash).Length >= EncryptionConstants.NonceSize
+                )
+        );
 
-        TestContext.Out.WriteLine($"chunk hash: {Convert.ToHexStringLower(chunkHash)}");
-        TestContext.Out.WriteLine(
+        TestContext.Current.TestOutputHelper?.WriteLine(
+            $"chunk hash: {Convert.ToHexStringLower(chunkHash)}"
+        );
+        TestContext.Current.TestOutputHelper?.WriteLine(
             $"chunk file name: {Convert.ToHexStringLower(HMACSHA256.HashData(namingKey, chunkHash))}"
         );
-        TestContext.Out.WriteLine(
+        TestContext.Current.TestOutputHelper?.WriteLine(
             "chunk nonce: "
                 + Convert.ToHexStringLower(
                     HMACSHA256.HashData(nonceKey, chunkHash).AsSpan(0, EncryptionConstants.NonceSize)
@@ -162,7 +170,7 @@ public sealed class OnDiskFormatFixtureGenerator
                 CancellationToken.None
             );
 
-        Assert.That(result.IsSuccess, Is.True, $"Could not generate the '{fixture.Name}' fixture.");
-        await TestContext.Out.WriteLineAsync($"Regenerated {fixture.Name} at {target}");
+        Assert.True(result.IsSuccess, $"Could not generate the '{fixture.Name}' fixture.");
+        TestContext.Current.TestOutputHelper?.WriteLine($"Regenerated {fixture.Name} at {target}");
     }
 }

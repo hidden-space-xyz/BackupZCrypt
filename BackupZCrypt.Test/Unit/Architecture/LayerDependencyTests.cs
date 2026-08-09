@@ -51,29 +51,25 @@ public sealed class LayerDependencyTests
     };
 
     /// <summary>
-    /// The projects under the dependency rules, as a test-case source.
+    /// Gets the projects under the dependency rules, as the theory data that runs the reference
+    /// check once per project.
     /// </summary>
-    private static IEnumerable<string> Projects => AllowedProjectReferences.Keys;
+    public static TheoryData<string> Projects => new(AllowedProjectReferences.Keys);
 
-    [TestCaseSource(nameof(Projects))]
-    public void ProjectReferences_MatchTheDocumentedLayerTable(string project)
+    [Theory]
+    [MemberData(nameof(Projects))]
+    internal void ProjectReferences_MatchTheDocumentedLayerTable(string project)
     {
         var declared = ReadProject(project)
             .Descendants("ProjectReference")
             .Select(static r => ProjectNameOf(r.Attribute("Include")!.Value))
             .ToList();
 
-        Assert.That(
-            declared,
-            Is.EquivalentTo(AllowedProjectReferences[project]),
-            $"{project} does not reference exactly what the architecture allows. Dependencies point "
-                + "inward only; adding an edge here changes the architecture and must be a deliberate, "
-                + "documented decision."
-        );
+        Assert.Equivalent(AllowedProjectReferences[project], declared, strict: true);
     }
 
-    [Test]
-    public void Domain_DeclaresNoRuntimeNuGetPackage()
+    [Fact]
+    internal void Domain_DeclaresNoRuntimeNuGetPackage()
     {
         var runtimePackages = ReadProject("BackupZCrypt.Domain")
             .Descendants("PackageReference")
@@ -81,16 +77,11 @@ public sealed class LayerDependencyTests
             .Select(static p => p.Attribute("Include")!.Value)
             .ToList();
 
-        Assert.That(
-            runtimePackages,
-            Is.Empty,
-            "Domain must depend on the BCL only. Build-time analyzers (PrivateAssets=all) are allowed "
-                + "because they ship nothing; anything else becomes part of the domain's contract."
-        );
+        Assert.Empty(runtimePackages);
     }
 
-    [Test]
-    public void SharedBuildProperties_AddOnlyBuildTimeOnlyPackages()
+    [Fact]
+    internal void SharedBuildProperties_AddOnlyBuildTimeOnlyPackages()
     {
         var leaked = ReadSharedBuildProperties()
             .Descendants("PackageReference")
@@ -98,20 +89,15 @@ public sealed class LayerDependencyTests
             .Select(static p => p.Attribute("Include")!.Value)
             .ToList();
 
-        Assert.That(
-            leaked,
-            Is.Empty,
-            "Directory.Build.props applies to every project including Domain, so a package added there "
-                + "without PrivateAssets=all would silently give Domain a runtime dependency."
-        );
+        Assert.Empty(leaked);
     }
 
-    [Test]
-    public void NoProjectPinsItsOwnPackageVersion()
+    [Fact]
+    internal void NoProjectPinsItsOwnPackageVersion()
     {
         var pinned = new List<string>();
 
-        foreach (var project in Projects)
+        foreach (var project in AllowedProjectReferences.Keys)
         {
             pinned.AddRange(
                 ReadProject(project)
@@ -121,12 +107,7 @@ public sealed class LayerDependencyTests
             );
         }
 
-        Assert.That(
-            pinned,
-            Is.Empty,
-            "Package versions belong in Directory.Packages.props. A version pinned in a project file "
-                + "silently overrides central management for that project only."
-        );
+        Assert.Empty(pinned);
     }
 
     /// <summary>
@@ -158,7 +139,7 @@ public sealed class LayerDependencyTests
     {
         var path = Path.Combine(RepositoryRoot, project, project + ".csproj");
 
-        Assert.That(File.Exists(path), Is.True, $"Could not find {path}.");
+        Assert.True(File.Exists(path), $"Could not find {path}.");
         return XDocument.Load(path);
     }
 
@@ -170,7 +151,7 @@ public sealed class LayerDependencyTests
     {
         var path = Path.Combine(RepositoryRoot, "Directory.Build.props");
 
-        Assert.That(File.Exists(path), Is.True, $"Could not find {path}.");
+        Assert.True(File.Exists(path), $"Could not find {path}.");
         return XDocument.Load(path);
     }
 

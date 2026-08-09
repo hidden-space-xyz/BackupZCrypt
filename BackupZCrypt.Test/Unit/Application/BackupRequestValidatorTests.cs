@@ -25,6 +25,13 @@ namespace BackupZCrypt.Test.Unit.Application;
 public sealed class BackupRequestValidatorTests
 {
     /// <summary>
+    /// The message the simulated I/O failure carries while the source is listed. It is a single
+    /// constant because the validator has to pass it through untouched as the error's only format
+    /// argument, so the thrown message and the expected argument can never drift apart.
+    /// </summary>
+    private const string SourceIoFailureMessage = "drive fell over";
+
+    /// <summary>
     /// The rooted source path the requests point at. Nothing is created on disk because the file
     /// system is substituted, but the path must be absolute to survive path normalization.
     /// </summary>
@@ -39,6 +46,30 @@ public sealed class BackupRequestValidatorTests
     private static readonly string DestinationDir = Path.GetFullPath(
         Path.Combine(Path.GetTempPath(), "bzc-validator-dst")
     );
+
+    /// <summary>
+    /// The format arguments the I/O arm of the source listing failure is allowed to carry: the raw
+    /// exception message and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// The array lives in a field rather than inline in the case list because a constant array written
+    /// straight into an argument is what CA1861 asks to be hoisted.
+    /// </remarks>
+    private static readonly object[] SourceIoFailureArgs = [SourceIoFailureMessage];
+
+    /// <summary>
+    /// The only containment error a destination nested inside the source may produce, hoisted out of
+    /// the case list for the same CA1861 reason as <see cref="SourceIoFailureArgs"/>.
+    /// </summary>
+    private static readonly MessageCode[] DestinationInsideSourceOnly =
+        [MessageCode.DestinationInsideSource];
+
+    /// <summary>
+    /// The only containment error a source nested inside the destination may produce, hoisted out of
+    /// the case list for the same CA1861 reason as <see cref="SourceIoFailureArgs"/>.
+    /// </summary>
+    private static readonly MessageCode[] SourceInsideDestinationOnly =
+        [MessageCode.SourceInsideDestination];
 
     /// <summary>
     /// The substituted file system the validator probes for path existence, for the source and
@@ -57,6 +88,47 @@ public sealed class BackupRequestValidatorTests
     /// The substituted password service that supplies the strength analysis behind weak-password warnings.
     /// </summary>
     private readonly IPasswordService passwordService = Substitute.For<IPasswordService>();
+
+    /// <summary>
+    /// Supplies the exception thrown while listing the source, the error code it must map to, and the
+    /// format arguments that message is allowed to carry.
+    /// </summary>
+    /// <remarks>
+    /// The permission-denied arm carries no arguments at all, so the raw .NET message — which embeds the
+    /// full path on Windows — never reaches the user-facing dialog.
+    /// </remarks>
+    /// <returns>One case per catch arm of the source listing block.</returns>
+    public static TheoryData<Exception, MessageCode, object[]> SourceListingFailureCases()
+    {
+        return new()
+        {
+            {
+                new UnauthorizedAccessException("denied"),
+                MessageCode.SourceAccessDenied,
+                Array.Empty<object>()
+            },
+            {
+                new IOException(SourceIoFailureMessage),
+                MessageCode.SourceAccessErrorFormat,
+                SourceIoFailureArgs
+            },
+        };
+    }
+
+    /// <summary>
+    /// Supplies source and destination pairs together with the containment errors they must produce,
+    /// including a sibling pair that shares a name prefix and must produce none.
+    /// </summary>
+    /// <returns>One case per containment outcome.</returns>
+    public static TheoryData<string, string, MessageCode[]> OverlappingPathCases()
+    {
+        return new()
+        {
+            { SourceDir, Path.Combine(SourceDir, "backup"), DestinationInsideSourceOnly },
+            { Path.Combine(DestinationDir, "data"), DestinationDir, SourceInsideDestinationOnly },
+            { SourceDir, SourceDir + "-backup", Array.Empty<MessageCode>() },
+        };
+    }
 
     /// <summary>
     /// Creates a validator wired to the substituted file, storage, and password services.
@@ -114,19 +186,20 @@ public sealed class BackupRequestValidatorTests
         return OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
     }
 
-    [Test]
-    public async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
+    [Fact]
+    internal async Task AnalyzeErrors_EmptySourcePath_ReportsSourcePathEmpty()
     {
         var request = ValidRequest(string.Empty, DestinationDir);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.SourcePathEmpty));
+        Assert.Contains(MessageCode.SourcePathEmpty, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_SourceNeitherFileNorDirectory_ReportsNotExist()
+    [Fact]
+    internal async Task AnalyzeErrors_SourceNeitherFileNorDirectory_ReportsNotExist()
     {
         _ = this.fileOperations.FileExists(SourceDir).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(false);
@@ -134,13 +207,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.SourcePathNotExistFormat));
+        Assert.Contains(MessageCode.SourcePathNotExistFormat, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_EmptyPassword_ReportsPasswordRequired()
+    [Fact]
+    internal async Task AnalyzeErrors_EmptyPassword_ReportsPasswordRequired()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
@@ -150,13 +224,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir, password: string.Empty);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordRequired));
+        Assert.Contains(MessageCode.PasswordRequired, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_ShortPassword_ReportsPasswordTooShort()
+    [Fact]
+    internal async Task AnalyzeErrors_ShortPassword_ReportsPasswordTooShort()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
@@ -166,13 +241,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir, password: "Ab1!xyz");
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordTooShort));
+        Assert.Contains(MessageCode.PasswordTooShort, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_PasswordMismatch_ReportsMismatch()
+    [Fact]
+    internal async Task AnalyzeErrors_PasswordMismatch_ReportsMismatch()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
@@ -190,13 +266,14 @@ public sealed class BackupRequestValidatorTests
             BackupOperation.Create
         );
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.PasswordMismatch));
+        Assert.Contains(MessageCode.PasswordMismatch, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_SourceEqualsDestinationDirectory_ReportsSameDirectory()
+    [Fact]
+    internal async Task AnalyzeErrors_SourceEqualsDestinationDirectory_ReportsSameDirectory()
     {
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -207,13 +284,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, SourceDir);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors), Does.Contain(MessageCode.SourceDestinationSameDirectory));
+        Assert.Contains(MessageCode.SourceDestinationSameDirectory, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeErrors_FullyValidRequest_ReturnsEmpty()
+    [Fact]
+    internal async Task AnalyzeErrors_FullyValidRequest_ReturnsEmpty()
     {
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -227,13 +305,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(errors, Is.Empty);
+        Assert.Empty(errors);
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_WeakPassword_ReportsWeakPasswordWarning()
+    [Fact]
+    internal async Task AnalyzeWarnings_WeakPassword_ReportsWeakPasswordWarning()
     {
         _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
@@ -244,13 +323,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
-        var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(warnings), Does.Contain(MessageCode.WeakPasswordWarning));
+        Assert.Contains(MessageCode.WeakPasswordWarning, Codes(warnings));
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_StrongPassword_DoesNotReportWeakPasswordWarning()
+    [Fact]
+    internal async Task AnalyzeWarnings_StrongPassword_DoesNotReportWeakPasswordWarning()
     {
         _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
@@ -261,13 +341,14 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
-        var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(warnings), Does.Not.Contain(MessageCode.WeakPasswordWarning));
+        Assert.DoesNotContain(MessageCode.WeakPasswordWarning, Codes(warnings));
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_InsufficientDiskSpace_ReportsLowDiskSpace()
+    [Fact]
+    internal async Task AnalyzeWarnings_InsufficientDiskSpace_ReportsLowDiskSpace()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
@@ -289,15 +370,17 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir);
 
-        var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(warnings), Does.Contain(MessageCode.LowDiskSpaceFormat));
+        Assert.Contains(MessageCode.LowDiskSpaceFormat, Codes(warnings));
     }
 
-    [TestCase(BackupOperation.Create, true)]
-    [TestCase(BackupOperation.Restore, true)]
-    [TestCase(BackupOperation.Update, false)]
-    public async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForCreateAndRestoreOnly(
+    [Theory]
+    [InlineData(BackupOperation.Create, true)]
+    [InlineData(BackupOperation.Restore, true)]
+    [InlineData(BackupOperation.Update, false)]
+    internal async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForCreateAndRestoreOnly(
         BackupOperation operation,
         bool expectedWarning
     )
@@ -315,10 +398,11 @@ public sealed class BackupRequestValidatorTests
 
         var request = ValidRequest(SourceDir, DestinationDir, operation: operation);
 
-        var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
         var hasWarning = Codes(warnings).Contains(MessageCode.DestinationExistingFilesFormat);
-        Assert.That(hasWarning, Is.EqualTo(expectedWarning));
+        Assert.Equal(expectedWarning, hasWarning);
     }
 
     /// <summary>
@@ -334,27 +418,29 @@ public sealed class BackupRequestValidatorTests
             .Returns([Path.Combine(SourceDir, "a.txt")]);
     }
 
-    [Test]
-    public async Task AnalyzeErrors_SourceIsAFile_ReportsMustBeDirectoryWithoutListingIt()
+    [Fact]
+    internal async Task AnalyzeErrors_SourceIsAFile_ReportsMustBeDirectoryWithoutListingIt()
     {
         _ = this.fileOperations.FileExists(SourceDir).Returns(true);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(Codes(errors), Does.Contain(MessageCode.SourceMustBeDirectory));
-            Assert.That(Codes(errors), Does.Not.Contain(MessageCode.SourcePathNotExistFormat));
-        }
+        Assert.Multiple(
+            () => Assert.Contains(MessageCode.SourceMustBeDirectory, Codes(errors)),
+            () => Assert.DoesNotContain(MessageCode.SourcePathNotExistFormat, Codes(errors))
+        );
 
         await this.fileOperations.DidNotReceive()
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task AnalyzeErrors_SourceDirectoryHasNoFiles_ReportsSourceDirectoryEmpty()
+    [Fact]
+    internal async Task AnalyzeErrors_SourceDirectoryHasNoFiles_ReportsSourceDirectoryEmpty()
     {
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -364,37 +450,18 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(Codes(errors), Is.EqualTo([MessageCode.SourceDirectoryEmpty]));
+        MessageCode[] expectedCodes = [MessageCode.SourceDirectoryEmpty];
+        Assert.Equal(expectedCodes, Codes(errors));
     }
 
-    /// <summary>
-    /// Supplies the exception thrown while listing the source, the error code it must map to, and the
-    /// format arguments that message is allowed to carry.
-    /// </summary>
-    /// <remarks>
-    /// The permission-denied arm carries no arguments at all, so the raw .NET message — which embeds the
-    /// full path on Windows — never reaches the user-facing dialog.
-    /// </remarks>
-    /// <returns>One case per catch arm of the source listing block.</returns>
-    private static IEnumerable<TestCaseData> SourceListingFailureCases()
-    {
-        yield return new TestCaseData(
-            new UnauthorizedAccessException("denied"),
-            MessageCode.SourceAccessDenied,
-            Array.Empty<object>()
-        );
-
-        yield return new TestCaseData(
-            new IOException("drive fell over"),
-            MessageCode.SourceAccessErrorFormat,
-            new object[] { "drive fell over" }
-        );
-    }
-
-    [TestCaseSource(nameof(SourceListingFailureCases))]
-    public async Task AnalyzeErrors_SourceListingThrows_ReportsTheMatchingAccessError(
+    [Theory]
+    [MemberData(nameof(SourceListingFailureCases))]
+    internal async Task AnalyzeErrors_SourceListingThrows_ReportsTheMatchingAccessError(
         Exception thrown,
         MessageCode expectedCode,
         object[] expectedArgs
@@ -408,30 +475,37 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(Codes(errors), Is.EqualTo([expectedCode]));
-            Assert.That(errors[0].Args, Is.EqualTo(expectedArgs));
-        }
+        MessageCode[] expectedCodes = [expectedCode];
+        Assert.Multiple(
+            () => Assert.Equal(expectedCodes, Codes(errors)),
+            () => Assert.Equal(expectedArgs, errors[0].Args)
+        );
     }
 
-    [Test]
-    public async Task AnalyzeErrors_EmptyDestinationPath_ReportsDestinationPathEmptyWithoutProbing()
+    [Fact]
+    internal async Task AnalyzeErrors_EmptyDestinationPath_ReportsDestinationPathEmptyWithoutProbing()
     {
         this.StubReadableSource();
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, string.Empty));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, string.Empty),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationPathEmpty]));
+        MessageCode[] expectedCodes = [MessageCode.DestinationPathEmpty];
+        Assert.Equal(expectedCodes, Codes(errors));
 
         _ = this.systemStorage.DidNotReceive().GetPathRoot(Arg.Any<string>());
     }
 
-    [Test]
-    public async Task AnalyzeErrors_DestinationDriveNotReady_ReportsDriveNotAccessibleWithTheRoot()
+    [Fact]
+    internal async Task AnalyzeErrors_DestinationDriveNotReady_ReportsDriveNotAccessibleWithTheRoot()
     {
         var driveRoot = Path.GetPathRoot(DestinationDir)!;
 
@@ -440,31 +514,37 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.IsDriveReady(driveRoot).Returns(false);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationDriveNotAccessibleFormat]));
-            Assert.That(errors[0].Args, Is.EqualTo(new object[] { driveRoot }));
-        }
+        MessageCode[] expectedCodes = [MessageCode.DestinationDriveNotAccessibleFormat];
+        Assert.Multiple(
+            () => Assert.Equal(expectedCodes, Codes(errors)),
+            () => Assert.Equal(new object[] { driveRoot }, errors[0].Args)
+        );
     }
 
-    [Test]
-    public async Task AnalyzeErrors_DestinationRootUnknown_ReportsNothingAndSkipsTheReadinessProbe()
+    [Fact]
+    internal async Task AnalyzeErrors_DestinationRootUnknown_ReportsNothingAndSkipsTheReadinessProbe()
     {
         this.StubReadableSource();
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns((string?)null);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(errors, Is.Empty);
+        Assert.Empty(errors);
 
         _ = this.systemStorage.DidNotReceive().IsDriveReady(Arg.Any<string>());
     }
 
-    [Test]
-    public async Task AnalyzeErrors_DestinationRootLookupThrows_ReportsDestinationInvalidWithMessage()
+    [Fact]
+    internal async Task AnalyzeErrors_DestinationRootLookupThrows_ReportsDestinationInvalidWithMessage()
     {
         static ArgumentException RootLookupFailure(string fullPath)
         {
@@ -477,19 +557,23 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(_ => throw lookupFailure);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(Codes(errors), Is.EqualTo([MessageCode.DestinationInvalidFormat]));
-            Assert.That(errors[0].Args, Is.EqualTo(new object[] { lookupFailure.Message }));
-        }
+        MessageCode[] expectedCodes = [MessageCode.DestinationInvalidFormat];
+        Assert.Multiple(
+            () => Assert.Equal(expectedCodes, Codes(errors)),
+            () => Assert.Equal(new object[] { lookupFailure.Message }, errors[0].Args)
+        );
     }
 
-    [TestCase(true, false, 1)]
-    [TestCase(false, true, 1)]
-    [TestCase(true, true, 2)]
-    public async Task AnalyzeErrors_UnnormalizablePath_ReportsOneInvalidPathFormatPerBadPath(
+    [Theory]
+    [InlineData(true, false, 1)]
+    [InlineData(false, true, 1)]
+    [InlineData(true, true, 2)]
+    internal async Task AnalyzeErrors_UnnormalizablePath_ReportsOneInvalidPathFormatPerBadPath(
         bool sourceInvalid,
         bool destinationInvalid,
         int expectedCount
@@ -505,28 +589,27 @@ public sealed class BackupRequestValidatorTests
             BackupOperation.Create
         );
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                errors,
-                Has.Count.EqualTo(expectedCount),
-                "an unresolvable path ends validation early, so only the path problem is reported: the empty "
-                    + "password on this request is never even looked at, because nothing else can be validated "
-                    + "against a path that failed to resolve"
-            );
-            Assert.That(Codes(errors), Is.All.EqualTo(MessageCode.InvalidPathFormat));
-            Assert.That(errors[0].Args, Has.Count.EqualTo(1));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(expectedCount, errors.Count),
+            () =>
+                Assert.All(
+                    Codes(errors),
+                    code => Assert.Equal(MessageCode.InvalidPathFormat, code)
+                ),
+            () => Assert.Single(errors[0].Args)
+        );
 
         _ = this.fileOperations.DidNotReceive().DirectoryExists(Arg.Any<string>());
         _ = this.fileOperations.DidNotReceive().FileExists(Arg.Any<string>());
     }
 
-    [TestCase(1000, false)]
-    [TestCase(1001, true)]
-    public async Task AnalyzeErrors_PasswordLength_ReportsTooLongOnlyBeyondTheLimit(
+    [Theory]
+    [InlineData(1000, false)]
+    [InlineData(1001, true)]
+    internal async Task AnalyzeErrors_PasswordLength_ReportsTooLongOnlyBeyondTheLimit(
         int length,
         bool expectTooLong
     )
@@ -537,23 +620,23 @@ public sealed class BackupRequestValidatorTests
         var password = new string('x', length);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir, password: password));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                Codes(errors).Contains(MessageCode.PasswordTooLong),
-                Is.EqualTo(expectTooLong)
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir, password: password),
+                TestContext.Current.CancellationToken
             );
-            Assert.That(Codes(errors), Does.Not.Contain(MessageCode.PasswordTooShort));
-        }
+
+        Assert.Multiple(
+            () => Assert.Equal(expectTooLong, Codes(errors).Contains(MessageCode.PasswordTooLong)),
+            () => Assert.DoesNotContain(MessageCode.PasswordTooShort, Codes(errors))
+        );
     }
 
-    [TestCase(" Str0ng-Passw0rd!", true)]
-    [TestCase("Str0ng-Passw0rd! ", true)]
-    [TestCase("\tStr0ng-Passw0rd!", true)]
-    [TestCase("Str0ng Passw0rd!", false)]
-    public async Task AnalyzeErrors_Password_RejectsOnlySurroundingWhitespace(
+    [Theory]
+    [InlineData(" Str0ng-Passw0rd!", true)]
+    [InlineData("Str0ng-Passw0rd! ", true)]
+    [InlineData("\tStr0ng-Passw0rd!", true)]
+    [InlineData("Str0ng Passw0rd!", false)]
+    internal async Task AnalyzeErrors_Password_RejectsOnlySurroundingWhitespace(
         string password,
         bool expectRejected
     )
@@ -562,23 +645,27 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir, password: password));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                Codes(errors).Contains(MessageCode.PasswordLeadingTrailingSpaces),
-                Is.EqualTo(expectRejected)
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir, password: password),
+                TestContext.Current.CancellationToken
             );
-            Assert.That(Codes(errors), Does.Not.Contain(MessageCode.PasswordMismatch));
-        }
+
+        Assert.Multiple(
+            () =>
+                Assert.Equal(
+                    expectRejected,
+                    Codes(errors).Contains(MessageCode.PasswordLeadingTrailingSpaces)
+                ),
+            () => Assert.DoesNotContain(MessageCode.PasswordMismatch, Codes(errors))
+        );
     }
 
-    [TestCase(BackupOperation.Create, "", MessageCode.ConfirmPasswordRequired, true)]
-    [TestCase(BackupOperation.Create, "Different-Passw0rd!", MessageCode.PasswordMismatch, true)]
-    [TestCase(BackupOperation.Restore, "", MessageCode.ConfirmPasswordRequired, false)]
-    [TestCase(BackupOperation.Update, "Different-Passw0rd!", MessageCode.PasswordMismatch, false)]
-    public async Task AnalyzeErrors_ConfirmPassword_IsEnforcedOnCreateOnly(
+    [Theory]
+    [InlineData(BackupOperation.Create, "", MessageCode.ConfirmPasswordRequired, true)]
+    [InlineData(BackupOperation.Create, "Different-Passw0rd!", MessageCode.PasswordMismatch, true)]
+    [InlineData(BackupOperation.Restore, "", MessageCode.ConfirmPasswordRequired, false)]
+    [InlineData(BackupOperation.Update, "Different-Passw0rd!", MessageCode.PasswordMismatch, false)]
+    internal async Task AnalyzeErrors_ConfirmPassword_IsEnforcedOnCreateOnly(
         BackupOperation operation,
         string confirmPassword,
         MessageCode expectedCode,
@@ -598,39 +685,15 @@ public sealed class BackupRequestValidatorTests
             operation
         );
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(request);
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(Codes(errors).Contains(expectedCode), Is.EqualTo(expectReported));
+        Assert.Equal(expectReported, Codes(errors).Contains(expectedCode));
     }
 
-    /// <summary>
-    /// Supplies source and destination pairs together with the containment errors they must produce,
-    /// including a sibling pair that shares a name prefix and must produce none.
-    /// </summary>
-    /// <returns>One case per containment outcome.</returns>
-    private static IEnumerable<TestCaseData> OverlappingPathCases()
-    {
-        yield return new TestCaseData(
-            SourceDir,
-            Path.Combine(SourceDir, "backup"),
-            new[] { MessageCode.DestinationInsideSource }
-        );
-
-        yield return new TestCaseData(
-            Path.Combine(DestinationDir, "data"),
-            DestinationDir,
-            new[] { MessageCode.SourceInsideDestination }
-        );
-
-        yield return new TestCaseData(
-            SourceDir,
-            SourceDir + "-backup",
-            Array.Empty<MessageCode>()
-        );
-    }
-
-    [TestCaseSource(nameof(OverlappingPathCases))]
-    public async Task AnalyzeErrors_SourceAndDestinationOverlap_ReportsTheMatchingContainmentError(
+    [Theory]
+    [MemberData(nameof(OverlappingPathCases))]
+    internal async Task AnalyzeErrors_SourceAndDestinationOverlap_ReportsTheMatchingContainmentError(
         string source,
         string destination,
         MessageCode[] expectedCodes
@@ -643,7 +706,11 @@ public sealed class BackupRequestValidatorTests
             .Returns([Path.Combine(source, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(ValidRequest(source, destination));
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(
+                ValidRequest(source, destination),
+                TestContext.Current.CancellationToken
+            );
 
         var containment = Codes(errors)
             .Where(c =>
@@ -653,11 +720,11 @@ public sealed class BackupRequestValidatorTests
             )
             .ToList();
 
-        Assert.That(containment, Is.EqualTo(expectedCodes));
+        Assert.Equal(expectedCodes, containment);
     }
 
-    [Test]
-    public async Task AnalyzeErrors_OverlapProbeThrows_ReportsNoContainmentErrorAtAll()
+    [Fact]
+    internal async Task AnalyzeErrors_OverlapProbeThrows_ReportsNoContainmentErrorAtAll()
     {
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations
@@ -668,20 +735,17 @@ public sealed class BackupRequestValidatorTests
             .Returns([Path.Combine(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var errors = await this.CreateSut().AnalyzeErrorsAsync(ValidRequest(SourceDir, SourceDir));
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, SourceDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(
-            errors,
-            Is.Empty,
-            "the first directory probe answers the source check and the second is the overlap probe, which is "
-                + "best effort so an unreadable path never blocks a backup with a spurious error: this request "
-                + "points at a single directory, so a probe that did not degrade gracefully would report "
-                + "SourceDestinationSameDirectory here"
-        );
+        Assert.Empty(errors);
     }
 
-    [Test]
-    public async Task AnalyzeErrors_DestinationDiffersFromSourceByCaseOnly_FollowsThePlatformRule()
+    [Fact]
+    internal async Task AnalyzeErrors_DestinationDiffersFromSourceByCaseOnly_FollowsThePlatformRule()
     {
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -691,23 +755,20 @@ public sealed class BackupRequestValidatorTests
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
-            .AnalyzeErrorsAsync(ValidRequest(SourceDir, SourceDir.ToUpperInvariant()));
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, SourceDir.ToUpperInvariant()),
+                TestContext.Current.CancellationToken
+            );
 
         MessageCode[] expected = OperatingSystem.IsWindows()
             ? [MessageCode.SourceDestinationSameDirectory]
             : [];
 
-        Assert.That(
-            Codes(errors),
-            Is.EqualTo(expected),
-            "Windows resolves both spellings to the same directory, so writing the backup into it has to be "
-                + "rejected; on a case-sensitive file system they are two different directories and rejecting "
-                + "them would block a perfectly valid backup"
-        );
+        Assert.Equal(expected, Codes(errors));
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_SourceListingThrows_ReturnsEmptyInsteadOfPropagating()
+    [Fact]
+    internal async Task AnalyzeWarnings_SourceListingThrows_ReturnsEmptyInsteadOfPropagating()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
@@ -715,19 +776,19 @@ public sealed class BackupRequestValidatorTests
             .ThrowsAsync(new IOException("gone"));
 
         var warnings = await this.CreateSut()
-            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(
-            warnings,
-            Is.Empty,
-            "swallowing the listing failure also suppresses the weak-password check that would otherwise follow"
-        );
+        Assert.Empty(warnings);
     }
 
-    [TestCase(-1L, false)]
-    [TestCase(1_200_000L, false)]
-    [TestCase(1_199_999L, true)]
-    public async Task AnalyzeWarnings_FreeSpace_WarnsOnlyWhenAKnownAmountFallsShort(
+    [Theory]
+    [InlineData(-1L, false)]
+    [InlineData(1_200_000L, false)]
+    [InlineData(1_199_999L, true)]
+    internal async Task AnalyzeWarnings_FreeSpace_WarnsOnlyWhenAKnownAmountFallsShort(
         long availableBytes,
         bool expectWarning
     )
@@ -753,20 +814,18 @@ public sealed class BackupRequestValidatorTests
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
 
         var warnings = await this.CreateSut()
-            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(
-            Codes(warnings).Contains(MessageCode.LowDiskSpaceFormat),
-            Is.EqualTo(expectWarning),
-            "1,000,000 bytes of source needs 1,200,000 bytes free, and -1 means the free space cannot be "
-                + "queried at all: comparing that sentinel as a number turns an unqueryable volume into an "
-                + "unusable one"
-        );
+        Assert.Equal(expectWarning, Codes(warnings).Contains(MessageCode.LowDiskSpaceFormat));
     }
 
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    public async Task AnalyzeWarnings_UnnormalizablePath_ReturnsEmptyWithoutTouchingTheFileSystem(
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    internal async Task AnalyzeWarnings_UnnormalizablePath_ReturnsEmptyWithoutTouchingTheFileSystem(
         bool sourceInvalid,
         bool destinationInvalid
     )
@@ -785,22 +844,17 @@ public sealed class BackupRequestValidatorTests
             BackupOperation.Create
         );
 
-        var warnings = await this.CreateSut().AnalyzeWarningsAsync(request);
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.That(
-            warnings,
-            Is.Empty,
-            "an unresolvable path is the blocking errors' business, so the sweep stops before its first probe "
-                + "rather than estimate free space and list files for a path already known to be unusable: the "
-                + "weak password would otherwise have warned on its own"
-        );
+        Assert.Empty(warnings);
 
         _ = this.fileOperations.DidNotReceive().DirectoryExists(Arg.Any<string>());
         _ = this.passwordService.DidNotReceive().AnalyzePasswordStrength(Arg.Any<string>());
     }
 
-    [Test]
-    public async Task AnalyzeWarnings_FileSizeProbeThrows_CountsThatFileAsZeroAndKeepsSweeping()
+    [Fact]
+    internal async Task AnalyzeWarnings_FileSizeProbeThrows_CountsThatFileAsZeroAndKeepsSweeping()
     {
         var driveRoot = Path.GetPathRoot(DestinationDir)!;
         var readable = Path.Combine(SourceDir, "readable.bin");
@@ -826,19 +880,25 @@ public sealed class BackupRequestValidatorTests
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 10, []));
 
         var warnings = await this.CreateSut()
-            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(
-            Codes(warnings),
-            Is.EqualTo([MessageCode.WeakPasswordWarning]),
-            "the one measurable file needs exactly the 1,200,000 bytes the drive reports, so no space warning "
-                + "is due: the unmeasurable file has to count as zero instead of aborting the estimate"
-        );
+        MessageCode[] expectedCodes = [MessageCode.WeakPasswordWarning];
+        Assert.Equal(expectedCodes, Codes(warnings));
     }
 
-    [TestCase(true, TestName = "AnalyzeWarnings_DestinationDriveNotReady_SkipsTheFreeSpaceProbe")]
-    [TestCase(false, TestName = "AnalyzeWarnings_DestinationRootUnknown_SkipsTheFreeSpaceProbe")]
-    public async Task AnalyzeWarnings_DestinationDriveUnusable_SkipsTheFreeSpaceProbe(
+    [Theory]
+    [InlineData(
+        true,
+        TestDisplayName = "AnalyzeWarnings_DestinationDriveNotReady_SkipsTheFreeSpaceProbe"
+    )]
+    [InlineData(
+        false,
+        TestDisplayName = "AnalyzeWarnings_DestinationRootUnknown_SkipsTheFreeSpaceProbe"
+    )]
+    internal async Task AnalyzeWarnings_DestinationDriveUnusable_SkipsTheFreeSpaceProbe(
         bool rootKnown
     )
     {
@@ -863,13 +923,12 @@ public sealed class BackupRequestValidatorTests
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 10, []));
 
         var warnings = await this.CreateSut()
-            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir));
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
 
-        Assert.That(
-            Codes(warnings),
-            Is.EqualTo([MessageCode.WeakPasswordWarning]),
-            "querying free space on an unknown root or an offline drive is what throws in the first place, so "
-                + "the guard has to short-circuit before asking at all"
-        );
+        MessageCode[] expectedCodes = [MessageCode.WeakPasswordWarning];
+        Assert.Equal(expectedCodes, Codes(warnings));
     }
 }

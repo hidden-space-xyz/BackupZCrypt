@@ -15,8 +15,8 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </summary>
 public sealed class ChunkCryptoHelperTests
 {
-    [Test]
-    public void ComputeChunkNonce_SameKeyAndChunkHash_ReturnsIdenticalNonceOfExactlyNonceSize()
+    [Fact]
+    internal void ComputeChunkNonce_SameKeyAndChunkHash_ReturnsIdenticalNonceOfExactlyNonceSize()
     {
         var nonceKey = SHA256.HashData("chunk-nonce-sub-key"u8);
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
@@ -24,23 +24,14 @@ public sealed class ChunkCryptoHelperTests
         var first = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
         var second = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                first,
-                Has.Length.EqualTo(EncryptionConstants.NonceSize),
-                "The nonce length is part of the format; a silently truncated or widened nonce breaks every archive."
-            );
-            Assert.That(
-                second,
-                Is.EqualTo(first),
-                "The nonce must be deterministic, otherwise identical chunks stop deduplicating."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(EncryptionConstants.NonceSize, first.Length),
+            () => Assert.Equal(first, second)
+        );
     }
 
-    [Test]
-    public void ComputeChunkNonce_NonceKeysDifferingByOneBit_ReturnDifferentNonces()
+    [Fact]
+    internal void ComputeChunkNonce_NonceKeysDifferingByOneBit_ReturnDifferentNonces()
     {
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
         var nonceKey = SHA256.HashData("chunk-nonce-sub-key"u8);
@@ -50,15 +41,11 @@ public sealed class ChunkCryptoHelperTests
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
         var neighbouringNonce = ChunkCryptoHelper.ComputeChunkNonce(neighbouringKey, chunkHash);
 
-        Assert.That(
-            neighbouringNonce,
-            Is.Not.EqualTo(nonce),
-            "The nonce must depend on the key, otherwise two backups of the same content share a nonce."
-        );
+        Assert.NotEqual(nonce, neighbouringNonce);
     }
 
-    [Test]
-    public void ComputeChunkNonce_ChunkHashesDifferingByOneBit_ReturnDifferentNonces()
+    [Fact]
+    internal void ComputeChunkNonce_ChunkHashesDifferingByOneBit_ReturnDifferentNonces()
     {
         var nonceKey = SHA256.HashData("chunk-nonce-sub-key"u8);
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
@@ -68,15 +55,11 @@ public sealed class ChunkCryptoHelperTests
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
         var neighbouringNonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, neighbouringHash);
 
-        Assert.That(
-            neighbouringNonce,
-            Is.Not.EqualTo(nonce),
-            "Distinct chunks must not reuse a nonce under the same key."
-        );
+        Assert.NotEqual(nonce, neighbouringNonce);
     }
 
-    [Test]
-    public void BuildChunkAssociatedData_ChunkHashAndNonce_ConcatenatesHashBeforeNonce()
+    [Fact]
+    internal void BuildChunkAssociatedData_ChunkHashAndNonce_ConcatenatesHashBeforeNonce()
     {
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(
@@ -86,11 +69,10 @@ public sealed class ChunkCryptoHelperTests
 
         var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(associatedData, Has.Length.EqualTo(chunkHash.Length + nonce.Length));
-            Assert.That(associatedData[..chunkHash.Length], Is.EqualTo(chunkHash));
-            Assert.That(associatedData[chunkHash.Length..], Is.EqualTo(nonce));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(chunkHash.Length + nonce.Length, associatedData.Length),
+            () => Assert.Equal(chunkHash, associatedData[..chunkHash.Length]),
+            () => Assert.Equal(nonce, associatedData[chunkHash.Length..])
+        );
     }
 }

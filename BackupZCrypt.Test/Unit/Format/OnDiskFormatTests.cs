@@ -50,12 +50,30 @@ public sealed class OnDiskFormatTests
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
     /// <summary>
-    /// The fixture archives, exposed as a test-case source so each gets its own result.
+    /// Gets the fixture archives, exposed as a theory data source so each gets its own result.
     /// </summary>
-    private static IEnumerable<OnDiskFormatFixture> Fixtures => OnDiskFormatFixtures.All;
+    /// <remarks>
+    /// It is public only because <see cref="MemberDataAttribute"/> can reference nothing less
+    /// visible; every other member of this class is as private as the runner allows.
+    /// </remarks>
+    public static TheoryData<OnDiskFormatFixture> Fixtures
+    {
+        get
+        {
+            var data = new TheoryData<OnDiskFormatFixture>();
 
-    [TestCaseSource(nameof(Fixtures))]
-    public async Task Restore_CommittedFixtureArchive_RebuildsTheOriginalTreeByteForByte(
+            foreach (var fixture in OnDiskFormatFixtures.All)
+            {
+                data.Add(fixture);
+            }
+
+            return data;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Fixtures))]
+    internal async Task Restore_CommittedFixtureArchive_RebuildsTheOriginalTreeByteForByte(
         OnDiskFormatFixture fixture
     )
     {
@@ -74,9 +92,8 @@ public sealed class OnDiskFormatTests
                 CancellationToken.None
             );
 
-        Assert.That(
+        Assert.True(
             result.IsSuccess && result.Value.Completion!.IsSuccess,
-            Is.True,
             $"The committed '{fixture.Name}' archive no longer restores. The on-disk format changed; "
                 + "every archive a user already wrote is unreadable by this build."
         );
@@ -90,38 +107,37 @@ public sealed class OnDiskFormatTests
                 relativePath.Replace('/', Path.DirectorySeparatorChar)
             );
             var actual = File.Exists(restoredFile)
-                ? await File.ReadAllTextAsync(restoredFile, Encoding.UTF8)
+                ? await File.ReadAllTextAsync(
+                    restoredFile,
+                    Encoding.UTF8,
+                    TestContext.Current.CancellationToken
+                )
                 : null;
 
             restoredContents.Add((relativePath, expected, actual));
         }
 
-        using (Assert.EnterMultipleScope())
-        {
-            foreach (var (relativePath, expected, actual) in restoredContents)
-            {
-                Assert.That(
-                    actual,
-                    Is.Not.Null,
-                    $"'{relativePath}' is missing from the restored tree."
-                );
-                Assert.That(
-                    actual,
-                    Is.EqualTo(expected),
-                    $"'{relativePath}' restored with different content than it was backed up with."
-                );
-            }
-
-            Assert.That(
-                Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories),
-                Has.Length.EqualTo(OnDiskFormatFixtures.SourceTree.Length),
-                "The restored tree holds a different number of files than the fixture recorded."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.All(
+                    restoredContents,
+                    entry =>
+                    {
+                        Assert.NotNull(entry.Actual);
+                        Assert.Equal(entry.Expected, entry.Actual);
+                    }
+                ),
+            () =>
+                Assert.Equal(
+                    OnDiskFormatFixtures.SourceTree.Length,
+                    Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories).Length
+                )
+        );
     }
 
-    [TestCaseSource(nameof(Fixtures))]
-    public async Task Verify_CommittedFixtureArchive_ReportsEveryChunkIntact(
+    [Theory]
+    [MemberData(nameof(Fixtures))]
+    internal async Task Verify_CommittedFixtureArchive_ReportsEveryChunkIntact(
         OnDiskFormatFixture fixture
     )
     {
@@ -139,54 +155,46 @@ public sealed class OnDiskFormatTests
                 CancellationToken.None
             );
 
-        Assert.That(
+        Assert.True(
             result.IsSuccess && result.Value.Completion!.IsSuccess,
-            Is.True,
             $"Verification of the committed '{fixture.Name}' archive failed."
         );
     }
 
-    [TestCaseSource(nameof(Fixtures))]
-    public void ManifestPreamble_OfCommittedFixture_KeepsThe34BytePlaintextLayout(
+    [Theory]
+    [MemberData(nameof(Fixtures))]
+    internal void ManifestPreamble_OfCommittedFixture_KeepsThe34BytePlaintextLayout(
         OnDiskFormatFixture fixture
     )
     {
         var manifest = Path.Combine(RequireFixture(fixture), "manifest.bzc");
         var raw = File.ReadAllBytes(manifest);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                raw,
-                Has.Length.GreaterThan(2 + EncryptionConstants.SaltSize + EncryptionConstants.NonceSize),
-                "The manifest is too short to hold a preamble, a nonce, and a payload."
-            );
-            Assert.That(
-                raw[0],
-                Is.EqualTo((byte)fixture.Encryption),
-                "Byte 0 of the preamble must be the encryption algorithm identifier."
-            );
-            Assert.That(
-                raw[1],
-                Is.EqualTo((byte)fixture.KeyDerivation),
-                "Byte 1 of the preamble must be the key derivation identifier."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    raw.Length > 2 + EncryptionConstants.SaltSize + EncryptionConstants.NonceSize,
+                    "The manifest is too short to hold a preamble, a nonce, and a payload."
+                ),
+            () => Assert.Equal((byte)fixture.Encryption, raw[0]),
+            () => Assert.Equal((byte)fixture.KeyDerivation, raw[1])
+        );
     }
 
-    [TestCase(
+    [Theory]
+    [InlineData(
         KeyDerivationAlgorithm.Argon2id,
         "1574da42c67f0e9384fce03787cbbbe7ea38b5a4192cfc397dbc38619a63a2a2"
     )]
-    [TestCase(
+    [InlineData(
         KeyDerivationAlgorithm.PBKDF2,
         "bba95f7a23ed99c9039c8d56e52a481b8c7420c6ba4a9b15252c5bd3feeb1f79"
     )]
-    [TestCase(
+    [InlineData(
         KeyDerivationAlgorithm.Scrypt,
         "4bb6d1232ec1e5d3f1730dbb4d8b0097ad3a8a2de53f96368a24c815ea482d9f"
     )]
-    public void DeriveKey_WithTheGoldenPasswordAndSalt_ReturnsThePinnedMasterKey(
+    internal void DeriveKey_WithTheGoldenPasswordAndSalt_ReturnsThePinnedMasterKey(
         KeyDerivationAlgorithm algorithm,
         string expectedHex
     )
@@ -200,12 +208,7 @@ public sealed class OnDiskFormatTests
 
         try
         {
-            Assert.That(
-                Convert.ToHexStringLower(masterKey),
-                Is.EqualTo(expectedHex),
-                $"The {algorithm} parameters changed. Every archive written with {algorithm} is now "
-                    + "undecryptable, because the password no longer derives the same master key."
-            );
+            Assert.Equal(expectedHex, Convert.ToHexStringLower(masterKey));
         }
         finally
         {
@@ -213,23 +216,20 @@ public sealed class OnDiskFormatTests
         }
     }
 
-    [TestCase("chunk-encryption", "c1e8b496572cfd4c474374db2a6a402910662ca5fb462be072a305d7591f645b")]
-    [TestCase("chunk-nonce", "a1bdc141f016ae95a7395ce392848c8d35270675263cbfb5a8ffaa61fc3ea157")]
-    [TestCase("chunk-naming", "928c856c5cef08c0b6ddb3fd15a0627696eedae2b918df900b7c449ff07037c2")]
-    [TestCase(
+    [Theory]
+    [InlineData("chunk-encryption", "c1e8b496572cfd4c474374db2a6a402910662ca5fb462be072a305d7591f645b")]
+    [InlineData("chunk-nonce", "a1bdc141f016ae95a7395ce392848c8d35270675263cbfb5a8ffaa61fc3ea157")]
+    [InlineData("chunk-naming", "928c856c5cef08c0b6ddb3fd15a0627696eedae2b918df900b7c449ff07037c2")]
+    [InlineData(
         "manifest-encryption",
         "c32f4c44a4dfdde445949bd8087c58c7b9d9e1707ca4be1445aaf3603afdabc7"
     )]
-    public void ExpandSubKey_FromThePinnedPbkdf2MasterKey_ReturnsThePinnedSubKey(
+    internal void ExpandSubKey_FromThePinnedPbkdf2MasterKey_ReturnsThePinnedSubKey(
         string label,
         string expectedHex
     )
     {
-        Assert.That(
-            OnDiskFormatFixtures.SubKeyLabels,
-            Does.Contain(label),
-            "The label under test is no longer one of the four the backup service derives."
-        );
+        Assert.Contains(label, OnDiskFormatFixtures.SubKeyLabels);
 
         var masterKey = Convert.FromHexString(
             "bba95f7a23ed99c9039c8d56e52a481b8c7420c6ba4a9b15252c5bd3feeb1f79"
@@ -245,11 +245,7 @@ public sealed class OnDiskFormatTests
                 Encoding.UTF8.GetBytes(label)
             );
 
-            Assert.That(
-                Convert.ToHexStringLower(subKey),
-                Is.EqualTo(expectedHex),
-                $"The '{label}' sub-key derivation changed. Existing archives cannot be read."
-            );
+            Assert.Equal(expectedHex, Convert.ToHexStringLower(subKey));
         }
         finally
         {
@@ -258,27 +254,22 @@ public sealed class OnDiskFormatTests
         }
     }
 
-    [Test]
-    public void ComputeChunkNonce_WithThePinnedNonceKey_ReturnsThePinnedNonce()
+    [Fact]
+    internal void ComputeChunkNonce_WithThePinnedNonceKey_ReturnsThePinnedNonce()
     {
         var nonceKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNonceKeyHex);
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
 
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(nonce, Has.Length.EqualTo(EncryptionConstants.NonceSize));
-            Assert.That(
-                Convert.ToHexStringLower(nonce),
-                Is.EqualTo("ee5d7d9a1b9eb918308f8f59"),
-                "The per-chunk nonce derivation changed; every chunk ever written fails its AEAD tag."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(EncryptionConstants.NonceSize, nonce.Length),
+            () => Assert.Equal("ee5d7d9a1b9eb918308f8f59", Convert.ToHexStringLower(nonce))
+        );
     }
 
-    [Test]
-    public void BuildChunkAssociatedData_PinsTheChunkHashThenNonceLayout()
+    [Fact]
+    internal void BuildChunkAssociatedData_PinsTheChunkHashThenNonceLayout()
     {
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(
@@ -288,39 +279,33 @@ public sealed class OnDiskFormatTests
 
         var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
 
-        Assert.That(
-            Convert.ToHexStringLower(associatedData),
-            Is.EqualTo(Convert.ToHexStringLower(chunkHash) + Convert.ToHexStringLower(nonce)),
-            "The AEAD associated data is no longer chunkHash concatenated with nonce."
+        Assert.Equal(
+            Convert.ToHexStringLower(chunkHash) + Convert.ToHexStringLower(nonce),
+            Convert.ToHexStringLower(associatedData)
         );
     }
 
-    [Test]
-    public void ChunkFileName_WithThePinnedNamingKey_ReturnsThePinnedHmacHex()
+    [Fact]
+    internal void ChunkFileName_WithThePinnedNamingKey_ReturnsThePinnedHmacHex()
     {
         var namingKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNamingKeyHex);
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
 
         var fileName = Convert.ToHexStringLower(HMACSHA256.HashData(namingKey, chunkHash));
 
-        Assert.That(
-            fileName,
-            Is.EqualTo("d35f87764839b54b3ef3105e52b2fd06516625c71677e5f120e4a417654fdb5d"),
-            "The chunk naming derivation changed; the chunks of every existing archive can no longer be located."
-        );
+        Assert.Equal("d35f87764839b54b3ef3105e52b2fd06516625c71677e5f120e4a417654fdb5d", fileName);
     }
 
-    [Test]
-    public void EncryptionConstants_KeepTheSizesEveryArchiveWasWrittenWith()
+    [Fact]
+    internal void EncryptionConstants_KeepTheSizesEveryArchiveWasWrittenWith()
     {
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(EncryptionConstants.KeySize, Is.EqualTo(256));
-            Assert.That(EncryptionConstants.SaltSize, Is.EqualTo(32));
-            Assert.That(EncryptionConstants.NonceSize, Is.EqualTo(12));
-            Assert.That(EncryptionConstants.MacSize, Is.EqualTo(128));
-            Assert.That(EncryptionConstants.TagSize, Is.EqualTo(16));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(256, EncryptionConstants.KeySize),
+            () => Assert.Equal(32, EncryptionConstants.SaltSize),
+            () => Assert.Equal(12, EncryptionConstants.NonceSize),
+            () => Assert.Equal(128, EncryptionConstants.MacSize),
+            () => Assert.Equal(16, EncryptionConstants.TagSize)
+        );
     }
 
     /// <summary>
@@ -332,9 +317,8 @@ public sealed class OnDiskFormatTests
     {
         var path = Path.Combine(OnDiskFormatFixtures.DeployedTestDataRoot, fixture.Name);
 
-        Assert.That(
+        Assert.True(
             Directory.Exists(path) && File.Exists(Path.Combine(path, "manifest.bzc")),
-            Is.True,
             $"The '{fixture.Name}' fixture archive is missing from {path}. It is committed binary test "
                 + "data; restore it from source control rather than regenerating it, or the format it "
                 + "pins is lost."

@@ -82,7 +82,9 @@ public sealed class TempDir : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TestContext.Out.WriteLine($"TempDir cleanup failed for '{Path}': {ex.Message}");
+            TestContext.Current.TestOutputHelper?.WriteLine(
+                $"TempDir cleanup failed for '{Path}': {ex.Message}"
+            );
         }
     }
 }

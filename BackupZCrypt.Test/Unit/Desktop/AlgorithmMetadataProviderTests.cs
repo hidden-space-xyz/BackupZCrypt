@@ -13,8 +13,8 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// </summary>
 public sealed class AlgorithmMetadataProviderTests
 {
-    [Test]
-    public void Metadata_EveryEncryptionAlgorithm_IsNamedSummarizedAndDescribedUniquely()
+    [Fact]
+    internal void Metadata_EveryEncryptionAlgorithm_IsNamedSummarizedAndDescribedUniquely()
     {
         AssertEveryValueIsDescribedUniquely(
             Enum.GetValues<EncryptionAlgorithm>(),
@@ -24,8 +24,8 @@ public sealed class AlgorithmMetadataProviderTests
         );
     }
 
-    [Test]
-    public void Metadata_EveryKeyDerivationAlgorithm_IsNamedSummarizedAndDescribedUniquely()
+    [Fact]
+    internal void Metadata_EveryKeyDerivationAlgorithm_IsNamedSummarizedAndDescribedUniquely()
     {
         AssertEveryValueIsDescribedUniquely(
             Enum.GetValues<KeyDerivationAlgorithm>(),
@@ -35,8 +35,8 @@ public sealed class AlgorithmMetadataProviderTests
         );
     }
 
-    [Test]
-    public void Metadata_EveryCompressionModeExceptNone_DiffersFromTheNoneFallbackText()
+    [Fact]
+    internal void Metadata_EveryCompressionModeExceptNone_DiffersFromTheNoneFallbackText()
     {
         var noneName = Strings.NoneCompressionName;
         var noneDescription = Strings.NoneCompressionDescription;
@@ -53,21 +53,10 @@ public sealed class AlgorithmMetadataProviderTests
             .Select(static mode => mode.ToString())
             .ToList();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                unlabeled,
-                Is.Empty,
-                "CompressionMode members that fall through to the \"no compression\" text, which would describe a "
-                    + "compressing mode as storing chunks uncompressed: "
-                    + string.Join(", ", unlabeled)
-            );
-            Assert.That(
-                AlgorithmMetadataProvider.GetName(CompressionMode.None),
-                Is.EqualTo(noneName),
-                "CompressionMode.None must keep the fallback name; it is the one value the catch-all arm is meant for."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Empty(unlabeled),
+            () => Assert.Equal(noneName, AlgorithmMetadataProvider.GetName(CompressionMode.None))
+        );
     }
 
     /// <summary>
@@ -100,21 +89,11 @@ public sealed class AlgorithmMetadataProviderTests
             .Select(static id => id.ToString())
             .ToList();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                blank,
-                Is.Empty,
-                $"{typeof(TId).Name} members with blank display metadata, which would render as an empty row: "
-                    + string.Join(", ", blank)
-            );
-            Assert.That(names, Is.Unique, $"{typeof(TId).Name} display names must be distinct: {string.Join(" | ", names)}");
-            Assert.That(summaries, Is.Unique, $"{typeof(TId).Name} summaries must be distinct: {string.Join(" | ", summaries)}");
-            Assert.That(
-                descriptions,
-                Is.Unique,
-                $"{typeof(TId).Name} descriptions must be distinct so no algorithm is described as another one."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Empty(blank),
+            () => Assert.Distinct(names),
+            () => Assert.Distinct(summaries),
+            () => Assert.Distinct(descriptions)
+        );
     }
 }

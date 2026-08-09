@@ -67,8 +67,24 @@ public sealed class ChunkedBackupFailurePathTests
     /// </summary>
     private const string OtherPassword = "Wrong-Horse-Battery-Staple-99";
 
-    [Test]
-    public async Task Create_OneSourceFileVanishesBeforeItIsRead_IsolatesTheFailureAndKeepsProgressConsistent()
+    /// <summary>
+    /// The complete set of message codes a create whose every file failed has to report. Held in a
+    /// field rather than allocated at the call site so the constant array is created once (CA1861).
+    /// </summary>
+    private static readonly MessageCode[] AllFilesFailedCodes =
+    [
+        MessageCode.AllFilesFailed,
+        MessageCode.EncryptionErrorFormat,
+    ];
+
+    /// <summary>
+    /// The complete set of message codes a restore that hit a chunk failing authentication has to
+    /// report. Held in a field for the same reason as <see cref="AllFilesFailedCodes"/>.
+    /// </summary>
+    private static readonly MessageCode[] AuthenticationFailureCodes = [MessageCode.InvalidPassword];
+
+    [Fact]
+    internal async Task Create_OneSourceFileVanishesBeforeItIsRead_IsolatesTheFailureAndKeepsProgressConsistent()
     {
         const string KeepAContent = "the first file, which must survive its neighbour's failure";
         const string KeepBContent = "the second file, nested, which must also survive";
@@ -96,42 +112,37 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True, "One unreadable file must not sink the whole backup.");
-            Assert.That(result.Value.IsSuccess, Is.False, "The result claimed success while a file had failed.");
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(3));
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(2));
-            Assert.That(result.Value.TotalBytes, Is.EqualTo(totalBytes));
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.EncryptionErrorFormat)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess, "One unreadable file must not sink the whole backup."),
+            () => Assert.False(result.Value.IsSuccess, "The result claimed success while a file had failed."),
+            () => Assert.Equal(3, result.Value.TotalFiles),
+            () => Assert.Equal(2, result.Value.ProcessedFiles),
+            () => Assert.Equal(totalBytes, result.Value.TotalBytes),
+            () => Assert.Single(result.Value.Errors),
+            () =>
+                Assert.All(
+                    result.Value.Errors,
+                    static e => Assert.True(e.Code is MessageCode.EncryptionErrorFormat)
+                )
+        );
 
         var reports = recorded.Reports;
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(reports, Is.Not.Empty, "The engine reported no progress at all.");
-            Assert.That(reports[0].ProcessedFiles, Is.Zero, "The first report is the pre-loop baseline.");
-            Assert.That(reports[0].ProcessedBytes, Is.Zero, "The first report is the pre-loop baseline.");
-            Assert.That(
-                reports,
-                Has.All.Matches<BackupStatus>(r => r.TotalFiles is 3 && r.TotalBytes == totalBytes),
-                "A progress report disagreed with the totals the run was started with."
-            );
-            Assert.That(
-                reports.Max(static r => r.ProcessedFiles),
-                Is.EqualTo(result.Value.ProcessedFiles),
-                "Progress announced a different number of completed files than the result reports."
-            );
-            Assert.That(
-                reports.Max(static r => r.ProcessedBytes),
-                Is.EqualTo(survivingBytes),
-                "Progress counted bytes for a file that never made it into the archive."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.NotEmpty(reports),
+            () => Assert.Equal(0, reports[0].ProcessedFiles),
+            () => Assert.Equal(0L, reports[0].ProcessedBytes),
+            () =>
+                Assert.All(
+                    reports,
+                    r =>
+                        Assert.True(
+                            r.TotalFiles is 3 && r.TotalBytes == totalBytes,
+                            "A progress report disagreed with the totals the run was started with."
+                        )
+                ),
+            () => Assert.Equal(result.Value.ProcessedFiles, reports.Max(static r => r.ProcessedFiles)),
+            () => Assert.Equal(survivingBytes, reports.Max(static r => r.ProcessedBytes))
+        );
 
         var restoreResult = await service.RestoreAsync(
             archive.Path,
@@ -141,28 +152,33 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        var restoredKeepA = await File.ReadAllTextAsync(Path.Combine(restored.Path, "keep-a.txt"));
-        var restoredKeepB = await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "keep-b.txt"));
+        var restoredKeepA = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "keep-a.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var restoredKeepB = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "dir", "keep-b.txt"),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
-                Is.True,
-                "The archive written around a failed file did not restore cleanly."
-            );
-            Assert.That(restoredKeepA, Is.EqualTo(KeepAContent));
-            Assert.That(restoredKeepB, Is.EqualTo(KeepBContent));
-            Assert.That(
-                File.Exists(Path.Combine(restored.Path, "doomed.txt")),
-                Is.False,
-                "The file that failed was recorded in the manifest anyway."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                    "The archive written around a failed file did not restore cleanly."
+                ),
+            () => Assert.Equal(KeepAContent, restoredKeepA),
+            () => Assert.Equal(KeepBContent, restoredKeepB),
+            () =>
+                Assert.False(
+                    File.Exists(Path.Combine(restored.Path, "doomed.txt")),
+                    "The file that failed was recorded in the manifest anyway."
+                )
+        );
     }
 
-    [Test]
-    public async Task Create_EverySourceFileFails_FailsWithAllFilesFailed()
+    [Fact]
+    internal async Task Create_EverySourceFileFails_FailsWithAllFilesFailed()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -180,19 +196,14 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False, "A backup that captured no file at all was reported as a result.");
-            Assert.That(
-                CollectCodes(result),
-                Is.EquivalentTo([MessageCode.AllFilesFailed, MessageCode.EncryptionErrorFormat]),
-                "A total failure must name both the overall outcome and the file that caused it."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "A backup that captured no file at all was reported as a result."),
+            () => Assert.Equivalent(AllFilesFailedCodes, CollectCodes(result), strict: true)
+        );
     }
 
-    [Test]
-    public async Task Create_EmptySourceDirectory_ReportsNoFilesAndLeavesTheDestinationEmpty()
+    [Fact]
+    internal async Task Create_EmptySourceDirectory_ReportsNoFilesAndLeavesTheDestinationEmpty()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -208,28 +219,23 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.IsSuccess, Is.False, "An empty source is not a successful backup.");
-            Assert.That(result.Value.TotalFiles, Is.Zero);
-            Assert.That(result.Value.ProcessedFiles, Is.Zero);
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.NoFilesInSourceDirectory)
-            );
-
-            Assert.That(
-                Directory.GetFileSystemEntries(archive.Path),
-                Is.Empty,
-                "An empty source left something behind that looks like a backup."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.False(result.Value.IsSuccess, "An empty source is not a successful backup."),
+            () => Assert.Equal(0, result.Value.TotalFiles),
+            () => Assert.Equal(0, result.Value.ProcessedFiles),
+            () => Assert.Single(result.Value.Errors),
+            () =>
+                Assert.All(
+                    result.Value.Errors,
+                    static e => Assert.True(e.Code is MessageCode.NoFilesInSourceDirectory)
+                ),
+            () => Assert.Empty(Directory.GetFileSystemEntries(archive.Path))
+        );
     }
 
-    [Test]
-    public async Task CreateThenRestore_SourceHoldsOnlyEmptyFiles_StoresNoChunksAndRestoresZeroLengthFiles()
+    [Fact]
+    internal async Task CreateThenRestore_SourceHoldsOnlyEmptyFiles_StoresNoChunksAndRestoresZeroLengthFiles()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -249,19 +255,17 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(createResult.IsSuccess && createResult.Value.IsSuccess, Is.True, "Empty files broke the backup.");
-            Assert.That(createResult.Value.TotalFiles, Is.EqualTo(2));
-            Assert.That(createResult.Value.ProcessedFiles, Is.EqualTo(2));
-            Assert.That(createResult.Value.TotalBytes, Is.Zero);
-
-            Assert.That(
-                ChunkFiles(archive.Path),
-                Is.Empty,
-                "A zero-length file was stored as a chunk, so the archive is no longer content-addressed."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    createResult.IsSuccess && createResult.Value.IsSuccess,
+                    "Empty files broke the backup."
+                ),
+            () => Assert.Equal(2, createResult.Value.TotalFiles),
+            () => Assert.Equal(2, createResult.Value.ProcessedFiles),
+            () => Assert.Equal(0L, createResult.Value.TotalBytes),
+            () => Assert.Empty(ChunkFiles(archive.Path))
+        );
 
         var restoreResult = await service.RestoreAsync(
             archive.Path,
@@ -271,21 +275,20 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
-                Is.True,
-                "An archive that holds no chunks failed to restore."
-            );
-            Assert.That(FilesUnder(restored.Path), Has.Length.EqualTo(2));
-            Assert.That(new FileInfo(Path.Combine(restored.Path, "empty-root.dat")).Length, Is.Zero);
-            Assert.That(new FileInfo(Path.Combine(restored.Path, "dir", "empty-nested.dat")).Length, Is.Zero);
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                    "An archive that holds no chunks failed to restore."
+                ),
+            () => Assert.Equal(2, FilesUnder(restored.Path).Length),
+            () => Assert.Equal(0L, new FileInfo(Path.Combine(restored.Path, "empty-root.dat")).Length),
+            () => Assert.Equal(0L, new FileInfo(Path.Combine(restored.Path, "dir", "empty-nested.dat")).Length)
+        );
     }
 
-    [Test]
-    public async Task Restore_ChunkFileMissing_IsolatesTheFailureAndRestoresTheOtherFiles()
+    [Fact]
+    internal async Task Restore_ChunkFileMissing_IsolatesTheFailureAndRestoresTheOtherFiles()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -297,11 +300,7 @@ public sealed class ChunkedBackupFailurePathTests
         var expected = BuildThreeFileTree(source);
         await CreateBackupAsync(service, source.Path, archive.Path);
 
-        Assert.That(
-            ChunkFiles(archive.Path),
-            Has.Length.EqualTo(expected.Count),
-            "The fixture assumes one chunk per file."
-        );
+        Assert.Equal(expected.Count, ChunkFiles(archive.Path).Length);
         File.Delete(ChunkFiles(archive.Path)[0]);
 
         var result = await service.RestoreAsync(
@@ -314,30 +313,28 @@ public sealed class ChunkedBackupFailurePathTests
 
         var reproduced = CountReproduced(expected, restored.Path);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True, "A missing chunk aborted the whole restore.");
-            Assert.That(result.Value.IsSuccess, Is.False, "The restore claimed success with a chunk missing.");
-            Assert.That(result.Value.TotalFiles, Is.EqualTo(expected.Count));
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(expected.Count - 1));
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
-
-            Assert.That(
-                result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.DecryptionErrorFormat),
-                "A restore failure must not be reported as an encryption failure: the user is reading "
-                    + "files out, and being told the file could not be encrypted is simply wrong."
-            );
-            Assert.That(
-                reproduced,
-                Is.EqualTo(expected.Count - 1),
-                "The files whose chunks were intact were not reproduced byte for byte."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess, "A missing chunk aborted the whole restore."),
+            () => Assert.False(result.Value.IsSuccess, "The restore claimed success with a chunk missing."),
+            () => Assert.Equal(expected.Count, result.Value.TotalFiles),
+            () => Assert.Equal(expected.Count - 1, result.Value.ProcessedFiles),
+            () => Assert.Single(result.Value.Errors),
+            () =>
+                Assert.All(
+                    result.Value.Errors,
+                    static e =>
+                        Assert.True(
+                            e.Code is MessageCode.DecryptionErrorFormat,
+                            "A restore failure must not be reported as an encryption failure: the user is reading "
+                                + "files out, and being told the file could not be encrypted is simply wrong."
+                        )
+                ),
+            () => Assert.Equal(expected.Count - 1, reproduced)
+        );
     }
 
-    [Test]
-    public async Task Restore_ChunkFileTruncated_AbortsTheWholeRunAndReportsInvalidPassword()
+    [Fact]
+    internal async Task Restore_ChunkFileTruncated_AbortsTheWholeRunAndReportsInvalidPassword()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -350,8 +347,8 @@ public sealed class ChunkedBackupFailurePathTests
         await CreateBackupAsync(service, source.Path, archive.Path);
 
         var chunkFile = ChunkFiles(archive.Path)[0];
-        var intact = await File.ReadAllBytesAsync(chunkFile);
-        await File.WriteAllBytesAsync(chunkFile, intact[..4]);
+        var intact = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
+        await File.WriteAllBytesAsync(chunkFile, intact[..4], TestContext.Current.CancellationToken);
 
         var result = await service.RestoreAsync(
             archive.Path,
@@ -361,19 +358,14 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False, "A chunk that fails authentication did not abort the restore.");
-            Assert.That(
-                CollectCodes(result),
-                Is.EquivalentTo([MessageCode.InvalidPassword]),
-                "A chunk that fails authentication must surface as an authentication failure and nothing else."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "A chunk that fails authentication did not abort the restore."),
+            () => Assert.Equivalent(AuthenticationFailureCodes, CollectCodes(result), strict: true)
+        );
     }
 
-    [Test]
-    public async Task Restore_DestinationAlreadyHoldsFiles_OverwritesBackedUpPathsAndLeavesOthersAlone()
+    [Fact]
+    internal async Task Restore_DestinationAlreadyHoldsFiles_OverwritesBackedUpPathsAndLeavesOthersAlone()
     {
         const string RestoredA = "the archived content of a.txt";
         const string RestoredB = "the archived content of the nested b.txt";
@@ -401,34 +393,34 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        var restoredA = await File.ReadAllTextAsync(Path.Combine(restored.Path, "a.txt"));
-        var restoredB = await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "b.txt"));
-        var restoredUnrelated = await File.ReadAllTextAsync(Path.Combine(restored.Path, "unrelated.txt"));
+        var restoredA = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "a.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var restoredB = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "dir", "b.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var restoredUnrelated = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "unrelated.txt"),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                result.IsSuccess && result.Value.IsSuccess,
-                Is.True,
-                "Restoring over an existing destination did not succeed."
-            );
-            Assert.That(
-                restoredA,
-                Is.EqualTo(RestoredA),
-                "The stale file, deliberately longer than the archived copy, was not replaced with exactly that content."
-            );
-            Assert.That(restoredB, Is.EqualTo(RestoredB));
-            Assert.That(
-                restoredUnrelated,
-                Is.EqualTo(Unrelated),
-                "The restore touched a file the archive knows nothing about."
-            );
-            Assert.That(FilesUnder(restored.Path), Has.Length.EqualTo(3));
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    result.IsSuccess && result.Value.IsSuccess,
+                    "Restoring over an existing destination did not succeed."
+                ),
+            () => Assert.Equal(RestoredA, restoredA),
+            () => Assert.Equal(RestoredB, restoredB),
+            () => Assert.Equal(Unrelated, restoredUnrelated),
+            () => Assert.Equal(3, FilesUnder(restored.Path).Length)
+        );
     }
 
-    [Test]
-    public async Task Update_ChangedFileVanishesBeforeItIsRead_IsolatesTheFailureAndDropsItsEntry()
+    [Fact]
+    internal async Task Update_ChangedFileVanishesBeforeItIsRead_IsolatesTheFailureAndDropsItsEntry()
     {
         const string StableContent = "a file that never changes";
         const string RevisedContent = "the revised content that does get re-chunked";
@@ -457,23 +449,18 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True, "One unreadable file must not sink the whole update.");
-            Assert.That(result.Value.IsSuccess, Is.False, "The update claimed success while a file had failed.");
-
-            Assert.That(
-                result.Value.TotalFiles,
-                Is.EqualTo(2),
-                "Only the two modified files are re-chunked; the untouched one is carried over."
-            );
-            Assert.That(result.Value.ProcessedFiles, Is.EqualTo(1));
-            Assert.That(result.Value.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Value.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.EncryptionErrorFormat)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess, "One unreadable file must not sink the whole update."),
+            () => Assert.False(result.Value.IsSuccess, "The update claimed success while a file had failed."),
+            () => Assert.Equal(2, result.Value.TotalFiles),
+            () => Assert.Equal(1, result.Value.ProcessedFiles),
+            () => Assert.Single(result.Value.Errors),
+            () =>
+                Assert.All(
+                    result.Value.Errors,
+                    static e => Assert.True(e.Code is MessageCode.EncryptionErrorFormat)
+                )
+        );
 
         var restoreResult = await service.RestoreAsync(
             archive.Path,
@@ -483,30 +470,34 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        var restoredStable = await File.ReadAllTextAsync(Path.Combine(restored.Path, "stable.txt"));
-        var restoredRevised = await File.ReadAllTextAsync(Path.Combine(restored.Path, "revised.txt"));
+        var restoredStable = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "stable.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var restoredRevised = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "revised.txt"),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
-                Is.True,
-                "The archive left behind by a partially failed update is not restorable."
-            );
-            Assert.That(restoredStable, Is.EqualTo(StableContent));
-            Assert.That(restoredRevised, Is.EqualTo(RevisedContent));
-
-            Assert.That(
-                File.Exists(Path.Combine(restored.Path, "doomed.txt")),
-                Is.False,
-                "The failed file's entry survived the update; the manifest now points at a pruned chunk."
-            );
-            Assert.That(FilesUnder(restored.Path), Has.Length.EqualTo(2));
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    restoreResult.IsSuccess && restoreResult.Value.IsSuccess,
+                    "The archive left behind by a partially failed update is not restorable."
+                ),
+            () => Assert.Equal(StableContent, restoredStable),
+            () => Assert.Equal(RevisedContent, restoredRevised),
+            () =>
+                Assert.False(
+                    File.Exists(Path.Combine(restored.Path, "doomed.txt")),
+                    "The failed file's entry survived the update; the manifest now points at a pruned chunk."
+                ),
+            () => Assert.Equal(2, FilesUnder(restored.Path).Length)
+        );
     }
 
-    [Test]
-    public async Task Update_ChunksDirectoryRemovedBeforePruning_CompletesWithoutResurrectingIt()
+    [Fact]
+    internal async Task Update_ChunksDirectoryRemovedBeforePruning_CompletesWithoutResurrectingIt()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -531,27 +522,26 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                result.IsSuccess,
-                Is.True,
-                "A vanished chunks directory failed the update; pruning is best-effort cleanup run after the manifest."
-            );
-            Assert.That(result.Value.IsSuccess, Is.True);
-            Assert.That(result.Value.TotalFiles, Is.Zero, "Nothing changed, so nothing should have been re-chunked.");
-            Assert.That(result.Value.Errors, Is.Empty);
-            Assert.That(Directory.Exists(chunksDir), Is.False, "Pruning recreated the chunks directory.");
-            Assert.That(
-                File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
-                Is.True,
-                "The update did not leave a manifest behind."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    result.IsSuccess,
+                    "A vanished chunks directory failed the update; pruning is best-effort cleanup run after the manifest."
+                ),
+            () => Assert.True(result.Value.IsSuccess),
+            () => Assert.Equal(0, result.Value.TotalFiles),
+            () => Assert.Empty(result.Value.Errors),
+            () => Assert.False(Directory.Exists(chunksDir), "Pruning recreated the chunks directory."),
+            () =>
+                Assert.True(
+                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
+                    "The update did not leave a manifest behind."
+                )
+        );
     }
 
-    [Test]
-    public async Task Update_DestinationHasNoManifest_FailsWithManifestRequiredForUpdate()
+    [Fact]
+    internal async Task Update_DestinationHasNoManifest_FailsWithManifestRequiredForUpdate()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -570,25 +560,25 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False, "An update without a manifest was accepted.");
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.ManifestRequiredForUpdate)
-            );
-            Assert.That(
-                File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
-                Is.False,
-                "The refused update wrote a manifest anyway."
-            );
-            Assert.That(FilesUnder(archive.Path), Has.Length.EqualTo(1), "The refused update wrote to the destination.");
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "An update without a manifest was accepted."),
+            () => Assert.Single(result.Errors),
+            () =>
+                Assert.All(
+                    result.Errors,
+                    static e => Assert.True(e.Code is MessageCode.ManifestRequiredForUpdate)
+                ),
+            () =>
+                Assert.False(
+                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
+                    "The refused update wrote a manifest anyway."
+                ),
+            () => Assert.Single(FilesUnder(archive.Path))
+        );
     }
 
-    [Test]
-    public async Task Update_WrongPassword_FailsWithInvalidPasswordAndLeavesTheArchiveUnchanged()
+    [Fact]
+    internal async Task Update_WrongPassword_FailsWithInvalidPasswordAndLeavesTheArchiveUnchanged()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -611,25 +601,16 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False, "An update under the wrong password succeeded.");
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Errors,
-                Has.All.Matches<LocalizableMessage>(static e => e.Code is MessageCode.InvalidPassword)
-            );
-
-            Assert.That(
-                Snapshot(archive.Path),
-                Is.EqualTo(archiveBefore),
-                "An update that could not open the manifest still modified the archive."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "An update under the wrong password succeeded."),
+            () => Assert.Single(result.Errors),
+            () => Assert.All(result.Errors, static e => Assert.True(e.Code is MessageCode.InvalidPassword)),
+            () => Assert.Equal(archiveBefore, Snapshot(archive.Path))
+        );
     }
 
-    [Test]
-    public async Task Create_CancelledBeforeAnyFileIsProcessed_StopsAndWritesNoManifest()
+    [Fact]
+    internal async Task Create_CancelledBeforeAnyFileIsProcessed_StopsAndWritesNoManifest()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -644,21 +625,18 @@ public sealed class ChunkedBackupFailurePathTests
         var request = NewRequest(source.Path, archive.Path, BackupOperation.Create);
         var progress = new HookedProgress(new RecordingProgress<BackupStatus>(), cts.Cancel);
 
-        _ = Assert.CatchAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.CreateAsync(source.Path, archive.Path, request, progress, cts.Token)
         );
 
-        Assert.That(
-            FilesUnder(archive.Path),
-            Is.Empty,
-            "A cancelled backup left files behind; a manifest there would describe an archive holding no files at all."
-        );
+        Assert.Empty(FilesUnder(archive.Path));
     }
 
-    [TestCase(BackupOperation.Update)]
-    [TestCase(BackupOperation.Restore)]
-    [TestCase(BackupOperation.Verify)]
-    public async Task ExistingBackup_CancelledBeforeAnyFileIsProcessed_StopsAndLeavesTheArchiveIntact(
+    [Theory]
+    [InlineData(BackupOperation.Update)]
+    [InlineData(BackupOperation.Restore)]
+    [InlineData(BackupOperation.Verify)]
+    internal async Task ExistingBackup_CancelledBeforeAnyFileIsProcessed_StopsAndLeavesTheArchiveIntact(
         BackupOperation operation
     )
     {
@@ -713,17 +691,12 @@ public sealed class ChunkedBackupFailurePathTests
             };
         }
 
-        _ = Assert.CatchAsync<OperationCanceledException>(RunOperationAsync);
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(RunOperationAsync);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                Snapshot(archive.Path),
-                Is.EqualTo(archiveBefore),
-                "A cancelled operation modified the archive instead of stopping."
-            );
-            Assert.That(FilesUnder(restored.Path), Is.Empty, "A cancelled operation left restored files behind.");
-        }
+        Assert.Multiple(
+            () => Assert.Equal(archiveBefore, Snapshot(archive.Path)),
+            () => Assert.Empty(FilesUnder(restored.Path))
+        );
     }
 
     /// <summary>
@@ -777,9 +750,8 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
-        Assert.That(
+        Assert.True(
             result.IsSuccess && result.Value.IsSuccess,
-            Is.True,
             "The fixture could not create the backup under test."
         );
     }

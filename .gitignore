@@ -38,7 +38,7 @@ Generated\ Files/
 
 *.VisualState.xml
 TestResult.xml
-nunit-*.xml
+xunit-*.xml
 
 *.received.*
 

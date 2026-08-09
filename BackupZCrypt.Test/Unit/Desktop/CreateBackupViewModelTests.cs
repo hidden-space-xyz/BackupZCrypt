@@ -113,8 +113,8 @@ public sealed class CreateBackupViewModelTests
     private readonly ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis> analyzePasswordStrength =
         Substitute.For<ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis>>();
 
-    [Test]
-    public async Task StartCommand_CanExecute_AgreesWithTheRequestValidatorOnEveryPasswordRule()
+    [Fact]
+    internal async Task StartCommand_CanExecute_AgreesWithTheRequestValidatorOnEveryPasswordRule()
     {
         using TempDir temp = new();
         _ = temp.WriteText(Path.Combine("source", "file.txt"), "content");
@@ -145,7 +145,8 @@ public sealed class CreateBackupViewModelTests
                     EncryptionAlgorithm.Aes,
                     KeyDerivationAlgorithm.PBKDF2,
                     BackupOperation.Create
-                )
+                ),
+                TestContext.Current.CancellationToken
             );
 
             var validatorAccepts = !errors.Any(error =>
@@ -162,15 +163,11 @@ public sealed class CreateBackupViewModelTests
             }
         }
 
-        Assert.That(
-            drift,
-            Is.Empty,
-            $"The start gate and the request validator disagree: {string.Join("; ", drift)}"
-        );
+        Assert.Empty(drift);
     }
 
-    [Test]
-    public void GeneratePasswordCommand_FillsBothFieldsWithALongPasswordUsingEveryCharacterClass()
+    [Fact]
+    internal void GeneratePasswordCommand_FillsBothFieldsWithALongPasswordUsingEveryCharacterClass()
     {
         var sut = CreateSut();
         List<GeneratePasswordQuery> queries = [];
@@ -184,31 +181,28 @@ public sealed class CreateBackupViewModelTests
 
         sut.GeneratePasswordCommand.Execute(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                queries,
-                Is.EqualTo(
-                    [
-                        new GeneratePasswordQuery(
-                            50,
-                            PasswordGenerationOptions.IncludeUppercase
-                                | PasswordGenerationOptions.IncludeLowercase
-                                | PasswordGenerationOptions.IncludeNumbers
-                                | PasswordGenerationOptions.IncludeSpecialCharacters
-                        ),
-                    ]
-                )
-            );
-            Assert.That(sut.Password, Is.EqualTo("GENERATED-PASSWORD"));
-            Assert.That(sut.ConfirmPassword, Is.EqualTo("GENERATED-PASSWORD"));
-            Assert.That(sut.RevealPassword, Is.False);
-            Assert.That(sut.ShowPasswordMismatch, Is.False);
-        }
+        GeneratePasswordQuery[] expectedQueries =
+        [
+            new GeneratePasswordQuery(
+                50,
+                PasswordGenerationOptions.IncludeUppercase
+                    | PasswordGenerationOptions.IncludeLowercase
+                    | PasswordGenerationOptions.IncludeNumbers
+                    | PasswordGenerationOptions.IncludeSpecialCharacters
+            ),
+        ];
+
+        Assert.Multiple(
+            () => Assert.Equal(expectedQueries, queries),
+            () => Assert.Equal("GENERATED-PASSWORD", sut.Password),
+            () => Assert.Equal("GENERATED-PASSWORD", sut.ConfirmPassword),
+            () => Assert.False(sut.RevealPassword),
+            () => Assert.False(sut.ShowPasswordMismatch)
+        );
     }
 
-    [Test]
-    public async Task CopyPasswordCommand_IsGatedOnAPasswordAndCopiesItVerbatim()
+    [Fact]
+    internal async Task CopyPasswordCommand_IsGatedOnAPasswordAndCopiesItVerbatim()
     {
         var sut = CreateSut();
         List<string> copied = [];
@@ -224,17 +218,18 @@ public sealed class CreateBackupViewModelTests
 
         sut.Password = string.Empty;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(enabledWithoutPassword, Is.False);
-            Assert.That(enabledWithPassword, Is.True);
-            Assert.That(copied, Is.EqualTo(["  pass word  "]));
-            Assert.That(sut.CopyPasswordCommand.CanExecute(null), Is.False);
-        }
+        string[] expectedCopied = ["  pass word  "];
+
+        Assert.Multiple(
+            () => Assert.False(enabledWithoutPassword),
+            () => Assert.True(enabledWithPassword),
+            () => Assert.Equal(expectedCopied, copied),
+            () => Assert.False(sut.CopyPasswordCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public void Password_WhenSetAndThenCleared_PublishesAndThenClearsTheStrengthFeedback()
+    [Fact]
+    internal void Password_WhenSetAndThenCleared_PublishesAndThenClearsTheStrengthFeedback()
     {
         var sut = CreateSut();
         PasswordStrengthAnalysis analysis = new(
@@ -254,21 +249,21 @@ public sealed class CreateBackupViewModelTests
 
         sut.Password = string.Empty;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(hasStrength, Is.True);
-            Assert.That(score, Is.EqualTo(22));
-            Assert.That(description, Is.EqualTo(PasswordStrengthFormatter.Format(analysis)));
-            Assert.That(sut.HasStrength, Is.False);
-            Assert.That(sut.StrengthScore, Is.Zero);
-            Assert.That(sut.StrengthDescription, Is.Empty);
-        }
+        Assert.Multiple(
+            () => Assert.True(hasStrength),
+            () => Assert.Equal(22d, score),
+            () => Assert.Equal(PasswordStrengthFormatter.Format(analysis), description),
+            () => Assert.False(sut.HasStrength),
+            () => Assert.Equal(0d, sut.StrengthScore),
+            () => Assert.Empty(sut.StrengthDescription)
+        );
     }
 
-    [TestCase("abcdefgh", "", false)]
-    [TestCase("abcdefgh", "abc", true)]
-    [TestCase("abcdefgh", "abcdefgh", false)]
-    public void ConfirmPassword_WhenTyped_ShowsTheMismatchHintOnlyOnceSomethingWasEntered(
+    [Theory]
+    [InlineData("abcdefgh", "", false)]
+    [InlineData("abcdefgh", "abc", true)]
+    [InlineData("abcdefgh", "abcdefgh", false)]
+    internal void ConfirmPassword_WhenTyped_ShowsTheMismatchHintOnlyOnceSomethingWasEntered(
         string password,
         string confirm,
         bool expected
@@ -279,11 +274,11 @@ public sealed class CreateBackupViewModelTests
         sut.Password = password;
         sut.ConfirmPassword = confirm;
 
-        Assert.That(sut.ShowPasswordMismatch, Is.EqualTo(expected));
+        Assert.Equal(expected, sut.ShowPasswordMismatch);
     }
 
-    [Test]
-    public async Task OnNavigatedToAsync_WithAnUndefinedStoredEncryptionAlgorithm_FallsBackToAes()
+    [Fact]
+    internal async Task OnNavigatedToAsync_WithAnUndefinedStoredEncryptionAlgorithm_FallsBackToAes()
     {
         var sut = CreateSut();
         _ = this
@@ -310,23 +305,19 @@ public sealed class CreateBackupViewModelTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(commands, Has.Count.EqualTo(1));
-            Assert.That(commands[0].EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
-            Assert.That(
-                commands[0].KeyDerivationAlgorithm,
-                Is.EqualTo(KeyDerivationAlgorithm.Scrypt)
-            );
-            Assert.That(commands[0].Compression, Is.EqualTo(CompressionMode.ZstdBest));
-            Assert.That(commands[0].Password, Is.EqualTo("good-password"));
-            Assert.That(commands[0].ConfirmPassword, Is.EqualTo("good-password"));
-            Assert.That(commands[0].ProceedOnWarnings, Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.Single(commands),
+            () => Assert.Equal(EncryptionAlgorithm.Aes, commands[0].EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, commands[0].KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.ZstdBest, commands[0].Compression),
+            () => Assert.Equal("good-password", commands[0].Password),
+            () => Assert.Equal("good-password", commands[0].ConfirmPassword),
+            () => Assert.False(commands[0].ProceedOnWarnings)
+        );
     }
 
-    [Test]
-    public async Task OnNavigatedToAsync_WhileAnOperationRuns_KeepsTheAlgorithmsTheRunStartedWith()
+    [Fact]
+    internal async Task OnNavigatedToAsync_WhileAnOperationRuns_KeepsTheAlgorithmsTheRunStartedWith()
     {
         var sut = CreateSut();
         _ = this
@@ -355,16 +346,12 @@ public sealed class CreateBackupViewModelTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(commands, Has.Count.EqualTo(1));
-            Assert.That(commands[0].EncryptionAlgorithm, Is.EqualTo(EncryptionAlgorithm.Aes));
-            Assert.That(
-                commands[0].KeyDerivationAlgorithm,
-                Is.EqualTo(KeyDerivationAlgorithm.Argon2id)
-            );
-            Assert.That(commands[0].Compression, Is.EqualTo(CompressionMode.None));
-        }
+        Assert.Multiple(
+            () => Assert.Single(commands),
+            () => Assert.Equal(EncryptionAlgorithm.Aes, commands[0].EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Argon2id, commands[0].KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.None, commands[0].Compression)
+        );
     }
 
     /// <summary>

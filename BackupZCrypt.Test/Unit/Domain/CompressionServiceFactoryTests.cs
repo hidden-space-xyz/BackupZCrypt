@@ -32,8 +32,8 @@ public sealed class CompressionServiceFactoryTests
         return strategy;
     }
 
-    [Test]
-    public void Create_UnregisteredMode_Throws()
+    [Fact]
+    internal void Create_UnregisteredMode_Throws()
     {
         var factory = new CompressionServiceFactory([Stub(CompressionMode.None)]);
 

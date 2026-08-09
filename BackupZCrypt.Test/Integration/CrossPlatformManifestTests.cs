@@ -36,8 +36,8 @@ public sealed class CrossPlatformManifestTests
     /// </summary>
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
-    [Test]
-    public async Task CreateThenRestore_NestedTree_RecordsForwardSlashPathsAndRebuildsTheSameStructure()
+    [Fact]
+    internal async Task CreateThenRestore_NestedTree_RecordsForwardSlashPathsAndRebuildsTheSameStructure()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -55,19 +55,16 @@ public sealed class CrossPlatformManifestTests
 
         var manifest = await ReadManifestAsync(provider, destination.Path);
         var manifestPaths = manifest.Files.Select(static f => f.OriginalPath).ToList();
+        string[] expectedManifestPaths = ["root.txt", "docs/notes.md", "docs/sub/deep.txt"];
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                manifestPaths.Where(static p => p.Contains('\\', StringComparison.Ordinal)),
-                Is.Empty,
-                "A manifest entry recorded a host separator; the archive is then unreadable as a tree on other platforms."
-            );
-            Assert.That(
-                manifestPaths,
-                Is.EquivalentTo(["root.txt", "docs/notes.md", "docs/sub/deep.txt"])
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.DoesNotContain(
+                    manifestPaths,
+                    static p => p.Contains('\\', StringComparison.Ordinal)
+                ),
+            () => Assert.Equivalent(expectedManifestPaths, manifestPaths, strict: true)
+        );
 
         await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
 
@@ -76,22 +73,18 @@ public sealed class CrossPlatformManifestTests
             .Select(f => Path.GetRelativePath(restored.Path, f).Replace('\\', '/'))
             .ToList();
         var deepContent = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "docs", "sub", "deep.txt")
+            Path.Combine(restored.Path, "docs", "sub", "deep.txt"),
+            TestContext.Current.CancellationToken
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                restoredPaths,
-                Is.EquivalentTo(manifestPaths),
-                "The restored tree does not mirror the structure the manifest recorded."
-            );
-            Assert.That(deepContent, Is.EqualTo("deep"));
-        }
+        Assert.Multiple(
+            () => Assert.Equivalent(manifestPaths, restoredPaths, strict: true),
+            () => Assert.Equal("deep", deepContent)
+        );
     }
 
-    [Test]
-    public async Task Restore_ForeignManifestEntryWithBackslashSeparators_RebuildsNestedDirectoriesNotAFlatName()
+    [Fact]
+    internal async Task Restore_ForeignManifestEntryWithBackslashSeparators_RebuildsNestedDirectoriesNotAFlatName()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -113,26 +106,25 @@ public sealed class CrossPlatformManifestTests
             .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetFileName(f))
             .ToList();
+        string[] expectedRestoredNames = ["notes.md"];
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                File.Exists(restoredFile),
-                Is.True,
-                "An entry recorded with Windows separators must restore as a nested directory tree on every platform."
-            );
-            Assert.That(
-                restoredNames,
-                Is.EquivalentTo(["notes.md"]),
-                "The separator survived into the file name instead of creating a directory."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.True(
+                    File.Exists(restoredFile),
+                    "An entry recorded with Windows separators must restore as a nested directory tree on every platform."
+                ),
+            () => Assert.Equivalent(expectedRestoredNames, restoredNames, strict: true)
+        );
 
-        Assert.That(await File.ReadAllTextAsync(restoredFile), Is.EqualTo("# notes"));
+        Assert.Equal(
+            "# notes",
+            await File.ReadAllTextAsync(restoredFile, TestContext.Current.CancellationToken)
+        );
     }
 
-    [Test]
-    public async Task Restore_ManifestPathWithWindowsTraversal_IsRejectedAndWritesNothing()
+    [Fact]
+    internal async Task Restore_ManifestPathWithWindowsTraversal_IsRejectedAndWritesNothing()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -153,36 +145,31 @@ public sealed class CrossPlatformManifestTests
             new RestoreBackupCommand(destination.Path, restored.Path, Password, ProceedOnWarnings: true)
             {
                 Progress = new RecordingProgress<BackupStatus>(),
-            }
+            },
+            TestContext.Current.CancellationToken
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                result.IsSuccess,
-                Is.False,
-                "A manifest path with Windows traversal notation was accepted."
-            );
-            Assert.That(
-                result.Errors,
-                Has.Some.Matches<LocalizableMessage>(static e =>
-                    e.Code is MessageCode.UnexpectedErrorFormat
-                )
-            );
-            Assert.That(
-                File.Exists(escapeTarget),
-                Is.False,
-                "The restore wrote a file outside its destination root. A TempDir root sits two levels below "
-                    + "the platform temp directory, so the two-level traversal in the rewritten manifest path "
-                    + "lands exactly there, and the name is unique so a file leaked by an earlier run can "
-                    + "never pass for an escape."
-            );
-            Assert.That(
-                Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories),
-                Is.Empty,
-                "A rejected manifest must leave the restore root untouched."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.False(
+                    result.IsSuccess,
+                    "A manifest path with Windows traversal notation was accepted."
+                ),
+            () =>
+                Assert.Contains(
+                    result.Errors,
+                    static e => e.Code is MessageCode.UnexpectedErrorFormat
+                ),
+            () =>
+                Assert.False(
+                    File.Exists(escapeTarget),
+                    "The restore wrote a file outside its destination root. A TempDir root sits two levels below "
+                        + "the platform temp directory, so the two-level traversal in the rewritten manifest path "
+                        + "lands exactly there, and the name is unique so a file leaked by an earlier run can "
+                        + "never pass for an escape."
+                ),
+            () => Assert.Empty(Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories))
+        );
     }
 
     /// <summary>
@@ -216,7 +203,7 @@ public sealed class CrossPlatformManifestTests
             }
         );
 
-        Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Backup creation failed.");
+        Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Backup creation failed.");
     }
 
     /// <summary>
@@ -239,7 +226,7 @@ public sealed class CrossPlatformManifestTests
             }
         );
 
-        Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Restore failed.");
+        Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Restore failed.");
     }
 
     /// <summary>
@@ -261,8 +248,8 @@ public sealed class CrossPlatformManifestTests
         try
         {
             var manifest = manifestService.DecryptChunkManifest(preamble, manifestKey);
-            Assert.That(manifest, Is.Not.Null, "The manifest under test could not be decrypted.");
-            return manifest!;
+            Assert.NotNull(manifest);
+            return manifest;
         }
         finally
         {
@@ -297,14 +284,13 @@ public sealed class CrossPlatformManifestTests
         try
         {
             var manifest = manifestService.DecryptChunkManifest(preamble, manifestKey);
-            Assert.That(manifest, Is.Not.Null, "The manifest under test could not be decrypted.");
+            Assert.NotNull(manifest);
 
-            var original = manifest!;
-            var renamedFiles = original
+            var renamedFiles = manifest
                 .Files.Select(f => f with { OriginalPath = rewritePath(f.OriginalPath) })
                 .ToList();
 
-            var rewritten = original with { Files = renamedFiles };
+            var rewritten = manifest with { Files = renamedFiles };
 
             var errors = await manifestService.SaveChunkManifestAsync(
                 rewritten,
@@ -314,7 +300,7 @@ public sealed class CrossPlatformManifestTests
                 CancellationToken.None
             );
 
-            Assert.That(errors, Is.Empty, "Saving the rewritten manifest failed.");
+            Assert.Empty(errors);
         }
         finally
         {
@@ -338,8 +324,8 @@ public sealed class CrossPlatformManifestTests
             CancellationToken.None
         );
 
-        Assert.That(preamble, Is.Not.Null, "The backup under test has no readable manifest preamble.");
-        return preamble!;
+        Assert.NotNull(preamble);
+        return preamble;
     }
 
     /// <summary>

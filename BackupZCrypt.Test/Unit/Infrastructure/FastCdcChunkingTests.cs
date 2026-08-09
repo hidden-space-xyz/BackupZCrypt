@@ -121,126 +121,107 @@ public sealed class FastCdcChunkingTests
         return hash.GetHashAndReset();
     }
 
-    [Test]
-    public async Task EmptyInput_YieldsNoChunks()
+    [Fact]
+    internal async Task EmptyInput_YieldsNoChunks()
     {
         var chunks = await DrainAsync([]);
 
-        Assert.That(chunks, Is.Empty);
+        Assert.Empty(chunks);
     }
 
-    [Test]
-    public async Task SmallInput_YieldsSingleChunkEqualToInput()
+    [Fact]
+    internal async Task SmallInput_YieldsSingleChunkEqualToInput()
     {
         var input = RandomBytes(10 * 1024, seed: 1);
 
         var chunks = await DrainAsync(input);
 
-        Assert.That(chunks, Has.Count.EqualTo(1));
-        Assert.That(chunks[0], Is.EqualTo(input));
+        var only = Assert.Single(chunks);
+        Assert.Equal(input, only);
     }
 
-    [Test]
-    public async Task LargeInput_ReassemblesToOriginal_WithMultipleChunks()
+    [Fact]
+    internal async Task LargeInput_ReassemblesToOriginal_WithMultipleChunks()
     {
         var input = RandomBytes(10 * 1024 * 1024, seed: 2);
 
         var chunks = await DrainAsync(input);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(chunks, Has.Count.GreaterThan(1), $"Expected multiple chunks, got {chunks.Count}.");
-            Assert.That(chunks.Sum(chunk => chunk.Length), Is.EqualTo(input.Length));
-            Assert.That(
-                HashOf(chunks),
-                Is.EqualTo(SHA256.HashData(input)),
-                "The concatenated chunks are not byte-identical to the input."
-            );
-        }
-    }
-
-    [TestCase(512 * 1024)]
-    [TestCase(10 * 1024 * 1024)]
-    public async Task EveryChunk_StaysWithinTheConfiguredSizeBounds(int inputLength)
-    {
-        var chunks = await DrainAsync(RandomBytes(inputLength, seed: 3));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                chunks,
-                Has.All.Matches<byte[]>(chunk => chunk.Length <= ChunkMaxSize),
-                "A chunk exceeded the maximum size, which is what bounds memory per concurrent file."
-            );
-            Assert.That(
-                chunks.Take(chunks.Count - 1),
-                Has.All.Matches<byte[]>(chunk => chunk.Length >= ChunkMinSize),
-                "Only the final chunk may be shorter than the minimum chunk size."
-            );
-        }
-    }
-
-    [Test]
-    public async Task FixedInput_ProducesTheGoldenChunkBoundaries()
-    {
-        var chunks = await DrainAsync(BoundarySample);
-
-        Assert.That(
-            chunks.Select(chunk => chunk.Length).ToArray(),
-            Is.EqualTo(GoldenChunkLengths),
-            "Chunk boundaries moved. That is an on-disk format change: chunks stored by earlier "
-                + "versions will never be matched again, so every existing backup re-uploads in full."
+        Assert.Multiple(
+            () => Assert.True(chunks.Count > 1, $"Expected multiple chunks, got {chunks.Count}."),
+            () => Assert.Equal(input.Length, chunks.Sum(chunk => chunk.Length)),
+            () => Assert.Equal(SHA256.HashData(input), HashOf(chunks))
         );
     }
 
-    [Test]
-    public async Task FixedInputCutBelowTheTargetSize_HonoursAnOddOffsetCutPoint()
+    [Theory]
+    [InlineData(512 * 1024)]
+    [InlineData(10 * 1024 * 1024)]
+    internal async Task EveryChunk_StaysWithinTheConfiguredSizeBounds(int inputLength)
+    {
+        var chunks = await DrainAsync(RandomBytes(inputLength, seed: 3));
+
+        Assert.Multiple(
+            () => Assert.All(
+                chunks,
+                chunk => Assert.True(
+                    chunk.Length <= ChunkMaxSize,
+                    "A chunk exceeded the maximum size, which is what bounds memory per concurrent file."
+                )
+            ),
+            () => Assert.All(
+                chunks.Take(chunks.Count - 1),
+                chunk => Assert.True(
+                    chunk.Length >= ChunkMinSize,
+                    "Only the final chunk may be shorter than the minimum chunk size."
+                )
+            )
+        );
+    }
+
+    [Fact]
+    internal async Task FixedInput_ProducesTheGoldenChunkBoundaries()
+    {
+        var chunks = await DrainAsync(BoundarySample);
+
+        Assert.Equal(GoldenChunkLengths, chunks.Select(chunk => chunk.Length).ToArray());
+    }
+
+    [Fact]
+    internal async Task FixedInputCutBelowTheTargetSize_HonoursAnOddOffsetCutPoint()
     {
         var chunks = await DrainAsync(RandomBytes(ChunkTargetSize, seed: 20));
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                chunks.Select(chunk => chunk.Length).ToArray(),
-                Is.EqualTo([357111, 691465]),
-                "The strict-mask cut point moved, which is an on-disk format change."
-            );
-            Assert.That(
-                chunks[0].Length % 2,
-                Is.EqualTo(1),
-                "The first chunk no longer ends on an odd offset, so this test no longer covers the "
-                    + "arm it exists for."
-            );
-            Assert.That(
-                chunks[0],
-                Has.Length.GreaterThan(ChunkMinSize),
+        int[] expectedLengths = [357111, 691465];
+
+        Assert.Multiple(
+            () => Assert.Equal(expectedLengths, chunks.Select(chunk => chunk.Length).ToArray()),
+            () => Assert.Equal(1, chunks[0].Length % 2),
+            () => Assert.True(
+                chunks[0].Length > ChunkMinSize,
                 "The cut point fell below the window where the strict mask applies."
-            );
-            Assert.That(
-                chunks[0],
-                Has.Length.LessThan(ChunkTargetSize),
+            ),
+            () => Assert.True(
+                chunks[0].Length < ChunkTargetSize,
                 "The cut point rose above the window where the strict mask applies."
-            );
-        }
+            )
+        );
     }
 
-    [Test]
-    public async Task UniformInput_IsCutAtTheMaximumChunkSize()
+    [Fact]
+    internal async Task UniformInput_IsCutAtTheMaximumChunkSize()
     {
         const int Length = 10 * 1024 * 1024;
 
         var chunks = await DrainAsync(new byte[Length]);
 
-        Assert.That(
-            chunks.Select(chunk => chunk.Length).ToArray(),
-            Is.EqualTo([ChunkMaxSize, ChunkMaxSize, Length - (2 * ChunkMaxSize)]),
-            "Input that never finds a cut point was not cut at the maximum chunk size, so the "
-                + "chunker buffers without bound."
-        );
+        int[] expectedLengths = [ChunkMaxSize, ChunkMaxSize, Length - (2 * ChunkMaxSize)];
+
+        Assert.Equal(expectedLengths, chunks.Select(chunk => chunk.Length).ToArray());
     }
 
-    [Test]
-    public async Task ShortReads_ProduceTheSameBoundariesAsWholeBufferReads()
+    [Fact]
+    internal async Task ShortReads_ProduceTheSameBoundariesAsWholeBufferReads()
     {
         var input = RandomBytes(4 * 1024 * 1024, seed: 23);
 
@@ -249,19 +230,17 @@ public sealed class FastCdcChunkingTests
         using var drippedStream = new DripStream(input, maxBytesPerRead: 997);
         var dripped = await DrainAsync(drippedStream);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                dripped.Select(chunk => chunk.Length).ToArray(),
-                Is.EqualTo(reference.Select(chunk => chunk.Length).ToArray()),
-                "Chunk boundaries changed when the source returned partial reads."
-            );
-            Assert.That(HashOf(dripped), Is.EqualTo(HashOf(reference)));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(
+                reference.Select(chunk => chunk.Length).ToArray(),
+                dripped.Select(chunk => chunk.Length).ToArray()
+            ),
+            () => Assert.Equal(HashOf(reference), HashOf(dripped))
+        );
     }
 
-    [Test]
-    public async Task ContentInsertedInTheMiddle_LeavesLaterChunksUnchanged()
+    [Fact]
+    internal async Task ContentInsertedInTheMiddle_LeavesLaterChunksUnchanged()
     {
         const int InsertAt = 1024 * 1024;
         var insertion = RandomBytes(1024, seed: 24);
@@ -284,9 +263,8 @@ public sealed class FastCdcChunkingTests
             $"Only {shared} of {modifiedChunks.Count} chunks survived a 1 KiB insertion: the chunker "
         );
 
-        Assert.That(
-            shared,
-            Is.GreaterThanOrEqualTo(6),
+        Assert.True(
+            shared >= 6,
             sharedSummary
                 + "no longer resynchronises, so deduplication across updates has collapsed. This is "
                 + "the property content-defined chunking exists for, and every other case in this "
@@ -294,14 +272,14 @@ public sealed class FastCdcChunkingTests
         );
     }
 
-    [Test]
-    public void Chunk_CancelledToken_ThrowsOperationCanceledException()
+    [Fact]
+    internal async Task Chunk_CancelledToken_ThrowsOperationCanceledException()
     {
         var strategy = new FastCdcChunkingStrategy();
         using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
             var source = new MemoryStream(RandomBytes(64 * 1024, seed: 81));
 
@@ -312,14 +290,14 @@ public sealed class FastCdcChunkingTests
         });
     }
 
-    [Test]
-    public void Chunk_NullSource_ThrowsArgumentNullException()
+    [Fact]
+    internal async Task Chunk_NullSource_ThrowsArgumentNullException()
     {
         var strategy = new FastCdcChunkingStrategy();
 
-        _ = Assert.ThrowsAsync<ArgumentNullException>(async () =>
+        _ = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
         {
-            await foreach (var _ in strategy.ChunkAsync(null!))
+            await foreach (var _ in strategy.ChunkAsync(null!, TestContext.Current.CancellationToken))
             {
                 Assert.Fail("A null source must not yield a chunk.");
             }

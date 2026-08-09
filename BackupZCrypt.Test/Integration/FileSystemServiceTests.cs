@@ -25,8 +25,8 @@ public sealed class FileSystemServiceTests
     /// </summary>
     private const string Sha256OfEmpty = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
-    [Test]
-    public async Task ComputeFileHashAsync_MatchesKnownVectorsAndIsContentSensitive()
+    [Fact]
+    internal async Task ComputeFileHashAsync_MatchesKnownVectorsAndIsContentSensitive()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
@@ -36,22 +36,33 @@ public sealed class FileSystemServiceTests
         var empty = dir.WriteFile("empty.bin", []);
         var other = dir.WriteText("other.txt", "different content");
 
-        var hashAbc = await service.ComputeFileHashAsync(abc);
-        var hashAbcCopy = await service.ComputeFileHashAsync(abcCopy);
-        var hashEmpty = await service.ComputeFileHashAsync(empty);
-        var hashOther = await service.ComputeFileHashAsync(other);
+        var hashAbc = await service.ComputeFileHashAsync(
+            abc,
+            TestContext.Current.CancellationToken
+        );
+        var hashAbcCopy = await service.ComputeFileHashAsync(
+            abcCopy,
+            TestContext.Current.CancellationToken
+        );
+        var hashEmpty = await service.ComputeFileHashAsync(
+            empty,
+            TestContext.Current.CancellationToken
+        );
+        var hashOther = await service.ComputeFileHashAsync(
+            other,
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(hashAbc, Is.EqualTo(Sha256OfAbc), "No longer Base64-encoded SHA-256.");
-            Assert.That(hashEmpty, Is.EqualTo(Sha256OfEmpty));
-            Assert.That(hashAbcCopy, Is.EqualTo(hashAbc));
-            Assert.That(hashOther, Is.Not.EqualTo(hashAbc));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(Sha256OfAbc, hashAbc),
+            () => Assert.Equal(Sha256OfEmpty, hashEmpty),
+            () => Assert.Equal(hashAbc, hashAbcCopy),
+            () => Assert.NotEqual(hashAbc, hashOther)
+        );
     }
 
-    [Test]
-    public async Task GetFilesAsync_ReturnsEveryFileIncludingNested()
+    [Fact]
+    internal async Task GetFilesAsync_ReturnsEveryFileIncludingNested()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
@@ -60,19 +71,17 @@ public sealed class FileSystemServiceTests
         var child = dir.WriteText(Path.Combine("nested", "child.txt"), "2");
         var grandchild = dir.WriteText(Path.Combine("nested", "deep", "grandchild.txt"), "3");
 
-        var files = await service.GetFilesAsync(dir.Path);
-
-        Assert.That(
-            files,
-            Is.EquivalentTo([root, child, grandchild]),
-            "Enumeration must return the written paths verbatim. The comparison is deliberately ordinal: the "
-                + "manifest's relative paths are computed from these strings, so on the case-sensitive file "
-                + "systems CI runs on a difference in casing is a real defect rather than noise."
+        var files = await service.GetFilesAsync(
+            dir.Path,
+            cancellationToken: TestContext.Current.CancellationToken
         );
+
+        string[] expected = [root, child, grandchild];
+        Assert.Equivalent(expected, files, strict: true);
     }
 
-    [Test]
-    public async Task GetFilesAsync_WithSearchPattern_ReturnsOnlyMatchingFiles()
+    [Fact]
+    internal async Task GetFilesAsync_WithSearchPattern_ReturnsOnlyMatchingFiles()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
@@ -82,13 +91,18 @@ public sealed class FileSystemServiceTests
         _ = dir.WriteText("b.log", "2");
         _ = dir.WriteText(Path.Combine("sub", "d.log"), "4");
 
-        var files = await service.GetFilesAsync(dir.Path, "*.txt");
+        var files = await service.GetFilesAsync(
+            dir.Path,
+            "*.txt",
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(files, Is.EquivalentTo([rootText, nestedText]));
+        string[] expected = [rootText, nestedText];
+        Assert.Equivalent(expected, files, strict: true);
     }
 
-    [Test]
-    public async Task GetFilesAsync_DirectorySymbolicLink_IsNotTraversed()
+    [Fact]
+    internal async Task GetFilesAsync_DirectorySymbolicLink_IsNotTraversed()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
@@ -104,27 +118,26 @@ public sealed class FileSystemServiceTests
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Assert.Ignore("This platform refuses directory symbolic links: " + ex.Message);
+            Assert.Skip("This platform refuses directory symbolic links: " + ex.Message);
         }
 
-        var files = await service.GetFilesAsync(source);
+        var files = await service.GetFilesAsync(
+            source,
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(files, Does.Contain(included));
-            Assert.That(
-                files.Where(path => path.EndsWith("secret.txt", StringComparison.Ordinal)),
-                Is.Empty,
-                "Enumeration followed a directory symbolic link out of the source tree. The promise that "
-                    + "traversal cannot cycle or descend outside the source rests entirely on the recursion "
-                    + "predicate skipping reparse points, and nothing else asserts it: without it a junction "
-                    + "loop hangs the backup, or files outside the source are silently archived."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Contains(included, files),
+            () =>
+                Assert.DoesNotContain(
+                    files,
+                    path => path.EndsWith("secret.txt", StringComparison.Ordinal)
+                )
+        );
     }
 
-    [Test]
-    public async Task CleanDirectoryAsync_EmptiesPopulatedDirectory()
+    [Fact]
+    internal async Task CleanDirectoryAsync_EmptiesPopulatedDirectory()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
@@ -132,63 +145,49 @@ public sealed class FileSystemServiceTests
         _ = dir.WriteText("top.txt", "x");
         _ = dir.WriteText(Path.Combine("sub", "inner.txt"), "y");
 
-        await service.CleanDirectoryAsync(dir.Path);
+        await service.CleanDirectoryAsync(dir.Path, TestContext.Current.CancellationToken);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(Directory.Exists(dir.Path), Is.True);
-            Assert.That(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories), Is.Empty);
-            Assert.That(Directory.GetDirectories(dir.Path), Is.Empty);
-        }
+        Assert.Multiple(
+            () => Assert.True(Directory.Exists(dir.Path)),
+            () => Assert.Empty(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories)),
+            () => Assert.Empty(Directory.GetDirectories(dir.Path))
+        );
     }
 
-    [Test]
-    public void SystemStorage_RealTempDrive_IsReadyAndReportsFreeSpace()
+    [Fact]
+    internal void SystemStorage_RealTempDrive_IsReadyAndReportsFreeSpace()
     {
         using var dir = new TempDir();
         var service = new SystemStorageService();
 
         var root = service.GetPathRoot(dir.Path);
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(string.IsNullOrEmpty(root), Is.False, "Could not resolve the temp drive root.");
-
-            Assert.That(service.IsDriveReady(root!), Is.True, $"Temp drive '{root}' reported not ready.");
-            Assert.That(
-                service.GetAvailableFreeSpace(root!),
-                Is.GreaterThan(0),
-                $"Temp drive '{root}' reported no free space."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(string.IsNullOrEmpty(root), "Could not resolve the temp drive root."),
+            () => Assert.True(service.IsDriveReady(root!), $"Temp drive '{root}' reported not ready."),
+            () =>
+                Assert.True(
+                    service.GetAvailableFreeSpace(root!) > 0,
+                    $"Temp drive '{root}' reported no free space."
+                )
+        );
     }
 
-    [Test]
-    public void SystemStorage_UnmountedRoot_IsNotReadyAndReportsNegativeSpace()
+    [Fact]
+    internal void SystemStorage_UnmountedRoot_IsNotReadyAndReportsNegativeSpace()
     {
         var service = new SystemStorageService();
         var unmountedRoot = FindUnmountedRoot();
 
         if (unmountedRoot is null)
         {
-            Assert.Ignore("Every drive letter is assigned, so no unmounted root is available.");
+            Assert.Skip("Every drive letter is assigned, so no unmounted root is available.");
         }
         else
         {
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(
-                    service.IsDriveReady(unmountedRoot),
-                    Is.False,
-                    $"'{unmountedRoot}' reported ready."
-                );
-                Assert.That(
-                    service.GetAvailableFreeSpace(unmountedRoot),
-                    Is.EqualTo(-1),
-                    "An unreachable root must report the -1 sentinel the validator turns into a warning the "
-                        + "user can act on, instead of throwing and crashing the app on an unreachable "
-                        + "destination."
-                );
-            }
+            Assert.Multiple(
+                () => Assert.False(service.IsDriveReady(unmountedRoot), $"'{unmountedRoot}' reported ready."),
+                () => Assert.Equal(-1L, service.GetAvailableFreeSpace(unmountedRoot))
+            );
         }
     }
 

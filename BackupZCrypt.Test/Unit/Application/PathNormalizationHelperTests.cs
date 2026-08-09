@@ -16,36 +16,36 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </remarks>
 public sealed class PathNormalizationHelperTests
 {
-    [TestCase("")]
-    [TestCase("   ")]
-    public void TryNormalize_EmptyOrWhitespace_ReturnsEmptyWithoutError(string rawPath)
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    internal void TryNormalize_EmptyOrWhitespace_ReturnsEmptyWithoutError(string rawPath)
     {
         var result = PathNormalizationHelper.TryNormalize(rawPath, out var error);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result, Is.EqualTo(string.Empty));
-            Assert.That(error, Is.Null);
-        }
+        Assert.Multiple(
+            () => Assert.Equal(string.Empty, result),
+            () => Assert.Null(error)
+        );
     }
 
-    [Test]
-    public void TryNormalize_RelativePath_ResolvesAgainstTheCurrentDirectory()
+    [Fact]
+    internal void TryNormalize_RelativePath_ResolvesAgainstTheCurrentDirectory()
     {
         var result = PathNormalizationHelper.TryNormalize("some-relative-folder", out var error);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(error, Is.Null);
-            Assert.That(
-                result,
-                Is.EqualTo(Path.Combine(Environment.CurrentDirectory, "some-relative-folder"))
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Null(error),
+            () =>
+                Assert.Equal(
+                    Path.Combine(Environment.CurrentDirectory, "some-relative-folder"),
+                    result
+                )
+        );
     }
 
-    [Test]
-    public void TryNormalize_PaddedPathWithEnvironmentVariable_TrimsAndExpandsBeforeResolving()
+    [Fact]
+    internal void TryNormalize_PaddedPathWithEnvironmentVariable_TrimsAndExpandsBeforeResolving()
     {
         var variableName = "BZC_TEST_ROOT_" + Guid.NewGuid().ToString("N");
         var variableValue = Path.GetTempPath();
@@ -58,11 +58,10 @@ public sealed class PathNormalizationHelperTests
                 out var error
             );
 
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(error, Is.Null);
-                Assert.That(result, Is.EqualTo(Path.GetFullPath(variableValue)));
-            }
+            Assert.Multiple(
+                () => Assert.Null(error),
+                () => Assert.Equal(Path.GetFullPath(variableValue), result)
+            );
         }
         finally
         {
@@ -70,19 +69,18 @@ public sealed class PathNormalizationHelperTests
         }
     }
 
-    [Test]
-    public void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
+    [Fact]
+    internal void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
     {
         var invalid = OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
 
         var result = PathNormalizationHelper.TryNormalize(invalid, out var error);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result, Is.Null);
-            Assert.That(error, Is.Not.Null);
-        }
+        Assert.Multiple(
+            () => Assert.Null(result),
+            () => Assert.NotNull(error)
+        );
 
-        Assert.That(error!.Code, Is.EqualTo(MessageCode.InvalidPathFormat));
+        Assert.Equal(MessageCode.InvalidPathFormat, error!.Code);
     }
 }

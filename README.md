@@ -153,7 +153,7 @@ specific locale, and every temporary file lives in a directory the test owns and
 | `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; file system access |
 | `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |
 | `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
-| `BackupZCrypt.Test` | NUnit suite: unit, integration, architecture, and on-disk format tests |
+| `BackupZCrypt.Test` | xUnit suite: unit, integration, architecture, and on-disk format tests |
 
 ## 💡 How to Contribute
 

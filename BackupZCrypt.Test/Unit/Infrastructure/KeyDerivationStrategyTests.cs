@@ -43,42 +43,43 @@ public sealed class KeyDerivationStrategyTests
 
     /// <summary>
     /// Supplies every production key-derivation function as a test case so all of them satisfy the
-    /// same contract.
+    /// same contract. Exposed publicly because <c>[MemberData]</c> sources must be public and static,
+    /// and declared as a property so it is not mistaken for an untagged test method.
     /// </summary>
-    /// <returns>One strategy instance per supported key-derivation algorithm.</returns>
-    private static IEnumerable<IKeyDerivationAlgorithmStrategy> Kdfs()
-    {
-        return
-        [
+    /// <value>One strategy instance per supported key-derivation algorithm.</value>
+    public static TheoryData<IKeyDerivationAlgorithmStrategy> Kdfs =>
+        new()
+        {
             new Argon2IdKeyDerivationStrategy(),
             new Pbkdf2KeyDerivationStrategy(),
             new ScryptKeyDerivationStrategy(),
-        ];
-    }
+        };
 
-    [TestCaseSource(nameof(Kdfs))]
-    public void DeriveKey_DeterministicCorrectLength_AndSensitiveToSaltAndPassword(
+    [Theory]
+    [MemberData(nameof(Kdfs))]
+    internal void DeriveKey_DeterministicCorrectLength_AndSensitiveToSaltAndPassword(
         IKeyDerivationAlgorithmStrategy kdf
     )
     {
         var key = kdf.DeriveKey(Password, Salt, KeySizeBits);
 
-        Assert.That(key, Has.Length.EqualTo(KeySizeBits / 8));
+        Assert.Equal(KeySizeBits / 8, key.Length);
 
         var keyAgain = kdf.DeriveKey(Password, Salt, KeySizeBits);
-        Assert.That(keyAgain, Is.EqualTo(key));
+        Assert.Equal(key, keyAgain);
 
         var otherSalt = (byte[])Salt.Clone();
         otherSalt[0] ^= 0xFF;
         var keyOtherSalt = kdf.DeriveKey(Password, otherSalt, KeySizeBits);
-        Assert.That(keyOtherSalt, Is.Not.EqualTo(key));
+        Assert.NotEqual(key, keyOtherSalt);
 
         var keyOtherPassword = kdf.DeriveKey(Password + "!", Salt, KeySizeBits);
-        Assert.That(keyOtherPassword, Is.Not.EqualTo(key));
+        Assert.NotEqual(key, keyOtherPassword);
     }
 
-    [TestCaseSource(nameof(Kdfs))]
-    public void DeriveKey_WhenDerivationFails_ReportsACryptographicExceptionThatKeepsTheCause(
+    [Theory]
+    [MemberData(nameof(Kdfs))]
+    internal void DeriveKey_WhenDerivationFails_ReportsACryptographicExceptionThatKeepsTheCause(
         IKeyDerivationAlgorithmStrategy kdf
     )
     {
@@ -86,10 +87,6 @@ public sealed class KeyDerivationStrategyTests
             () => kdf.DeriveKey(null!, Salt, KeySizeBits)
         );
 
-        Assert.That(
-            error?.InnerException,
-            Is.Not.Null,
-            "The provider failure was swallowed, leaving nothing to diagnose the derivation with."
-        );
+        Assert.NotNull(error.InnerException);
     }
 }

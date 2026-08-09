@@ -45,30 +45,35 @@ public sealed class BackupRestoreRoundtripTests
     /// instead of silently escaping coverage.
     /// </summary>
     /// <returns>One case per encryption, compression, and key-derivation combination under test.</returns>
-    private static IEnumerable<TestCaseData> Configs()
+    public static TheoryData<EncryptionAlgorithm, CompressionMode, KeyDerivationAlgorithm> Configs()
     {
+        TheoryData<EncryptionAlgorithm, CompressionMode, KeyDerivationAlgorithm> configs = new();
+
         foreach (var encryption in Enum.GetValues<EncryptionAlgorithm>())
         {
             foreach (var compression in Enum.GetValues<CompressionMode>())
             {
-                yield return new TestCaseData(encryption, compression, KeyDerivationAlgorithm.PBKDF2);
+                configs.Add(encryption, compression, KeyDerivationAlgorithm.PBKDF2);
             }
         }
 
-        yield return new TestCaseData(
+        configs.Add(
             EncryptionAlgorithm.Aes,
             CompressionMode.Zstd,
             KeyDerivationAlgorithm.Argon2id
         );
-        yield return new TestCaseData(
+        configs.Add(
             EncryptionAlgorithm.ChaCha20,
             CompressionMode.None,
             KeyDerivationAlgorithm.Scrypt
         );
+
+        return configs;
     }
 
-    [TestCaseSource(nameof(Configs))]
-    public async Task CreateThenRestore_ReproducesEverySourceFile(
+    [Theory]
+    [MemberData(nameof(Configs))]
+    internal async Task CreateThenRestore_ReproducesEverySourceFile(
         EncryptionAlgorithm encryption,
         CompressionMode compression,
         KeyDerivationAlgorithm keyDerivation
@@ -94,53 +99,56 @@ public sealed class BackupRestoreRoundtripTests
             createProgress
         );
 
-        var createResult = await createHandler.HandleAsync(createCommand);
+        var createResult = await createHandler.HandleAsync(
+            createCommand,
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(createResult.IsSuccess, Is.True, DescribeErrors("Create failed", createResult.Errors));
-            Assert.That(
-                createResult.Value.Completion!.IsSuccess,
-                Is.True,
-                DescribeErrors("Create inner result failed", createResult.Value.Completion.Errors)
-            );
-            Assert.That(createResult.Value.Completion.TotalFiles, Is.EqualTo(expected.Count));
-            Assert.That(createResult.Value.Completion.ProcessedFiles, Is.EqualTo(createResult.Value.Completion.TotalFiles));
-        }
+        Assert.Multiple(
+            () => Assert.True(createResult.IsSuccess, DescribeErrors("Create failed", createResult.Errors)),
+            () =>
+                Assert.True(
+                    createResult.Value.Completion!.IsSuccess,
+                    DescribeErrors("Create inner result failed", createResult.Value.Completion.Errors)
+                ),
+            () => Assert.Equal(expected.Count, createResult.Value.Completion!.TotalFiles),
+            () =>
+                Assert.Equal(
+                    createResult.Value.Completion!.TotalFiles,
+                    createResult.Value.Completion.ProcessedFiles
+                )
+        );
 
         var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(File.Exists(manifestPath), Is.True, $"Manifest not written at '{manifestPath}'.");
-            Assert.That(createProgress.Reports, Is.Not.Empty);
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.EqualTo(ExpectedChunkFiles),
-                "Content-addressed storage did not collapse the byte-identical files into one shared chunk."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(File.Exists(manifestPath), $"Manifest not written at '{manifestPath}'."),
+            () => Assert.NotEmpty(createProgress.Reports),
+            () => Assert.Equal(ExpectedChunkFiles, ChunkFiles(destination.Path).Length)
+        );
 
         var restoreProgress = new RecordingProgress<BackupStatus>();
         var restoreCommand = NewRestoreCommand(destination.Path, restored.Path, restoreProgress);
 
-        var restoreResult = await restoreHandler.HandleAsync(restoreCommand);
+        var restoreResult = await restoreHandler.HandleAsync(
+            restoreCommand,
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(restoreResult.IsSuccess, Is.True, DescribeErrors("Restore failed", restoreResult.Errors));
-            Assert.That(
-                restoreResult.Value.Completion!.IsSuccess,
-                Is.True,
-                DescribeErrors("Restore inner result failed", restoreResult.Value.Completion.Errors)
-            );
-            Assert.That(restoreResult.Value.Completion.ProcessedFiles, Is.EqualTo(expected.Count));
-        }
+        Assert.Multiple(
+            () => Assert.True(restoreResult.IsSuccess, DescribeErrors("Restore failed", restoreResult.Errors)),
+            () =>
+                Assert.True(
+                    restoreResult.Value.Completion!.IsSuccess,
+                    DescribeErrors("Restore inner result failed", restoreResult.Value.Completion.Errors)
+                ),
+            () => Assert.Equal(expected.Count, restoreResult.Value.Completion!.ProcessedFiles)
+        );
 
         AssertTreesByteIdentical(expected, restored.Path);
     }
 
-    [Test]
-    public async Task CreateThenRestore_FileLongerThanTheMaximumChunk_ReassemblesItsChunksInOrder()
+    [Fact]
+    internal async Task CreateThenRestore_FileLongerThanTheMaximumChunk_ReassemblesItsChunksInOrder()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -161,40 +169,41 @@ public sealed class BackupRestoreRoundtripTests
                 CompressionMode.None,
                 KeyDerivationAlgorithm.PBKDF2,
                 new RecordingProgress<BackupStatus>()
-            )
+            ),
+            TestContext.Current.CancellationToken
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(createResult.IsSuccess, Is.True, DescribeErrors("Create failed", createResult.Errors));
-            Assert.That(createResult.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.GreaterThan(1),
-                "The payload exceeds the maximum chunk length, so it must be stored as several chunks."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(createResult.IsSuccess, DescribeErrors("Create failed", createResult.Errors)),
+            () => Assert.True(createResult.Value.Completion!.IsSuccess),
+            () =>
+                Assert.True(
+                    ChunkFiles(destination.Path).Length > 1,
+                    "The payload exceeds the maximum chunk length, so it must be stored as several chunks."
+                )
+        );
 
         var restoreResult = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path, new RecordingProgress<BackupStatus>())
+            NewRestoreCommand(destination.Path, restored.Path, new RecordingProgress<BackupStatus>()),
+            TestContext.Current.CancellationToken
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(restoreResult.IsSuccess, Is.True, DescribeErrors("Restore failed", restoreResult.Errors));
-            Assert.That(restoreResult.Value.Completion!.IsSuccess, Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(restoreResult.IsSuccess, DescribeErrors("Restore failed", restoreResult.Errors)),
+            () => Assert.True(restoreResult.Value.Completion!.IsSuccess)
+        );
 
-        Assert.That(
-            await File.ReadAllBytesAsync(Path.Combine(restored.Path, "split.bin")),
-            Is.EqualTo(content),
-            "A reassembly that concatenated the chunks in the wrong order would still produce a file of the "
-                + "right length, so this byte comparison is what pins the ordering."
+        Assert.Equal(
+            content,
+            await File.ReadAllBytesAsync(
+                Path.Combine(restored.Path, "split.bin"),
+                TestContext.Current.CancellationToken
+            )
         );
     }
 
-    [Test]
-    public async Task Restore_WithWrongPassword_FailsAndDoesNotReproduceOriginals()
+    [Fact]
+    internal async Task Restore_WithWrongPassword_FailsAndDoesNotReproduceOriginals()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -214,9 +223,10 @@ public sealed class BackupRestoreRoundtripTests
                 CompressionMode.None,
                 KeyDerivationAlgorithm.PBKDF2,
                 new RecordingProgress<BackupStatus>()
-            )
+            ),
+            TestContext.Current.CancellationToken
         );
-        Assert.That(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess, Is.True);
+        Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess);
 
         var wrongPasswordCommand = new RestoreBackupCommand(
             destination.Path,
@@ -228,30 +238,32 @@ public sealed class BackupRestoreRoundtripTests
             Progress = new RecordingProgress<BackupStatus>(),
         };
 
-        var restoreResult = await restoreHandler.HandleAsync(wrongPasswordCommand);
+        var restoreResult = await restoreHandler.HandleAsync(
+            wrongPasswordCommand,
+            TestContext.Current.CancellationToken
+        );
 
         var failed = (!restoreResult.IsSuccess) || (!restoreResult.Value.Completion!.IsSuccess);
-        Assert.That(failed, Is.True, "Restore with a wrong password unexpectedly succeeded.");
+        Assert.True(failed, "Restore with a wrong password unexpectedly succeeded.");
 
         var codes = CollectCodes(restoreResult);
-        Assert.That(
-            codes,
-            Does.Contain(MessageCode.InvalidPassword),
-            "Expected InvalidPassword, got: " + string.Join(", ", codes)
-        );
+        Assert.Contains(MessageCode.InvalidPassword, codes);
 
         foreach (var (relativePath, content) in expected)
         {
             var restoredFile = Path.Combine(restored.Path, relativePath);
             if (File.Exists(restoredFile))
             {
-                Assert.That(await File.ReadAllBytesAsync(restoredFile), Is.Not.EqualTo(content));
+                Assert.NotEqual(
+                    content,
+                    await File.ReadAllBytesAsync(restoredFile, TestContext.Current.CancellationToken)
+                );
             }
         }
     }
 
-    [Test]
-    public async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
+    [Fact]
+    internal async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
     {
         await using var provider = TestHost.CreateProvider();
         var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
@@ -262,17 +274,18 @@ public sealed class BackupRestoreRoundtripTests
         _ = backup.WriteText("stray.txt", "not a manifest");
 
         var result = await restoreHandler.HandleAsync(
-            NewRestoreCommand(backup.Path, restored.Path, new RecordingProgress<BackupStatus>())
+            NewRestoreCommand(backup.Path, restored.Path, new RecordingProgress<BackupStatus>()),
+            TestContext.Current.CancellationToken
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False, "Restore without a manifest unexpectedly succeeded.");
-            Assert.That(
-                result.Errors,
-                Has.Some.Matches<LocalizableMessage>(e => e.Code is MessageCode.ManifestRequiredForDecryption)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "Restore without a manifest unexpectedly succeeded."),
+            () =>
+                Assert.Contains(
+                    result.Errors,
+                    e => e.Code is MessageCode.ManifestRequiredForDecryption
+                )
+        );
     }
 
     /// <summary>
@@ -398,11 +411,10 @@ public sealed class BackupRestoreRoundtripTests
         foreach (var (relativePath, content) in expected)
         {
             var restoredFile = Path.Combine(restoredRoot, relativePath);
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(File.Exists(restoredFile), Is.True, $"Missing restored file '{relativePath}'.");
-                Assert.That(File.ReadAllBytes(restoredFile), Is.EqualTo(content));
-            }
+            Assert.Multiple(
+                () => Assert.True(File.Exists(restoredFile), $"Missing restored file '{relativePath}'."),
+                () => Assert.Equal(content, File.ReadAllBytes(restoredFile))
+            );
         }
 
         var restoredFiles = Directory
@@ -410,7 +422,7 @@ public sealed class BackupRestoreRoundtripTests
             .Select(f => Path.GetRelativePath(restoredRoot, f))
             .ToHashSet(StringComparer.Ordinal);
 
-        Assert.That(restoredFiles, Has.Count.EqualTo(expected.Count));
+        Assert.Equal(expected.Count, restoredFiles.Count);
     }
 
     /// <summary>

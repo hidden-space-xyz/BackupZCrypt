@@ -206,8 +206,8 @@ public sealed class BackupOperationRunnerTests
             .Returns(SuccessResult());
     }
 
-    [Test]
-    public async Task RunAsync_ValidationErrors_FailsAndNeverStartsTheBackup()
+    [Fact]
+    internal async Task RunAsync_ValidationErrors_FailsAndNeverStartsTheBackup()
     {
         _ = this.validator
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
@@ -217,11 +217,14 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(Codes(result.Errors), Is.EqualTo([MessageCode.PasswordTooShort]));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.PasswordTooShort],
+                    Codes(result.Errors)
+                )
+        );
 
         await this.validator.DidNotReceive()
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>());
@@ -239,9 +242,10 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task RunAsync_WarningsRaised_RunsOnlyWhenTheUserAgreedToProceed(
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    internal async Task RunAsync_WarningsRaised_RunsOnlyWhenTheUserAgreedToProceed(
         bool proceedOnWarnings
     )
     {
@@ -259,24 +263,28 @@ public sealed class BackupOperationRunnerTests
 
         var result = await this.CreateSut().RunAsync(request, this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.NeedsWarningConfirmation, Is.EqualTo(!proceedOnWarnings));
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.Equal(!proceedOnWarnings, result.Value.NeedsWarningConfirmation)
+        );
 
-            if (proceedOnWarnings)
-            {
-                Assert.That(result.Value.Completion!.IsSuccess, Is.True);
-                Assert.That(result.Value.PendingWarnings, Is.Empty);
-            }
-            else
-            {
-                Assert.That(result.Value.Completion, Is.Null);
-                Assert.That(
-                    Codes(result.Value.PendingWarnings),
-                    Is.EqualTo([MessageCode.DestinationExistingFilesFormat])
-                );
-            }
+        if (proceedOnWarnings)
+        {
+            Assert.Multiple(
+                () => Assert.True(result.Value.Completion!.IsSuccess),
+                () => Assert.Empty(result.Value.PendingWarnings)
+            );
+        }
+        else
+        {
+            Assert.Multiple(
+                () => Assert.Null(result.Value.Completion),
+                () =>
+                    Assert.Equal<MessageCode>(
+                        [MessageCode.DestinationExistingFilesFormat],
+                        Codes(result.Value.PendingWarnings)
+                    )
+            );
         }
 
         var expectedCalls = proceedOnWarnings ? 1 : 0;
@@ -288,11 +296,12 @@ public sealed class BackupOperationRunnerTests
             .CleanDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
     }
 
-    [TestCase(BackupOperation.Create, true, true)]
-    [TestCase(BackupOperation.Create, false, false)]
-    [TestCase(BackupOperation.Update, true, false)]
-    [TestCase(BackupOperation.Restore, true, false)]
-    public async Task RunAsync_DestinationPreparation_CleansOnlyForCreateOverAnExistingDirectory(
+    [Theory]
+    [InlineData(BackupOperation.Create, true, true)]
+    [InlineData(BackupOperation.Create, false, false)]
+    [InlineData(BackupOperation.Update, true, false)]
+    [InlineData(BackupOperation.Restore, true, false)]
+    internal async Task RunAsync_DestinationPreparation_CleansOnlyForCreateOverAnExistingDirectory(
         BackupOperation operation,
         bool destinationExists,
         bool expectClean
@@ -311,10 +320,11 @@ public sealed class BackupOperationRunnerTests
             .CreateDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
     }
 
-    [TestCase(BackupOperation.Create)]
-    [TestCase(BackupOperation.Update)]
-    [TestCase(BackupOperation.Restore)]
-    public async Task RunAsync_KnownOperation_ForwardsNormalizedPathsAndTokenToItsOwnMethod(
+    [Theory]
+    [InlineData(BackupOperation.Create)]
+    [InlineData(BackupOperation.Update)]
+    [InlineData(BackupOperation.Restore)]
+    internal async Task RunAsync_KnownOperation_ForwardsNormalizedPathsAndTokenToItsOwnMethod(
         BackupOperation operation
     )
     {
@@ -332,7 +342,7 @@ public sealed class BackupOperationRunnerTests
 
         var result = await this.CreateSut().RunAsync(request, this.progress, cancellation.Token);
 
-        Assert.That(result.Value.Completion!.IsSuccess, Is.True);
+        Assert.True(result.Value.Completion!.IsSuccess);
 
         await this.chunkedBackupService.Received(operation is BackupOperation.Create ? 1 : 0)
             .CreateAsync(SourceDir, DestinationDir, request, this.progress, cancellation.Token);
@@ -349,8 +359,8 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [Test]
-    public async Task RunAsync_NoProgressSink_ForwardsTheSharedNullSinkToTheEngine()
+    [Fact]
+    internal async Task RunAsync_NoProgressSink_ForwardsTheSharedNullSinkToTheEngine()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -370,9 +380,10 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [TestCase(true, MessageCode.SourceMustBeDirectory)]
-    [TestCase(false, MessageCode.SourcePathNotExist)]
-    public async Task RunAsync_SourceIsAFileOrGone_FailsWithoutPreparingTheDestination(
+    [Theory]
+    [InlineData(true, MessageCode.SourceMustBeDirectory)]
+    [InlineData(false, MessageCode.SourcePathNotExist)]
+    internal async Task RunAsync_SourceIsAFileOrGone_FailsWithoutPreparingTheDestination(
         bool sourceIsFile,
         MessageCode expectedCode
     )
@@ -385,11 +396,10 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(Codes(result.Errors), Is.EqualTo([expectedCode]));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Equal<MessageCode>([expectedCode], Codes(result.Errors))
+        );
 
         await this.fileOperations.DidNotReceive()
             .CleanDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -397,8 +407,8 @@ public sealed class BackupOperationRunnerTests
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task RunAsync_UpdateWithMissingDestination_FailsWithoutCreatingADecoyDirectory()
+    [Fact]
+    internal async Task RunAsync_UpdateWithMissingDestination_FailsWithoutCreatingADecoyDirectory()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -408,14 +418,14 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunAsync(Request(BackupOperation.Update), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.BackupDestinationMustExist])
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.BackupDestinationMustExist],
+                    Codes(result.Errors)
+                )
+        );
 
         await this.fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -429,8 +439,8 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [Test]
-    public async Task RunAsync_BackupServiceThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
+    [Fact]
+    internal async Task RunAsync_BackupServiceThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -447,19 +457,19 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
-            );
-            Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "boom" }));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.UnexpectedErrorFormat],
+                    Codes(result.Errors)
+                ),
+            () => Assert.Equal<object>(["boom"], result.Errors[0].Args)
+        );
     }
 
-    [Test]
-    public async Task RunAsync_UnrecognizedOperation_FailsLoudlyInsteadOfSilentlyDoingNothing()
+    [Fact]
+    internal async Task RunAsync_UnrecognizedOperation_FailsLoudlyInsteadOfSilentlyDoingNothing()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -469,14 +479,14 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunAsync(Request((BackupOperation)99), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.UnexpectedErrorFormat],
+                    Codes(result.Errors)
+                )
+        );
 
         await this.chunkedBackupService.DidNotReceive()
             .CreateAsync(
@@ -504,8 +514,8 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [Test]
-    public void RunAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
+    [Fact]
+    internal async Task RunAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -520,14 +530,14 @@ public sealed class BackupOperationRunnerTests
             )
             .ThrowsAsync(new OperationCanceledException());
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut()
                 .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None)
         );
     }
 
-    [Test]
-    public void RunVerifyAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
+    [Fact]
+    internal async Task RunVerifyAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -539,14 +549,14 @@ public sealed class BackupOperationRunnerTests
             )
             .ThrowsAsync(new OperationCanceledException());
 
-        _ = Assert.ThrowsAsync<OperationCanceledException>(
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut()
                 .RunVerifyAsync(Request(BackupOperation.Verify), this.progress, CancellationToken.None)
         );
     }
 
-    [Test]
-    public async Task RunVerifyAsync_ExistingArchive_SkipsValidationAndNeverWritesToADestination()
+    [Fact]
+    internal async Task RunVerifyAsync_ExistingArchive_SkipsValidationAndNeverWritesToADestination()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -563,7 +573,7 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunVerifyAsync(request, this.progress, CancellationToken.None);
 
-        Assert.That(result.Value.Completion!.IsSuccess, Is.True);
+        Assert.True(result.Value.Completion!.IsSuccess);
 
         await this.chunkedBackupService.Received(1)
             .VerifyAsync(SourceDir, request, this.progress, Arg.Any<CancellationToken>());
@@ -577,8 +587,8 @@ public sealed class BackupOperationRunnerTests
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task RunVerifyAsync_WithoutPassword_ReportsPasswordRequiredBeforeAnyProbing()
+    [Fact]
+    internal async Task RunVerifyAsync_WithoutPassword_ReportsPasswordRequiredBeforeAnyProbing()
     {
         var request = Request(
             BackupOperation.Verify,
@@ -589,11 +599,14 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunVerifyAsync(request, this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(Codes(result.Errors), Is.EqualTo([MessageCode.PasswordRequired]));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.PasswordRequired],
+                    Codes(result.Errors)
+                )
+        );
 
         _ = this.fileOperations.DidNotReceive().DirectoryExists(Arg.Any<string>());
         await this.chunkedBackupService.DidNotReceive()
@@ -605,8 +618,8 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [Test]
-    public async Task RunVerifyAsync_WithAnUnnormalizablePath_ReportsInvalidPathBeforeProbing()
+    [Fact]
+    internal async Task RunVerifyAsync_WithAnUnnormalizablePath_ReportsInvalidPathBeforeProbing()
     {
         var request = Request(
             BackupOperation.Verify,
@@ -617,16 +630,14 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunVerifyAsync(request, this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.InvalidPathFormat]),
-                "verify skips the request validator entirely, so this check is the only thing standing between "
-                    + "an unresolvable path and a raw exception from the file-system probe below it"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.InvalidPathFormat],
+                    Codes(result.Errors)
+                )
+        );
 
         _ = this.fileOperations.DidNotReceive().DirectoryExists(Arg.Any<string>());
         await this.chunkedBackupService.DidNotReceive()
@@ -638,9 +649,10 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [TestCase(true, MessageCode.SourceMustBeDirectory)]
-    [TestCase(false, MessageCode.SourcePathNotExist)]
-    public async Task RunVerifyAsync_SourceIsAFileOrGone_FailsWithoutReadingTheArchive(
+    [Theory]
+    [InlineData(true, MessageCode.SourceMustBeDirectory)]
+    [InlineData(false, MessageCode.SourcePathNotExist)]
+    internal async Task RunVerifyAsync_SourceIsAFileOrGone_FailsWithoutReadingTheArchive(
         bool sourceIsFile,
         MessageCode expectedCode
     )
@@ -651,16 +663,10 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunVerifyAsync(Request(BackupOperation.Verify), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([expectedCode]),
-                "a backup is a directory of chunks, so pointing verify at a single file is a different user "
-                    + "mistake from pointing it at nothing, and telling the two apart is the whole message"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Equal<MessageCode>([expectedCode], Codes(result.Errors))
+        );
 
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
@@ -671,8 +677,8 @@ public sealed class BackupOperationRunnerTests
             );
     }
 
-    [Test]
-    public async Task RunVerifyAsync_EngineThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
+    [Fact]
+    internal async Task RunVerifyAsync_EngineThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -687,19 +693,19 @@ public sealed class BackupOperationRunnerTests
         var result = await this.CreateSut()
             .RunVerifyAsync(Request(BackupOperation.Verify), this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.UnexpectedErrorFormat])
-            );
-            Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "verify boom" }));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.UnexpectedErrorFormat],
+                    Codes(result.Errors)
+                ),
+            () => Assert.Equal<object>(["verify boom"], result.Errors[0].Args)
+        );
     }
 
-    [Test]
-    public async Task RunAsync_UnnormalizablePaths_FailOnTheRawPathInsteadOfThrowing()
+    [Fact]
+    internal async Task RunAsync_UnnormalizablePaths_FailOnTheRawPathInsteadOfThrowing()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
@@ -714,17 +720,14 @@ public sealed class BackupOperationRunnerTests
 
         var result = await this.CreateSut().RunAsync(request, this.progress, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(
-                Codes(result.Errors),
-                Is.EqualTo([MessageCode.SourcePathNotExist]),
-                "normalization failing must not swap the path for something else: the raw value is probed, "
-                    + "found missing, and reported, because silently substituting a resolvable path would point "
-                    + "a destructive create at a directory the user never named"
-            );
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.SourcePathNotExist],
+                    Codes(result.Errors)
+                )
+        );
 
         _ = this.fileOperations.Received(1).DirectoryExists(request.SourcePath);
         await this.fileOperations.DidNotReceive()

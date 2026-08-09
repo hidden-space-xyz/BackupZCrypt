@@ -26,8 +26,8 @@ public sealed class GeneratePasswordQueryHandlerTests
         return new(this.passwordService);
     }
 
-    [Test]
-    public void Handle_Query_DelegatesLengthAndOptionsAndReturnsTheGeneratedPassword()
+    [Fact]
+    internal void Handle_Query_DelegatesLengthAndOptionsAndReturnsTheGeneratedPassword()
     {
         var options =
             PasswordGenerationOptions.IncludeUppercase | PasswordGenerationOptions.IncludeNumbers;
@@ -35,6 +35,6 @@ public sealed class GeneratePasswordQueryHandlerTests
 
         var result = this.CreateSut().Handle(new GeneratePasswordQuery(50, options));
 
-        Assert.That(result, Is.EqualTo("generated-password"));
+        Assert.Equal("generated-password", result);
     }
 }

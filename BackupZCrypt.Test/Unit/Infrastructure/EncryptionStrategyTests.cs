@@ -57,6 +57,16 @@ public sealed class EncryptionStrategyTests
     ];
 
     /// <summary>
+    /// Gets every production AEAD cipher as a one-parameter theory case, so all of them satisfy the
+    /// same contract.
+    /// </summary>
+    /// <remarks>
+    /// A member data source has to be public and static for xUnit to reach it; it only wraps
+    /// <see cref="RealCiphers"/>, which stays private for the one test that walks the ciphers itself.
+    /// </remarks>
+    public static TheoryData<IEncryptionAlgorithmStrategy> RealCipherCases => new(RealCiphers());
+
+    /// <summary>
     /// Supplies every production AEAD cipher as a test case so all of them satisfy the same contract.
     /// </summary>
     /// <returns>One strategy instance per supported encryption algorithm.</returns>
@@ -85,8 +95,9 @@ public sealed class EncryptionStrategyTests
         return data;
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Roundtrip_RecoversPlaintext_AcrossSizes(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Roundtrip_RecoversPlaintext_AcrossSizes(IEncryptionAlgorithmStrategy cipher)
     {
         int[] sizes = [0, 1, 1024, 64 * 1024];
 
@@ -97,25 +108,27 @@ public sealed class EncryptionStrategyTests
             var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
             var decrypted = cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData);
 
-            Assert.That(decrypted, Is.EqualTo(plaintext));
+            Assert.Equal(plaintext, decrypted);
         }
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Ciphertext_AppendsTag_AndDiffersFromPlaintext(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Ciphertext_AppendsTag_AndDiffersFromPlaintext(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(1024, seed: 7);
 
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
-        Assert.That(ciphertext, Has.Length.EqualTo(plaintext.Length + EncryptionConstants.TagSize));
+        Assert.Equal(plaintext.Length + EncryptionConstants.TagSize, ciphertext.Length);
 
         var ciphertextBody = ciphertext[..plaintext.Length];
-        Assert.That(ciphertextBody, Is.Not.EqualTo(plaintext));
+        Assert.NotEqual(plaintext, ciphertextBody);
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_WithWrongKey_Throws(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_WithWrongKey_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 11);
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
@@ -123,13 +136,14 @@ public sealed class EncryptionStrategyTests
         var wrongKey = (byte[])Key.Clone();
         wrongKey[0] ^= 0xFF;
 
-        _ = Assert.Catch<CryptographicException>(
+        _ = Assert.ThrowsAny<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, wrongKey, Nonce, AssociatedData)
         );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_WithWrongNonce_Throws(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_WithWrongNonce_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 12);
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
@@ -137,13 +151,14 @@ public sealed class EncryptionStrategyTests
         var wrongNonce = (byte[])Nonce.Clone();
         wrongNonce[0] ^= 0xFF;
 
-        _ = Assert.Catch<CryptographicException>(
+        _ = Assert.ThrowsAny<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, wrongNonce, AssociatedData)
         );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_WithWrongAssociatedData_Throws(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_WithWrongAssociatedData_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 13);
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
@@ -151,26 +166,28 @@ public sealed class EncryptionStrategyTests
         var wrongAad = (byte[])AssociatedData.Clone();
         wrongAad[0] ^= 0xFF;
 
-        _ = Assert.Catch<CryptographicException>(
+        _ = Assert.ThrowsAny<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, wrongAad)
         );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_WithTamperedCiphertext_Throws(IEncryptionAlgorithmStrategy cipher)
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_WithTamperedCiphertext_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 14);
         var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
         ciphertext[0] ^= 0x01;
 
-        _ = Assert.Catch<CryptographicException>(
+        _ = Assert.ThrowsAny<CryptographicException>(
             () => cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData)
         );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Encrypt_WithDifferentNonce_ProducesDifferentCiphertext(
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Encrypt_WithDifferentNonce_ProducesDifferentCiphertext(
         IEncryptionAlgorithmStrategy cipher
     )
     {
@@ -182,43 +199,32 @@ public sealed class EncryptionStrategyTests
         otherNonce[0] ^= 0xFF;
         var second = cipher.EncryptChunk(plaintext, Key, otherNonce, AssociatedData);
 
-        Assert.That(second, Is.Not.EqualTo(first));
+        Assert.NotEqual(first, second);
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_CiphertextShorterThanTag_ThrowsAtTheLengthBoundary(
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_CiphertextShorterThanTag_ThrowsAtTheLengthBoundary(
         IEncryptionAlgorithmStrategy cipher
     )
     {
         var tagOnly = cipher.EncryptChunk([], Key, Nonce, AssociatedData);
 
-        using (Assert.EnterMultipleScope())
-        {
-            foreach (var length in UndersizedCiphertextLengths)
-            {
-                Assert.That(
-                    () => cipher.DecryptChunk(new byte[length], Key, Nonce, AssociatedData),
-                    Throws.InstanceOf<CryptographicException>(),
-                    $"A {length}-byte ciphertext cannot hold a tag and must be rejected."
-                );
-            }
-
-            Assert.That(
-                tagOnly,
-                Has.Length.EqualTo(EncryptionConstants.TagSize),
-                "An empty chunk must encrypt to exactly a bare authentication tag."
-            );
-            Assert.That(
-                cipher.DecryptChunk(tagOnly, Key, Nonce, AssociatedData),
-                Is.Empty,
-                "A bare tag sits one byte above the length guard and must still round-trip to an "
-                    + "empty chunk."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.All(
+                UndersizedCiphertextLengths,
+                length => Assert.ThrowsAny<CryptographicException>(
+                    () => cipher.DecryptChunk(new byte[length], Key, Nonce, AssociatedData)
+                )
+            ),
+            () => Assert.Equal(EncryptionConstants.TagSize, tagOnly.Length),
+            () => Assert.Empty(cipher.DecryptChunk(tagOnly, Key, Nonce, AssociatedData))
+        );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Decrypt_TamperedTagOrTruncatedBody_ThrowsForEveryMutation(
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Decrypt_TamperedTagOrTruncatedBody_ThrowsForEveryMutation(
         IEncryptionAlgorithmStrategy cipher
     )
     {
@@ -236,75 +242,55 @@ public sealed class EncryptionStrategyTests
         ciphertext.AsSpan(0, bodyLength - 1).CopyTo(truncatedBody);
         ciphertext.AsSpan(bodyLength).CopyTo(truncatedBody.AsSpan(bodyLength - 1));
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                () => cipher.DecryptChunk(lastTagByteFlipped, Key, Nonce, AssociatedData),
-                Throws.InstanceOf<CryptographicException>(),
-                "A flipped final tag byte was accepted. This case exercises the tag comparison "
-                    + "itself, rather than the decrypt-then-verify path the body-tampering test "
-                    + "covers."
-            );
-            Assert.That(
-                () => cipher.DecryptChunk(firstTagByteFlipped, Key, Nonce, AssociatedData),
-                Throws.InstanceOf<CryptographicException>(),
-                "A flipped first tag byte was accepted."
-            );
-            Assert.That(
-                () => cipher.DecryptChunk(truncatedBody, Key, Nonce, AssociatedData),
-                Throws.InstanceOf<CryptographicException>(),
-                "A ciphertext body missing one byte was accepted. It is long enough to clear every "
-                    + "length guard, so only authentication can reject it."
-            );
-        }
-    }
-
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Encrypt_EmptyNonce_ThrowsArgumentException(IEncryptionAlgorithmStrategy cipher)
-    {
-        Assert.That(
-            () => cipher.EncryptChunk(RandomBytes(64, seed: 51), Key, [], AssociatedData),
-            Throws.InstanceOf<ArgumentException>(),
-            "A degenerate nonce is catastrophic for AEAD and was accepted instead of throwing. Only "
-                + "the empty nonce is asserted across all five ciphers: the platform primitives "
-                + "reject an 11-byte nonce while BouncyCastle's GCM accepts any IV length, so a "
-                + "shared undersized-nonce case would codify that divergence as the contract."
+        Assert.Multiple(
+            () => Assert.ThrowsAny<CryptographicException>(
+                () => cipher.DecryptChunk(lastTagByteFlipped, Key, Nonce, AssociatedData)
+            ),
+            () => Assert.ThrowsAny<CryptographicException>(
+                () => cipher.DecryptChunk(firstTagByteFlipped, Key, Nonce, AssociatedData)
+            ),
+            () => Assert.ThrowsAny<CryptographicException>(
+                () => cipher.DecryptChunk(truncatedBody, Key, Nonce, AssociatedData)
+            )
         );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void EncryptAndDecrypt_UndersizedKey_ThrowInsteadOfPaddingTheKey(
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Encrypt_EmptyNonce_ThrowsArgumentException(IEncryptionAlgorithmStrategy cipher)
+    {
+        _ = Assert.ThrowsAny<ArgumentException>(
+            () => cipher.EncryptChunk(RandomBytes(64, seed: 51), Key, [], AssociatedData)
+        );
+    }
+
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void EncryptAndDecrypt_UndersizedKey_ThrowInsteadOfPaddingTheKey(
         IEncryptionAlgorithmStrategy cipher
     )
     {
         var undersizedKey = new byte[(EncryptionConstants.KeySize / 8) - 1];
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.ThrowsAny<Exception>(
                 () =>
                     cipher.EncryptChunk(
                         RandomBytes(64, seed: 61),
                         undersizedKey,
                         Nonce,
                         AssociatedData
-                    ),
-                Throws.InstanceOf<Exception>(),
-                "Encryption accepted a 31-byte key, which is invalid for all five ciphers. A silent "
-                    + "truncation or zero-pad would quietly degrade the 256-bit key promise; the "
-                    + "concrete exception type differs per implementation, so only the refusal "
-                    + "itself is asserted."
-            );
-            Assert.That(
-                () => cipher.DecryptChunk(new byte[80], undersizedKey, Nonce, AssociatedData),
-                Throws.InstanceOf<Exception>(),
-                "Decryption accepted a 31-byte key."
-            );
-        }
+                    )
+            ),
+            () => Assert.ThrowsAny<Exception>(
+                () => cipher.DecryptChunk(new byte[80], undersizedKey, Nonce, AssociatedData)
+            )
+        );
     }
 
-    [TestCaseSource(nameof(RealCiphers))]
-    public void Encrypt_SameKeyNonceAndPlaintext_ProducesIdenticalCiphertext(
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
+    internal void Encrypt_SameKeyNonceAndPlaintext_ProducesIdenticalCiphertext(
         IEncryptionAlgorithmStrategy cipher
     )
     {
@@ -313,19 +299,11 @@ public sealed class EncryptionStrategyTests
         var first = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
         var second = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
 
-        Assert.That(
-            second,
-            Is.EqualTo(first),
-            "The same key, nonce and plaintext produced different ciphertexts. Deduplication "
-                + "depends on encryption being a pure function of those three inputs - the "
-                + "per-chunk nonce is derived from the chunk hash precisely so identical content "
-                + "stores identical bytes - and internal randomness here makes every update rewrite "
-                + "the whole backup while every round-trip test still passes."
-        );
+        Assert.Equal(first, second);
     }
 
-    [Test]
-    public void Encrypt_SameInputsThroughEveryCipher_ProducesADistinctCiphertextPerAlgorithm()
+    [Fact]
+    internal void Encrypt_SameInputsThroughEveryCipher_ProducesADistinctCiphertextPerAlgorithm()
     {
         var plaintext = RandomBytes(64, seed: 81);
 
@@ -335,14 +313,6 @@ public sealed class EncryptionStrategyTests
             )
             .ToArray();
 
-        Assert.That(
-            ciphertexts,
-            Is.Unique,
-            "Two encryption strategies turned the same key, nonce and plaintext into the same "
-                + "ciphertext, so they are wired to the same engine. Identical output is the only "
-                + "observable symptom: round-trip, tamper detection and determinism all still hold, "
-                + "the composition tests still see the right Id, and the archive is written with a "
-                + "cipher the manifest does not name."
-        );
+        Assert.Distinct(ciphertexts);
     }
 }

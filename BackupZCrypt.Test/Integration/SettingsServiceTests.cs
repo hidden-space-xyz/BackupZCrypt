@@ -31,26 +31,27 @@ public sealed class SettingsServiceTests
         Converters = { new JsonStringEnumConverter() },
     };
 
-    [Test]
-    public async Task GetOrCreateAsync_WhenNoFile_ReturnsDefaultsAndCreatesFile()
+    [Fact]
+    internal async Task GetOrCreateAsync_WhenNoFile_ReturnsDefaultsAndCreatesFile()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
-        Assert.That(File.Exists(filePath), Is.False);
+        Assert.False(File.Exists(filePath));
 
-        var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
+        var settings = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
-            Assert.That(File.Exists(filePath), Is.True, "GetOrCreateAsync did not persist the defaults file.");
-        }
+        Assert.Multiple(
+            () => Assert.Equal(BackupCreationSettings.DefaultValue, settings),
+            () => Assert.True(File.Exists(filePath), "GetOrCreateAsync did not persist the defaults file.")
+        );
     }
 
-    [Test]
-    public async Task SaveThenGetOrCreate_RoundtripsNonDefaultValue()
+    [Fact]
+    internal async Task SaveThenGetOrCreate_RoundtripsNonDefaultValue()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
@@ -60,35 +61,46 @@ public sealed class SettingsServiceTests
             KeyDerivationAlgorithm.Scrypt,
             CompressionMode.ZstdBest
         );
-        Assert.That(custom, Is.Not.EqualTo(BackupCreationSettings.DefaultValue));
+        Assert.NotEqual(BackupCreationSettings.DefaultValue, custom);
 
-        await service.SaveAsync(custom);
-        var loaded = await service.GetOrCreateAsync<BackupCreationSettings>();
+        await service.SaveAsync(custom, TestContext.Current.CancellationToken);
+        var loaded = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(loaded, Is.EqualTo(custom));
+        Assert.Equal(custom, loaded);
     }
 
-    [Test]
-    public async Task GetOrCreateAsync_WhenFileCorrupted_SelfHealsToDefaults()
+    [Fact]
+    internal async Task GetOrCreateAsync_WhenFileCorrupted_SelfHealsToDefaults()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
         _ = Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        await File.WriteAllTextAsync(filePath, "this is not valid json {{{");
+        await File.WriteAllTextAsync(
+            filePath,
+            "this is not valid json {{{",
+            TestContext.Current.CancellationToken
+        );
 
-        var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
+        var settings = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
+        Assert.Equal(BackupCreationSettings.DefaultValue, settings);
 
-        var reread = await service.GetOrCreateAsync<BackupCreationSettings>();
-        Assert.That(reread, Is.EqualTo(BackupCreationSettings.DefaultValue));
+        var reread = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
+        Assert.Equal(BackupCreationSettings.DefaultValue, reread);
     }
 
-    [TestCase("null", TestName = "GetOrCreateAsync_WhenFileHoldsJsonNull_SelfHealsAndRewritesTheFile")]
-    [TestCase("", TestName = "GetOrCreateAsync_WhenFileIsEmpty_SelfHealsAndRewritesTheFile")]
-    public async Task GetOrCreateAsync_WhenFileHoldsNoUsableSettings_SelfHealsAndRewritesTheFile(
+    [Theory]
+    [InlineData("null")]
+    [InlineData("")]
+    internal async Task GetOrCreateAsync_WhenFileHoldsNoUsableSettings_SelfHealsAndRewritesTheFile(
         string fileContent
     )
     {
@@ -97,51 +109,49 @@ public sealed class SettingsServiceTests
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
         _ = Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        await File.WriteAllTextAsync(filePath, fileContent);
+        await File.WriteAllTextAsync(filePath, fileContent, TestContext.Current.CancellationToken);
 
-        var settings = await service.GetOrCreateAsync<BackupCreationSettings>();
+        var settings = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(settings, Is.EqualTo(BackupCreationSettings.DefaultValue));
+        Assert.Equal(BackupCreationSettings.DefaultValue, settings);
 
-        var onDisk = await File.ReadAllTextAsync(filePath);
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                onDisk,
-                Is.Not.EqualTo(fileContent),
-                "The unusable settings file was returned as defaults but never replaced on disk."
-            );
-            Assert.That(
-                JsonSerializer.Deserialize<BackupCreationSettings>(onDisk, SettingsFileOptions),
-                Is.EqualTo(BackupCreationSettings.DefaultValue)
-            );
-        }
+        var onDisk = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
+        Assert.Multiple(
+            () => Assert.NotEqual(fileContent, onDisk),
+            () => Assert.Equal(
+                BackupCreationSettings.DefaultValue,
+                JsonSerializer.Deserialize<BackupCreationSettings>(onDisk, SettingsFileOptions)
+            )
+        );
     }
 
-    [Test]
-    public async Task GetOrCreateAsync_WhenBaseDirectoryMissing_CreatesTheTreeAndPersistsDefaults()
+    [Fact]
+    internal async Task GetOrCreateAsync_WhenBaseDirectoryMissing_CreatesTheTreeAndPersistsDefaults()
     {
         using var dir = new TempDir();
         var baseDirectory = Path.Combine(dir.Path, "BackupZCrypt", "settings");
         var service = new SettingsService(new FileOperationsService(), baseDirectory);
-        Assert.That(Directory.Exists(baseDirectory), Is.False);
+        Assert.False(Directory.Exists(baseDirectory));
 
-        var settings = await service.GetOrCreateAsync<LanguageSettings>();
+        var settings = await service.GetOrCreateAsync<LanguageSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(settings, Is.EqualTo(LanguageSettings.DefaultValue));
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.Equal(LanguageSettings.DefaultValue, settings),
+            () => Assert.True(
                 File.Exists(service.GetFilePath<LanguageSettings>()),
-                Is.True,
                 "A first run has to create the missing settings directory tree, not fail to save."
-            );
-        }
+            )
+        );
     }
 
-    [TestCase(null)]
-    [TestCase("   ")]
-    public async Task SaveAsync_WhenThePathHasNoDirectory_ThrowsWithoutWritingAnything(
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    internal async Task SaveAsync_WhenThePathHasNoDirectory_ThrowsWithoutWritingAnything(
         string? directoryName
     )
     {
@@ -152,16 +162,17 @@ public sealed class SettingsServiceTests
 
         var service = new SettingsService(fileOperations, baseDirectory);
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.SaveAsync(BackupCreationSettings.DefaultValue)
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.SaveAsync(
+                BackupCreationSettings.DefaultValue,
+                TestContext.Current.CancellationToken
+            )
         );
 
-        Assert.That(
-            exception?.Message,
-            Does.Contain(service.GetFilePath<BackupCreationSettings>()),
-            "Creating a directory from a blank name would resolve against the process working directory, so "
-                + "the save has to fail loudly and name the path instead of writing the file somewhere the "
-                + "next run will never look for it."
+        Assert.Contains(
+            service.GetFilePath<BackupCreationSettings>(),
+            exception.Message,
+            StringComparison.Ordinal
         );
 
         await fileOperations.DidNotReceive()
@@ -174,8 +185,8 @@ public sealed class SettingsServiceTests
             );
     }
 
-    [Test]
-    public void GetFilePath_WithNoBaseDirectoryOverride_ResolvesUnderTheUserApplicationDataFolder()
+    [Fact]
+    internal void GetFilePath_WithNoBaseDirectoryOverride_ResolvesUnderTheUserApplicationDataFolder()
     {
         var expectedDirectory = Path.GetFullPath(
             Path.Combine(
@@ -188,15 +199,9 @@ public sealed class SettingsServiceTests
 
         var filePath = service.GetFilePath<BackupCreationSettings>();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                Path.GetDirectoryName(filePath),
-                Is.EqualTo(expectedDirectory),
-                "Settings have to survive a reinstall of the app in a new folder, so they belong to the "
-                    + "user's profile rather than to whatever directory the process happens to start in."
-            );
-            Assert.That(Path.GetFileName(filePath), Is.EqualTo(BackupCreationSettings.FileName));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(expectedDirectory, Path.GetDirectoryName(filePath)),
+            () => Assert.Equal(BackupCreationSettings.FileName, Path.GetFileName(filePath))
+        );
     }
 }

@@ -38,9 +38,10 @@ public sealed class BackupVerifyTests
     /// </summary>
     private const int SourceFileCount = 3;
 
-    [TestCase(CompressionMode.None)]
-    [TestCase(CompressionMode.Zstd)]
-    public async Task Verify_IntactBackup_SucceedsWithoutTouchingTheArchiveOrTheDestination(
+    [Theory]
+    [InlineData(CompressionMode.None)]
+    [InlineData(CompressionMode.Zstd)]
+    internal async Task Verify_IntactBackup_SucceedsWithoutTouchingTheArchiveOrTheDestination(
         CompressionMode compression
     )
     {
@@ -55,31 +56,24 @@ public sealed class BackupVerifyTests
 
         var archiveBefore = Snapshot(destination.Path);
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(destination.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
-            Assert.That(result.Value.Completion.ProcessedFiles, Is.EqualTo(result.Value.Completion.TotalFiles));
-            Assert.That(result.Value.Completion.Errors, Is.Empty);
-
-            Assert.That(
-                Directory.GetFileSystemEntries(scratch.Path),
-                Is.Empty,
-                "Verify wrote to the destination directory."
-            );
-            Assert.That(
-                Snapshot(destination.Path),
-                Is.EqualTo(archiveBefore),
-                "Verify mutated the archive it was asked to read."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.True(result.Value.Completion!.IsSuccess),
+            () => Assert.Equal(SourceFileCount, result.Value.Completion!.TotalFiles),
+            () => Assert.Equal(result.Value.Completion!.TotalFiles, result.Value.Completion!.ProcessedFiles),
+            () => Assert.Empty(result.Value.Completion!.Errors),
+            () => Assert.Empty(Directory.GetFileSystemEntries(scratch.Path)),
+            () => Assert.Equal(archiveBefore, Snapshot(destination.Path))
+        );
     }
 
-    [Test]
-    public async Task Verify_WrongPassword_FailsWithInvalidPasswordAndReportsNoVerifiedFiles()
+    [Fact]
+    internal async Task Verify_WrongPassword_FailsWithInvalidPasswordAndReportsNoVerifiedFiles()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -89,24 +83,25 @@ public sealed class BackupVerifyTests
         using var destination = new TempDir();
         await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path, password: "a-different-password-1"));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(destination.Path, password: "a-different-password-1"),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.False(
                 result.IsSuccess,
-                Is.False,
                 "Verify with a wrong password unexpectedly succeeded. A wrong password stops verification "
                     + "before any file is read, so the outer result must fail outright rather than report a "
                     + "partial verification alongside the authentication failure."
-            );
-            Assert.That(CollectCodes(result), Does.Contain(MessageCode.VerifyInvalidPassword));
-            Assert.That(CollectCodes(result), Has.Count.EqualTo(1), "Verify reported more than the auth failure.");
-        }
+            ),
+            () => Assert.Contains(MessageCode.VerifyInvalidPassword, CollectCodes(result)),
+            () => Assert.Single(CollectCodes(result))
+        );
     }
 
-    [Test]
-    public async Task Verify_CorruptedChunk_ReportsIntegrityErrorForAffectedFile()
+    [Fact]
+    internal async Task Verify_CorruptedChunk_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -117,35 +112,33 @@ public sealed class BackupVerifyTests
         await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
 
         var chunkFile = ChunkFiles(destination.Path)[0];
-        var bytes = await File.ReadAllBytesAsync(chunkFile);
+        var bytes = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
         bytes[0] ^= 0xFF;
-        await File.WriteAllBytesAsync(chunkFile, bytes);
+        await File.WriteAllBytesAsync(chunkFile, bytes, TestContext.Current.CancellationToken);
 
         var archiveBefore = Snapshot(destination.Path);
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(destination.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion!.IsSuccess, Is.False);
-            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
-            Assert.That(result.Value.Completion.ProcessedFiles, Is.EqualTo(SourceFileCount - 1));
-            Assert.That(result.Value.Completion.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Value.Completion.Errors,
-                Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
-            );
-            Assert.That(
-                Snapshot(destination.Path),
-                Is.EqualTo(archiveBefore),
-                "Verify altered the damaged archive instead of only reporting on it."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.False(result.Value.Completion!.IsSuccess),
+            () => Assert.Equal(SourceFileCount, result.Value.Completion!.TotalFiles),
+            () => Assert.Equal(SourceFileCount - 1, result.Value.Completion!.ProcessedFiles),
+            () => Assert.Single(result.Value.Completion!.Errors),
+            () => Assert.All(
+                result.Value.Completion!.Errors,
+                e => Assert.True(e.Code is MessageCode.IntegrityErrorFormat)
+            ),
+            () => Assert.Equal(archiveBefore, Snapshot(destination.Path))
+        );
     }
 
-    [Test]
-    public async Task Verify_ChunkFileMissing_ReportsIntegrityErrorForAffectedFile()
+    [Fact]
+    internal async Task Verify_ChunkFileMissing_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -157,30 +150,26 @@ public sealed class BackupVerifyTests
 
         File.Delete(ChunkFiles(destination.Path)[0]);
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(destination.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion!.IsSuccess, Is.False);
-            Assert.That(result.Value.Completion.TotalFiles, Is.EqualTo(SourceFileCount));
-            Assert.That(
-                result.Value.Completion.ProcessedFiles,
-                Is.EqualTo(SourceFileCount - 1),
-                "A chunk that is absent rather than corrupt surfaces as an I/O failure instead of a "
-                    + "cryptographic one, and that arm of the per-file error handling must still finish the "
-                    + "run and salvage every file whose chunks are intact."
-            );
-            Assert.That(result.Value.Completion.Errors, Has.Count.EqualTo(1));
-            Assert.That(
-                result.Value.Completion.Errors,
-                Has.All.Matches<LocalizableMessage>(e => e.Code is MessageCode.IntegrityErrorFormat)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.False(result.Value.Completion!.IsSuccess),
+            () => Assert.Equal(SourceFileCount, result.Value.Completion!.TotalFiles),
+            () => Assert.Equal(SourceFileCount - 1, result.Value.Completion!.ProcessedFiles),
+            () => Assert.Single(result.Value.Completion!.Errors),
+            () => Assert.All(
+                result.Value.Completion!.Errors,
+                e => Assert.True(e.Code is MessageCode.IntegrityErrorFormat)
+            )
+        );
     }
 
-    [Test]
-    public async Task Verify_MissingManifest_FailsWithManifestRequired()
+    [Fact]
+    internal async Task Verify_MissingManifest_FailsWithManifestRequired()
     {
         await using var provider = TestHost.CreateProvider();
         var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
@@ -188,35 +177,44 @@ public sealed class BackupVerifyTests
         using var backup = new TempDir();
         _ = backup.WriteText("stray.txt", "not a manifest");
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(backup.Path));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(backup.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(CollectCodes(result), Does.Contain(MessageCode.ManifestRequiredForDecryption));
+        Assert.Contains(MessageCode.ManifestRequiredForDecryption, CollectCodes(result));
     }
 
-    [Test]
-    public async Task Verify_MissingSource_FailsWithSourcePathNotExist()
+    [Fact]
+    internal async Task Verify_MissingSource_FailsWithSourcePathNotExist()
     {
         await using var provider = TestHost.CreateProvider();
         var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         var missing = Path.Combine(Path.GetTempPath(), "bzc-missing", Guid.NewGuid().ToString("N"));
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(missing));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(missing),
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(CollectCodes(result), Does.Contain(MessageCode.SourcePathNotExist));
+        Assert.Contains(MessageCode.SourcePathNotExist, CollectCodes(result));
     }
 
-    [Test]
-    public async Task Verify_EmptyPassword_ReportsPasswordRequired()
+    [Fact]
+    internal async Task Verify_EmptyPassword_ReportsPasswordRequired()
     {
         await using var provider = TestHost.CreateProvider();
         var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
         using var backup = new TempDir();
 
-        var result = await verifyHandler.HandleAsync(NewVerifyQuery(backup.Path, password: string.Empty));
+        var result = await verifyHandler.HandleAsync(
+            NewVerifyQuery(backup.Path, password: string.Empty),
+            TestContext.Current.CancellationToken
+        );
 
-        Assert.That(CollectCodes(result), Does.Contain(MessageCode.PasswordRequired));
+        Assert.Contains(MessageCode.PasswordRequired, CollectCodes(result));
     }
 
     /// <summary>
@@ -242,15 +240,10 @@ public sealed class BackupVerifyTests
 
         var result = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path, compression));
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess && result.Value.Completion!.IsSuccess, Is.True, "Backup creation failed.");
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.EqualTo(SourceFileCount),
-                "The fixture assumes one chunk per file, so damaging one chunk affects exactly one file."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Backup creation failed."),
+            () => Assert.Equal(SourceFileCount, ChunkFiles(destination.Path).Length)
+        );
     }
 
     /// <summary>

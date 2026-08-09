@@ -65,8 +65,8 @@ public sealed class ChunkedBackupSecurityTests
     /// </summary>
     private const string OtherPassword = "Wrong-Horse-Battery-Staple-99";
 
-    [Test]
-    public async Task RestoreAsync_ManifestEntryEscapesDestination_RejectsEntryAndWritesNothingOutsideRestoreRoot()
+    [Fact]
+    internal async Task RestoreAsync_ManifestEntryEscapesDestination_RejectsEntryAndWritesNothingOutsideRestoreRoot()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -119,36 +119,28 @@ public sealed class ChunkedBackupSecurityTests
             var crafted = manifest with { Files = [entry with { OriginalPath = entryPath }] };
             await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
-            var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, caseRoot));
+            var result = await restoreHandler.HandleAsync(
+                NewRestoreCommand(destination.Path, caseRoot),
+                TestContext.Current.CancellationToken
+            );
 
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(
+            Assert.Multiple(
+                () => Assert.False(
                     result.IsSuccess && result.Value.Completion!.IsSuccess,
-                    Is.False,
                     $"Restore accepted the crafted manifest entry '{entryPath}' ({name})."
-                );
-                Assert.That(
-                    CollectCodes(result),
-                    Is.Not.Empty,
-                    $"The crafted entry '{entryPath}' ({name}) was rejected without reporting anything."
-                );
-                Assert.That(
+                ),
+                () => Assert.NotEmpty(CollectCodes(result)),
+                () => Assert.False(
                     File.Exists(escapeTarget),
-                    Is.False,
                     $"The crafted entry '{entryPath}' ({name}) wrote to '{escapeTarget}', outside the restore root."
-                );
-                Assert.That(
-                    FilesUnder(caseRoot),
-                    Is.Empty,
-                    $"The crafted entry '{entryPath}' ({name}) left files under the restore root."
-                );
-            }
+                ),
+                () => Assert.Empty(FilesUnder(caseRoot))
+            );
         }
     }
 
-    [Test]
-    public async Task CreateAsync_ChunkFileNames_LeakNeitherTheContentHashNorMatchAnotherPassword()
+    [Fact]
+    internal async Task CreateAsync_ChunkFileNames_LeakNeitherTheContentHashNorMatchAnotherPassword()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -182,25 +174,16 @@ public sealed class ChunkedBackupSecurityTests
             .Where(n => contentHashes.Any(h => n.Contains(h, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(firstNames, Has.Length.EqualTo(2), "Expected one chunk per source file.");
-            Assert.That(secondNames, Has.Length.EqualTo(2), "Expected one chunk per source file.");
-            Assert.That(
-                leaking,
-                Is.Empty,
-                "A chunk file name embeds the SHA-256 of its plaintext, so the chunks directory reveals its contents."
-            );
-            Assert.That(
-                firstNames.Intersect(secondNames, StringComparer.OrdinalIgnoreCase),
-                Is.Empty,
-                "Two backups of identical content under different passwords produced the same chunk file names."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(2, firstNames.Length),
+            () => Assert.Equal(2, secondNames.Length),
+            () => Assert.Empty(leaking),
+            () => Assert.Empty(firstNames.Intersect(secondNames, StringComparer.OrdinalIgnoreCase))
+        );
     }
 
-    [Test]
-    public async Task DerivedSubKeys_BoundToDifferentPurposes_AreDistinctAndNotInterchangeable()
+    [Fact]
+    internal async Task DerivedSubKeys_BoundToDifferentPurposes_AreDistinctAndNotInterchangeable()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -232,55 +215,26 @@ public sealed class ChunkedBackupSecurityTests
             .Select(Convert.ToHexStringLower)
             .ToHashSet(StringComparer.Ordinal);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                ChunkFileNames(destination.Path).Single(),
-                Is.EqualTo(Convert.ToHexStringLower(namingMac) + BackupConstants.AppFileExtension),
-                "The chunk file name is no longer HMAC-SHA256(chunk-naming sub-key, chunk hash)."
-            );
-            Assert.That(
-                Convert.FromBase64String(chunkRef.Nonce),
-                Is.EqualTo(nonceMac[..EncryptionConstants.NonceSize]),
-                "The recorded chunk nonce is no longer HMAC-SHA256(chunk-nonce sub-key, chunk hash) truncated."
-            );
-
-            Assert.That(
-                namingMac,
-                Is.Not.EqualTo(nonceMac),
-                "The chunk-naming and chunk-nonce sub-keys produced the same HMAC, so a file name leaks its nonce."
-            );
-            Assert.That(
-                distinctSubKeys,
-                Has.Count.EqualTo(4),
-                "The four HKDF context labels did not produce four distinct sub-keys."
-            );
-
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, manifestKey),
-                Is.Not.Null,
-                "The manifest did not open under the manifest-encryption sub-key."
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, chunkEncryptionKey),
-                Is.Null,
-                "The manifest opened under the chunk-encryption sub-key."
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, chunkNonceKey),
-                Is.Null,
-                "The manifest opened under the chunk-nonce sub-key."
-            );
-            Assert.That(
-                manifestService.DecryptChunkManifest(preamble, namingKey),
-                Is.Null,
-                "The manifest opened under the chunk-naming sub-key."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(
+                Convert.ToHexStringLower(namingMac) + BackupConstants.AppFileExtension,
+                ChunkFileNames(destination.Path).Single()
+            ),
+            () => Assert.Equal(
+                nonceMac[..EncryptionConstants.NonceSize],
+                Convert.FromBase64String(chunkRef.Nonce)
+            ),
+            () => Assert.NotEqual(nonceMac, namingMac),
+            () => Assert.Equal(4, distinctSubKeys.Count),
+            () => Assert.NotNull(manifestService.DecryptChunkManifest(preamble, manifestKey)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble, chunkEncryptionKey)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble, chunkNonceKey)),
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble, namingKey))
+        );
     }
 
-    [Test]
-    public async Task RestoreAsync_ManifestPreambleOrPasswordTampered_FailsClosedAndRestoresNothing()
+    [Fact]
+    internal async Task RestoreAsync_ManifestPreambleOrPasswordTampered_FailsClosedAndRestoresNothing()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -295,14 +249,13 @@ public sealed class ChunkedBackupSecurityTests
         await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
         var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
-        var pristine = await File.ReadAllBytesAsync(manifestPath);
+        var pristine = await File.ReadAllBytesAsync(manifestPath, TestContext.Current.CancellationToken);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(pristine, Has.Length.GreaterThan(60), "The manifest is too short to tamper with.");
-            Assert.That(pristine[0], Is.EqualTo((byte)EncryptionAlgorithm.Aes));
-            Assert.That(pristine[1], Is.EqualTo((byte)KeyDerivationAlgorithm.PBKDF2));
-        }
+        Assert.Multiple(
+            () => Assert.True(pristine.Length > 60, "The manifest is too short to tamper with."),
+            () => Assert.Equal((byte)EncryptionAlgorithm.Aes, pristine[0]),
+            () => Assert.Equal((byte)KeyDerivationAlgorithm.PBKDF2, pristine[1])
+        );
 
         (string Name, int Offset, byte Value, string CasePassword, MessageCode Expected)[] tamperCases =
         [
@@ -336,7 +289,7 @@ public sealed class ChunkedBackupSecurityTests
                 tampered[offset] = value;
             }
 
-            await File.WriteAllBytesAsync(manifestPath, tampered);
+            await File.WriteAllBytesAsync(manifestPath, tampered, TestContext.Current.CancellationToken);
 
             var caseRoot = Path.Combine(
                 restoreArea.Path,
@@ -344,31 +297,24 @@ public sealed class ChunkedBackupSecurityTests
             );
             caseIndex++;
 
-            var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, caseRoot, casePassword));
+            var result = await restoreHandler.HandleAsync(
+                NewRestoreCommand(destination.Path, caseRoot, casePassword),
+                TestContext.Current.CancellationToken
+            );
 
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(
+            Assert.Multiple(
+                () => Assert.False(
                     result.IsSuccess && result.Value.Completion!.IsSuccess,
-                    Is.False,
                     $"Restore succeeded even though the {name}."
-                );
-                Assert.That(
-                    CollectCodes(result),
-                    Does.Contain(expected),
-                    $"Expected {expected} when the {name}."
-                );
-                Assert.That(
-                    FilesUnder(caseRoot),
-                    Is.Empty,
-                    $"Restore left files behind even though the {name}."
-                );
-            }
+                ),
+                () => Assert.Contains(expected, CollectCodes(result)),
+                () => Assert.Empty(FilesUnder(caseRoot))
+            );
         }
     }
 
-    [Test]
-    public async Task RestoreAsync_ManifestUnderDeclaresFileSize_StopsAtTheDeclaredByteBudget()
+    [Fact]
+    internal async Task RestoreAsync_ManifestUnderDeclaresFileSize_StopsAtTheDeclaredByteBudget()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -389,40 +335,31 @@ public sealed class ChunkedBackupSecurityTests
         var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
         var entry = manifest.Files[0];
 
-        Assert.That(
-            entry.TotalSize,
-            Is.EqualTo(5000L),
-            "The fixture must store a large, highly compressible file, or the declared byte budget is never exercised."
-        );
+        Assert.Equal(5000L, entry.TotalSize);
 
         var understated = manifest with { Files = [entry with { TotalSize = 1L }] };
         await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, understated);
 
-        var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
+        var result = await restoreHandler.HandleAsync(
+            NewRestoreCommand(destination.Path, restored.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.False(
                 result.IsSuccess && result.Value.Completion!.IsSuccess,
-                Is.False,
                 "Restore accepted a chunk that decompresses past the size the manifest declares."
-            );
-            Assert.That(
-                CollectCodes(result),
-                Does.Contain(MessageCode.UnexpectedErrorFormat),
-                "An over-expanding chunk must abort the run rather than be recorded as a per-file problem."
-            );
-
-            Assert.That(
-                TotalBytesUnder(restored.Path),
-                Is.LessThanOrEqualTo(1L),
+            ),
+            () => Assert.Contains(MessageCode.UnexpectedErrorFormat, CollectCodes(result)),
+            () => Assert.True(
+                TotalBytesUnder(restored.Path) <= 1L,
                 "Decompression wrote past the byte budget the manifest declared for the file."
-            );
-        }
+            )
+        );
     }
 
-    [Test]
-    public async Task RestoreAsync_ManifestRecordsTwoNoncesForOneChunkHash_IsRejectedInsteadOfGuessed()
+    [Fact]
+    internal async Task RestoreAsync_ManifestRecordsTwoNoncesForOneChunkHash_IsRejectedInsteadOfGuessed()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -444,18 +381,12 @@ public sealed class ChunkedBackupSecurityTests
         );
         var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
 
-        Assert.That(
-            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(StringComparer.Ordinal),
-            Has.Exactly(1).Items,
-            "The fixture relies on both files deduplicating to one shared chunk."
+        _ = Assert.Single(
+            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(StringComparer.Ordinal)
         );
 
         var foreignNonce = Convert.ToBase64String(new byte[EncryptionConstants.NonceSize]);
-        Assert.That(
-            foreignNonce,
-            Is.Not.EqualTo(manifest.Files[0].Chunks[0].Nonce),
-            "The fixture must offer a nonce the engine did not derive."
-        );
+        Assert.NotEqual(manifest.Files[0].Chunks[0].Nonce, foreignNonce);
 
         var second = manifest.Files[1];
         var crafted = manifest with
@@ -474,22 +405,19 @@ public sealed class ChunkedBackupSecurityTests
         };
         await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
-        var result = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
+        var result = await restoreHandler.HandleAsync(
+            NewRestoreCommand(destination.Path, restored.Path),
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
+        Assert.Multiple(
+            () => Assert.False(
                 result.IsSuccess && result.Value.Completion!.IsSuccess,
-                Is.False,
                 "A chunk nonce is a deterministic function of the chunk hash, so a manifest offering two "
                     + "for one hash is crafted and must be rejected rather than resolved by trial decryption."
-            );
-            Assert.That(
-                FilesUnder(restored.Path),
-                Is.Empty,
-                "The rejected manifest still produced output in the restore root."
-            );
-        }
+            ),
+            () => Assert.Empty(FilesUnder(restored.Path))
+        );
     }
 
     /// <summary>
@@ -565,9 +493,8 @@ public sealed class ChunkedBackupSecurityTests
             NewCreateCommand(sourcePath, destinationPath, compression, password)
         );
 
-        Assert.That(
+        Assert.True(
             result.IsSuccess && result.Value.Completion!.IsSuccess,
-            Is.True,
             "The fixture could not create the backup under test."
         );
     }
@@ -641,7 +568,7 @@ public sealed class ChunkedBackupSecurityTests
                 CancellationToken.None
             );
 
-        Assert.That(errors, Is.Empty, "The fixture could not rewrite the manifest under test.");
+        Assert.Empty(errors);
     }
 
     /// <summary>

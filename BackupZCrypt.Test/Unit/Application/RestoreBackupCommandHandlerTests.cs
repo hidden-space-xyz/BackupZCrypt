@@ -83,8 +83,8 @@ public sealed class RestoreBackupCommandHandlerTests
             .Returns(empty);
     }
 
-    [Test]
-    public async Task HandleAsync_Command_MapsOntoARestoreRequestAndForwardsTheProgress()
+    [Fact]
+    internal async Task HandleAsync_Command_MapsOntoARestoreRequestAndForwardsTheProgress()
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(BackupDir).Returns(true);
@@ -112,17 +112,16 @@ public sealed class RestoreBackupCommandHandlerTests
 
         var result = await this.CreateSut().HandleAsync(command, CancellationToken.None);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.True);
-            Assert.That(result.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(captured!.SourcePath, Is.EqualTo(BackupDir));
-            Assert.That(captured.DestinationPath, Is.EqualTo(DestinationDir));
-            Assert.That(captured.Password, Is.EqualTo("Correct-Horse-Battery-Staple-42"));
-            Assert.That(captured.ConfirmPassword, Is.EqualTo(captured.Password));
-            Assert.That(captured.Operation, Is.EqualTo(BackupOperation.Restore));
-            Assert.That(captured.ProceedOnWarnings, Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(result.IsSuccess),
+            () => Assert.True(result.Value.Completion!.IsSuccess),
+            () => Assert.Equal(BackupDir, captured!.SourcePath),
+            () => Assert.Equal(DestinationDir, captured!.DestinationPath),
+            () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.Password),
+            () => Assert.Equal(captured!.Password, captured.ConfirmPassword),
+            () => Assert.Equal(BackupOperation.Restore, captured!.Operation),
+            () => Assert.True(captured!.ProceedOnWarnings)
+        );
 
         await this.chunkedBackupService.Received(1)
             .RestoreAsync(
@@ -134,17 +133,16 @@ public sealed class RestoreBackupCommandHandlerTests
             );
     }
 
-    [Test]
-    public void ToString_OfTheCommand_RedactsThePassword()
+    [Fact]
+    internal void ToString_OfTheCommand_RedactsThePassword()
     {
         var command = new RestoreBackupCommand(BackupDir, DestinationDir, "hunter2-secret");
 
         var text = command.ToString();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(text, Does.Not.Contain("hunter2-secret"));
-            Assert.That(text, Does.Contain("***"));
-        }
+        Assert.Multiple(
+            () => Assert.DoesNotContain("hunter2-secret", text, StringComparison.Ordinal),
+            () => Assert.Contains("***", text, StringComparison.Ordinal)
+        );
     }
 }

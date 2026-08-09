@@ -28,8 +28,8 @@ public sealed class UpdateBackupTests
     /// </summary>
     private const string SharedContent = "shared twin content";
 
-    [Test]
-    public async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
+    [Fact]
+    internal async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -44,77 +44,78 @@ public sealed class UpdateBackupTests
         _ = source.WriteText("changing.txt", "original content");
         _ = source.WriteText(Path.Combine("dir", "keep.txt"), "nested keep");
 
-        var createResult = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(ChunkFiles(destination.Path), Has.Length.EqualTo(3));
-        }
+        var createResult = await createHandler.HandleAsync(
+            NewCreateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Multiple(
+            () => Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess),
+            () => Assert.Equal(3, ChunkFiles(destination.Path).Length)
+        );
 
         const string ModifiedContent = "MODIFIED content that is clearly different from the original";
         _ = source.WriteText("changing.txt", ModifiedContent);
         const string AddedContent = "freshly added file";
         _ = source.WriteText(Path.Combine("dir", "added.txt"), AddedContent);
 
-        var updateResult = await updateHandler.HandleAsync(NewUpdateCommand(source.Path, destination.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
+        var updateResult = await updateHandler.HandleAsync(
+            NewUpdateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Multiple(
+            () =>
+                Assert.True(
                     updateResult.IsSuccess && updateResult.Value.Completion!.IsSuccess,
-                    Is.True,
                     "Update did not succeed."
-                );
+                ),
+            () => Assert.Equal(2, updateResult.Value.Completion!.TotalFiles),
+            () =>
+                Assert.Equal(
+                    updateResult.Value.Completion!.TotalFiles,
+                    updateResult.Value.Completion!.ProcessedFiles
+                ),
+            () => Assert.Equal(4, ChunkFiles(destination.Path).Length)
+        );
 
-            Assert.That(
-                updateResult.Value.Completion!.TotalFiles,
-                Is.EqualTo(2),
-                "Only the modified and the added file may be re-chunked; the two untouched files are carried "
-                    + "over from the previous manifest without being read back through the chunking pipeline."
-            );
-            Assert.That(
-                updateResult.Value.Completion.ProcessedFiles,
-                Is.EqualTo(updateResult.Value.Completion.TotalFiles)
-            );
+        var restoreResult = await restoreHandler.HandleAsync(
+            NewRestoreCommand(destination.Path, restored.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.True(
+            restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
+            "Restore of the updated backup did not succeed."
+        );
 
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.EqualTo(4),
-                "The chunk the modified file no longer references was not pruned. Four live contents remain "
-                    + "(two untouched, one rewritten, one new), so the superseded chunk of changing.txt is the "
-                    + "only one pruning may reclaim."
-            );
-        }
+        // The four reads are hoisted out of the grouped assertion because Assert.Multiple takes
+        // synchronous lambdas; they run only after the restore itself is known to have succeeded,
+        // so a failed restore still reports the message above rather than a file-not-found error.
+        var unchangedText = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "unchanged.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var changingText = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "changing.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var keepText = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "dir", "keep.txt"),
+            TestContext.Current.CancellationToken
+        );
+        var addedText = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "dir", "added.txt"),
+            TestContext.Current.CancellationToken
+        );
 
-        var restoreResult = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                    restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
-                    Is.True,
-                    "Restore of the updated backup did not succeed."
-                );
-
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(restored.Path, "unchanged.txt")),
-                Is.EqualTo("stays the same")
-            );
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(restored.Path, "changing.txt")),
-                Is.EqualTo(ModifiedContent)
-            );
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "keep.txt")),
-                Is.EqualTo("nested keep")
-            );
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(restored.Path, "dir", "added.txt")),
-                Is.EqualTo(AddedContent)
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal("stays the same", unchangedText),
+            () => Assert.Equal(ModifiedContent, changingText),
+            () => Assert.Equal("nested keep", keepText),
+            () => Assert.Equal(AddedContent, addedText)
+        );
     }
 
-    [Test]
-    public async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
+    [Fact]
+    internal async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -130,66 +131,51 @@ public sealed class UpdateBackupTests
         var survivorRelativePath = Path.Combine("dir", "twin-b.txt");
         _ = source.WriteText(survivorRelativePath, SharedContent);
 
-        var createResult = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess, Is.True);
-            Assert.That(createResult.Value.Completion!.TotalFiles, Is.EqualTo(3));
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.EqualTo(2),
-                "The two byte-identical files should have been stored as a single shared chunk."
-            );
-        }
+        var createResult = await createHandler.HandleAsync(
+            NewCreateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Multiple(
+            () => Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess),
+            () => Assert.Equal(3, createResult.Value.Completion!.TotalFiles),
+            () => Assert.Equal(2, ChunkFiles(destination.Path).Length)
+        );
 
         File.Delete(uniquePath);
         File.Delete(twinPath);
 
-        var updateResult = await updateHandler.HandleAsync(NewUpdateCommand(source.Path, destination.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(updateResult.IsSuccess, Is.True);
-            Assert.That(updateResult.Value.Completion!.IsSuccess, Is.True, "Update did not succeed.");
+        var updateResult = await updateHandler.HandleAsync(
+            NewUpdateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Multiple(
+            () => Assert.True(updateResult.IsSuccess),
+            () => Assert.True(updateResult.Value.Completion!.IsSuccess, "Update did not succeed."),
+            () => Assert.Equal(0, updateResult.Value.Completion!.TotalFiles),
+            () => _ = Assert.Single(ChunkFiles(destination.Path))
+        );
 
-            Assert.That(
-                updateResult.Value.Completion.TotalFiles,
-                Is.Zero,
-                "The only surviving file is unchanged, so nothing at all has to be re-chunked."
-            );
+        var restoreResult = await restoreHandler.HandleAsync(
+            NewRestoreCommand(destination.Path, restored.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.True(
+            restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
+            "Restore after the pruning update did not succeed."
+        );
 
-            Assert.That(
-                ChunkFiles(destination.Path),
-                Has.Length.EqualTo(1),
-                "Pruning reclaimed the wrong number of chunks after a source file was deleted. The deleted "
-                    + "unique file releases its chunk, but the shared chunk was introduced by the deleted twin "
-                    + "and is still referenced by the survivor, so pruning must leave it alone."
-            );
-        }
+        // Hoisted out of the grouped assertion for the same reason as in the test above: the read
+        // only makes sense once the restore is known to have succeeded.
+        var survivorText = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, survivorRelativePath),
+            TestContext.Current.CancellationToken
+        );
 
-        var restoreResult = await restoreHandler.HandleAsync(NewRestoreCommand(destination.Path, restored.Path));
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
-                Is.True,
-                "Restore after the pruning update did not succeed."
-            );
-
-            Assert.That(
-                restoreResult.Value.Completion!.TotalFiles,
-                Is.EqualTo(1),
-                "The deleted entries were not dropped."
-            );
-            Assert.That(
-                Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories),
-                Has.Length.EqualTo(1)
-            );
-            Assert.That(
-                await File.ReadAllTextAsync(Path.Combine(restored.Path, survivorRelativePath)),
-                Is.EqualTo(SharedContent),
-                "The survivor's shared chunk was destroyed by pruning the file that introduced it."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(1, restoreResult.Value.Completion!.TotalFiles),
+            () => _ = Assert.Single(Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories)),
+            () => Assert.Equal(SharedContent, survivorText)
+        );
     }
 
     /// <summary>

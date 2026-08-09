@@ -29,22 +29,22 @@ public sealed class SaveSettingsCommandHandlerTests
         return new(this.settingsService);
     }
 
-    [Test]
-    public async Task HandleAsync_SaveSucceeds_PersistsTheGivenInstanceAndReportsSuccess()
+    [Fact]
+    internal async Task HandleAsync_SaveSucceeds_PersistsTheGivenInstanceAndReportsSuccess()
     {
         RecentPathSettings settings = new("some-source", "some-destination");
 
         var result = await this.CreateSut()
             .HandleAsync(new SaveSettingsCommand<RecentPathSettings>(settings), CancellationToken.None);
 
-        Assert.That(result.IsSuccess, Is.True);
+        Assert.True(result.IsSuccess);
 
         await this.settingsService.Received(1)
             .SaveAsync(settings, Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task HandleAsync_SaveThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
+    [Fact]
+    internal async Task HandleAsync_SaveThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
     {
         _ = this.settingsService
             .SaveAsync(Arg.Any<RecentPathSettings>(), Arg.Any<CancellationToken>())
@@ -56,12 +56,11 @@ public sealed class SaveSettingsCommandHandlerTests
                 CancellationToken.None
             );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.IsSuccess, Is.False);
-            Assert.That(result.Errors, Has.Count.EqualTo(1));
-            Assert.That(result.Errors[0].Code, Is.EqualTo(MessageCode.UnexpectedErrorFormat));
-            Assert.That(result.Errors[0].Args, Is.EqualTo(new object[] { "disk full" }));
-        }
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess),
+            () => Assert.Single(result.Errors),
+            () => Assert.Equal(MessageCode.UnexpectedErrorFormat, result.Errors[0].Code),
+            () => Assert.Equal<object>(["disk full"], result.Errors[0].Args)
+        );
     }
 }

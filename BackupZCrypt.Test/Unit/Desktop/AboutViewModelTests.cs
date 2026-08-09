@@ -19,8 +19,8 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// </summary>
 public sealed class AboutViewModelTests
 {
-    [Test]
-    public void Constructor_WithTheRegisteredStrategiesInReverse_DescribesEachFamilyInIdOrder()
+    [Fact]
+    internal void Constructor_WithTheRegisteredStrategiesInReverse_DescribesEachFamilyInIdOrder()
     {
         using var provider = TestHost.CreateProvider();
         var encryption = provider.GetServices<IEncryptionAlgorithmStrategy>().ToArray();
@@ -54,19 +54,18 @@ public sealed class AboutViewModelTests
             static id => AlgorithmMetadataProvider.GetDescription(id)
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(expectedEncryption, Is.Not.Empty);
-            Assert.That(expectedKeyDerivation, Is.Not.Empty);
-            Assert.That(expectedCompression, Is.Not.Empty);
-            Assert.That(sut.EncryptionAlgorithms, Is.EqualTo(expectedEncryption));
-            Assert.That(sut.KeyDerivationAlgorithms, Is.EqualTo(expectedKeyDerivation));
-            Assert.That(sut.CompressionAlgorithms, Is.EqualTo(expectedCompression));
-        }
+        Assert.Multiple(
+            () => Assert.NotEmpty(expectedEncryption),
+            () => Assert.NotEmpty(expectedKeyDerivation),
+            () => Assert.NotEmpty(expectedCompression),
+            () => Assert.Equal(expectedEncryption, sut.EncryptionAlgorithms),
+            () => Assert.Equal(expectedKeyDerivation, sut.KeyDerivationAlgorithms),
+            () => Assert.Equal(expectedCompression, sut.CompressionAlgorithms)
+        );
     }
 
-    [Test]
-    public void VersionText_ReportsTheAssemblyVersionAsThreeComponentsInTheLocalizedCaption()
+    [Fact]
+    internal void VersionText_ReportsTheAssemblyVersionAsThreeComponentsInTheLocalizedCaption()
     {
         AboutViewModel sut = new([], [], []);
 
@@ -78,11 +77,9 @@ public sealed class AboutViewModelTests
                 $"{version.Major}.{version.Minor}.{version.Build}"
             );
 
-        Assert.That(
-            sut.VersionText,
-            Is.EqualTo(
-                string.Format(CultureInfo.CurrentCulture, Strings.VersionFormat, expectedVersion)
-            )
+        Assert.Equal(
+            string.Format(CultureInfo.CurrentCulture, Strings.VersionFormat, expectedVersion),
+            sut.VersionText
         );
     }
 

@@ -11,9 +11,10 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </remarks>
 public sealed class BackupBenchmarkServiceComputeTests
 {
-    [TestCase(0d)]
-    [TestCase(-5d)]
-    public void ComputeEstimatedDuration_NonPositiveThroughput_ReturnsMaxValue(double throughput)
+    [Theory]
+    [InlineData(0d)]
+    [InlineData(-5d)]
+    internal void ComputeEstimatedDuration_NonPositiveThroughput_ReturnsMaxValue(double throughput)
     {
         var result = BackupBenchmarkService.ComputeEstimatedDuration(
             TimeSpan.Zero,
@@ -21,15 +22,16 @@ public sealed class BackupBenchmarkServiceComputeTests
             1000
         );
 
-        Assert.That(result, Is.EqualTo(TimeSpan.MaxValue));
+        Assert.Equal(TimeSpan.MaxValue, result);
     }
 
-    [TestCase(1d, 1000d, 2000L, 3d)]
-    [TestCase(0d, 1000d, 1000L, 1d)]
-    [TestCase(0d, 1000d, 2000L, 2d)]
-    [TestCase(2.5d, 500d, 250L, 3d)]
-    [TestCase(0.25d, 4d, 3L, 1d)]
-    public void ComputeEstimatedDuration_NormalInputs_SumsKeyDerivationAndComputeTime(
+    [Theory]
+    [InlineData(1d, 1000d, 2000L, 3d)]
+    [InlineData(0d, 1000d, 1000L, 1d)]
+    [InlineData(0d, 1000d, 2000L, 2d)]
+    [InlineData(2.5d, 500d, 250L, 3d)]
+    [InlineData(0.25d, 4d, 3L, 1d)]
+    internal void ComputeEstimatedDuration_NormalInputs_SumsKeyDerivationAndComputeTime(
         double keyDerivationSeconds,
         double throughputBytesPerSecond,
         long dataBytes,
@@ -42,11 +44,11 @@ public sealed class BackupBenchmarkServiceComputeTests
             dataBytes
         );
 
-        Assert.That(result, Is.EqualTo(TimeSpan.FromSeconds(expectedSeconds)));
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), result);
     }
 
-    [Test]
-    public void ComputeEstimatedDuration_Overflow_ClampsOnlyWhenUnrepresentable()
+    [Fact]
+    internal void ComputeEstimatedDuration_Overflow_ClampsOnlyWhenUnrepresentable()
     {
         var overflowing = BackupBenchmarkService.ComputeEstimatedDuration(
             TimeSpan.Zero,
@@ -60,17 +62,16 @@ public sealed class BackupBenchmarkServiceComputeTests
             dataBytes: long.MaxValue
         );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(overflowing, Is.EqualTo(TimeSpan.MaxValue));
-            Assert.That(
-                representable,
-                Is.LessThan(TimeSpan.MaxValue),
-                "the negative control for the clamp: roughly 29 years is still a representable TimeSpan, so a "
-                    + "clamp applied too eagerly, or compared against the wrong constant, would report "
-                    + "'unknown' for every large but perfectly valid backup"
-            );
-            Assert.That(representable, Is.GreaterThan(TimeSpan.Zero));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(TimeSpan.MaxValue, overflowing),
+            () =>
+                Assert.True(
+                    representable < TimeSpan.MaxValue,
+                    "the negative control for the clamp: roughly 29 years is still a representable TimeSpan, so a "
+                        + "clamp applied too eagerly, or compared against the wrong constant, would report "
+                        + "'unknown' for every large but perfectly valid backup"
+                ),
+            () => Assert.True(representable > TimeSpan.Zero)
+        );
     }
 }

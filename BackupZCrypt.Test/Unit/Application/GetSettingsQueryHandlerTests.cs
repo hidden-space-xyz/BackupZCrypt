@@ -28,8 +28,8 @@ public sealed class GetSettingsQueryHandlerTests
         return new(this.settingsService);
     }
 
-    [Test]
-    public async Task HandleAsync_StoredSettings_ReturnsThemUnchanged()
+    [Fact]
+    internal async Task HandleAsync_StoredSettings_ReturnsThemUnchanged()
     {
         RecentPathSettings stored = new("stored-source", "stored-destination");
         _ = this.settingsService
@@ -39,11 +39,11 @@ public sealed class GetSettingsQueryHandlerTests
         var result = await this.CreateSut()
             .HandleAsync(new GetSettingsQuery<RecentPathSettings>(), CancellationToken.None);
 
-        Assert.That(result, Is.SameAs(stored));
+        Assert.Same(stored, result);
     }
 
-    [Test]
-    public async Task HandleAsync_LoadThrows_ReturnsTheDefaultsInsteadOfLeakingTheException()
+    [Fact]
+    internal async Task HandleAsync_LoadThrows_ReturnsTheDefaultsInsteadOfLeakingTheException()
     {
         _ = this.settingsService
             .GetOrCreateAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
@@ -52,6 +52,6 @@ public sealed class GetSettingsQueryHandlerTests
         var result = await this.CreateSut()
             .HandleAsync(new GetSettingsQuery<RecentPathSettings>(), CancellationToken.None);
 
-        Assert.That(result, Is.EqualTo(RecentPathSettings.DefaultValue));
+        Assert.Equal(RecentPathSettings.DefaultValue, result);
     }
 }

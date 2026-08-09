@@ -27,7 +27,7 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// the start gate, the progress projection, cancellation, the warnings confirmation flow, the result
 /// panel, and the recent-path bookkeeping.
 /// </summary>
-public sealed class OperationViewModelBaseTests
+public sealed class OperationViewModelBaseTests : IDisposable
 {
     /// <summary>
     /// The substituted handler every run of the test page is dispatched to.
@@ -55,15 +55,16 @@ public sealed class OperationViewModelBaseTests
     /// <summary>
     /// The synchronization context that was installed before the test, restored afterwards.
     /// </summary>
-    private SynchronizationContext? previousContext;
+    private readonly SynchronizationContext? previousContext;
 
     /// <summary>
-    /// Installs a synchronization context that runs posted callbacks inline, so the
-    /// <see cref="Progress{T}"/> the page attaches to its message delivers its reports
-    /// synchronously instead of on an arbitrary thread pool thread.
+    /// Initializes a new instance of the <see cref="OperationViewModelBaseTests"/> class, installing
+    /// a synchronization context that runs posted callbacks inline, so the <see cref="Progress{T}"/>
+    /// the page attaches to its message delivers its reports synchronously instead of on an
+    /// arbitrary thread pool thread. A fresh instance is constructed for every test, so this is the
+    /// per-test setup hook.
     /// </summary>
-    [SetUp]
-    public void InstallInlineSynchronizationContext()
+    public OperationViewModelBaseTests()
     {
         this.previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
@@ -73,19 +74,19 @@ public sealed class OperationViewModelBaseTests
     /// Restores the synchronization context so the inline one cannot leak into other fixtures that
     /// share the same thread.
     /// </summary>
-    [TearDown]
-    public void RestoreSynchronizationContext()
+    public void Dispose()
     {
         SynchronizationContext.SetSynchronizationContext(this.previousContext);
     }
 
-    [TestCase("", "", false)]
-    [TestCase("source", "", false)]
-    [TestCase("", "destination", false)]
-    [TestCase("   ", "destination", false)]
-    [TestCase("source", "   ", false)]
-    [TestCase("source", "destination", true)]
-    public void StartCommand_CanExecute_RequiresBothPathsToBeNonBlank(
+    [Theory]
+    [InlineData("", "", false)]
+    [InlineData("source", "", false)]
+    [InlineData("", "destination", false)]
+    [InlineData("   ", "destination", false)]
+    [InlineData("source", "   ", false)]
+    [InlineData("source", "destination", true)]
+    internal void StartCommand_CanExecute_RequiresBothPathsToBeNonBlank(
         string source,
         string destination,
         bool expected
@@ -96,26 +97,27 @@ public sealed class OperationViewModelBaseTests
         sut.SourcePath = source;
         sut.DestinationPath = destination;
 
-        Assert.That(sut.StartCommand.CanExecute(null), Is.EqualTo(expected));
+        Assert.Equal(expected, sut.StartCommand.CanExecute(null));
     }
 
-    [Test]
-    public void StartCommand_WhileAnOperationRuns_IsBlockedAndBecomesAvailableAgainWhenItEnds()
+    [Fact]
+    internal void StartCommand_WhileAnOperationRuns_IsBlockedAndBecomesAvailableAgainWhenItEnds()
     {
         var sut = CreateSut();
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
 
         sut.IsRunning = true;
-        Assert.That(sut.StartCommand.CanExecute(null), Is.False);
+        Assert.False(sut.StartCommand.CanExecute(null));
 
         sut.IsRunning = false;
-        Assert.That(sut.StartCommand.CanExecute(null), Is.True);
+        Assert.True(sut.StartCommand.CanExecute(null));
     }
 
-    [TestCase(true, 5)]
-    [TestCase(false, 3)]
-    public async Task StartCommand_WhenTheOperationCompletes_ShowsTheResultPanelMatchingTheOutcome(
+    [Theory]
+    [InlineData(true, 5)]
+    [InlineData(false, 3)]
+    internal async Task StartCommand_WhenTheOperationCompletes_ShowsTheResultPanelMatchingTheOutcome(
         bool succeeded,
         int processedFiles
     )
@@ -134,36 +136,40 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.HasResult, Is.True);
-            Assert.That(sut.HasResultDetails, Is.True);
-            Assert.That(sut.ResultIsSuccess, Is.EqualTo(succeeded));
-            Assert.That(
-                sut.ResultTitle,
-                Is.EqualTo(succeeded ? Strings.ResultSuccessTitle : Strings.ResultPartialTitle)
-            );
-            Assert.That(
-                sut.ResultFiles,
-                Is.EqualTo(
+        Assert.Multiple(
+            () => Assert.True(sut.HasResult),
+            () => Assert.True(sut.HasResultDetails),
+            () => Assert.Equal(succeeded, sut.ResultIsSuccess),
+            () =>
+                Assert.Equal(
+                    succeeded ? Strings.ResultSuccessTitle : Strings.ResultPartialTitle,
+                    sut.ResultTitle
+                ),
+            () =>
+                Assert.Equal(
                     string.Format(
                         CultureInfo.CurrentCulture,
                         Strings.ResultFilesFormat,
                         processedFiles,
                         5
-                    )
-                )
-            );
-            Assert.That(sut.ResultDuration, Does.Contain("00:03:00"));
-            Assert.That(sut.ResultSize, Does.Contain(ByteSizeFormatter.Format(2048)));
-            Assert.That(sut.ShowErrors, Is.False);
-            Assert.That(sut.ShowWarnings, Is.False);
-            Assert.That(sut.IsRunning, Is.False);
-        }
+                    ),
+                    sut.ResultFiles
+                ),
+            () => Assert.Contains("00:03:00", sut.ResultDuration, StringComparison.Ordinal),
+            () =>
+                Assert.Contains(
+                    ByteSizeFormatter.Format(2048),
+                    sut.ResultSize,
+                    StringComparison.Ordinal
+                ),
+            () => Assert.False(sut.ShowErrors),
+            () => Assert.False(sut.ShowWarnings),
+            () => Assert.False(sut.IsRunning)
+        );
     }
 
-    [Test]
-    public async Task StartCommand_WhenTheOutcomeAwaitsConfirmation_OpensTheConfirmationGate()
+    [Fact]
+    internal async Task StartCommand_WhenTheOutcomeAwaitsConfirmation_OpensTheConfirmationGate()
     {
         var sut = CreateSut();
         LocalizableMessage warning = new(MessageCode.DestinationExistingFilesFormat, 12);
@@ -174,16 +180,15 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.ShowWarnings, Is.True);
-            Assert.That(sut.HasResult, Is.False);
-            Assert.That(sut.Warnings, Is.EqualTo([MessageLocalizer.Localize(warning)]));
-        }
+        Assert.Multiple(
+            () => Assert.True(sut.ShowWarnings),
+            () => Assert.False(sut.HasResult),
+            () => Assert.Equal<string>([MessageLocalizer.Localize(warning)], sut.Warnings)
+        );
     }
 
-    [Test]
-    public async Task StartCommand_WhenACompletedRunCarriesWarnings_ShowsTheResultInsteadOfTheGate()
+    [Fact]
+    internal async Task StartCommand_WhenACompletedRunCarriesWarnings_ShowsTheResultInsteadOfTheGate()
     {
         var sut = CreateSut();
         StubHandler(
@@ -206,16 +211,15 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.ShowWarnings, Is.False);
-            Assert.That(sut.HasResult, Is.True);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultPartialTitle));
-        }
+        Assert.Multiple(
+            () => Assert.False(sut.ShowWarnings),
+            () => Assert.True(sut.HasResult),
+            () => Assert.Equal(Strings.ResultPartialTitle, sut.ResultTitle)
+        );
     }
 
-    [Test]
-    public async Task ContinueAnywayCommand_ReRunsTheMessageWithProceedOnWarningsSet()
+    [Fact]
+    internal async Task ContinueAnywayCommand_ReRunsTheMessageWithProceedOnWarningsSet()
     {
         List<CreateBackupCommand> commands = [];
         var sut = CreateSut();
@@ -250,22 +254,22 @@ public sealed class OperationViewModelBaseTests
 
         await sut.ContinueAnywayCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(gateOpened, Is.True);
-            Assert.That(
-                commands.Select(static command => command.ProceedOnWarnings),
-                Is.EqualTo([false, true])
-            );
-            Assert.That(sut.ShowWarnings, Is.False);
-            Assert.That(sut.Warnings, Is.Empty);
-            Assert.That(sut.HasResult, Is.True);
-            Assert.That(sut.ResultIsSuccess, Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(gateOpened),
+            () =>
+                Assert.Equal<bool>(
+                    [false, true],
+                    commands.Select(static command => command.ProceedOnWarnings)
+                ),
+            () => Assert.False(sut.ShowWarnings),
+            () => Assert.Empty(sut.Warnings),
+            () => Assert.True(sut.HasResult),
+            () => Assert.True(sut.ResultIsSuccess)
+        );
     }
 
-    [Test]
-    public async Task CancelOperationCommand_CancelsTheTokenTheHandlerReceived_AndLeavesThePageIdle()
+    [Fact]
+    internal async Task CancelOperationCommand_CancelsTheTokenTheHandlerReceived_AndLeavesThePageIdle()
     {
         var sut = CreateSut();
 
@@ -289,21 +293,20 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.HasResult, Is.True);
-            Assert.That(sut.ResultIsSuccess, Is.False);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultCancelled));
-            Assert.That(sut.ShowErrors, Is.False);
-            Assert.That(sut.IsRunning, Is.False);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(sut.HasResult),
+            () => Assert.False(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultCancelled, sut.ResultTitle),
+            () => Assert.False(sut.ShowErrors),
+            () => Assert.False(sut.IsRunning),
+            () => Assert.True(sut.StartCommand.CanExecute(null))
+        );
 
-        Assert.That(() => sut.CancelOperationCommand.Execute(null), Throws.Nothing);
+        Assert.Null(Record.Exception(() => sut.CancelOperationCommand.Execute(null)));
     }
 
-    [Test]
-    public async Task StartCommand_WhenTheHandlerThrows_ShowsTheMessageAndReturnsToIdle()
+    [Fact]
+    internal async Task StartCommand_WhenTheHandlerThrows_ShowsTheMessageAndReturnsToIdle()
     {
         var sut = CreateSut();
         _ = this
@@ -315,29 +318,24 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.HasResult, Is.True);
-            Assert.That(sut.ResultIsSuccess, Is.False);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultErrorTitle));
-            Assert.That(
-                sut.Errors,
-                Has.Count.EqualTo(1).And.All.Contains("disk gone"),
-                "the exception detail must survive"
-            );
-            Assert.That(
-                sut.Errors[0],
-                Is.Not.EqualTo("disk gone"),
-                "the detail must be wrapped in the localized frame rather than shown bare, so the "
-                    + "sentence around it follows the user's language"
-            );
-            Assert.That(sut.ShowErrors, Is.True);
-            Assert.That(sut.IsRunning, Is.False);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(sut.HasResult),
+            () => Assert.False(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultErrorTitle, sut.ResultTitle),
+            () => _ = Assert.Single(sut.Errors),
+            () =>
+                Assert.All(
+                    sut.Errors,
+                    error => Assert.Contains("disk gone", error, StringComparison.Ordinal)
+                ),
+            () => Assert.NotEqual("disk gone", sut.Errors[0]),
+            () => Assert.True(sut.ShowErrors),
+            () => Assert.False(sut.IsRunning),
+            () => Assert.True(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
+    [Fact]
     [SuppressMessage(
         "Usage",
         "CA2201:Do not raise reserved exception types",
@@ -345,7 +343,7 @@ public sealed class OperationViewModelBaseTests
             + "that fatal exceptions like OutOfMemoryException escape the page's catch instead of "
             + "being swallowed and reported as an ordinary failure."
     )]
-    public void StartCommand_WhenTheHandlerRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
+    internal async Task StartCommand_WhenTheHandlerRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
     {
         var sut = CreateSut();
         _ = this
@@ -355,17 +353,15 @@ public sealed class OperationViewModelBaseTests
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
 
-        _ = Assert.ThrowsAsync<OutOfMemoryException>(() => sut.StartCommand.ExecuteAsync(null));
+        _ = await Assert.ThrowsAsync<OutOfMemoryException>(
+            () => sut.StartCommand.ExecuteAsync(null)
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.IsRunning, Is.False);
-            Assert.That(sut.HasResult, Is.False);
-        }
+        Assert.Multiple(() => Assert.False(sut.IsRunning), () => Assert.False(sut.HasResult));
     }
 
-    [Test]
-    public async Task StartCommand_WhenTheEngineReportsProgress_ProjectsBytesOntoThePercentAndCaptions()
+    [Fact]
+    internal async Task StartCommand_WhenTheEngineReportsProgress_ProjectsBytesOntoThePercentAndCaptions()
     {
         var sut = CreateSut();
         var indeterminateWhileScanning = false;
@@ -408,24 +404,22 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(indeterminateWhileScanning, Is.True);
-            Assert.That(percentWhileScanning, Is.Zero);
-            Assert.That(sut.IsProgressIndeterminate, Is.False);
-            Assert.That(sut.ProgressValue, Is.EqualTo(25d).Within(0.001));
-            Assert.That(
-                sut.ProgressText,
-                Is.EqualTo(
-                    string.Format(CultureInfo.CurrentCulture, Strings.ProgressFilesFormat, 4, 10)
-                )
-            );
-            Assert.That(sut.ElapsedText, Does.Contain("01:02:05"));
-        }
+        Assert.Multiple(
+            () => Assert.True(indeterminateWhileScanning),
+            () => Assert.Equal(0d, percentWhileScanning),
+            () => Assert.False(sut.IsProgressIndeterminate),
+            () => Assert.Equal(25d, sut.ProgressValue, 0.001),
+            () =>
+                Assert.Equal(
+                    string.Format(CultureInfo.CurrentCulture, Strings.ProgressFilesFormat, 4, 10),
+                    sut.ProgressText
+                ),
+            () => Assert.Contains("01:02:05", sut.ElapsedText, StringComparison.Ordinal)
+        );
     }
 
-    [Test]
-    public async Task StartCommand_RunAgain_ClearsThePreviousRunsErrorsAndProgress()
+    [Fact]
+    internal async Task StartCommand_RunAgain_ClearsThePreviousRunsErrorsAndProgress()
     {
         var sut = CreateSut();
 
@@ -455,21 +449,23 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(errorsAfterFirstRun, Is.EqualTo(2));
-            Assert.That(sut.Errors, Is.Empty);
-            Assert.That(sut.Warnings, Is.Empty);
-            Assert.That(sut.ShowErrors, Is.False);
-            Assert.That(sut.ShowWarnings, Is.False);
-            Assert.That(sut.ResultIsSuccess, Is.True);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultSuccessTitle));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(2, errorsAfterFirstRun),
+            () => Assert.Empty(sut.Errors),
+            () => Assert.Empty(sut.Warnings),
+            () => Assert.False(sut.ShowErrors),
+            () => Assert.False(sut.ShowWarnings),
+            () => Assert.True(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+        );
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task StartCommand_PersistsTheUsedPathsOnlyWhenTheOperationSucceeded(bool succeeded)
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    internal async Task StartCommand_PersistsTheUsedPathsOnlyWhenTheOperationSucceeded(
+        bool succeeded
+    )
     {
         List<RecentPathSettings> saved = [];
         var sut = CreateSut();
@@ -498,11 +494,11 @@ public sealed class OperationViewModelBaseTests
             ? [new RecentPathSettings("chosen-source", "chosen-destination")]
             : [];
 
-        Assert.That(saved, Is.EqualTo(expected));
+        Assert.Equal<RecentPathSettings>(expected, saved);
     }
 
-    [Test]
-    public async Task OnNavigatedToAsync_CalledAgain_KeepsWhatTheUserTypedInsteadOfReapplyingRecentPaths()
+    [Fact]
+    internal async Task OnNavigatedToAsync_CalledAgain_KeepsWhatTheUserTypedInsteadOfReapplyingRecentPaths()
     {
         var sut = CreateSut();
 
@@ -513,17 +509,16 @@ public sealed class OperationViewModelBaseTests
         sut.DestinationPath = "typed-by-the-user";
         await sut.OnNavigatedToAsync();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sourceAfterFirstVisit, Is.EqualTo("remembered-source"));
-            Assert.That(destinationAfterFirstVisit, Is.EqualTo("remembered-destination"));
-            Assert.That(sut.DestinationPath, Is.EqualTo("typed-by-the-user"));
-            Assert.That(sut.AppliedRecentPaths, Has.Count.EqualTo(1));
-        }
+        Assert.Multiple(
+            () => Assert.Equal("remembered-source", sourceAfterFirstVisit),
+            () => Assert.Equal("remembered-destination", destinationAfterFirstVisit),
+            () => Assert.Equal("typed-by-the-user", sut.DestinationPath),
+            () => _ = Assert.Single(sut.AppliedRecentPaths)
+        );
     }
 
-    [Test]
-    public async Task OnNavigatedToAsync_WhenTheHandlerReportsTheDefaults_LeavesThePageUsable()
+    [Fact]
+    internal async Task OnNavigatedToAsync_WhenTheHandlerReportsTheDefaults_LeavesThePageUsable()
     {
         var sut = CreateSut();
         _ = this
@@ -535,17 +530,23 @@ public sealed class OperationViewModelBaseTests
 
         await sut.OnNavigatedToAsync();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.SourcePath, Is.Empty);
-            Assert.That(sut.DestinationPath, Is.Empty);
-            Assert.That(sut.AppliedRecentPaths, Is.EqualTo([RecentPathSettings.DefaultValue]));
-        }
+        Assert.Multiple(
+            () => Assert.Empty(sut.SourcePath),
+            () => Assert.Empty(sut.DestinationPath),
+            () =>
+                Assert.Equal<RecentPathSettings>(
+                    [RecentPathSettings.DefaultValue],
+                    sut.AppliedRecentPaths
+                )
+        );
     }
 
-    [TestCase(true, 5, 5, "", Description = "cleared once the operation it protected has succeeded")]
-    [TestCase(false, 3, 5, "secret", Description = "kept after a partial run, which may be re-run")]
-    public async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
+    [Theory]
+    // cleared once the operation it protected has succeeded
+    [InlineData(true, 5, 5, "")]
+    // kept after a partial run, which may be re-run
+    [InlineData(false, 3, 5, "secret")]
+    internal async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
         bool succeeded,
         int processedFiles,
         int totalFiles,
@@ -573,17 +574,11 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        Assert.That(
-            sut.Password,
-            Is.EqualTo(expectedPassword),
-            "Page ViewModels are singletons held for the life of the window, so a password kept after "
-                + "a successful run stays reachable forever; clearing after a failed one would force "
-                + "the user to retype a generated password to correct an unrelated problem."
-        );
+        Assert.Equal(expectedPassword, sut.Password);
     }
 
-    [Test]
-    public async Task StartCommand_CapturesThePasswordBeforeClearingIt()
+    [Fact]
+    internal async Task StartCommand_CapturesThePasswordBeforeClearingIt()
     {
         List<CreateBackupCommand> commands = [];
         var sut = CreateSut();
@@ -609,12 +604,7 @@ public sealed class OperationViewModelBaseTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        Assert.That(
-            commands.Select(static command => command.Password),
-            Is.EqualTo(["secret"]),
-            "The message must carry the real password: clearing it before the message was built "
-                + "would silently send an empty one to the engine."
-        );
+        Assert.Equal<string>(["secret"], commands.Select(static command => command.Password));
     }
 
     /// <summary>

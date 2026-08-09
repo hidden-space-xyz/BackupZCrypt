@@ -27,10 +27,21 @@ namespace BackupZCrypt.Test.Unit.Infrastructure;
 public sealed class CompressionStrategyTests
 {
     /// <summary>
-    /// Supplies every Zstandard level as a test case so each behaves identically from the caller's view.
+    /// Supplies every Zstandard level as a theory case so each behaves identically from the caller's
+    /// view. Public because <c>[MemberData]</c> sources have to be publicly reachable.
+    /// </summary>
+    /// <returns>One theory case per supported compression level.</returns>
+    public static TheoryData<ICompressionStrategy> Levels()
+    {
+        return new(CreateLevels());
+    }
+
+    /// <summary>
+    /// Builds one strategy instance per supported Zstandard level, for the tests that need the
+    /// strategies themselves rather than one theory case each.
     /// </summary>
     /// <returns>One strategy instance per supported compression level.</returns>
-    private static IEnumerable<ICompressionStrategy> Levels()
+    private static ICompressionStrategy[] CreateLevels()
     {
         return
         [
@@ -135,19 +146,21 @@ public sealed class CompressionStrategyTests
         return collected.ToArray();
     }
 
-    [TestCaseSource(nameof(Levels))]
-    public async Task Roundtrip_RecoversCompressibleData(ICompressionStrategy strategy)
+    [Theory]
+    [MemberData(nameof(Levels))]
+    internal async Task Roundtrip_RecoversCompressibleData(ICompressionStrategy strategy)
     {
         var original = CompressiblePattern(200 * 1024);
 
         var compressed = await CompressToBytesAsync(strategy, original);
         var restored = await DecompressToBytesAsync(strategy, compressed);
 
-        Assert.That(restored, Is.EqualTo(original));
+        Assert.Equal(original, restored);
     }
 
-    [TestCaseSource(nameof(Levels))]
-    public async Task Roundtrip_IncompressibleData_RecoversItWithBoundedExpansion(
+    [Theory]
+    [MemberData(nameof(Levels))]
+    internal async Task Roundtrip_IncompressibleData_RecoversItWithBoundedExpansion(
         ICompressionStrategy strategy
     )
     {
@@ -156,57 +169,54 @@ public sealed class CompressionStrategyTests
         var compressed = await CompressToBytesAsync(strategy, original);
         var restored = await DecompressToBytesAsync(strategy, compressed);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(restored, Is.EqualTo(original));
-
-            Assert.That(
-                compressed,
-                Has.Length.LessThanOrEqualTo(original.Length + 1024),
-                $"Incompressible input grew from {original.Length} to {compressed.Length} bytes. "
-                    + "Already-compressed chunks (media, archives) expand rather than shrink and the "
-                    + "backup stores the expanded result, so the overhead has to stay a small "
-                    + "constant."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Equal(original, restored),
+            () =>
+                Assert.True(
+                    compressed.Length <= original.Length + 1024,
+                    $"Incompressible input grew from {original.Length} to {compressed.Length} bytes. "
+                        + "Already-compressed chunks (media, archives) expand rather than shrink and the "
+                        + "backup stores the expanded result, so the overhead has to stay a small "
+                        + "constant."
+                )
+        );
     }
 
-    [TestCaseSource(nameof(Levels))]
-    public async Task Compress_ShrinksCompressibleInput(ICompressionStrategy strategy)
+    [Theory]
+    [MemberData(nameof(Levels))]
+    internal async Task Compress_ShrinksCompressibleInput(ICompressionStrategy strategy)
     {
         var original = CompressiblePattern(200 * 1024);
 
         var compressed = await CompressToBytesAsync(strategy, original);
 
-        Assert.That(
-            compressed,
-            Has.Length.LessThan(original.Length),
+        Assert.True(
+            compressed.Length < original.Length,
             $"Expected compressed length {compressed.Length} < original {original.Length}."
         );
     }
 
-    [Test]
-    public async Task Compress_BestLevel_ProducesSmallerOutputThanFastLevel()
+    [Fact]
+    internal async Task Compress_BestLevel_ProducesSmallerOutputThanFastLevel()
     {
         var original = SemiCompressiblePattern(256 * 1024, seed: 5150);
 
         var fast = await CompressToBytesAsync(new ZstdFastCompressionStrategy(), original);
         var best = await CompressToBytesAsync(new ZstdBestCompressionStrategy(), original);
 
-        Assert.That(
-            best,
-            Has.Length.LessThan(fast.Length),
+        Assert.True(
+            best.Length < fast.Length,
             $"ZstdBest ({best.Length} bytes) did not beat ZstdFast ({fast.Length} bytes), "
                 + "so the two levels are probably swapped or identical, which no round-trip test "
                 + "would catch."
         );
     }
 
-    [Test]
-    public async Task Decompress_FrameWrittenByAnotherLevel_RecoversOriginal()
+    [Fact]
+    internal async Task Decompress_FrameWrittenByAnotherLevel_RecoversOriginal()
     {
         var original = CompressiblePattern(32 * 1024);
-        var levels = Levels().ToArray();
+        var levels = CreateLevels();
 
         foreach (var writer in levels)
         {
@@ -216,26 +226,24 @@ public sealed class CompressionStrategyTests
             {
                 var restored = await DecompressToBytesAsync(reader, compressed);
 
-                Assert.That(
-                    restored,
-                    Is.EqualTo(original),
-                    $"{reader.Id} could not read a frame written by {writer.Id}. Restore picks its "
-                        + "strategy from the mode recorded in the manifest, so decompression must "
-                        + "not depend on the level that wrote the frame."
-                );
+                Assert.Equal(original, restored);
             }
         }
     }
 
-    [Test]
-    public async Task Decompress_CorruptOrTruncatedFrame_FailsInsteadOfReturningPartialData()
+    [Fact]
+    internal async Task Decompress_CorruptOrTruncatedFrame_FailsInsteadOfReturningPartialData()
     {
         var strategy = new ZstdCompressionStrategy();
         var compressed = await CompressToBytesAsync(strategy, CompressiblePattern(32 * 1024));
         var truncated = compressed[..(compressed.Length / 2)];
         var garbage = RandomBytes(1024, seed: 777);
 
-        _ = Assert.CatchAsync(async () => await DecompressToBytesAsync(strategy, truncated));
-        _ = Assert.CatchAsync(async () => await DecompressToBytesAsync(strategy, garbage));
+        _ = await Assert.ThrowsAnyAsync<Exception>(
+            async () => await DecompressToBytesAsync(strategy, truncated)
+        );
+        _ = await Assert.ThrowsAnyAsync<Exception>(
+            async () => await DecompressToBytesAsync(strategy, garbage)
+        );
     }
 }

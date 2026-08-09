@@ -17,32 +17,32 @@ public sealed class PasswordConvertersTests
     /// </summary>
     private static readonly string[] Bands = ["danger", "warning", "good", "strong"];
 
-    [Test]
-    public void RevealToPasswordChar_MasksUnlessTheUserAskedToReveal()
+    [Fact]
+    internal void RevealToPasswordChar_MasksUnlessTheUserAskedToReveal()
     {
         var converter = PasswordConverters.RevealToPasswordChar;
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                converter.Convert(false, typeof(char), null, CultureInfo.InvariantCulture),
-                Is.EqualTo('●'),
-                "A hidden password must be masked, which is also what keeps copy and cut disabled."
-            );
-            Assert.That(
-                converter.Convert(true, typeof(char), null, CultureInfo.InvariantCulture),
-                Is.EqualTo('\0'),
-                "Only a deliberately revealed password may clear the mask and so become copyable."
-            );
-        }
+        Assert.Multiple(
+            () =>
+                Assert.Equal(
+                    '●',
+                    converter.Convert(false, typeof(char), null, CultureInfo.InvariantCulture)
+                ),
+            () =>
+                Assert.Equal(
+                    '\0',
+                    converter.Convert(true, typeof(char), null, CultureInfo.InvariantCulture)
+                )
+        );
     }
 
-    [TestCase(PasswordStrength.VeryWeak, "danger")]
-    [TestCase(PasswordStrength.Weak, "danger")]
-    [TestCase(PasswordStrength.Fair, "warning")]
-    [TestCase(PasswordStrength.Good, "good")]
-    [TestCase(PasswordStrength.Strong, "strong")]
-    public void StrengthIsBand_MatchesExactlyOneBandPerStrength(
+    [Theory]
+    [InlineData(PasswordStrength.VeryWeak, "danger")]
+    [InlineData(PasswordStrength.Weak, "danger")]
+    [InlineData(PasswordStrength.Fair, "warning")]
+    [InlineData(PasswordStrength.Good, "good")]
+    [InlineData(PasswordStrength.Strong, "strong")]
+    internal void StrengthIsBand_MatchesExactlyOneBandPerStrength(
         PasswordStrength strength,
         string expectedBand
     )
@@ -59,16 +59,13 @@ public sealed class PasswordConvertersTests
             )
             .ToList();
 
-        Assert.That(
-            matched,
-            Is.EqualTo([expectedBand]),
-            "Each strength must light exactly one style class: none leaves the bar on the default "
-                + "accent colour, and two would let style order decide the colour."
-        );
+        string[] expected = [expectedBand];
+
+        Assert.Equal(expected, matched);
     }
 
-    [Test]
-    public void StrengthIsBand_EveryDeclaredStrength_HasABand()
+    [Fact]
+    internal void StrengthIsBand_EveryDeclaredStrength_HasABand()
     {
         var unmapped = Enum.GetValues<PasswordStrength>()
             .Where(strength =>
@@ -85,10 +82,6 @@ public sealed class PasswordConvertersTests
             )
             .ToList();
 
-        Assert.That(
-            unmapped,
-            Is.Empty,
-            "A new PasswordStrength member with no colour band would silently show the default accent."
-        );
+        Assert.Empty(unmapped);
     }
 }

@@ -27,28 +27,27 @@ public sealed class AnalyzePasswordStrengthQueryHandlerTests
         return new(this.passwordService);
     }
 
-    [Test]
-    public void Handle_Query_DelegatesThePasswordAndReturnsTheAnalysisUnchanged()
+    [Fact]
+    internal void Handle_Query_DelegatesThePasswordAndReturnsTheAnalysisUnchanged()
     {
         PasswordStrengthAnalysis analysis = new(PasswordStrength.Strong, 87.5, 120.0, []);
         _ = this.passwordService.AnalyzePasswordStrength("candidate-password").Returns(analysis);
 
         var result = this.CreateSut().Handle(new AnalyzePasswordStrengthQuery("candidate-password"));
 
-        Assert.That(result, Is.SameAs(analysis));
+        Assert.Same(analysis, result);
     }
 
-    [Test]
-    public void ToString_OfTheQuery_RedactsThePassword()
+    [Fact]
+    internal void ToString_OfTheQuery_RedactsThePassword()
     {
         var query = new AnalyzePasswordStrengthQuery("hunter2-secret");
 
         var text = query.ToString();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(text, Does.Not.Contain("hunter2-secret"));
-            Assert.That(text, Does.Contain("***"));
-        }
+        Assert.Multiple(
+            () => Assert.DoesNotContain("hunter2-secret", text, StringComparison.Ordinal),
+            () => Assert.Contains("***", text, StringComparison.Ordinal)
+        );
     }
 }

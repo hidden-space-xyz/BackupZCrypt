@@ -1,39 +1,10 @@
 root = true
 
-# This file exists solely for diagnostics whose correct resolution is to ignore them.
-# Every suppression carries its reason; anything fixable is fixed in code instead.
-
 [BackupZCrypt.Application/ValueObjects/ResultOfT.cs]
-
-# Result<T>.Success/Failure are the idiomatic .NET result-pattern factories. The implicit
-# conversion operators already give call sites type inference where it matters, and moving the
-# factories onto the non-generic base type would churn every call site without making any of
-# them clearer or safer. Scoped to this file so any other generic type that grows static
-# members still answers to CA1000.
 dotnet_diagnostic.CA1000.severity = none
 
 [*.cs]
-
-# Every flagged composite format string comes from Strings.resx and is re-resolved against the
-# active UI culture on each access. Caching a CompositeFormat, as CA1863 asks, would freeze the
-# first culture seen and silently break the language preference applied at startup.
 dotnet_diagnostic.CA1863.severity = none
 
-# The pattern is **.cs rather than **/*.cs on purpose: Roslyn's editorconfig globbing requires a
-# real directory level before the '/' in '**/', which would silently exclude any .cs file sitting
-# directly in the project root.
 [BackupZCrypt.Test/**.cs]
-
-# Test method names deliberately follow the NUnit Method_Scenario_ExpectedOutcome convention,
-# whose readability depends on the underscores CA1707 forbids.
-dotnet_diagnostic.CA1707.severity = none
-
-# NUnit requires test classes and methods to be public, which makes CS1591 demand XML docs for
-# every test. The expressive Method_Scenario_ExpectedOutcome names and assertion messages are the
-# documentation; non-obvious helpers are documented individually.
-dotnet_diagnostic.CS1591.severity = none
-
-# Tests use System.Random only to generate bulk payloads for chunking, compression, and
-# encryption round-trips. Nothing security-sensitive derives from that randomness, so a
-# cryptographic generator would add cost without adding safety.
 dotnet_diagnostic.CA5394.severity = none

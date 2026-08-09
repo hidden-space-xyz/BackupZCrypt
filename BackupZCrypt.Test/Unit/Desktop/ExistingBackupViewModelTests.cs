@@ -24,7 +24,7 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// The absorption of probe failures into the missing kind lives in the detection handler and is
 /// pinned by its own tests.
 /// </summary>
-public sealed class ExistingBackupViewModelTests
+public sealed class ExistingBackupViewModelTests : IDisposable
 {
     /// <summary>
     /// The substituted handler the restore page dispatches its runs to.
@@ -70,32 +70,31 @@ public sealed class ExistingBackupViewModelTests
     /// <summary>
     /// The synchronization context that was installed before the test, restored afterwards.
     /// </summary>
-    private SynchronizationContext? previousContext;
+    private readonly SynchronizationContext? previousContext;
 
     /// <summary>
-    /// Installs a synchronization context that runs posted callbacks inline, so a detection that
-    /// completes after its await resumes at a deterministic point in the test instead of on an
-    /// arbitrary thread pool thread.
+    /// Initializes a new instance of the <see cref="ExistingBackupViewModelTests"/> class, installing
+    /// a synchronization context that runs posted callbacks inline, so a detection that completes
+    /// after its await resumes at a deterministic point in the test instead of on an arbitrary thread
+    /// pool thread.
     /// </summary>
-    [SetUp]
-    public void InstallInlineSynchronizationContext()
+    public ExistingBackupViewModelTests()
     {
         this.previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
     }
 
     /// <summary>
-    /// Restores the synchronization context so the inline one cannot leak into other fixtures that
-    /// share the same thread.
+    /// Restores the synchronization context so the inline one cannot leak into other test classes
+    /// that share the same thread.
     /// </summary>
-    [TearDown]
-    public void RestoreSynchronizationContext()
+    public void Dispose()
     {
         SynchronizationContext.SetSynchronizationContext(this.previousContext);
     }
 
-    [Test]
-    public void BackupPath_WhenAnEncryptedManifestIsFound_AsksForAPasswordAndStartsOnlyOnceItIsTyped()
+    [Fact]
+    internal void BackupPath_WhenAnEncryptedManifestIsFound_AsksForAPasswordAndStartsOnlyOnceItIsTyped()
     {
         StubDetection(ManifestKind.Encrypted);
         var sut = CreateSut();
@@ -107,17 +106,16 @@ public sealed class ExistingBackupViewModelTests
 
         sut.Password = "backup-password";
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.IsBackupDetected, Is.True);
-            Assert.That(sut.HasDetection, Is.False);
-            Assert.That(enabledWithoutPassword, Is.False);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.True(sut.IsBackupDetected),
+            () => Assert.False(sut.HasDetection),
+            () => Assert.False(enabledWithoutPassword),
+            () => Assert.True(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public void BackupPath_WhenNoManifestIsFound_ShowsTheMissingBackupNoticeAndKeepsTheStartBlocked()
+    [Fact]
+    internal void BackupPath_WhenNoManifestIsFound_ShowsTheMissingBackupNoticeAndKeepsTheStartBlocked()
     {
         StubDetection(ManifestKind.Missing);
         var sut = CreateSut();
@@ -126,16 +124,15 @@ public sealed class ExistingBackupViewModelTests
         sut.SourcePath = "not-a-backup";
         sut.Password = "backup-password";
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.IsBackupDetected, Is.False);
-            Assert.That(sut.HasDetection, Is.True);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.False(sut.IsBackupDetected),
+            () => Assert.True(sut.HasDetection),
+            () => Assert.False(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public void BackupPath_WhenClearedAfterADetection_ForgetsThePasswordRequirementAndTheNotice()
+    [Fact]
+    internal void BackupPath_WhenClearedAfterADetection_ForgetsThePasswordRequirementAndTheNotice()
     {
         StubDetection(ManifestKind.Encrypted);
         var sut = CreateSut();
@@ -147,17 +144,16 @@ public sealed class ExistingBackupViewModelTests
 
         sut.SourcePath = "   ";
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(enabledWithABackup, Is.True);
-            Assert.That(sut.IsBackupDetected, Is.False);
-            Assert.That(sut.HasDetection, Is.False);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.True(enabledWithABackup),
+            () => Assert.False(sut.IsBackupDetected),
+            () => Assert.False(sut.HasDetection),
+            () => Assert.False(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public void BackupPath_WhenAnEarlierProbeCompletesLate_KeepsTheDetectionOfTheCurrentPath()
+    [Fact]
+    internal void BackupPath_WhenAnEarlierProbeCompletesLate_KeepsTheDetectionOfTheCurrentPath()
     {
         TaskCompletionSource<ManifestKind> slowProbe = new();
 
@@ -184,17 +180,16 @@ public sealed class ExistingBackupViewModelTests
 
         slowProbe.SetResult(ManifestKind.Encrypted);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(detectedBeforeTheStaleResult, Is.False);
-            Assert.That(sut.IsBackupDetected, Is.False);
-            Assert.That(sut.HasDetection, Is.True);
-            Assert.That(sut.StartCommand.CanExecute(null), Is.False);
-        }
+        Assert.Multiple(
+            () => Assert.False(detectedBeforeTheStaleResult),
+            () => Assert.False(sut.IsBackupDetected),
+            () => Assert.True(sut.HasDetection),
+            () => Assert.False(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public void BackupPath_WhenTheDetectionFinishesAfterThePathWasSet_ReEvaluatesTheStartCommand()
+    [Fact]
+    internal void BackupPath_WhenTheDetectionFinishesAfterThePathWasSet_ReEvaluatesTheStartCommand()
     {
         TaskCompletionSource<ManifestKind> probe = new();
 
@@ -218,16 +213,15 @@ public sealed class ExistingBackupViewModelTests
 
         probe.SetResult(ManifestKind.Encrypted);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(enabledWhileProbing, Is.False);
-            Assert.That(notifications, Is.GreaterThan(notificationsWhileProbing));
-            Assert.That(sut.StartCommand.CanExecute(null), Is.True);
-        }
+        Assert.Multiple(
+            () => Assert.False(enabledWhileProbing),
+            () => Assert.True(notifications > notificationsWhileProbing),
+            () => Assert.True(sut.StartCommand.CanExecute(null))
+        );
     }
 
-    [Test]
-    public async Task StartCommand_OnTheRestorePage_SendsTheRestoreMessageAndItsSuccessTitle()
+    [Fact]
+    internal async Task StartCommand_OnTheRestorePage_SendsTheRestoreMessageAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
         var commands = StubRestoreCapturingCommands();
@@ -248,21 +242,20 @@ public sealed class ExistingBackupViewModelTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(commands, Has.Count.EqualTo(1));
-            Assert.That(commands[0].BackupPath, Is.EqualTo("backup-source"));
-            Assert.That(commands[0].DestinationPath, Is.EqualTo("backup-destination"));
-            Assert.That(commands[0].Password, Is.EqualTo("backup-password"));
-            Assert.That(commands[0].ProceedOnWarnings, Is.False);
-            Assert.That(commands[0].Progress, Is.Not.Null);
-            Assert.That(sut.ResultIsSuccess, Is.True);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultSuccessTitle));
-        }
+        Assert.Multiple(
+            () => _ = Assert.Single(commands),
+            () => Assert.Equal("backup-source", commands[0].BackupPath),
+            () => Assert.Equal("backup-destination", commands[0].DestinationPath),
+            () => Assert.Equal("backup-password", commands[0].Password),
+            () => Assert.False(commands[0].ProceedOnWarnings),
+            () => Assert.NotNull(commands[0].Progress),
+            () => Assert.True(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+        );
     }
 
-    [Test]
-    public async Task StartCommand_OnTheUpdatePage_SendsTheUpdateMessageAndItsSuccessTitle()
+    [Fact]
+    internal async Task StartCommand_OnTheUpdatePage_SendsTheUpdateMessageAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
         List<UpdateBackupCommand> commands = [];
@@ -289,21 +282,20 @@ public sealed class ExistingBackupViewModelTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(commands, Has.Count.EqualTo(1));
-            Assert.That(commands[0].SourcePath, Is.EqualTo("backup-source"));
-            Assert.That(commands[0].BackupPath, Is.EqualTo("backup-destination"));
-            Assert.That(commands[0].Password, Is.EqualTo("backup-password"));
-            Assert.That(commands[0].ProceedOnWarnings, Is.False);
-            Assert.That(commands[0].Progress, Is.Not.Null);
-            Assert.That(sut.ResultIsSuccess, Is.True);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.ResultSuccessTitle));
-        }
+        Assert.Multiple(
+            () => _ = Assert.Single(commands),
+            () => Assert.Equal("backup-source", commands[0].SourcePath),
+            () => Assert.Equal("backup-destination", commands[0].BackupPath),
+            () => Assert.Equal("backup-password", commands[0].Password),
+            () => Assert.False(commands[0].ProceedOnWarnings),
+            () => Assert.NotNull(commands[0].Progress),
+            () => Assert.True(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+        );
     }
 
-    [Test]
-    public async Task StartCommand_OnTheVerifyPage_SendsTheVerifyMessageAndItsSuccessTitle()
+    [Fact]
+    internal async Task StartCommand_OnTheVerifyPage_SendsTheVerifyMessageAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
         List<VerifyBackupQuery> queries = [];
@@ -329,21 +321,21 @@ public sealed class ExistingBackupViewModelTests
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(queries, Has.Count.EqualTo(1));
-            Assert.That(queries[0].BackupPath, Is.EqualTo("backup-source"));
-            Assert.That(queries[0].Password, Is.EqualTo("backup-password"));
-            Assert.That(queries[0].Progress, Is.Not.Null);
-            Assert.That(sut.ResultIsSuccess, Is.True);
-            Assert.That(sut.ResultTitle, Is.EqualTo(Strings.VerifySuccessTitle));
-        }
+        Assert.Multiple(
+            () => _ = Assert.Single(queries),
+            () => Assert.Equal("backup-source", queries[0].BackupPath),
+            () => Assert.Equal("backup-password", queries[0].Password),
+            () => Assert.NotNull(queries[0].Progress),
+            () => Assert.True(sut.ResultIsSuccess),
+            () => Assert.Equal(Strings.VerifySuccessTitle, sut.ResultTitle)
+        );
     }
 
-    [TestCase(BackupOperation.Restore, "remembered-destination", "")]
-    [TestCase(BackupOperation.Update, "remembered-source", "remembered-destination")]
-    [TestCase(BackupOperation.Verify, "remembered-destination", "")]
-    public async Task OnNavigatedToAsync_OnEachExistingBackupPage_SeedsThePathsItActuallyOperatesOn(
+    [Theory]
+    [InlineData(BackupOperation.Restore, "remembered-destination", "")]
+    [InlineData(BackupOperation.Update, "remembered-source", "remembered-destination")]
+    [InlineData(BackupOperation.Verify, "remembered-destination", "")]
+    internal async Task OnNavigatedToAsync_OnEachExistingBackupPage_SeedsThePathsItActuallyOperatesOn(
         BackupOperation operation,
         string expectedSource,
         string expectedDestination
@@ -354,17 +346,17 @@ public sealed class ExistingBackupViewModelTests
 
         await sut.OnNavigatedToAsync();
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.SourcePath, Is.EqualTo(expectedSource));
-            Assert.That(sut.DestinationPath, Is.EqualTo(expectedDestination));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(expectedSource, sut.SourcePath),
+            () => Assert.Equal(expectedDestination, sut.DestinationPath)
+        );
     }
 
-    [TestCase(BackupOperation.Restore, "backup-source", "backup-destination")]
-    [TestCase(BackupOperation.Update, "backup-source", "backup-destination")]
-    [TestCase(BackupOperation.Verify, "remembered-source", "backup-source")]
-    public async Task StartCommand_WhenThePageSucceeds_RemembersOnlyThePathsThatPageOwns(
+    [Theory]
+    [InlineData(BackupOperation.Restore, "backup-source", "backup-destination")]
+    [InlineData(BackupOperation.Update, "backup-source", "backup-destination")]
+    [InlineData(BackupOperation.Verify, "remembered-source", "backup-source")]
+    internal async Task StartCommand_WhenThePageSucceeds_RemembersOnlyThePathsThatPageOwns(
         BackupOperation operation,
         string expectedLastSource,
         string expectedLastDestination
@@ -390,13 +382,14 @@ public sealed class ExistingBackupViewModelTests
 
         RecentPathSettings[] expected = [new(expectedLastSource, expectedLastDestination)];
 
-        Assert.That(saved, Is.EqualTo(expected));
+        Assert.Equal(expected, saved);
     }
 
-    [TestCase(BackupOperation.Restore, false)]
-    [TestCase(BackupOperation.Update, false)]
-    [TestCase(BackupOperation.Verify, true)]
-    public void StartCommand_WithoutADestination_IsEnabledOnlyOnThePageThatWritesNothing(
+    [Theory]
+    [InlineData(BackupOperation.Restore, false)]
+    [InlineData(BackupOperation.Update, false)]
+    [InlineData(BackupOperation.Verify, true)]
+    internal void StartCommand_WithoutADestination_IsEnabledOnlyOnThePageThatWritesNothing(
         BackupOperation operation,
         bool expected
     )
@@ -407,11 +400,11 @@ public sealed class ExistingBackupViewModelTests
         sut.SourcePath = "backup-source";
         sut.Password = "backup-password";
 
-        Assert.That(sut.StartCommand.CanExecute(null), Is.EqualTo(expected));
+        Assert.Equal(expected, sut.StartCommand.CanExecute(null));
     }
 
-    [Test]
-    public async Task PickCommands_OnTheRestorePage_PutTheBackupInTheSourceAndTheRecoveryInTheDestination()
+    [Fact]
+    internal async Task PickCommands_OnTheRestorePage_PutTheBackupInTheSourceAndTheRecoveryInTheDestination()
     {
         StubDetection(ManifestKind.Encrypted);
         StubPickedFolders("picked-backup", "picked-recovery");
@@ -428,15 +421,14 @@ public sealed class ExistingBackupViewModelTests
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
         await sut.PickDestinationFolderCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.SourcePath, Is.EqualTo("picked-backup"));
-            Assert.That(sut.DestinationPath, Is.EqualTo("picked-recovery"));
-        }
+        Assert.Multiple(
+            () => Assert.Equal("picked-backup", sut.SourcePath),
+            () => Assert.Equal("picked-recovery", sut.DestinationPath)
+        );
     }
 
-    [Test]
-    public async Task PickCommands_OnTheUpdatePage_PutTheBackupInTheDestinationAndTheScannedFolderInTheSource()
+    [Fact]
+    internal async Task PickCommands_OnTheUpdatePage_PutTheBackupInTheDestinationAndTheScannedFolderInTheSource()
     {
         StubDetection(ManifestKind.Encrypted);
         StubPickedFolders("picked-scan", "picked-backup");
@@ -453,15 +445,14 @@ public sealed class ExistingBackupViewModelTests
         await sut.PickSourceFolderCommand.ExecuteAsync(null);
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sut.SourcePath, Is.EqualTo("picked-scan"));
-            Assert.That(sut.DestinationPath, Is.EqualTo("picked-backup"));
-        }
+        Assert.Multiple(
+            () => Assert.Equal("picked-scan", sut.SourcePath),
+            () => Assert.Equal("picked-backup", sut.DestinationPath)
+        );
     }
 
-    [Test]
-    public async Task PickCommand_OnTheVerifyPage_FillsTheBackupPathAndKeepsItWhenTheDialogIsDismissed()
+    [Fact]
+    internal async Task PickCommand_OnTheVerifyPage_FillsTheBackupPathAndKeepsItWhenTheDialogIsDismissed()
     {
         StubDetection(ManifestKind.Encrypted);
         StubPickedFolders("picked-backup", null);
@@ -480,12 +471,11 @@ public sealed class ExistingBackupViewModelTests
 
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(pathAfterPicking, Is.EqualTo("picked-backup"));
-            Assert.That(sut.SourcePath, Is.EqualTo("picked-backup"));
-            Assert.That(sut.DestinationPath, Is.Empty);
-        }
+        Assert.Multiple(
+            () => Assert.Equal("picked-backup", pathAfterPicking),
+            () => Assert.Equal("picked-backup", sut.SourcePath),
+            () => Assert.Empty(sut.DestinationPath)
+        );
     }
 
     /// <summary>

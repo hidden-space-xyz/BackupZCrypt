@@ -47,21 +47,17 @@ public sealed class SettingsRoundTripTests
     /// the default value with it.
     /// </summary>
     /// <returns>Recent path settings with exactly one member populated.</returns>
-    private static IEnumerable<TestCaseData> PartiallyPopulatedRecentPaths()
+    public static TheoryData<RecentPathSettings> PartiallyPopulatedRecentPaths()
     {
-        return
-        [
-            new TestCaseData(new RecentPathSettings(SourcePath, null)).SetName(
-                "SaveThenGetOrCreate_RecentPathsWithUnsetDestination_PreservesNullAndTheSetMember"
-            ),
-            new TestCaseData(new RecentPathSettings(null, DestinationPath)).SetName(
-                "SaveThenGetOrCreate_RecentPathsWithUnsetSource_PreservesNullAndTheSetMember"
-            ),
-        ];
+        return new()
+        {
+            new RecentPathSettings(SourcePath, null),
+            new RecentPathSettings(null, DestinationPath),
+        };
     }
 
-    [Test]
-    public void GetFilePath_EverySettingsType_ResolvesToADistinctFileInsideTheBaseDirectory()
+    [Fact]
+    internal void GetFilePath_EverySettingsType_ResolvesToADistinctFileInsideTheBaseDirectory()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
@@ -73,23 +69,18 @@ public sealed class SettingsRoundTripTests
             service.GetFilePath<RecentPathSettings>(),
         ];
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(
-                paths,
-                Is.Unique,
-                "Two settings types share a file name and would overwrite each other."
-            );
-            Assert.That(
-                paths.Select(Path.GetDirectoryName),
-                Is.All.EqualTo(Path.GetFullPath(dir.Path)),
-                "A settings file resolved outside the configured base directory."
-            );
-        }
+        Assert.Multiple(
+            () => Assert.Distinct(paths),
+            () =>
+                Assert.All(
+                    paths.Select(Path.GetDirectoryName),
+                    directory => Assert.Equal(Path.GetFullPath(dir.Path), directory)
+                )
+        );
     }
 
-    [Test]
-    public async Task SaveThenGetOrCreate_EverySettingsType_RoundtripsWithoutClobberingTheOthers()
+    [Fact]
+    internal async Task SaveThenGetOrCreate_EverySettingsType_RoundtripsWithoutClobberingTheOthers()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
@@ -102,57 +93,62 @@ public sealed class SettingsRoundTripTests
         var language = new LanguageSettings("es");
         var recentPaths = new RecentPathSettings(SourcePath, DestinationPath);
 
-        await service.SaveAsync(creation);
-        await service.SaveAsync(language);
-        await service.SaveAsync(recentPaths);
+        await service.SaveAsync(creation, TestContext.Current.CancellationToken);
+        await service.SaveAsync(language, TestContext.Current.CancellationToken);
+        await service.SaveAsync(recentPaths, TestContext.Current.CancellationToken);
 
-        var loadedCreation = await service.GetOrCreateAsync<BackupCreationSettings>();
-        var loadedLanguage = await service.GetOrCreateAsync<LanguageSettings>();
-        var loadedRecentPaths = await service.GetOrCreateAsync<RecentPathSettings>();
+        var loadedCreation = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
+        var loadedLanguage = await service.GetOrCreateAsync<LanguageSettings>(
+            TestContext.Current.CancellationToken
+        );
+        var loadedRecentPaths = await service.GetOrCreateAsync<RecentPathSettings>(
+            TestContext.Current.CancellationToken
+        );
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(loadedCreation, Is.EqualTo(creation));
-            Assert.That(loadedLanguage, Is.EqualTo(language));
-            Assert.That(loadedRecentPaths, Is.EqualTo(recentPaths));
-        }
+        Assert.Multiple(
+            () => Assert.Equal(creation, loadedCreation),
+            () => Assert.Equal(language, loadedLanguage),
+            () => Assert.Equal(recentPaths, loadedRecentPaths)
+        );
     }
 
-    [TestCaseSource(nameof(PartiallyPopulatedRecentPaths))]
-    public async Task SaveThenGetOrCreate_RecentPathsWithOneUnsetMember_PreservesNullAndTheSetMember(
+    [Theory]
+    [MemberData(nameof(PartiallyPopulatedRecentPaths))]
+    internal async Task SaveThenGetOrCreate_RecentPathsWithOneUnsetMember_PreservesNullAndTheSetMember(
         RecentPathSettings settings
     )
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
-        await service.SaveAsync(settings);
-        var loaded = await service.GetOrCreateAsync<RecentPathSettings>();
-
-        Assert.That(
-            loaded,
-            Is.EqualTo(settings),
-            "A null member must round-trip as null without resetting the populated member."
+        await service.SaveAsync(settings, TestContext.Current.CancellationToken);
+        var loaded = await service.GetOrCreateAsync<RecentPathSettings>(
+            TestContext.Current.CancellationToken
         );
+
+        Assert.Equal(settings, loaded);
     }
 
-    [Test]
-    public async Task SaveAsync_OverwritingWithAShorterValue_ReplacesTheWholeFile()
+    [Fact]
+    internal async Task SaveAsync_OverwritingWithAShorterValue_ReplacesTheWholeFile()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
 
-        await service.SaveAsync(new RecentPathSettings(SourcePath, DestinationPath));
+        await service.SaveAsync(
+            new RecentPathSettings(SourcePath, DestinationPath),
+            TestContext.Current.CancellationToken
+        );
 
         var trimmed = new RecentPathSettings(ShortPath);
-        await service.SaveAsync(trimmed);
+        await service.SaveAsync(trimmed, TestContext.Current.CancellationToken);
 
-        var loaded = await service.GetOrCreateAsync<RecentPathSettings>();
-
-        Assert.That(
-            loaded,
-            Is.EqualTo(trimmed),
-            "The shorter payload left remnants of the previous file, so the reload fell back to defaults."
+        var loaded = await service.GetOrCreateAsync<RecentPathSettings>(
+            TestContext.Current.CancellationToken
         );
+
+        Assert.Equal(trimmed, loaded);
     }
 }

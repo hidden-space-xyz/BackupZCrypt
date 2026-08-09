@@ -30,18 +30,18 @@ public sealed class StrategyRegistrationTests
     /// Supplies every declared encryption algorithm, so a new member automatically becomes a case.
     /// </summary>
     /// <returns>Every value of <see cref="EncryptionAlgorithm"/>.</returns>
-    private static EncryptionAlgorithm[] EncryptionAlgorithms()
+    public static TheoryData<EncryptionAlgorithm> EncryptionAlgorithms()
     {
-        return Enum.GetValues<EncryptionAlgorithm>();
+        return new(Enum.GetValues<EncryptionAlgorithm>());
     }
 
     /// <summary>
     /// Supplies every declared key derivation algorithm, so a new member automatically becomes a case.
     /// </summary>
     /// <returns>Every value of <see cref="KeyDerivationAlgorithm"/>.</returns>
-    private static KeyDerivationAlgorithm[] KeyDerivationAlgorithms()
+    public static TheoryData<KeyDerivationAlgorithm> KeyDerivationAlgorithms()
     {
-        return Enum.GetValues<KeyDerivationAlgorithm>();
+        return new(Enum.GetValues<KeyDerivationAlgorithm>());
     }
 
     /// <summary>
@@ -56,13 +56,16 @@ public sealed class StrategyRegistrationTests
     /// callers' job.
     /// </remarks>
     /// <returns>Every value of <see cref="CompressionMode"/> except <see cref="CompressionMode.None"/>.</returns>
-    private static IEnumerable<CompressionMode> CompressionModes()
+    public static TheoryData<CompressionMode> CompressionModes()
     {
-        return Enum.GetValues<CompressionMode>().Where(mode => mode is not CompressionMode.None);
+        return new(
+            Enum.GetValues<CompressionMode>().Where(mode => mode is not CompressionMode.None)
+        );
     }
 
-    [TestCaseSource(nameof(EncryptionAlgorithms))]
-    public void Create_EveryEncryptionAlgorithm_ResolvesStrategyWithMatchingId(
+    [Theory]
+    [MemberData(nameof(EncryptionAlgorithms))]
+    internal void Create_EveryEncryptionAlgorithm_ResolvesStrategyWithMatchingId(
         EncryptionAlgorithm algorithm
     )
     {
@@ -71,15 +74,12 @@ public sealed class StrategyRegistrationTests
 
         var strategy = factory.Create(algorithm);
 
-        Assert.That(
-            strategy.Id,
-            Is.EqualTo(algorithm),
-            $"The container resolved '{strategy.GetType().Name}' for {algorithm}."
-        );
+        Assert.Equal(algorithm, strategy.Id);
     }
 
-    [TestCaseSource(nameof(KeyDerivationAlgorithms))]
-    public void Create_EveryKeyDerivationAlgorithm_ResolvesStrategyWithMatchingId(
+    [Theory]
+    [MemberData(nameof(KeyDerivationAlgorithms))]
+    internal void Create_EveryKeyDerivationAlgorithm_ResolvesStrategyWithMatchingId(
         KeyDerivationAlgorithm algorithm
     )
     {
@@ -88,30 +88,23 @@ public sealed class StrategyRegistrationTests
 
         var strategy = factory.Create(algorithm);
 
-        Assert.That(
-            strategy.Id,
-            Is.EqualTo(algorithm),
-            $"The container resolved '{strategy.GetType().Name}' for {algorithm}."
-        );
+        Assert.Equal(algorithm, strategy.Id);
     }
 
-    [TestCaseSource(nameof(CompressionModes))]
-    public void Create_EveryCompressionMode_ResolvesStrategyWithMatchingId(CompressionMode mode)
+    [Theory]
+    [MemberData(nameof(CompressionModes))]
+    internal void Create_EveryCompressionMode_ResolvesStrategyWithMatchingId(CompressionMode mode)
     {
         using var provider = TestHost.CreateProvider();
         var factory = provider.GetRequiredService<ICompressionServiceFactory>();
 
         var strategy = factory.Create(mode);
 
-        Assert.That(
-            strategy.Id,
-            Is.EqualTo(mode),
-            $"The container resolved '{strategy.GetType().Name}' for {mode}."
-        );
+        Assert.Equal(mode, strategy.Id);
     }
 
-    [Test]
-    public void Create_CompressionModeNone_IsDeliberatelyUnregistered()
+    [Fact]
+    internal void Create_CompressionModeNone_IsDeliberatelyUnregistered()
     {
         using var provider = TestHost.CreateProvider();
         var factory = provider.GetRequiredService<ICompressionServiceFactory>();
@@ -119,23 +112,16 @@ public sealed class StrategyRegistrationTests
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => factory.Create(CompressionMode.None));
     }
 
-    [Test]
-    public void Registrations_ContainExactlyOneChunkingStrategy()
+    [Fact]
+    internal void Registrations_ContainExactlyOneChunkingStrategy()
     {
         using var provider = TestHost.CreateProvider();
 
-        Assert.That(
-            provider.GetServices<IChunkingStrategy>().ToList(),
-            Has.Count.EqualTo(1),
-            "Chunking is the one strategy family with no enum identifier and no manifest field "
-                + "recording which implementation ran. A second registration would change chunk "
-                + "boundaries with nothing on disk to say so, destroying deduplication against every "
-                + "archive already written."
-        );
+        _ = Assert.Single(provider.GetServices<IChunkingStrategy>().ToList());
     }
 
-    [Test]
-    public void Create_UnregisteredEncryptionAlgorithm_ThrowsInsteadOfSubstitutingAnotherCipher()
+    [Fact]
+    internal void Create_UnregisteredEncryptionAlgorithm_ThrowsInsteadOfSubstitutingAnotherCipher()
     {
         var registered = Substitute.For<IEncryptionAlgorithmStrategy>();
         _ = registered.Id.Returns(EncryptionAlgorithm.Aes);
