@@ -1,9 +1,7 @@
 <Project>
 
-  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.Analyzers.props" />
-
   <PropertyGroup>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -11,6 +9,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+
+    <AnalysisLevel>10-recommended</AnalysisLevel>
+    <AnalysisLevelSecurity>10-all</AnalysisLevelSecurity>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RunAnalyzers>true</RunAnalyzers>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <OptimizeImplicitlyTriggeredBuild>false</OptimizeImplicitlyTriggeredBuild>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+
   </PropertyGroup>
 
 </Project>

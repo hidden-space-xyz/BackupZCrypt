@@ -20,7 +20,7 @@ Four steps, in order, all against the Debug configuration:
 1. `dotnet restore`.
 2. `dotnet build`. The built-in .NET analyzers (`AnalysisLevel=10-recommended`,
    `AnalysisLevelSecurity=10-all`, `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`) run with
-   `TreatWarningsAsErrors` set in `Directory.Build.Analyzers.props`, so any analyzer or compiler
+   `TreatWarningsAsErrors` set in `Directory.Build.props`, so any analyzer or compiler
    warning fails the build. The switch lives in project configuration rather than on the command
    line on purpose: every build — local or CI, cold or incremental — applies it identically, which
    a `-warnaserror` CLI flag could not guarantee.
