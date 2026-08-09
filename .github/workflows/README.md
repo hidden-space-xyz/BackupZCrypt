@@ -1,17 +1,19 @@
 # Workflows
 
-Two workflows cover the whole path from a pull request to a published release. Neither runs on
-`develop` or on feature branches: everything is verified on the way into `master`, and `master` is
+Three workflows cover the whole path from a pull request to a published release. None of them runs
+on `develop` or on feature branches: everything is verified on the way into `master`, and `master` is
 what publishes.
 
 | Workflow | Runs on | Purpose |
 | --- | --- | --- |
 | [`ci.yml`](ci.yml) | pull requests targeting `master`, manual dispatch | Build, test and format gate |
+| [`codeql.yml`](codeql.yml) | pushes to `master`, pull requests targeting `master`, weekly | CodeQL code scanning |
 | [`release.yml`](release.yml) | pushes to `master`, manual dispatch | Publish the declared version as a GitHub Release |
 
-Both pin `DOTNET_VERSION` to `10.0.x`, restore the `~/.nuget/packages` cache keyed on
-`Directory.Packages.props` plus every `*.csproj`, and check out with `persist-credentials: false` so
-the checkout token is not left in `.git/config` for later steps to reuse.
+`ci.yml` and `release.yml` pin `DOTNET_VERSION` to `10.0.x`, restore the `~/.nuget/packages` cache
+keyed on `Directory.Packages.props` plus every `*.csproj`, and check out with
+`persist-credentials: false` so the checkout token is not left in `.git/config` for later steps to
+reuse. `codeql.yml` needs none of that — see below.
 
 ## `ci.yml` — build and test
 
@@ -37,6 +39,25 @@ green. Nothing here produces a distributable binary — packaging happens exclus
 There is no `push` trigger. Pushing to `develop` or to a feature branch runs nothing, so the gate
 fires once per release pull request rather than once per commit. Use the manual dispatch to run the
 same checks against an arbitrary branch.
+
+## `codeql.yml` — code scanning
+
+GitHub's advanced-setup template, kept close to its generated form so it stays cheap to diff against
+upstream when the template moves. Two languages are analysed in a matrix — `csharp` for the product
+and `actions` for these workflow files themselves — with `fail-fast: false`, so a finding in one does
+not hide the other's result.
+
+Both run with `build-mode: none`: CodeQL extracts the C# sources directly instead of observing a
+compilation. That is what the earlier default setup already did, and it is why this workflow needs no
+SDK, no restore and no NuGet cache — the build is already gated by `ci.yml`, and repeating it here
+would only add a second way for the scan to go red for reasons that have nothing to do with security.
+
+The weekly `schedule` matters more than the push trigger: it is what re-runs the analysis against new
+CodeQL queries on unchanged code, which is where most findings on a quiet repository come from.
+
+Advanced setup **replaces** default setup rather than complementing it. If default setup is ever
+re-enabled under *Settings → Code security → Code scanning*, this workflow's upload is rejected and
+the badge in the root README goes red — the two cannot both publish results.
 
 ## `release.yml` — publish a release
 

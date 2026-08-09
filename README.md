@@ -1,10 +1,15 @@
 <p align="center">
-<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F" />
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
 <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
 <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
 <img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge" />
+</p>
+
+<p align="center">
+<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F" />
+<img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
+<img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
 </p>
 
 # 🔐 BackupZCrypt
