@@ -196,12 +196,6 @@ jobs:
 
           Every asset is a self-contained single-file build — no .NET runtime required.
           On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
-
-          ## 🔒 Verify your download
-
-          ```sh
-          sha256sum --check --ignore-missing SHA256SUMS.txt
-          ```
           MARKDOWN
 
           sed -i "s/__TAG__/${TAG}/g" "$notes"
@@ -377,7 +371,7 @@ jobs:
           name: release-notes
           path: notes
 
-      - name: Generate checksums
+      - name: Check assets
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -386,9 +380,7 @@ jobs:
             echo "::error::No release assets were produced."
             exit 1
           fi
-          (cd assets && sha256sum -- "${packages[@]#assets/}") > SHA256SUMS.txt
-          mv SHA256SUMS.txt assets/
-          cat assets/SHA256SUMS.txt
+          printf '%s\n' "${packages[@]}"
 
       - name: Create GitHub Release
         env:

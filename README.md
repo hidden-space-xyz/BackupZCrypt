@@ -71,24 +71,6 @@ Every asset is a self-contained single-file executable — no .NET runtime requi
 
 On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
 
-Every release also publishes a `SHA256SUMS.txt`. Download it next to the archive and verify before
-running:
-
-```bash
-# Linux
-sha256sum --check --ignore-missing SHA256SUMS.txt
-```
-
-```bash
-# macOS
-shasum -a 256 --check --ignore-missing SHA256SUMS.txt
-```
-
-```powershell
-# Windows — compare the printed hash with the matching line in SHA256SUMS.txt
-Get-FileHash .\BackupZCrypt-v<version>-win-x64.zip -Algorithm SHA256
-```
-
 ## 🔒 Security
 
 ### How your data is protected

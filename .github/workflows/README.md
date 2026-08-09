@@ -110,9 +110,9 @@ dropped, and the result is zipped for Windows or tarred with `--owner=0 --group=
 archive carries no build-account metadata. The Unix binary is marked executable before archiving,
 since neither `tar` nor a self-contained publish sets that bit for the user.
 
-**`release`** downloads every package, generates `SHA256SUMS.txt` over them, and creates the GitHub
-Release with `gh`, targeting the exact commit that was built. It fails loudly rather than publishing
-an empty release if no assets arrived.
+**`release`** downloads every package and creates the GitHub Release with `gh`, targeting the exact
+commit that was built. It fails loudly rather than publishing an empty release if no assets arrived.
+No checksum file is published: GitHub already exposes the SHA-256 digest of every release asset.
 
 `contents: write` is granted to this job alone; the workflow's default is `contents: read`.
 `concurrency` does **not** cancel in-progress runs — a half-published release is worse than a queued
@@ -122,8 +122,7 @@ one.
 
 1. On `develop`, raise `<Version>` in `Directory.Build.props`.
 2. Open a pull request to `master`. `ci.yml` runs the build, test and format gates.
-3. Merge. `release.yml` publishes `v<version>` with notes, the four portable packages and their
-   checksums.
+3. Merge. `release.yml` publishes `v<version>` with notes and the four portable packages.
 
 If a release run fails after the gate passed, fix the cause and re-run the workflow manually — no
 empty commit needed. The dispatch fails fast if the version has meanwhile been published.
