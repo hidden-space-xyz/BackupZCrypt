@@ -52,9 +52,9 @@ local application data directory on Linux and macOS. They hold preferences only 
 ## 📸 Screenshots
 
 <p align="center">
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/9ca7d357-7b6b-4ae0-9d9e-e26d221f8185" />
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/f1629057-b395-40cb-a7d8-e76e168e9edc" />
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/e0c659c2-b0cc-4547-96d8-1aa20902472a" />
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/2fee1133-1831-4b1d-9c71-f3798471e505" />
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/1d2b6c7b-16cd-4b6c-9604-642d058475a7" />
+  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/516080e4-8fbc-44bc-bcf4-2ae825937ff4" />
 </p>
 
 ## ⬇️ Download
