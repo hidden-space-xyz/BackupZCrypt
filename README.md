@@ -1,13 +1,13 @@
 <p align="center">
 <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
-<img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
+<img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMy40NDkgOS43NSAyLjF2OS40NTFIMG0xMC45NDktOS42MDJMMjQgMHYxMS40SDEwLjk0OU0wIDEyLjZoOS43NXY5LjQ1MUwwIDIwLjY5OU0xMC45NDkgMTIuNkgyNFYyNGwtMTIuOS0xLjgwMSIvPjwvc3ZnPgo%3D" />
 <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
 <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
-<img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge" />
+<img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge&logo=gnu&logoColor=white" />
 </p>
 
 <p align="center">
-<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F" />
+<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F&logo=github&logoColor=white" />
 <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
 <img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
 </p>
