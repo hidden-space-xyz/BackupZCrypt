@@ -58,10 +58,10 @@ internal sealed partial class ChunkedBackupService
 
             var chunkHash = SHA256.HashData(chunkData.Span);
             var chunkHashB64 = Convert.ToBase64String(chunkHash);
-            var chunkFileName = ComputeChunkFileName(cipher.NamingKey, chunkHash);
-            var chunkFilePath = fileOperationsService.CombinePath(
+            var chunkFilePath = this.ComputeChunkFilePath(
                 chunksDir,
-                chunkFileName + BackupConstants.AppFileExtension
+                cipher.NamingKey,
+                chunkHash
             );
 
             var chunkOperation = new Lazy<Task<string>>(
@@ -229,7 +229,9 @@ internal sealed partial class ChunkedBackupService
         {
             if (nonceCandidates.Length is not 1)
             {
-                throw new CryptographicException();
+                throw new CryptographicException(
+                    "A chunk hash carries more than one distinct nonce."
+                );
             }
 
             var nonceB64 = nonceCandidates[0];
@@ -268,7 +270,7 @@ internal sealed partial class ChunkedBackupService
             {
                 var decodedHash = DecodeBase64FixedLength(
                     chunk.Hash,
-                    KeySizeBytes,
+                    SHA256.HashSizeInBytes,
                     "Invalid chunk hash."
                 );
                 var decodedNonce = DecodeBase64FixedLength(
@@ -433,12 +435,10 @@ internal sealed partial class ChunkedBackupService
             HashSet<string> expectedFileNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (var hash in referencedChunkHashes)
             {
-                var hashBytes = DecodeBase64FixedLength(hash, KeySizeBytes, "Invalid chunk hash.");
+                var hashBytes = DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, "Invalid chunk hash.");
                 try
                 {
-                    var fileName =
-                        ComputeChunkFileName(namingKey, hashBytes)
-                        + BackupConstants.AppFileExtension;
+                    var fileName = ComputeChunkFileNameWithExtension(namingKey, hashBytes);
                     _ = expectedFileNames.Add(fileName);
                 }
                 finally

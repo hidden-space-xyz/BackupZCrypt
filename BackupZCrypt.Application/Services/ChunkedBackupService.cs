@@ -45,8 +45,7 @@ internal sealed partial class ChunkedBackupService(
 ) : IChunkedBackupService
 {
     /// <summary>
-    /// The length in bytes of a 256-bit key, which is also the expected length of the SHA-256 chunk
-    /// and file hashes decoded from the manifest.
+    /// The length in bytes of a 256-bit key.
     /// </summary>
     private const int KeySizeBytes = EncryptionConstants.KeySize / 8;
 

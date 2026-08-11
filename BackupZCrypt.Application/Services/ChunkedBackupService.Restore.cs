@@ -441,7 +441,7 @@ internal sealed partial class ChunkedBackupService
         {
             var chunkHash = DecodeBase64FixedLength(
                 chunkRef.Hash,
-                KeySizeBytes,
+                SHA256.HashSizeInBytes,
                 "Invalid chunk hash."
             );
             var nonceB64 = storedChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
@@ -452,11 +452,7 @@ internal sealed partial class ChunkedBackupService
                 EncryptionConstants.NonceSize,
                 "Invalid chunk nonce."
             );
-            var chunkFileName = ComputeChunkFileName(namingKey, chunkHash);
-            var chunkFilePath = fileOperationsService.CombinePath(
-                chunksDir,
-                chunkFileName + BackupConstants.AppFileExtension
-            );
+            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
 
             var encryptedData = await fileOperationsService
                 .ReadAllBytesAsync(chunkFilePath, cancellationToken)
@@ -515,7 +511,7 @@ internal sealed partial class ChunkedBackupService
 
         var expectedFileHash = DecodeBase64FixedLength(
             fileEntry.FileHash,
-            KeySizeBytes,
+            SHA256.HashSizeInBytes,
             "Invalid file hash."
         );
         var actualFileHash = fileHasher.GetHashAndReset();

@@ -22,7 +22,7 @@ internal sealed partial class ChunkedBackupService
     private DerivedKeySet DeriveKeySet(string password, byte[] salt, KeyDerivationAlgorithm kdf)
     {
         var strategy = keyDerivationServiceFactory.Create(kdf);
-        var masterKey = strategy.DeriveKey(password, salt, KeySizeBytes * 8);
+        var masterKey = strategy.DeriveKey(password, salt, EncryptionConstants.KeySize);
 
         try
         {
@@ -91,6 +91,32 @@ internal sealed partial class ChunkedBackupService
         {
             CryptographicOperations.ZeroMemory(hmac);
         }
+    }
+
+    /// <summary>
+    /// Computes a chunk's full on-disk file name, extension included.
+    /// </summary>
+    /// <param name="namingKey">The chunk-naming sub-key.</param>
+    /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
+    /// <returns>The chunk file name with its extension.</returns>
+    private static string ComputeChunkFileNameWithExtension(byte[] namingKey, byte[] chunkHash)
+    {
+        return ComputeChunkFileName(namingKey, chunkHash) + BackupConstants.AppFileExtension;
+    }
+
+    /// <summary>
+    /// Resolves the full path of a chunk inside a backup's chunks directory.
+    /// </summary>
+    /// <param name="chunksDir">The directory encrypted chunk files live in.</param>
+    /// <param name="namingKey">The chunk-naming sub-key.</param>
+    /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
+    /// <returns>The absolute path of the chunk file.</returns>
+    private string ComputeChunkFilePath(string chunksDir, byte[] namingKey, byte[] chunkHash)
+    {
+        return fileOperationsService.CombinePath(
+            chunksDir,
+            ComputeChunkFileNameWithExtension(namingKey, chunkHash)
+        );
     }
 
     /// <summary>
