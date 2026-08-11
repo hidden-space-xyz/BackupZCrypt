@@ -126,7 +126,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
         StubHandler(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
-                    new BackupResult(succeeded, TimeSpan.FromMinutes(3), 2048, processedFiles, 5)
+                    new BackupResult(TimeSpan.FromMinutes(3), 2048, processedFiles, 5)
                 )
             )
         );
@@ -195,7 +195,6 @@ public sealed class OperationViewModelBaseTests : IDisposable
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(
-                        false,
                         TimeSpan.FromSeconds(4),
                         2048,
                         3,
@@ -240,7 +239,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 Task.FromResult(
                     Result<BackupOutcome>.Success(
                         BackupOutcome.Completed(
-                            new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                            new BackupResult(TimeSpan.FromSeconds(1), 16, 2, 2)
                         )
                     )
                 )
@@ -283,7 +282,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
 
                 return Task.FromResult(
                     Result<BackupOutcome>.Success(
-                        BackupOutcome.Completed(new BackupResult(true, TimeSpan.Zero, 0, 0, 0))
+                        BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0))
                     )
                 );
             });
@@ -393,7 +392,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 return Task.FromResult(
                     Result<BackupOutcome>.Success(
                         BackupOutcome.Completed(
-                            new BackupResult(true, TimeSpan.FromSeconds(3725), 1000, 10, 10)
+                            new BackupResult(TimeSpan.FromSeconds(3725), 1000, 10, 10)
                         )
                     )
                 );
@@ -435,7 +434,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 Task.FromResult(
                     Result<BackupOutcome>.Success(
                         BackupOutcome.Completed(
-                            new BackupResult(true, TimeSpan.FromSeconds(1), 16, 2, 2)
+                            new BackupResult(TimeSpan.FromSeconds(1), 16, 2, 2)
                         )
                     )
                 )
@@ -480,7 +479,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
         StubHandler(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
-                    new BackupResult(succeeded, TimeSpan.FromSeconds(1), 16, succeeded ? 2 : 1, 2)
+                    new BackupResult(TimeSpan.FromSeconds(1), 16, succeeded ? 2 : 1, 2)
                 )
             )
         );
@@ -543,11 +542,10 @@ public sealed class OperationViewModelBaseTests : IDisposable
 
     [Theory]
     // cleared once the operation it protected has succeeded
-    [InlineData(true, 5, 5, "")]
+    [InlineData(5, 5, "")]
     // kept after a partial run, which may be re-run
-    [InlineData(false, 3, 5, "secret")]
+    [InlineData(3, 5, "secret")]
     internal async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
-        bool succeeded,
         int processedFiles,
         int totalFiles,
         string expectedPassword
@@ -558,7 +556,6 @@ public sealed class OperationViewModelBaseTests : IDisposable
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(
-                        succeeded,
                         TimeSpan.FromSeconds(1),
                         1024,
                         processedFiles,
@@ -592,7 +589,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 Task.FromResult(
                     Result<BackupOutcome>.Success(
                         BackupOutcome.Completed(
-                            new BackupResult(true, TimeSpan.FromSeconds(1), 1024, 1, 1)
+                            new BackupResult(TimeSpan.FromSeconds(1), 1024, 1, 1)
                         )
                     )
                 )

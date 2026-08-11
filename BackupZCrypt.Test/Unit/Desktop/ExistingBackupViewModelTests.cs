@@ -485,7 +485,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     private static Result<BackupOutcome> SuccessOutcome()
     {
         return Result<BackupOutcome>.Success(
-            BackupOutcome.Completed(new BackupResult(true, TimeSpan.FromSeconds(1), 16, 1, 1))
+            BackupOutcome.Completed(new BackupResult(TimeSpan.FromSeconds(1), 16, 1, 1))
         );
     }
 

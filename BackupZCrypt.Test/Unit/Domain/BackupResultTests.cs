@@ -16,7 +16,6 @@ public sealed class BackupResultTests
     internal void ErrorAndWarningFlags_TrackSuppliedCollections()
     {
         var populated = new BackupResult(
-            isSuccess: false,
             elapsedTime: TimeSpan.FromSeconds(1),
             totalBytes: 0,
             processedFiles: 0,
@@ -25,7 +24,7 @@ public sealed class BackupResultTests
             warnings: [new LocalizableMessage(MessageCode.WeakPasswordWarning)]
         );
 
-        var omitted = new BackupResult(true, TimeSpan.FromSeconds(1), 0, 0, 0);
+        var omitted = new BackupResult(TimeSpan.FromSeconds(1), 0, 0, 0);
 
         Assert.Multiple(
             () => Assert.True(populated.HasErrors),
@@ -48,6 +47,48 @@ public sealed class BackupResultTests
     }
 
     [Theory]
+    [InlineData(5, 5, false, true)]
+    [InlineData(5, 5, true, false)]
+    [InlineData(3, 5, false, false)]
+    [InlineData(0, 0, false, true)]
+    [InlineData(0, 0, true, false)]
+    internal void IsSuccess_DerivesFromTheRecordedErrorsAndTheFileCounts(
+        int processedFiles,
+        int totalFiles,
+        bool withError,
+        bool expected
+    )
+    {
+        LocalizableMessage[]? errors = withError
+            ? [new LocalizableMessage(MessageCode.AllFilesFailed)]
+            : null;
+
+        var result = new BackupResult(
+            TimeSpan.FromSeconds(1),
+            0,
+            processedFiles,
+            totalFiles,
+            errors: errors
+        );
+
+        Assert.Equal(expected, result.IsSuccess);
+    }
+
+    [Fact]
+    internal void IsSuccess_WithWarningsButNoErrors_RemainsTrue()
+    {
+        var result = new BackupResult(
+            TimeSpan.FromSeconds(1),
+            0,
+            5,
+            5,
+            warnings: [new LocalizableMessage(MessageCode.WeakPasswordWarning)]
+        );
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Theory]
     [InlineData(1d, 100L, 7, 10, 3, 0.7d, 100d, 7d)]
     [InlineData(1d, 0L, 2, 8, 6, 0.25d, 0d, 2d)]
     [InlineData(1d, 0L, 0, 0, 0, 1.0d, 0d, 0d)]
@@ -65,7 +106,6 @@ public sealed class BackupResultTests
     )
     {
         var result = new BackupResult(
-            true,
             TimeSpan.FromSeconds(elapsedSeconds),
             totalBytes,
             processedFiles,
@@ -91,7 +131,7 @@ public sealed class BackupResultTests
         bool expected
     )
     {
-        var result = new BackupResult(true, TimeSpan.FromSeconds(1), 0, processed, total);
+        var result = new BackupResult(TimeSpan.FromSeconds(1), 0, processed, total);
 
         Assert.Equal(expected, result.IsPartialSuccess);
     }
@@ -113,7 +153,6 @@ public sealed class BackupResultTests
         var exception = Assert.Throws<ArgumentOutOfRangeException>(
             () =>
                 new BackupResult(
-                    true,
                     TimeSpan.FromSeconds(elapsedSeconds),
                     totalBytes,
                     processedFiles,

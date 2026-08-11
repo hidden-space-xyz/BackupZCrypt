@@ -98,7 +98,7 @@ public sealed class CreateBackupCommandHandlerTests
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
-            .Returns(Result<BackupResult>.Success(new BackupResult(true, TimeSpan.Zero, 0, 0, 0)));
+            .Returns(Result<BackupResult>.Success(new BackupResult(TimeSpan.Zero, 0, 0, 0)));
 
         var command = new CreateBackupCommand(
             SourceDir,

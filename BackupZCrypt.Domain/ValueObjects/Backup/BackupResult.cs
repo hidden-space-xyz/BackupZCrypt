@@ -11,7 +11,6 @@ public sealed record class BackupResult
     /// <summary>
     /// Initializes a new instance of the <see cref="BackupResult"/> class.
     /// </summary>
-    /// <param name="isSuccess">Whether the operation succeeded.</param>
     /// <param name="elapsedTime">The total time the operation took.</param>
     /// <param name="totalBytes">The total number of bytes processed.</param>
     /// <param name="processedFiles">The number of files processed successfully.</param>
@@ -23,7 +22,6 @@ public sealed record class BackupResult
     /// <paramref name="processedFiles"/> exceeds <paramref name="totalFiles"/>.
     /// </exception>
     public BackupResult(
-        bool isSuccess,
         TimeSpan elapsedTime,
         long totalBytes,
         int processedFiles,
@@ -34,7 +32,6 @@ public sealed record class BackupResult
     {
         ValidateInputs(elapsedTime, totalBytes, processedFiles, totalFiles);
 
-        this.IsSuccess = isSuccess;
         this.ElapsedTime = elapsedTime;
         this.TotalBytes = totalBytes;
         this.ProcessedFiles = processedFiles;
@@ -44,9 +41,10 @@ public sealed record class BackupResult
     }
 
     /// <summary>
-    /// Gets a value indicating whether the operation completed successfully.
+    /// Gets a value indicating whether the operation completed successfully: every file was
+    /// processed and nothing was recorded against it.
     /// </summary>
-    public bool IsSuccess { get; }
+    public bool IsSuccess => this.Errors.Count is 0 && this.ProcessedFiles == this.TotalFiles;
 
     /// <summary>
     /// Gets the total time the operation took.

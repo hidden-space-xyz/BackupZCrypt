@@ -177,7 +177,6 @@ internal sealed partial class ChunkedBackupService
 
             List<LocalizableMessage> errorList = [.. errors];
             stopwatch.Stop();
-            var isSuccess = errorList.Count is 0 && processedFiles == totalFiles;
 
             return errorList.Count > 0 && processedFiles is 0
                 ? Result<BackupResult>.Failure(
@@ -185,7 +184,6 @@ internal sealed partial class ChunkedBackupService
                 )
                 : Result<BackupResult>.Success(
                     new BackupResult(
-                        isSuccess,
                         stopwatch.Elapsed,
                         totalBytes,
                         processedFiles,
@@ -324,11 +322,9 @@ internal sealed partial class ChunkedBackupService
 
             List<LocalizableMessage> errorList = [.. errors];
             stopwatch.Stop();
-            var isSuccess = errorList.Count is 0 && processedFiles == totalFiles;
 
             return Result<BackupResult>.Success(
                 new BackupResult(
-                    isSuccess,
                     stopwatch.Elapsed,
                     totalBytes,
                     processedFiles,

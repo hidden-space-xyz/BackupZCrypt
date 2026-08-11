@@ -422,7 +422,7 @@ public sealed class CreateBackupViewModelTests
                 Task.FromResult(
                     Result<BackupOutcome>.Success(
                         BackupOutcome.Completed(
-                            new BackupResult(true, TimeSpan.FromSeconds(1), 16, 1, 1)
+                            new BackupResult(TimeSpan.FromSeconds(1), 16, 1, 1)
                         )
                     )
                 )

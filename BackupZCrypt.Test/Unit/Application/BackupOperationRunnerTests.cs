@@ -145,7 +145,7 @@ public sealed class BackupOperationRunnerTests
     /// <returns>A successful result carrying a successful <see cref="BackupResult"/>.</returns>
     private static Result<BackupResult> SuccessResult()
     {
-        return Result<BackupResult>.Success(new BackupResult(true, TimeSpan.Zero, 0, 0, 0));
+        return Result<BackupResult>.Success(new BackupResult(TimeSpan.Zero, 0, 0, 0));
     }
 
     /// <summary>
