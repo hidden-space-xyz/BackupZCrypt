@@ -442,8 +442,8 @@ internal sealed class BackupRequestValidator(
             return;
         }
 
-        var strength = passwordService.AnalyzePasswordStrength(request.Password);
-        if (strength.Score < 60)
+        var analysis = passwordService.AnalyzePasswordStrength(request.Password);
+        if (analysis.Strength < PasswordStrength.Good)
         {
             warnings.Add(new LocalizableMessage(MessageCode.WeakPasswordWarning));
         }

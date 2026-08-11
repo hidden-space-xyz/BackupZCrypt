@@ -354,6 +354,35 @@ public sealed class BackupRequestValidatorTests
         Assert.DoesNotContain(MessageCode.WeakPasswordWarning, Codes(warnings));
     }
 
+    [Theory]
+    [InlineData(PasswordStrength.VeryWeak, 10d, true)]
+    [InlineData(PasswordStrength.Weak, 30d, true)]
+    [InlineData(PasswordStrength.Fair, 50d, true)]
+    [InlineData(PasswordStrength.Fair, 62d, true)]
+    [InlineData(PasswordStrength.Good, 66d, false)]
+    [InlineData(PasswordStrength.Strong, 95d, false)]
+    internal async Task AnalyzeWarnings_WeakPasswordWarning_CutsAtTheGoodRatingNotAScore(
+        PasswordStrength strength,
+        double score,
+        bool expectWarning
+    )
+    {
+        _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(false);
+        _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
+
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(strength, score, 10, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir),
+                TestContext.Current.CancellationToken
+            );
+
+        Assert.Equal(expectWarning, Codes(warnings).Contains(MessageCode.WeakPasswordWarning));
+    }
+
     [Fact]
     internal async Task AnalyzeWarnings_InsufficientDiskSpace_ReportsLowDiskSpace()
     {
