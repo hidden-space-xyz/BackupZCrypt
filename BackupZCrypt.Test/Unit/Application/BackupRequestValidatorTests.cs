@@ -72,6 +72,11 @@ public sealed class BackupRequestValidatorTests
         [MessageCode.SourceInsideDestination];
 
     /// <summary>
+    /// The volume root containing <see cref="SourceDir"/> — <c>C:\</c> on Windows, <c>/</c> elsewhere.
+    /// </summary>
+    private static readonly string VolumeRoot = Path.GetPathRoot(SourceDir)!;
+
+    /// <summary>
     /// The substituted file system the validator probes for path existence, for the source and
     /// destination file listings, and for the file sizes behind the free-space estimate.
     /// </summary>
@@ -127,6 +132,8 @@ public sealed class BackupRequestValidatorTests
             { SourceDir, Path.Combine(SourceDir, "backup"), DestinationInsideSourceOnly },
             { Path.Combine(DestinationDir, "data"), DestinationDir, SourceInsideDestinationOnly },
             { SourceDir, SourceDir + "-backup", Array.Empty<MessageCode>() },
+            { SourceDir, VolumeRoot, SourceInsideDestinationOnly },
+            { VolumeRoot, SourceDir, DestinationInsideSourceOnly },
         };
     }
 

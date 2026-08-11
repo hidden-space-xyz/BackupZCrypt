@@ -312,18 +312,27 @@ internal sealed class BackupRequestValidator(
         {
             errors.Add(new LocalizableMessage(MessageCode.SourceDestinationSameDirectory));
         }
-        else if (
-            destinationPath.StartsWith(sourcePath + Path.DirectorySeparatorChar, PathComparer)
-        )
+        else if (destinationPath.StartsWith(ContainmentPrefixOf(sourcePath), PathComparer))
         {
             errors.Add(new LocalizableMessage(MessageCode.DestinationInsideSource));
         }
-        else if (
-            sourcePath.StartsWith(destinationPath + Path.DirectorySeparatorChar, PathComparer)
-        )
+        else if (sourcePath.StartsWith(ContainmentPrefixOf(destinationPath), PathComparer))
         {
             errors.Add(new LocalizableMessage(MessageCode.SourceInsideDestination));
         }
+    }
+
+    /// <summary>
+    /// Returns the prefix every path contained by <paramref name="path"/> must start with: the path
+    /// itself followed by exactly one directory separator.
+    /// </summary>
+    /// <param name="path">The normalized absolute path to build a containment prefix for.</param>
+    /// <returns>The path terminated by exactly one directory separator.</returns>
+    private static string ContainmentPrefixOf(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
     }
 
     /// <summary>
