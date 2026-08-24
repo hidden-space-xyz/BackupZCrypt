@@ -74,7 +74,9 @@ internal sealed class App : Avalonia.Application
         _ = services.AddSingleton<AboutViewModel>();
         _ = services.AddSingleton<MainWindowViewModel>();
 
-        return services.BuildServiceProvider();
+        return services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
+        );
     }
 
     /// <summary>

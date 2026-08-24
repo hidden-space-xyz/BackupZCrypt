@@ -137,6 +137,68 @@ public sealed class FileSystemServiceTests
     }
 
     [Fact]
+    internal async Task GetFilesAsync_FileSymbolicLink_IsExcluded()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+
+        var source = dir.Combine("source");
+        _ = Directory.CreateDirectory(source);
+        var included = dir.WriteText(Path.Combine("source", "root.txt"), "1");
+        var outside = dir.WriteText(Path.Combine("outside", "secret.txt"), "2");
+        var link = Path.Combine(source, "linked-secret.txt");
+
+        try
+        {
+            _ = File.CreateSymbolicLink(link, outside);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Assert.Skip("This platform refuses file symbolic links: " + ex.Message);
+        }
+
+        var files = await service.GetFilesAsync(
+            source,
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.Contains(included, files),
+            () => Assert.DoesNotContain(link, files)
+        );
+    }
+
+    [Fact]
+    internal async Task WriteFileAtomicallyAsync_WriterFails_PreservesTargetAndDeletesTemporaryFile()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var target = dir.WriteText("settings.json", "known-good");
+
+        var exception = await Assert.ThrowsAsync<IOException>(
+            () =>
+                service.WriteFileAtomicallyAsync(
+                    target,
+                    async (stream, token) =>
+                    {
+                        await stream.WriteAsync("partial"u8.ToArray(), token);
+                        throw new IOException("injected writer failure");
+                    },
+                    TestContext.Current.CancellationToken
+                )
+        );
+
+        Assert.Multiple(
+            () => Assert.Equal("injected writer failure", exception.Message),
+            () => Assert.Equal("known-good", File.ReadAllText(target)),
+            () =>
+                Assert.Empty(
+                    Directory.GetFiles(dir.Path, "*.tmp", SearchOption.TopDirectoryOnly)
+                )
+        );
+    }
+
+    [Fact]
     internal async Task CleanDirectoryAsync_EmptiesPopulatedDirectory()
     {
         using var dir = new TempDir();

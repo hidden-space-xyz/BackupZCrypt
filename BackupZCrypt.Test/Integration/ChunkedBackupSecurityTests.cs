@@ -314,7 +314,143 @@ public sealed class ChunkedBackupSecurityTests
     }
 
     [Fact]
-    internal async Task RestoreAsync_ManifestUnderDeclaresFileSize_StopsAtTheDeclaredByteBudget()
+    internal async Task RestoreAsync_MalformedManifestMetadata_IsRejectedBeforeAnyFileIsWritten()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restoreArea = new TempDir();
+
+        _ = source.WriteText(
+            Path.Combine("nested", "only.txt"),
+            "metadata validation probe stored in one chunk"
+        );
+        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
+
+        var (preamble, masterKey, manifest) = await OpenManifestAsync(
+            provider,
+            destination.Path,
+            Password
+        );
+        var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
+        var entry = Assert.Single(manifest.Files);
+        var chunk = Assert.Single(entry.Chunks);
+
+        (string Name, ChunkManifestData Manifest)[] craftedCases =
+        [
+            (
+                "duplicate canonical path",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry,
+                        entry with { OriginalPath = entry.OriginalPath.Replace('/', '\\') },
+                    ],
+                }
+            ),
+            (
+                "Unicode normalization collision",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry with { OriginalPath = "caf\u00E9.txt" },
+                        entry with { OriginalPath = "cafe\u0301.txt" },
+                    ],
+                }
+            ),
+            (
+                "negative file size",
+                manifest with { Files = [entry with { TotalSize = -1 }] }
+            ),
+            (
+                "invalid file hash length",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry with
+                        {
+                            FileHash = Convert.ToBase64String(
+                                new byte[SHA256.HashSizeInBytes - 1]
+                            ),
+                        },
+                    ],
+                }
+            ),
+            (
+                "zero-sized chunk",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry with { Chunks = [chunk with { Size = 0 }] },
+                    ],
+                }
+            ),
+            (
+                "oversized chunk",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry with
+                        {
+                            Chunks =
+                            [
+                                chunk with { Size = BackupConstants.MaximumChunkSize + 1 },
+                            ],
+                        },
+                    ],
+                }
+            ),
+            (
+                "chunk sizes do not add up",
+                manifest with { Files = [entry with { TotalSize = entry.TotalSize + 1 }] }
+            ),
+            (
+                "invalid chunk nonce",
+                manifest with
+                {
+                    Files =
+                    [
+                        entry with { Chunks = [chunk with { Nonce = "not-base64" }] },
+                    ],
+                }
+            ),
+        ];
+
+        for (var index = 0; index < craftedCases.Length; index++)
+        {
+            var (name, crafted) = craftedCases[index];
+            await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
+
+            var caseRoot = Path.Combine(
+                restoreArea.Path,
+                index.ToString(CultureInfo.InvariantCulture)
+            );
+            var result = await restoreHandler.HandleAsync(
+                NewRestoreCommand(destination.Path, caseRoot),
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.Multiple(
+                () => Assert.False(
+                    result.IsSuccess && result.Value.Completion!.IsSuccess,
+                    $"Restore accepted malformed manifest metadata: {name}."
+                ),
+                () => Assert.NotEmpty(CollectCodes(result)),
+                () => Assert.Empty(FilesUnder(caseRoot))
+            );
+        }
+    }
+
+    [Fact]
+    internal async Task RestoreAsync_ManifestUnderDeclaresFileSize_IsRejectedBeforeWriting()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -351,10 +487,7 @@ public sealed class ChunkedBackupSecurityTests
                 "Restore accepted a chunk that decompresses past the size the manifest declares."
             ),
             () => Assert.Contains(MessageCode.UnexpectedErrorFormat, CollectCodes(result)),
-            () => Assert.True(
-                TotalBytesUnder(restored.Path) <= 1L,
-                "Decompression wrote past the byte budget the manifest declared for the file."
-            )
+            () => Assert.Empty(FilesUnder(restored.Path))
         );
     }
 
@@ -622,16 +755,6 @@ public sealed class ChunkedBackupSecurityTests
             : [];
     }
 
-    /// <summary>
-    /// Adds up the bytes actually written beneath a directory, treating a directory that was never
-    /// created as zero bytes.
-    /// </summary>
-    /// <param name="root">The directory to measure.</param>
-    /// <returns>The total size in bytes of every file beneath <paramref name="root"/>.</returns>
-    private static long TotalBytesUnder(string root)
-    {
-        return FilesUnder(root).Sum(f => new FileInfo(f).Length);
-    }
 
     /// <summary>
     /// Gathers the handler's own error codes together with the per-file codes of the completed engine

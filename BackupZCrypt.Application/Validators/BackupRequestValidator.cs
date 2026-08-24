@@ -28,8 +28,8 @@ internal sealed class BackupRequestValidator(
 ) : IBackupRequestValidator
 {
     /// <summary>
-    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
-    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// The conservative comparison applied to backup paths: case-insensitive on Windows and macOS,
+    /// whose default volumes ignore case, and case-sensitive elsewhere.
     /// </summary>
     /// <remarks>
     /// Shared with the chunked backup service so validation and execution cannot disagree on whether

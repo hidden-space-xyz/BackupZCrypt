@@ -1,4 +1,6 @@
 using BackupZCrypt.Application.Utilities.Helpers;
+using BackupZCrypt.Test.Common;
+using BackupZCrypt.Infrastructure.Services;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
@@ -28,6 +30,18 @@ public sealed class ManifestPathPolicyTests
             "docs/../../escape.txt",
             "docs\\..\\..\\escape.txt",
             "a/../../b/../../escape.txt",
+            ".",
+            "./file.txt",
+            "docs/./file.txt",
+            "docs//file.txt",
+            "docs\\\\file.txt",
+            "CON",
+            "CON .txt",
+            "aux.txt",
+            "name.",
+            "name ",
+            "bad:name.txt",
+            "bad<name>.txt",
         };
     }
 
@@ -88,11 +102,63 @@ public sealed class ManifestPathPolicyTests
             () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt")
         );
     }
+    [Fact]
+    internal void EnsureNoReparsePointDescendants_LinkBelowRoot_IsRejected()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var root = dir.Combine("root");
+        var outside = dir.Combine("outside");
+        _ = Directory.CreateDirectory(root);
+        _ = Directory.CreateDirectory(outside);
+        var link = Path.Combine(root, "linked");
+
+        try
+        {
+            _ = Directory.CreateSymbolicLink(link, outside);
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            Assert.Skip("This platform refuses directory symbolic links: " + ex.Message);
+        }
+
+        _ = Assert.Throws<InvalidDataException>(
+            () =>
+                ManifestPathPolicy.EnsureNoReparsePointDescendants(
+                    service,
+                    root,
+                    Path.Combine(link, "nested")
+                )
+        );
+    }
+
 
     [Fact]
-    internal void ToManifestPath_AlwaysWritesForwardSlashes()
+    internal void ToManifestPath_NormalizesWindowsSeparatorsAndRejectsAmbiguousUnixBackslashes()
     {
-        Assert.Equal("docs/sub/deep.txt", ManifestPathPolicy.ToManifestPath("docs\\sub\\deep.txt"));
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Equal(
+                "docs/sub/deep.txt",
+                ManifestPathPolicy.ToManifestPath("docs\\sub\\deep.txt")
+            );
+        }
+        else
+        {
+            _ = Assert.Throws<InvalidDataException>(
+                () => ManifestPathPolicy.ToManifestPath("docs\\sub\\deep.txt")
+            );
+        }
+    }
+
+    [Fact]
+    internal void ToManifestPath_NormalizesUnicodeComposition()
+    {
+        Assert.Equal(
+            "caf\u00E9.txt",
+            ManifestPathPolicy.ToManifestPath("cafe\u0301.txt")
+        );
     }
 
     [Theory]

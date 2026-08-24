@@ -17,9 +17,8 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// <summary>
     /// Enumerates files recursively under <paramref name="directoryPath"/> that match
     /// <paramref name="searchPattern"/>, skipping inaccessible entries. Recursion stops at
-    /// directory reparse points (symlinks/junctions), so traversal cannot cycle or descend
-    /// outside the source tree; file reparse points are still returned and resolve to their
-    /// targets when opened.
+    /// reparse points (symlinks/junctions), so traversal cannot cycle, descend outside the source
+    /// tree, or copy the contents of a file reached through a link.
     /// </summary>
     /// <param name="directoryPath">The root directory to enumerate.</param>
     /// <param name="searchPattern">A simple wildcard expression matched against file names; defaults to all files.</param>
@@ -47,6 +46,7 @@ internal sealed class FileOperationsService : IFileOperationsService
                 {
                     ShouldIncludePredicate = (ref entry) =>
                         !entry.IsDirectory
+                        && !entry.Attributes.HasFlag(FileAttributes.ReparsePoint)
                         && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName),
                     ShouldRecursePredicate = static (ref entry) =>
                         !entry.Attributes.HasFlag(FileAttributes.ReparsePoint),
@@ -70,6 +70,12 @@ internal sealed class FileOperationsService : IFileOperationsService
         return File.Exists(filePath);
     }
 
+    /// <inheritdoc/>
+    public bool IsReparsePoint(string path)
+    {
+        return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+    }
+
     /// <summary>
     /// Creates the specified directory (and any missing parents) on a background thread.
     /// </summary>
@@ -88,17 +94,6 @@ internal sealed class FileOperationsService : IFileOperationsService
     public void DeleteFile(string filePath)
     {
         File.Delete(filePath);
-    }
-
-    /// <summary>
-    /// Moves a file to a new location, optionally overwriting an existing destination.
-    /// </summary>
-    /// <param name="sourcePath">The current path of the file.</param>
-    /// <param name="destinationPath">The target path to move the file to.</param>
-    /// <param name="overwrite">Whether to overwrite an existing destination file.</param>
-    public void MoveFile(string sourcePath, string destinationPath, bool overwrite)
-    {
-        File.Move(sourcePath, destinationPath, overwrite);
     }
 
     /// <summary>
@@ -194,23 +189,91 @@ internal sealed class FileOperationsService : IFileOperationsService
     }
 
     /// <summary>
-    /// Creates (or truncates) a file and opens it for asynchronous, sequential write access.
+    /// Creates a new file and opens it for asynchronous, sequential write access. Existing entries
+    /// are never followed or truncated, which lets callers publish through an atomic rename without
+    /// exposing an overwrite-through-symlink window.
     /// </summary>
     /// <param name="filePath">The path of the file to create.</param>
     /// <param name="bufferSize">The stream buffer size in bytes.</param>
     /// <returns>A writable stream over the file.</returns>
-    public Stream CreateWriteStream(string filePath, int bufferSize)
+    private static FileStream CreateNewWriteStream(string filePath, int bufferSize)
     {
         return new FileStream(
             filePath,
             new FileStreamOptions
             {
                 Access = FileAccess.Write,
-                Mode = FileMode.Create,
+                Mode = FileMode.CreateNew,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = bufferSize,
             }
         );
+    }
+
+    /// <summary>
+    /// Writes a complete file through a create-new, randomly named sibling and atomically replaces
+    /// the target only after the stream has closed successfully.
+    /// </summary>
+    /// <param name="finalPath">The final path to publish.</param>
+    /// <param name="writer">The callback that writes the complete temporary file.</param>
+    /// <param name="cancellationToken">A token to cancel the operation before publication.</param>
+    /// <returns>A task that completes after the temporary file has been renamed into place.</returns>
+    public async Task WriteFileAtomicallyAsync(
+        string finalPath,
+        Func<Stream, CancellationToken, Task> writer,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(finalPath);
+        ArgumentNullException.ThrowIfNull(writer);
+
+        var directory = Path.GetDirectoryName(finalPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new InvalidOperationException($"File path '{finalPath}' has no directory.");
+        }
+
+        var randomSuffix = RandomNumberGenerator.GetBytes(12);
+        string tempPath;
+
+        try
+        {
+            tempPath = Path.Combine(
+                directory,
+                "." + Convert.ToHexStringLower(randomSuffix) + ".tmp"
+            );
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(randomSuffix);
+        }
+
+        try
+        {
+            await using (
+                var stream = CreateNewWriteStream(tempPath, StreamConstants.CopyBufferSize)
+            )
+            {
+                await writer(stream, cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(tempPath, finalPath, overwrite: true);
+        }
+        catch
+        {
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // The original write or rename failure is the actionable error.
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -234,36 +297,97 @@ internal sealed class FileOperationsService : IFileOperationsService
         );
 
         var hash = await SHA256.HashDataAsync(stream, cancellationToken);
-        return Convert.ToBase64String(hash);
+
+        try
+        {
+            return Convert.ToBase64String(hash);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(hash);
+        }
     }
 
     /// <summary>
-    /// Reads the entire contents of a file into a byte array.
+    /// Reads a complete file into memory while enforcing a limit against the same opened stream, so
+    /// a size-check/read race cannot trigger an unbounded allocation.
     /// </summary>
     /// <param name="filePath">The path of the file to read.</param>
+    /// <param name="maximumBytes">The greatest file length the caller accepts.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The file's contents.</returns>
-    public async Task<byte[]> ReadAllBytesAsync(
+    /// <returns>The complete file contents.</returns>
+    public async Task<byte[]> ReadAllBytesBoundedAsync(
         string filePath,
+        int maximumBytes,
         CancellationToken cancellationToken = default
     )
     {
-        return await File.ReadAllBytesAsync(filePath, cancellationToken);
-    }
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumBytes);
 
-    /// <summary>
-    /// Writes the supplied bytes to a file, creating or overwriting it.
-    /// </summary>
-    /// <param name="filePath">The path of the file to write.</param>
-    /// <param name="bytes">The contents to write.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the bytes have been written.</returns>
-    public async Task WriteAllBytesAsync(
-        string filePath,
-        byte[] bytes,
-        CancellationToken cancellationToken = default
-    )
-    {
-        await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
+        await using FileStream stream = new(
+            filePath,
+            new FileStreamOptions
+            {
+                Access = FileAccess.Read,
+                Mode = FileMode.Open,
+                Share = FileShare.Read,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
+                BufferSize = StreamConstants.CopyBufferSize,
+            }
+        );
+
+        if (stream.Length > maximumBytes)
+        {
+            throw new InvalidDataException("File exceeds the permitted in-memory size.");
+        }
+
+        var bytes = new byte[(int)stream.Length];
+        var extraByte = new byte[1];
+        var totalRead = 0;
+
+        try
+        {
+            while (totalRead < bytes.Length)
+            {
+                var read = await stream
+                    .ReadAsync(bytes.AsMemory(totalRead), cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (read is 0)
+                {
+                    break;
+                }
+
+                totalRead += read;
+            }
+
+            if (
+                await stream
+                    .ReadAsync(extraByte.AsMemory(), cancellationToken)
+                    .ConfigureAwait(false)
+                is not 0
+            )
+            {
+                throw new InvalidDataException("File changed while it was being read.");
+            }
+
+            if (totalRead == bytes.Length)
+            {
+                return bytes;
+            }
+
+            var result = bytes[..totalRead];
+            CryptographicOperations.ZeroMemory(bytes);
+            return result;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(bytes);
+            throw;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(extraByte);
+        }
     }
 }

@@ -8,8 +8,8 @@ public interface IFileOperationsService
 {
     /// <summary>
     /// Recursively enumerates files under a directory that match a search pattern, skipping
-    /// inaccessible entries and never following directory reparse points (symbolic links or
-    /// junctions) so enumeration cannot cycle or escape the source tree.
+    /// inaccessible entries and excluding all reparse points (symbolic links or junctions), so
+    /// enumeration cannot cycle, escape the source tree, or copy a linked file target.
     /// </summary>
     /// <param name="directoryPath">The root directory to search.</param>
     /// <param name="searchPattern">The wildcard expression matched against file names; defaults to all files.</param>
@@ -36,6 +36,14 @@ public interface IFileOperationsService
     public bool FileExists(string filePath);
 
     /// <summary>
+    /// Determines whether an existing file-system entry is a symbolic link, junction, or other
+    /// reparse point.
+    /// </summary>
+    /// <param name="path">The existing entry to inspect.</param>
+    /// <returns><see langword="true"/> when the entry is a reparse point.</returns>
+    public bool IsReparsePoint(string path);
+
+    /// <summary>
     /// Creates the specified directory, including any missing parent directories.
     /// </summary>
     /// <param name="directoryPath">The directory path to create.</param>
@@ -48,14 +56,6 @@ public interface IFileOperationsService
     /// </summary>
     /// <param name="filePath">The path of the file to delete.</param>
     public void DeleteFile(string filePath);
-
-    /// <summary>
-    /// Moves a file to a new location, optionally overwriting an existing target.
-    /// </summary>
-    /// <param name="sourcePath">The path of the file to move.</param>
-    /// <param name="destinationPath">The destination path.</param>
-    /// <param name="overwrite">Whether to overwrite an existing file at the destination.</param>
-    public void MoveFile(string sourcePath, string destinationPath, bool overwrite);
 
     /// <summary>
     /// Removes all files and subdirectories from a directory while keeping the directory itself.
@@ -103,12 +103,18 @@ public interface IFileOperationsService
     public Stream OpenReadStream(string filePath, int bufferSize);
 
     /// <summary>
-    /// Creates or truncates a file and opens it for writing.
+    /// Writes a complete file through a randomly named sibling and atomically replaces the target
+    /// only after the write succeeds.
     /// </summary>
-    /// <param name="filePath">The path of the file to create.</param>
-    /// <param name="bufferSize">The buffer size, in bytes, to use for the stream.</param>
-    /// <returns>A writable stream over the file.</returns>
-    public Stream CreateWriteStream(string filePath, int bufferSize);
+    /// <param name="finalPath">The final path to publish.</param>
+    /// <param name="writer">The callback that writes the complete temporary file.</param>
+    /// <param name="cancellationToken">A token to cancel the operation before publication.</param>
+    /// <returns>A task that completes after the temporary file has been renamed into place.</returns>
+    public Task WriteFileAtomicallyAsync(
+        string finalPath,
+        Func<Stream, CancellationToken, Task> writer,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Computes the SHA-256 hash of the specified file's contents.
@@ -122,23 +128,15 @@ public interface IFileOperationsService
     );
 
     /// <summary>
-    /// Reads the entire contents of a file into a byte array.
+    /// Reads a complete file into memory while enforcing an allocation limit on the opened stream.
     /// </summary>
     /// <param name="filePath">The path of the file to read.</param>
+    /// <param name="maximumBytes">The greatest file length the caller accepts.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The file contents as a byte array.</returns>
-    public Task<byte[]> ReadAllBytesAsync(string filePath, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Writes a byte array to a file, creating or overwriting it.
-    /// </summary>
-    /// <param name="filePath">The path of the file to write.</param>
-    /// <param name="bytes">The bytes to write.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the file has been written.</returns>
-    public Task WriteAllBytesAsync(
+    /// <returns>The complete file contents.</returns>
+    public Task<byte[]> ReadAllBytesBoundedAsync(
         string filePath,
-        byte[] bytes,
+        int maximumBytes,
         CancellationToken cancellationToken = default
     );
 }

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Utilities.Extensions;
@@ -22,7 +23,6 @@ internal sealed partial class ChunkedBackupService
     /// </remarks>
     /// <param name="filePath">The absolute path of the file to read.</param>
     /// <param name="relativePath">The file's path relative to the backup root, as recorded in the manifest.</param>
-    /// <param name="fileSize">The file size in bytes recorded in the manifest entry.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
     /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
@@ -31,7 +31,6 @@ internal sealed partial class ChunkedBackupService
     private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
         string filePath,
         string relativePath,
-        long fileSize,
         string chunksDir,
         ChunkCipherSet cipher,
         ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
@@ -48,56 +47,86 @@ internal sealed partial class ChunkedBackupService
 
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
+        long actualFileSize = 0;
         await foreach (
             var chunkData in chunkingStrategy
                 .ChunkAsync(fileStream, cancellationToken)
                 .ConfigureAwait(false)
         )
         {
-            fileHasher.AppendData(chunkData.Span);
+            byte[]? chunkHash = null;
 
-            var chunkHash = SHA256.HashData(chunkData.Span);
-            var chunkHashB64 = Convert.ToBase64String(chunkHash);
-            var chunkFilePath = this.ComputeChunkFilePath(
-                chunksDir,
-                cipher.NamingKey,
-                chunkHash
-            );
+            try
+            {
+                actualFileSize = checked(actualFileSize + chunkData.Length);
+                fileHasher.AppendData(chunkData.Span);
 
-            var chunkOperation = new Lazy<Task<string>>(
-                () =>
-                    EncryptAndStoreChunkAsync(
-                        chunkData,
-                        chunkHash,
-                        chunkFilePath,
-                        cipher.ChunkEncryptionKey,
-                        cipher.ChunkNonceKey,
-                        cipher.EncryptionStrategy,
-                        cipher.CompressionStrategy,
-                        cancellationToken
-                    ),
-                LazyThreadSafetyMode.ExecutionAndPublication
-            );
+                chunkHash = SHA256.HashData(chunkData.Span);
+                var chunkHashB64 = Convert.ToBase64String(chunkHash);
+                var chunkFilePath = this.ComputeChunkFilePath(
+                    chunksDir,
+                    cipher.NamingKey,
+                    chunkHash
+                );
 
-            var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
+                var chunkOperation = new Lazy<Task<string>>(
+                    () =>
+                        EncryptAndStoreChunkAsync(
+                            chunkData,
+                            chunkHash,
+                            chunkFilePath,
+                            cipher.ChunkEncryptionKey,
+                            cipher.ChunkNonceKey,
+                            cipher.EncryptionStrategy,
+                            cipher.CompressionStrategy,
+                            cancellationToken
+                        ),
+                    LazyThreadSafetyMode.ExecutionAndPublication
+                );
 
-            var nonceB64 = await AwaitStoredChunkNonceAsync(
-                    chunkHashB64,
-                    storedChunk,
-                    chunkOperation,
-                    storedChunks
-                )
-                .ConfigureAwait(false);
+                var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
 
-            chunkRefs.Add(new ChunkManifestChunkRef(chunkHashB64, chunkData.Length, nonceB64));
-            CryptographicOperations.ZeroMemory(chunkHash);
+                var nonceB64 = await AwaitStoredChunkNonceAsync(
+                        chunkHashB64,
+                        storedChunk,
+                        chunkOperation,
+                        storedChunks
+                    )
+                    .ConfigureAwait(false);
+
+                chunkRefs.Add(new ChunkManifestChunkRef(chunkHashB64, chunkData.Length, nonceB64));
+            }
+            finally
+            {
+                if (chunkHash is not null)
+                {
+                    CryptographicOperations.ZeroMemory(chunkHash);
+                }
+
+                if (MemoryMarshal.TryGetArray(chunkData, out var chunkSegment))
+                {
+                    CryptographicOperations.ZeroMemory(
+                        chunkSegment.Array!.AsSpan(chunkSegment.Offset, chunkSegment.Count)
+                    );
+                }
+            }
         }
 
         var fileHash = fileHasher.GetHashAndReset();
-        var fileHashB64 = Convert.ToBase64String(fileHash);
-        CryptographicOperations.ZeroMemory(fileHash);
 
-        return new ChunkManifestFileEntry(relativePath, fileHashB64, fileSize, chunkRefs);
+        try
+        {
+            return new ChunkManifestFileEntry(
+                relativePath,
+                Convert.ToBase64String(fileHash),
+                actualFileSize,
+                chunkRefs
+            );
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(fileHash);
+        }
     }
 
     /// <summary>
@@ -132,13 +161,14 @@ internal sealed partial class ChunkedBackupService
     )
     {
         var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
-        var nonceB64 = Convert.ToBase64String(nonce);
         byte[]? dataToEncrypt = null;
         byte[]? encrypted = null;
         byte[]? associatedData = null;
 
         try
         {
+            var nonceB64 = Convert.ToBase64String(nonce);
+
             if (compressionStrategy is not null)
             {
                 await using var inputStream = CreateReadOnlyStream(chunkData);
@@ -150,6 +180,15 @@ internal sealed partial class ChunkedBackupService
                 if (compressedStream is MemoryStream compressedMemory)
                 {
                     dataToEncrypt = compressedMemory.ToArray();
+                    if (compressedMemory.TryGetBuffer(out var compressedSegment))
+                    {
+                        CryptographicOperations.ZeroMemory(
+                            compressedSegment.Array!.AsSpan(
+                                compressedSegment.Offset,
+                                compressedSegment.Count
+                            )
+                        );
+                    }
                 }
                 else
                 {
@@ -159,7 +198,24 @@ internal sealed partial class ChunkedBackupService
                         .ConfigureAwait(false);
 
                     dataToEncrypt = compressedBuffer.ToArray();
+                    if (compressedBuffer.TryGetBuffer(out var compressedSegment))
+                    {
+                        CryptographicOperations.ZeroMemory(
+                            compressedSegment.Array!.AsSpan(
+                                compressedSegment.Offset,
+                                compressedSegment.Count
+                            )
+                        );
+                    }
                 }
+            }
+
+            if (
+                dataToEncrypt is not null
+                && dataToEncrypt.Length > MaximumStoredChunkSize - EncryptionConstants.TagSize
+            )
+            {
+                throw new InvalidDataException("Compressed chunk exceeds the supported size.");
             }
 
             associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
@@ -178,7 +234,7 @@ internal sealed partial class ChunkedBackupService
                 );
 
             await fileOperationsService
-                .WriteAllBytesAsync(chunkFilePath, encrypted, cancellationToken)
+                .WriteAllBytesAtomicallyAsync(chunkFilePath, encrypted, cancellationToken)
                 .ConfigureAwait(false);
 
             return nonceB64;
@@ -247,6 +303,98 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
+    /// Removes preloaded deduplication entries whose stored chunk is absent, linked, or has an
+    /// impossible ciphertext size, so an update regenerates them from the source.
+    /// </summary>
+    /// <param name="storedChunks">The preloaded hash-to-nonce cache to filter.</param>
+    /// <param name="manifestFiles">The existing manifest entries that describe stored chunks.</param>
+    /// <param name="chunksDir">The archive directory that should contain the chunk files.</param>
+    /// <param name="namingKey">The sub-key used to derive chunk file names.</param>
+    /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
+    private void RemoveUnavailableStoredChunks(
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
+        string chunksDir,
+        byte[] namingKey,
+        ICompressionStrategy? compressionStrategy
+    )
+    {
+        HashSet<string> inspectedHashes = new(StringComparer.Ordinal);
+
+        foreach (var chunk in manifestFiles.SelectMany(static file => file.Chunks))
+        {
+            if (
+                inspectedHashes.Add(chunk.Hash)
+                && !this.IsStoredChunkAvailable(
+                    chunk,
+                    chunksDir,
+                    namingKey,
+                    compressionStrategy
+                )
+            )
+            {
+                _ = storedChunks.TryRemove(chunk.Hash, out _);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Checks whether one stored chunk can safely be reused without reading it into memory.
+    /// </summary>
+    /// <param name="chunk">The manifest reference describing the plaintext chunk.</param>
+    /// <param name="chunksDir">The directory expected to contain its ciphertext.</param>
+    /// <param name="namingKey">The sub-key used to derive its on-disk name.</param>
+    /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the entry is a regular file of a plausible size.</returns>
+    private bool IsStoredChunkAvailable(
+        ChunkManifestChunkRef chunk,
+        string chunksDir,
+        byte[] namingKey,
+        ICompressionStrategy? compressionStrategy
+    )
+    {
+        byte[]? chunkHash = null;
+
+        try
+        {
+            chunkHash = DecodeBase64FixedLength(
+                chunk.Hash,
+                SHA256.HashSizeInBytes,
+                "Invalid chunk hash."
+            );
+            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
+
+            if (
+                !fileOperationsService.FileExists(chunkFilePath)
+                || fileOperationsService.IsReparsePoint(chunkFilePath)
+            )
+            {
+                return false;
+            }
+
+            var storedSize = fileOperationsService.GetFileSize(chunkFilePath);
+            var maximumStoredSize = compressionStrategy is null
+                ? checked(chunk.Size + EncryptionConstants.TagSize)
+                : MaximumStoredChunkSize;
+
+            return storedSize >= EncryptionConstants.TagSize
+                && storedSize <= maximumStoredSize
+                && (compressionStrategy is not null || storedSize == maximumStoredSize);
+        }
+        catch (Exception exception) when (IsFileLevelError(exception))
+        {
+            return false;
+        }
+        finally
+        {
+            if (chunkHash is not null)
+            {
+                CryptographicOperations.ZeroMemory(chunkHash);
+            }
+        }
+    }
+
+    /// <summary>
     /// Validates every entry path, chunk hash, and chunk nonce a manifest records, before any file is
     /// created, read, or overwritten.
     /// </summary>
@@ -256,30 +404,146 @@ internal sealed partial class ChunkedBackupService
     /// The decoded bytes serve only as a length check and are zeroed immediately.
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries to validate.</param>
-    /// <exception cref="InvalidDataException">An entry path is empty, rooted, or contains traversal or invalid characters.</exception>
-    /// <exception cref="CryptographicException">A chunk hash or nonce is not Base64 of the expected length.</exception>
+    /// <exception cref="InvalidDataException">
+    /// An entry path is invalid or duplicated, a size is impossible, or chunk sizes do not add up
+    /// to the file size.
+    /// </exception>
+    /// <exception cref="CryptographicException">
+    /// A file hash, chunk hash, or nonce is not canonical Base64 of the expected length.
+    /// </exception>
     private static void ValidateManifestEntries(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
+        HashSet<string> paths = new(StringComparer.FromComparison(PathComparer));
+
+        Dictionary<string, (int Size, string Nonce)> chunkMetadata = new(StringComparer.Ordinal);
+
         foreach (var file in manifestFiles)
         {
             ManifestPathPolicy.ValidateRelative(file.OriginalPath);
+            var canonicalPath = ManifestPathPolicy.Canonicalize(file.OriginalPath);
+            if (!paths.Add(canonicalPath))
+            {
+                throw new InvalidDataException("Manifest contains duplicate file paths.");
+            }
+
+            if (file.TotalSize < 0)
+            {
+                throw new InvalidDataException("Manifest file size cannot be negative.");
+            }
+
+            var decodedFileHash = DecodeBase64FixedLength(
+                file.FileHash,
+                SHA256.HashSizeInBytes,
+                "Invalid file hash."
+            );
+
+            try
+            {
+                if (
+                    !string.Equals(
+                        file.FileHash,
+                        Convert.ToBase64String(decodedFileHash),
+                        StringComparison.Ordinal
+                    )
+                )
+                {
+                    throw new CryptographicException("File hash is not canonical Base64.");
+                }
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decodedFileHash);
+            }
+
+            long totalChunkSize = 0;
 
             foreach (var chunk in file.Chunks)
             {
-                var decodedHash = DecodeBase64FixedLength(
-                    chunk.Hash,
-                    SHA256.HashSizeInBytes,
-                    "Invalid chunk hash."
+                if (chunk.Size is <= 0 or > BackupConstants.MaximumChunkSize)
+                {
+                    throw new InvalidDataException("Manifest chunk size is outside the supported range.");
+                }
+
+                try
+                {
+                    totalChunkSize = checked(totalChunkSize + chunk.Size);
+                }
+                catch (OverflowException ex)
+                {
+                    throw new InvalidDataException("Manifest chunk sizes overflow the file size.", ex);
+                }
+
+                byte[]? decodedHash = null;
+                byte[]? decodedNonce = null;
+
+                try
+                {
+                    decodedHash = DecodeBase64FixedLength(
+                        chunk.Hash,
+                        SHA256.HashSizeInBytes,
+                        "Invalid chunk hash."
+                    );
+                    decodedNonce = DecodeBase64FixedLength(
+                        chunk.Nonce,
+                        EncryptionConstants.NonceSize,
+                        "Invalid chunk nonce."
+                    );
+
+                    var canonicalHash = Convert.ToBase64String(decodedHash);
+                    var canonicalNonce = Convert.ToBase64String(decodedNonce);
+
+                    if (
+                        !string.Equals(chunk.Hash, canonicalHash, StringComparison.Ordinal)
+                        || !string.Equals(chunk.Nonce, canonicalNonce, StringComparison.Ordinal)
+                    )
+                    {
+                        throw new CryptographicException(
+                            "Chunk hash or nonce is not canonical Base64."
+                        );
+                    }
+
+                    if (chunkMetadata.TryGetValue(canonicalHash, out var metadata))
+                    {
+                        if (
+                            metadata.Size != chunk.Size
+                            || !string.Equals(
+                                metadata.Nonce,
+                                canonicalNonce,
+                                StringComparison.Ordinal
+                            )
+                        )
+                        {
+                            throw new InvalidDataException(
+                                "One chunk hash has inconsistent size or nonce metadata."
+                            );
+                        }
+                    }
+                    else
+                    {
+                        chunkMetadata.Add(canonicalHash, (chunk.Size, canonicalNonce));
+                    }
+                }
+                finally
+                {
+                    if (decodedHash is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(decodedHash);
+                    }
+
+                    if (decodedNonce is not null)
+                    {
+                        CryptographicOperations.ZeroMemory(decodedNonce);
+                    }
+                }
+            }
+
+            if (totalChunkSize != file.TotalSize)
+            {
+                throw new InvalidDataException(
+                    "Manifest chunk sizes do not add up to the declared file size."
                 );
-                var decodedNonce = DecodeBase64FixedLength(
-                    chunk.Nonce,
-                    EncryptionConstants.NonceSize,
-                    "Invalid chunk nonce."
-                );
-                CryptographicOperations.ZeroMemory(decodedHash);
-                CryptographicOperations.ZeroMemory(decodedNonce);
             }
         }
     }
@@ -507,13 +771,13 @@ internal sealed partial class ChunkedBackupService
     /// </summary>
     /// <remarks>
     /// <see cref="FileNotFoundException"/>, <see cref="DirectoryNotFoundException"/>, and
-    /// <see cref="PathTooLongException"/> all derive from <see cref="IOException"/>, so naming only
-    /// the two base types matches exactly the same set of failures.
+    /// <see cref="PathTooLongException"/> all derive from <see cref="IOException"/>. Invalid archive
+    /// data is also confined to the manifest entry currently being processed.
     /// </remarks>
     /// <param name="ex">The exception thrown while processing a file.</param>
     /// <returns><see langword="true"/> if the failure affects only one file; otherwise <see langword="false"/>.</returns>
     private static bool IsFileLevelError(Exception ex)
     {
-        return ex is IOException or UnauthorizedAccessException;
+        return ex is IOException or InvalidDataException or UnauthorizedAccessException;
     }
 }

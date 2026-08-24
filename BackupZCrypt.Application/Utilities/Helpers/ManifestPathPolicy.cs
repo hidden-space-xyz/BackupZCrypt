@@ -1,3 +1,8 @@
+using System.Buffers;
+using System.Text;
+
+using BackupZCrypt.Domain.Services.Interfaces;
+
 namespace BackupZCrypt.Application.Utilities.Helpers;
 
 /// <summary>
@@ -32,13 +37,25 @@ internal static class ManifestPathPolicy
     private static readonly char[] ManifestPathSeparators = ['/', '\\'];
 
     /// <summary>
-    /// The characters that may not appear within a single path segment on Windows.
+    /// The Windows-reserved characters that may not appear within a portable path segment. Applying
+    /// the same rule on every host prevents an archive created on Unix from becoming unrestorable or
+    /// ambiguous on Windows.
     /// </summary>
-    private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
+    private static readonly SearchValues<char> PortableInvalidFileNameChars =
+        SearchValues.Create(['<', '>', ':', '"', '|', '?', '*']);
+
+    /// <summary>
+    /// Device names Windows resolves specially even when they carry an extension.
+    /// </summary>
+    private static readonly HashSet<string> ReservedFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
 
     /// <summary>
     /// Validates that a manifest entry path is relative and free of traversal segments and illegal
-    /// characters, with an extra per-segment file name check on Windows.
+    /// characters, including portable per-segment rules shared by every supported platform.
     /// </summary>
     /// <remarks>
     /// Applied to paths both on the way into and on the way out of a manifest, so neither a hostile
@@ -46,7 +63,7 @@ internal static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The entry path to validate.</param>
     /// <exception cref="InvalidDataException">
-    /// The path is empty, rooted, contains invalid characters, or contains a <c>..</c> segment.
+    /// The path is empty, rooted, contains invalid characters, or has an ambiguous segment.
     /// </exception>
     internal static void ValidateRelative(string relativePath)
     {
@@ -65,25 +82,43 @@ internal static class ManifestPathPolicy
             throw new InvalidDataException("Manifest entry path contains invalid characters.");
         }
 
-        var pathSegments = relativePath.Split(
-            ManifestPathSeparators,
-            StringSplitOptions.RemoveEmptyEntries
-        );
+        var pathSegments = relativePath.Split(ManifestPathSeparators, StringSplitOptions.None);
 
-        if (pathSegments.Any(static segment => string.Equals(segment, "..", StringComparison.Ordinal)))
+        if (
+            pathSegments.Any(static segment =>
+                string.IsNullOrEmpty(segment) || string.Equals(segment, "..", StringComparison.Ordinal)
+            )
+        )
         {
             throw new InvalidDataException("Manifest entry path contains traversal segments.");
         }
 
-        if (
-            OperatingSystem.IsWindows()
-            && pathSegments.Any(static segment => segment.IndexOfAny(InvalidFileNameChars) >= 0)
-        )
+        if (pathSegments.Any(static segment => string.Equals(segment, ".", StringComparison.Ordinal)))
+        {
+            throw new InvalidDataException("Manifest entry path contains current-directory segments.");
+        }
+
+        if (pathSegments.Any(IsInvalidPortableSegment))
         {
             throw new InvalidDataException(
-                "Manifest entry path contains invalid file name characters."
+                "Manifest entry path contains a file name that is not portable."
             );
         }
+    }
+
+    /// <summary>
+    /// Determines whether a path segment would be invalid or ambiguous on a supported host.
+    /// </summary>
+    /// <param name="segment">The individual manifest path segment.</param>
+    /// <returns><see langword="true"/> when the segment cannot be represented portably.</returns>
+    private static bool IsInvalidPortableSegment(string segment)
+    {
+        var deviceName = segment.Split('.', 2)[0].TrimEnd(' ');
+        return segment.AsSpan().IndexOfAny(PortableInvalidFileNameChars) >= 0
+            || segment.Any(static character => char.IsControl(character))
+            || segment.EndsWith(' ')
+            || segment.EndsWith('.')
+            || ReservedFileNames.Contains(deviceName);
     }
 
     /// <summary>
@@ -118,17 +153,93 @@ internal static class ManifestPathPolicy
     }
 
     /// <summary>
+    /// Rejects an existing descendant directory reached through a symbolic link or junction.
+    /// </summary>
+    /// <remarks>
+    /// Lexical containment alone cannot stop a path below the restore or archive root from resolving
+    /// elsewhere through a link. Callers check before and after creating missing directories. The
+    /// root itself is intentionally excluded because a user may explicitly choose a linked root.
+    /// </remarks>
+    /// <param name="fileOperationsService">The port used to inspect existing file-system entries.</param>
+    /// <param name="rootPath">The trusted logical root.</param>
+    /// <param name="descendantDirectory">The directory at or below the root to inspect.</param>
+    /// <exception cref="InvalidDataException">
+    /// The directory is outside the root or an existing descendant component is a reparse point.
+    /// </exception>
+    internal static void EnsureNoReparsePointDescendants(
+        IFileOperationsService fileOperationsService,
+        string rootPath,
+        string descendantDirectory
+    )
+    {
+        ArgumentNullException.ThrowIfNull(fileOperationsService);
+
+        var rootFullPath = Path.GetFullPath(rootPath);
+        var descendantFullPath = Path.GetFullPath(descendantDirectory);
+
+        if (string.Equals(rootFullPath, descendantFullPath, PathNormalizationHelper.PathComparer))
+        {
+            return;
+        }
+
+        var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
+        if (!descendantFullPath.StartsWith(rootWithSeparator, PathNormalizationHelper.PathComparer))
+        {
+            throw new InvalidDataException("Directory is outside the trusted root.");
+        }
+
+        var relative = Path.GetRelativePath(rootFullPath, descendantFullPath);
+        var current = rootFullPath;
+
+        foreach (
+            var segment in relative.Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries
+            )
+        )
+        {
+            current = Path.Combine(current, segment);
+            if (
+                fileOperationsService.DirectoryExists(current)
+                && fileOperationsService.IsReparsePoint(current)
+            )
+            {
+                throw new InvalidDataException("Path traverses a symbolic link or junction.");
+            }
+        }
+    }
+
+    /// <summary>
     /// Converts a host-relative path into the manifest's canonical, platform-independent form.
     /// </summary>
     /// <remarks>
-    /// Forward slashes are the canonical separator on disk, the same convention archive formats use, so
-    /// an archive records the same entry text no matter which platform wrote it.
+    /// Forward slashes and Unicode normalization form C are canonical on disk, so archives written
+    /// on different platforms use one representation and cannot contain visually equivalent paths
+    /// that collide only when restored elsewhere.
     /// </remarks>
     /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
-    /// <returns>The path with every separator normalized to <c>/</c>.</returns>
+    /// <returns>The path with canonical separators and Unicode composition.</returns>
     internal static string ToManifestPath(string relativePath)
     {
-        return relativePath.Replace('\\', '/');
+        if (Path.DirectorySeparatorChar is not '\\' && relativePath.Contains('\\'))
+        {
+            throw new InvalidDataException(
+                "A source file name contains a backslash reserved by the manifest format."
+            );
+        }
+
+        return Canonicalize(relativePath);
+    }
+
+    /// <summary>
+    /// Normalizes separators and Unicode composition to the single representation used for path
+    /// identity inside a manifest.
+    /// </summary>
+    /// <param name="manifestPath">The manifest path to canonicalize.</param>
+    /// <returns>The path with forward slashes and Unicode normalization form C.</returns>
+    internal static string Canonicalize(string manifestPath)
+    {
+        return manifestPath.Replace('\\', '/').Normalize(NormalizationForm.FormC);
     }
 
     /// <summary>

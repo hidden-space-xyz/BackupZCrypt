@@ -104,6 +104,8 @@ internal sealed class ManifestService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
 
+        byte[]? rawFile = null;
+
         try
         {
             var manifestPath = fileOperationsService.CombinePath(sourceRoot, BackupConstants.ManifestFileName);
@@ -112,8 +114,8 @@ internal sealed class ManifestService(
                 return null;
             }
 
-            var rawFile = await fileOperationsService
-                .ReadAllBytesAsync(manifestPath, cancellationToken)
+            rawFile = await fileOperationsService
+                .ReadAllBytesBoundedAsync(manifestPath, BackupConstants.MaximumManifestSize, cancellationToken)
                 .ConfigureAwait(false);
 
             var algorithm = (EncryptionAlgorithm)rawFile[0];
@@ -136,6 +138,13 @@ internal sealed class ManifestService(
         catch
         {
             return null;
+        }
+        finally
+        {
+            if (rawFile is not null)
+            {
+                CryptographicOperations.ZeroMemory(rawFile);
+            }
         }
     }
 
@@ -327,7 +336,8 @@ internal sealed class ManifestService(
             encryptedBytes.CopyTo(payload, ChunkPreambleHeaderSize + EncryptionConstants.NonceSize);
 
             var manifestPath = fileOperationsService.CombinePath(destinationRoot, BackupConstants.ManifestFileName);
-            await WriteFileAtomicallyAsync(manifestPath, payload, cancellationToken)
+            await fileOperationsService
+                .WriteAllBytesAtomicallyAsync(manifestPath, payload, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -355,41 +365,6 @@ internal sealed class ManifestService(
         return errors;
     }
 
-    /// <summary>
-    /// Writes the payload to a sibling temp file and renames it over the target, so an interrupted write can
-    /// never leave a truncated manifest in place of a valid one.
-    /// </summary>
-    /// <remarks>
-    /// If the write or the rename fails, the temp file is deleted on a best-effort basis and any cleanup
-    /// failure is swallowed, because the original write failure is rethrown and must not be masked.
-    /// </remarks>
-    /// <param name="finalPath">The path the manifest must end up at.</param>
-    /// <param name="payload">The bytes to write.</param>
-    /// <param name="cancellationToken">A token to cancel the write.</param>
-    /// <returns>A task that completes once the file has been renamed into place.</returns>
-    private async Task WriteFileAtomicallyAsync(
-        string finalPath,
-        byte[] payload,
-        CancellationToken cancellationToken
-    )
-    {
-        var tempPath = finalPath + ".tmp";
-
-        try
-        {
-            await fileOperationsService
-                .WriteAllBytesAsync(tempPath, payload, cancellationToken)
-                .ConfigureAwait(false);
-
-            fileOperationsService.MoveFile(tempPath, finalPath, overwrite: true);
-        }
-        catch
-        {
-            _ = fileOperationsService.TryDeleteFile(tempPath);
-
-            throw;
-        }
-    }
 
     /// <summary>
     /// Builds the fixed-size preamble header that is stored unencrypted at the head of the manifest and also

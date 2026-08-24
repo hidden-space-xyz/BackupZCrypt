@@ -3,7 +3,7 @@ using BackupZCrypt.Domain.Services.Interfaces;
 namespace BackupZCrypt.Application.Utilities.Extensions;
 
 /// <summary>
-/// File-system probes whose failure must not change the outcome of the operation that triggered them.
+/// Shared atomic byte-array writes plus best-effort housekeeping probes.
 /// </summary>
 /// <remarks>
 /// Removing a temporary file, pruning an orphaned chunk, and measuring a file to seed a progress bar
@@ -15,6 +15,30 @@ namespace BackupZCrypt.Application.Utilities.Extensions;
 /// </remarks>
 internal static class FileOperationsServiceExtensions
 {
+    /// <summary>
+    /// Atomically writes a byte array to a file without following an existing temporary entry.
+    /// </summary>
+    /// <param name="fileOperationsService">The service that performs the file operations.</param>
+    /// <param name="finalPath">The path the completed file is published at.</param>
+    /// <param name="bytes">The bytes to write.</param>
+    /// <param name="cancellationToken">A token to cancel the write before it is published.</param>
+    /// <returns>A task that completes after the bytes have been renamed into place.</returns>
+    public static Task WriteAllBytesAtomicallyAsync(
+        this IFileOperationsService fileOperationsService,
+        string finalPath,
+        byte[] bytes,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+
+        return fileOperationsService.WriteFileAtomicallyAsync(
+            finalPath,
+            (stream, token) => stream.WriteAsync(bytes, token).AsTask(),
+            cancellationToken
+        );
+    }
+
     /// <summary>
     /// Deletes a file, reporting failure instead of throwing.
     /// </summary>

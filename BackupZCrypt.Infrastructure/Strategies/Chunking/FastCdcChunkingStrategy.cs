@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Infrastructure.Strategies.Chunking;
@@ -30,7 +31,7 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
     /// The longest chunk in bytes (4 MiB). A boundary is forced here when the rolling hash has not
     /// produced one, which bounds both the read buffer and the memory held per chunk.
     /// </summary>
-    private const int ChunkMaxSize = 4 * 1024 * 1024;
+    private const int ChunkMaxSize = BackupConstants.MaximumChunkSize;
 
     /// <summary>
     /// The strict cut-point mask (22 set bits) applied while a chunk is still shorter than
@@ -402,7 +403,7 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
     }
 

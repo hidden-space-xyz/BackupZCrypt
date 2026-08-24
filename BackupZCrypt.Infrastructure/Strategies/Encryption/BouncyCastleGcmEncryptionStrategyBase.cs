@@ -47,6 +47,7 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
     )
     {
         var input = plaintext.ToArray();
+        byte[]? output = null;
 
         try
         {
@@ -54,7 +55,7 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
             AeadParameters parameters = new(new KeyParameter(key), MacSize, nonce, associatedData);
             cipher.Init(true, parameters);
 
-            var output = new byte[cipher.GetOutputSize(input.Length)];
+            output = new byte[cipher.GetOutputSize(input.Length)];
             var len = cipher.ProcessBytes(input, 0, input.Length, output, 0);
             len += cipher.DoFinal(output, len);
 
@@ -66,6 +67,15 @@ internal abstract class BouncyCastleGcmEncryptionStrategyBase : IEncryptionAlgor
             }
 
             return output;
+        }
+        catch
+        {
+            if (output is not null)
+            {
+                CryptographicOperations.ZeroMemory(output);
+            }
+
+            throw;
         }
         finally
         {

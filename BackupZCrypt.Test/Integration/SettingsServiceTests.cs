@@ -97,6 +97,29 @@ public sealed class SettingsServiceTests
         Assert.Equal(BackupCreationSettings.DefaultValue, reread);
     }
 
+    [Fact]
+    internal async Task GetOrCreateAsync_WhenFileExceedsSafetyLimit_ReplacesItWithDefaults()
+    {
+        using var dir = new TempDir();
+        var service = new SettingsService(new FileOperationsService(), dir.Path);
+        var filePath = service.GetFilePath<BackupCreationSettings>();
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllBytesAsync(
+            filePath,
+            new byte[(1024 * 1024) + 1],
+            TestContext.Current.CancellationToken
+        );
+
+        var settings = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.Equal(BackupCreationSettings.DefaultValue, settings),
+            () => Assert.True(new FileInfo(filePath).Length < 1024 * 1024)
+        );
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("")]
@@ -178,9 +201,9 @@ public sealed class SettingsServiceTests
         await fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await fileOperations.DidNotReceive()
-            .WriteAllBytesAsync(
+            .WriteFileAtomicallyAsync(
                 Arg.Any<string>(),
-                Arg.Any<byte[]>(),
+                Arg.Any<Func<Stream, CancellationToken, Task>>(),
                 Arg.Any<CancellationToken>()
             );
     }

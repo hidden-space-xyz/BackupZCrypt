@@ -8,8 +8,9 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 internal static class PathNormalizationHelper
 {
     /// <summary>
-    /// The comparison applied to backup paths: case-insensitive on Windows and case-sensitive
-    /// elsewhere, matching how each platform's file system distinguishes names.
+    /// The conservative comparison applied to backup paths: case-insensitive on Windows and macOS,
+    /// whose default volumes are case-insensitive, and case-sensitive elsewhere. A case-sensitive
+    /// volume may reject two otherwise distinct names rather than restore one over the other.
     /// </summary>
     /// <remarks>
     /// Every layer that decides whether two paths denote the same location must use this one value.
@@ -17,7 +18,7 @@ internal static class PathNormalizationHelper
     /// as the same directory when they are two distinct ones, and disagreeing on the rule between
     /// the validator and the backup engine would let a request pass validation and then be refused.
     /// </remarks>
-    internal static readonly StringComparison PathComparer = OperatingSystem.IsWindows()
+    internal static readonly StringComparison PathComparer = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 

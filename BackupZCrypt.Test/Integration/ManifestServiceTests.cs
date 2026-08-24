@@ -561,7 +561,7 @@ public sealed class ManifestServiceTests
     }
 
     [Fact]
-    internal async Task SaveChunkManifestAsync_RenameFails_KeepsTheExistingManifestAndDeletesTheTempFile()
+    internal async Task SaveChunkManifestAsync_AtomicWriteFails_KeepsExistingManifestAndLeavesNoTempFile()
     {
         await using var provider = TestHost.CreateProvider();
         var realFileOperations = provider.GetRequiredService<IFileOperationsService>();
@@ -584,18 +584,12 @@ public sealed class ManifestServiceTests
 
         var failingFileOperations = Substitute.For<IFileOperationsService>();
         _ = failingFileOperations
-            .WriteAllBytesAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns(call => realFileOperations.WriteAllBytesAsync(
-                call.ArgAt<string>(0),
-                call.ArgAt<byte[]>(1),
-                call.ArgAt<CancellationToken>(2)
-            ));
-        failingFileOperations
-            .When(operations => operations.MoveFile(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()))
-            .Do(_ => throw new IOException("injected rename failure"));
-        failingFileOperations
-            .When(operations => operations.DeleteFile(Arg.Any<string>()))
-            .Do(call => realFileOperations.DeleteFile(call.ArgAt<string>(0)));
+            .WriteFileAtomicallyAsync(
+                Arg.Any<string>(),
+                Arg.Any<Func<Stream, CancellationToken, Task>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Task.FromException(new IOException("injected atomic write failure")));
 
         var failingService = new ManifestService(failingFileOperations, encryptionServiceFactory);
 
@@ -617,39 +611,32 @@ public sealed class ManifestServiceTests
         Assert.Multiple(
             () => Assert.Single(errors),
             () => Assert.Equal(MessageCode.ManifestWriteFailedFormat, errors[0].Code),
-            () => Assert.Contains<object>("injected rename failure", errors[0].Args),
-            () => Assert.False(
-                File.Exists(manifestPath + ".tmp"),
-                "a failed save left a temp manifest behind for the next run to trip over"
-            ),
+            () => Assert.Contains<object>("injected atomic write failure", errors[0].Args),
+            () =>
+                Assert.Empty(
+                    Directory.GetFiles(backup.Path, "*.tmp", SearchOption.TopDirectoryOnly)
+                ),
             () => Assert.Equal(originalBytes, survivingBytes),
             () => Assert.Equal(2, survivor!.Files.Count)
         );
     }
 
     [Fact]
-    internal async Task SaveChunkManifestAsync_RenameAndTempCleanupBothFail_ReportsTheRenameFailureNotTheCleanupFailure()
+    internal async Task SaveChunkManifestAsync_AtomicWriteFails_DoesNotCreateManifest()
     {
         await using var provider = TestHost.CreateProvider();
-        var realFileOperations = provider.GetRequiredService<IFileOperationsService>();
         var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
 
         using var backup = new TempDir();
 
         var failingFileOperations = Substitute.For<IFileOperationsService>();
         _ = failingFileOperations
-            .WriteAllBytesAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns(call => realFileOperations.WriteAllBytesAsync(
-                call.ArgAt<string>(0),
-                call.ArgAt<byte[]>(1),
-                call.ArgAt<CancellationToken>(2)
-            ));
-        failingFileOperations
-            .When(operations => operations.MoveFile(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()))
-            .Do(_ => throw new IOException("injected rename failure"));
-        failingFileOperations
-            .When(operations => operations.DeleteFile(Arg.Any<string>()))
-            .Do(_ => throw new UnauthorizedAccessException("injected cleanup failure"));
+            .WriteFileAtomicallyAsync(
+                Arg.Any<string>(),
+                Arg.Any<Func<Stream, CancellationToken, Task>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Task.FromException(new IOException("injected atomic write failure")));
 
         var failingService = new ManifestService(failingFileOperations, encryptionServiceFactory);
 
@@ -664,8 +651,7 @@ public sealed class ManifestServiceTests
         Assert.Multiple(
             () => Assert.Single(errors),
             () => Assert.Equal(MessageCode.ManifestWriteFailedFormat, errors[0].Code),
-            () => Assert.Contains<object>("injected rename failure", errors[0].Args),
-            () => Assert.DoesNotContain<object>("injected cleanup failure", errors[0].Args),
+            () => Assert.Contains<object>("injected atomic write failure", errors[0].Args),
             () => Assert.False(
                 File.Exists(Path.Combine(backup.Path, BackupConstants.ManifestFileName)),
                 "a save whose rename never happened must not leave a manifest at the destination"

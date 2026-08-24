@@ -18,6 +18,11 @@ internal sealed class SettingsService(
 ) : ISettingsService
 {
     /// <summary>
+    /// The largest settings document accepted in memory.
+    /// </summary>
+    private const int MaximumSettingsFileSize = 1024 * 1024;
+
+    /// <summary>
     /// The folder created under the per-user application data directory that holds every settings file.
     /// </summary>
     private const string SettingsDirectoryName = "BackupZCrypt";
@@ -78,21 +83,45 @@ internal sealed class SettingsService(
             return defaults;
         }
 
-        var rawSettings = await fileOperationsService.ReadAllBytesAsync(
-            filePath,
-            cancellationToken
-        );
+        byte[]? rawSettings = null;
 
-        var settings = TryDeserialize<T>(rawSettings);
-
-        if (settings is not null)
+        try
         {
-            return settings;
-        }
+            try
+            {
+                rawSettings = await fileOperationsService
+                    .ReadAllBytesBoundedAsync(
+                        filePath,
+                        MaximumSettingsFileSize,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
+            }
+            catch (InvalidDataException)
+            {
+                var defaults = T.DefaultValue;
+                await this.SaveAsync(defaults, cancellationToken).ConfigureAwait(false);
+                return defaults;
+            }
 
-        var recreated = T.DefaultValue;
-        await this.SaveAsync(recreated, cancellationToken);
-        return recreated;
+            var settings = TryDeserialize<T>(rawSettings);
+
+            if (settings is not null)
+            {
+                return settings;
+            }
+
+            var recreated = T.DefaultValue;
+            await this.SaveAsync(recreated, cancellationToken).ConfigureAwait(false);
+            return recreated;
+        }
+        finally
+        {
+            if (rawSettings is not null)
+            {
+                Array.Clear(rawSettings);
+            }
+        }
     }
 
     /// <summary>
@@ -116,7 +145,8 @@ internal sealed class SettingsService(
     }
 
     /// <summary>
-    /// Serializes the given settings to indented JSON and writes them to disk, creating the directory if needed.
+    /// Serializes the given settings to indented JSON and atomically replaces the persisted file,
+    /// creating the directory if needed.
     /// </summary>
     /// <typeparam name="T">The settings type to save.</typeparam>
     /// <param name="settings">The settings instance to persist.</param>
@@ -141,6 +171,19 @@ internal sealed class SettingsService(
 
         var rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
 
-        await fileOperationsService.WriteAllBytesAsync(filePath, rawSettings, cancellationToken);
+        try
+        {
+            await fileOperationsService
+                .WriteFileAtomicallyAsync(
+                    filePath,
+                    (stream, token) => stream.WriteAsync(rawSettings, token).AsTask(),
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            Array.Clear(rawSettings);
+        }
     }
 }

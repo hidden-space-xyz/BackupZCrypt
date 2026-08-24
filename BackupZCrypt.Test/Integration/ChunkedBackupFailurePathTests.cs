@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -9,6 +10,8 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
+
+using NSubstitute;
 
 namespace BackupZCrypt.Test.Integration;
 
@@ -43,14 +46,10 @@ namespace BackupZCrypt.Test.Integration;
 /// was started with and that the furthest progress ever announced is exactly what the result reports.
 /// </para>
 /// <para>
-/// A missing chunk and a truncated chunk are deliberately separate cases. An absent chunk is an I/O
-/// failure the engine classifies as file-level, so the run keeps going and salvages every file whose
-/// chunks are intact; a chunk truncated to fewer bytes than its authentication tag cannot be
-/// authenticated at all, which is a cryptographic failure that must abort the entire run rather than be
-/// recorded as one more per-file problem. The update cases likewise pin behaviour that costs data on
-/// purpose — a file that fails during an update is dropped from the new manifest and the chunk its
-/// previous version referenced is then pruned, so the earlier copy is gone rather than retained — and
-/// exist so that behaviour cannot change silently.
+/// A missing chunk and a truncated chunk are deliberately separate cases. Both are isolated to the
+/// file that references them, so the run keeps going and salvages every file whose chunks are intact.
+/// The update cases also pin the data-preserving fallback: if a changed file cannot be captured, its
+/// last valid manifest entry and chunks survive while other changes are still committed.
 /// </para>
 /// </remarks>
 public sealed class ChunkedBackupFailurePathTests
@@ -76,12 +75,6 @@ public sealed class ChunkedBackupFailurePathTests
         MessageCode.AllFilesFailed,
         MessageCode.EncryptionErrorFormat,
     ];
-
-    /// <summary>
-    /// The complete set of message codes a restore that hit a chunk failing authentication has to
-    /// report. Held in a field for the same reason as <see cref="AllFilesFailedCodes"/>.
-    /// </summary>
-    private static readonly MessageCode[] AuthenticationFailureCodes = [MessageCode.InvalidPassword];
 
     [Fact]
     internal async Task Create_OneSourceFileVanishesBeforeItIsRead_IsolatesTheFailureAndKeepsProgressConsistent()
@@ -177,6 +170,55 @@ public sealed class ChunkedBackupFailurePathTests
         );
     }
 
+    [Fact]
+    internal async Task Create_ManifestPublicationFails_ReportsOperationFailure()
+    {
+        var manifestService = Substitute.For<IManifestService>();
+        IReadOnlyList<LocalizableMessage> saveErrors =
+        [
+            new LocalizableMessage(MessageCode.ManifestWriteFailedFormat, "injected failure"),
+        ];
+        manifestService
+            .SaveChunkManifestAsync(
+                Arg.Any<ChunkManifestData>(),
+                Arg.Any<string>(),
+                Arg.Any<byte[]>(),
+                Arg.Any<EncryptionAlgorithm>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Task.FromResult(saveErrors));
+
+        await using var provider = TestHost.CreateProvider(services =>
+        {
+            _ = services.AddSingleton(manifestService);
+        });
+        var service = provider.GetRequiredService<IChunkedBackupService>();
+
+        using var source = new TempDir();
+        using var archive = new TempDir();
+        _ = source.WriteText("file.txt", "content whose chunks cannot form a usable backup alone");
+
+        var result = await service.CreateAsync(
+            source.Path,
+            archive.Path,
+            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            new HookedProgress(new RecordingProgress<BackupStatus>()),
+            CancellationToken.None
+        );
+
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "A missing manifest was reported as a backup result."),
+            () =>
+                Assert.Equal(
+                    MessageCode.ManifestWriteFailedFormat,
+                    Assert.Single(result.Errors).Code
+                ),
+            () =>
+                Assert.False(
+                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName))
+                )
+        );
+    }
     [Fact]
     internal async Task Create_EverySourceFileFails_FailsWithAllFilesFailed()
     {
@@ -334,7 +376,7 @@ public sealed class ChunkedBackupFailurePathTests
     }
 
     [Fact]
-    internal async Task Restore_ChunkFileTruncated_AbortsTheWholeRunAndReportsInvalidPassword()
+    internal async Task Restore_ChunkFileTruncated_IsolatesTheFailureAndPublishesNoPartialFile()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -343,7 +385,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var archive = new TempDir();
         using var restored = new TempDir();
 
-        _ = BuildThreeFileTree(source);
+        var expected = BuildThreeFileTree(source);
         await CreateBackupAsync(service, source.Path, archive.Path);
 
         var chunkFile = ChunkFiles(archive.Path)[0];
@@ -358,13 +400,65 @@ public sealed class ChunkedBackupFailurePathTests
             CancellationToken.None
         );
 
+        var restoredFiles = FilesUnder(restored.Path);
+
         Assert.Multiple(
-            () => Assert.False(result.IsSuccess, "A chunk that fails authentication did not abort the restore."),
-            () => Assert.Equivalent(AuthenticationFailureCodes, CollectCodes(result), strict: true)
+            () => Assert.True(result.IsSuccess, "One corrupt chunk aborted the whole restore."),
+            () => Assert.False(result.Value.IsSuccess, "The restore claimed success with a corrupt chunk."),
+            () => Assert.Equal(expected.Count, result.Value.TotalFiles),
+            () => Assert.Equal(expected.Count - 1, result.Value.ProcessedFiles),
+            () => Assert.Single(result.Value.Errors),
+            () => Assert.Equal(MessageCode.DecryptionErrorFormat, result.Value.Errors[0].Code),
+            () => Assert.Equal(expected.Count - 1, CountReproduced(expected, restored.Path)),
+            () => Assert.Equal(expected.Count - 1, restoredFiles.Length),
+            () =>
+                Assert.DoesNotContain(
+                    restoredFiles,
+                    static path => path.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)
+                )
         );
     }
 
     [Fact]
+    internal async Task Restore_CorruptOnlyFile_PreservesExistingDestinationAndDeletesTemporaryFile()
+    {
+        const string ExistingContent = "known-good destination content that must survive";
+
+        await using var provider = TestHost.CreateProvider();
+        var service = provider.GetRequiredService<IChunkedBackupService>();
+
+        using var source = new TempDir();
+        using var archive = new TempDir();
+        using var restored = new TempDir();
+
+        _ = source.WriteText("only.txt", "archived content");
+        _ = restored.WriteText("only.txt", ExistingContent);
+        await CreateBackupAsync(service, source.Path, archive.Path);
+
+        var chunkFile = Assert.Single(ChunkFiles(archive.Path));
+        var intact = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
+        await File.WriteAllBytesAsync(chunkFile, intact[..4], TestContext.Current.CancellationToken);
+
+        var result = await service.RestoreAsync(
+            archive.Path,
+            restored.Path,
+            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new HookedProgress(new RecordingProgress<BackupStatus>()),
+            CancellationToken.None
+        );
+
+        Assert.Multiple(
+            () => Assert.False(result.IsSuccess, "The only corrupt file was reported as restored."),
+            () => Assert.Equal(ExistingContent, File.ReadAllText(Path.Combine(restored.Path, "only.txt"))),
+            () =>
+                Assert.Empty(
+                    Directory.GetFiles(restored.Path, "*.tmp", SearchOption.AllDirectories)
+                )
+        );
+    }
+
+    [Fact]
+
     internal async Task Restore_DestinationAlreadyHoldsFiles_OverwritesBackedUpPathsAndLeavesOthersAlone()
     {
         const string RestoredA = "the archived content of a.txt";
@@ -420,10 +514,11 @@ public sealed class ChunkedBackupFailurePathTests
     }
 
     [Fact]
-    internal async Task Update_ChangedFileVanishesBeforeItIsRead_IsolatesTheFailureAndDropsItsEntry()
+    internal async Task Update_ChangedFileVanishesBeforeItIsRead_PreservesItsPreviousVersion()
     {
         const string StableContent = "a file that never changes";
         const string RevisedContent = "the revised content that does get re-chunked";
+        const string OriginalDoomedContent = "the original content of the file that disappears";
 
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IChunkedBackupService>();
@@ -434,7 +529,7 @@ public sealed class ChunkedBackupFailurePathTests
 
         _ = source.WriteText("stable.txt", StableContent);
         _ = source.WriteText("revised.txt", "the original content of the file that gets revised");
-        _ = source.WriteText("doomed.txt", "the original content of the file that disappears");
+        _ = source.WriteText("doomed.txt", OriginalDoomedContent);
 
         await CreateBackupAsync(service, source.Path, archive.Path);
 
@@ -478,6 +573,10 @@ public sealed class ChunkedBackupFailurePathTests
             Path.Combine(restored.Path, "revised.txt"),
             TestContext.Current.CancellationToken
         );
+        var restoredDoomed = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "doomed.txt"),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Multiple(
             () =>
@@ -487,12 +586,8 @@ public sealed class ChunkedBackupFailurePathTests
                 ),
             () => Assert.Equal(StableContent, restoredStable),
             () => Assert.Equal(RevisedContent, restoredRevised),
-            () =>
-                Assert.False(
-                    File.Exists(Path.Combine(restored.Path, "doomed.txt")),
-                    "The failed file's entry survived the update; the manifest now points at a pruned chunk."
-                ),
-            () => Assert.Equal(2, FilesUnder(restored.Path).Length)
+            () => Assert.Equal(OriginalDoomedContent, restoredDoomed),
+            () => Assert.Equal(3, FilesUnder(restored.Path).Length)
         );
     }
 

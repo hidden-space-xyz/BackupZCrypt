@@ -10,14 +10,18 @@ namespace BackupZCrypt.Test.Common;
 public static class TestHost
 {
     /// <summary>
-    /// Builds a provider containing the production domain and application registrations, so tests
-    /// exercise the real crypto, chunking, and orchestration stack rather than substitutes.
+    /// Builds a provider containing production registrations, optionally followed by test overrides.
     /// </summary>
+    /// <param name="configure">Optional registrations appended after the production services.</param>
     /// <returns>A new provider the caller owns and must dispose.</returns>
-    public static ServiceProvider CreateProvider()
+    public static ServiceProvider CreateProvider(Action<IServiceCollection>? configure = null)
     {
-        return new ServiceCollection()
-            .AddBackupZCryptServices()
-            .BuildServiceProvider();
+        var services = new ServiceCollection().AddBackupZCryptServices();
+
+        configure?.Invoke(services);
+
+        return services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
+        );
     }
 }

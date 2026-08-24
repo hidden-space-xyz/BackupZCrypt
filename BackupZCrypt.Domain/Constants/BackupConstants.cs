@@ -6,6 +6,19 @@ namespace BackupZCrypt.Domain.Constants;
 public static class BackupConstants
 {
     /// <summary>
+    /// The maximum plaintext size of one content-defined chunk (4 MiB). This is part of the
+    /// on-disk format: readers use it to reject impossible manifest entries and oversized chunk
+    /// files before allocating memory for them.
+    /// </summary>
+    public const int MaximumChunkSize = 4 * 1024 * 1024;
+
+    /// <summary>
+    /// The largest encrypted manifest accepted in memory (256 MiB). This operational resource limit
+    /// supports very large archives while rejecting files designed to exhaust process memory.
+    /// </summary>
+    public const int MaximumManifestSize = 256 * 1024 * 1024;
+
+    /// <summary>
     /// The file extension used for backup artifacts produced by this tool.
     /// </summary>
     public const string AppFileExtension = ".bzc";

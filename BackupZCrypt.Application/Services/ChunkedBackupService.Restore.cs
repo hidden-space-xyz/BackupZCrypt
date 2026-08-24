@@ -97,7 +97,7 @@ internal sealed partial class ChunkedBackupService
                         manifest.Files,
                         new ParallelOptions
                         {
-                            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+                            MaxDegreeOfParallelism = MaximumParallelFileOperations,
                             CancellationToken = linkedCts.Token,
                         },
                         async (fileEntry, token) =>
@@ -133,14 +133,15 @@ internal sealed partial class ChunkedBackupService
                                     )
                                 );
                             }
-                            catch (CryptographicException)
+                            catch (CryptographicException ex)
                             {
-                                _ = Interlocked.CompareExchange(
-                                    ref fatalError,
-                                    new LocalizableMessage(MessageCode.InvalidPassword),
-                                    null
+                                errors.Add(
+                                    new LocalizableMessage(
+                                        MessageCode.DecryptionErrorFormat,
+                                        fileEntry.OriginalPath,
+                                        ex.Message
+                                    )
                                 );
-                                await linkedCts.CancelAsync().ConfigureAwait(false);
                             }
                             catch (Exception ex)
                                 when (ex is not OperationCanceledException && IsFileLevelError(ex))
@@ -270,7 +271,7 @@ internal sealed partial class ChunkedBackupService
                     manifest.Files,
                     new ParallelOptions
                     {
-                        MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+                        MaxDegreeOfParallelism = MaximumParallelFileOperations,
                         CancellationToken = cancellationToken,
                     },
                     async (fileEntry, token) =>
@@ -371,25 +372,28 @@ internal sealed partial class ChunkedBackupService
 
         if (!string.IsNullOrEmpty(destDir))
         {
+            ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
             await fileOperationsService
                 .CreateDirectoryAsync(destDir, cancellationToken)
                 .ConfigureAwait(false);
+            ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
         }
 
-        await using var destStream = fileOperationsService.CreateWriteStream(
-            destFilePath,
-            StreamConstants.CopyBufferSize
-        );
-
-        await VerifyFileChunksAsync(
-                fileEntry,
-                chunksDir,
-                encryptionKey,
-                namingKey,
-                encryptionStrategy,
-                storedChunkNonces,
-                compressionStrategy,
-                destStream,
+        await fileOperationsService
+            .WriteFileAtomicallyAsync(
+                destFilePath,
+                (destStream, token) =>
+                    VerifyFileChunksAsync(
+                        fileEntry,
+                        chunksDir,
+                        encryptionKey,
+                        namingKey,
+                        encryptionStrategy,
+                        storedChunkNonces,
+                        compressionStrategy,
+                        destStream,
+                        token
+                    ),
                 cancellationToken
             )
             .ConfigureAwait(false);
@@ -439,35 +443,54 @@ internal sealed partial class ChunkedBackupService
 
         foreach (var chunkRef in fileEntry.Chunks)
         {
-            var chunkHash = DecodeBase64FixedLength(
-                chunkRef.Hash,
-                SHA256.HashSizeInBytes,
-                "Invalid chunk hash."
-            );
-            var nonceB64 = storedChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
-                ? await storedChunk.Value.ConfigureAwait(false)
-                : chunkRef.Nonce;
-            var nonce = DecodeBase64FixedLength(
-                nonceB64,
-                EncryptionConstants.NonceSize,
-                "Invalid chunk nonce."
-            );
-            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
-
-            var encryptedData = await fileOperationsService
-                .ReadAllBytesAsync(chunkFilePath, cancellationToken)
-                .ConfigureAwait(false);
-
-            var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
-            var decryptedData = encryptionStrategy.DecryptChunk(
-                encryptedData,
-                encryptionKey,
-                nonce,
-                associatedData
-            );
+            byte[]? chunkHash = null;
+            byte[]? nonce = null;
+            byte[]? encryptedData = null;
+            byte[]? associatedData = null;
+            byte[]? decryptedData = null;
 
             try
             {
+                chunkHash = DecodeBase64FixedLength(
+                    chunkRef.Hash,
+                    SHA256.HashSizeInBytes,
+                    "Invalid chunk hash."
+                );
+                var nonceB64 = storedChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
+                    ? await storedChunk.Value.ConfigureAwait(false)
+                    : chunkRef.Nonce;
+                nonce = DecodeBase64FixedLength(
+                    nonceB64,
+                    EncryptionConstants.NonceSize,
+                    "Invalid chunk nonce."
+                );
+                var chunkFilePath = this.ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
+                var storedSize = fileOperationsService.GetFileSize(chunkFilePath);
+                var maximumStoredSize = compressionStrategy is null
+                    ? checked(chunkRef.Size + EncryptionConstants.TagSize)
+                    : MaximumStoredChunkSize;
+
+                if (
+                    storedSize < EncryptionConstants.TagSize
+                    || storedSize > maximumStoredSize
+                    || (compressionStrategy is null && storedSize != maximumStoredSize)
+                )
+                {
+                    throw new InvalidDataException("Stored chunk size is invalid.");
+                }
+
+                encryptedData = await fileOperationsService
+                    .ReadAllBytesBoundedAsync(chunkFilePath, maximumStoredSize, cancellationToken)
+                    .ConfigureAwait(false);
+
+                associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+                decryptedData = encryptionStrategy.DecryptChunk(
+                    encryptedData,
+                    encryptionKey,
+                    nonce,
+                    associatedData
+                );
+
                 if (compressionStrategy is not null)
                 {
                     await using MemoryStream compressedStream = new(decryptedData, writable: false);
@@ -476,31 +499,66 @@ internal sealed partial class ChunkedBackupService
                         .DecompressAsync(compressedStream, cancellationToken)
                         .ConfigureAwait(false);
 
-                    processedBytes += await CopyToWithHashAsync(
+                    var decompressedSize = await CopyToWithHashAsync(
                             decompressedStream,
                             destination,
                             fileHasher,
-                            fileEntry.TotalSize - processedBytes,
+                            chunkRef.Size,
                             cancellationToken
                         )
                         .ConfigureAwait(false);
+
+                    if (decompressedSize != chunkRef.Size)
+                    {
+                        throw new CryptographicException(
+                            "Decompressed chunk size does not match the manifest."
+                        );
+                    }
+
+                    processedBytes = checked(processedBytes + decompressedSize);
                 }
                 else
                 {
+                    if (decryptedData.Length != chunkRef.Size)
+                    {
+                        throw new CryptographicException(
+                            "Chunk size does not match the manifest."
+                        );
+                    }
+
                     fileHasher.AppendData(decryptedData);
                     await destination
                         .WriteAsync(decryptedData, cancellationToken)
                         .ConfigureAwait(false);
-                    processedBytes += decryptedData.Length;
+                    processedBytes = checked(processedBytes + decryptedData.Length);
                 }
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(chunkHash);
-                CryptographicOperations.ZeroMemory(nonce);
-                CryptographicOperations.ZeroMemory(associatedData);
-                CryptographicOperations.ZeroMemory(encryptedData);
-                CryptographicOperations.ZeroMemory(decryptedData);
+                if (chunkHash is not null)
+                {
+                    CryptographicOperations.ZeroMemory(chunkHash);
+                }
+
+                if (nonce is not null)
+                {
+                    CryptographicOperations.ZeroMemory(nonce);
+                }
+
+                if (associatedData is not null)
+                {
+                    CryptographicOperations.ZeroMemory(associatedData);
+                }
+
+                if (encryptedData is not null)
+                {
+                    CryptographicOperations.ZeroMemory(encryptedData);
+                }
+
+                if (decryptedData is not null)
+                {
+                    CryptographicOperations.ZeroMemory(decryptedData);
+                }
             }
         }
 

@@ -24,20 +24,46 @@ internal sealed partial class ChunkedBackupService
         var strategy = keyDerivationServiceFactory.Create(kdf);
         var masterKey = strategy.DeriveKey(password, salt, EncryptionConstants.KeySize);
 
+        byte[]? chunkEncryptionKey = null;
+        byte[]? chunkNonceKey = null;
+        byte[]? namingKey = null;
+        byte[]? manifestEncryptionKey = null;
+
         try
         {
+            chunkEncryptionKey = DeriveSubKey(masterKey, "chunk-encryption"u8);
+            chunkNonceKey = DeriveSubKey(masterKey, "chunk-nonce"u8);
+            namingKey = DeriveSubKey(masterKey, "chunk-naming"u8);
+            manifestEncryptionKey = DeriveSubKey(masterKey, "manifest-encryption"u8);
+
             return new DerivedKeySet(
                 masterKey,
-                DeriveSubKey(masterKey, "chunk-encryption"u8),
-                DeriveSubKey(masterKey, "chunk-nonce"u8),
-                DeriveSubKey(masterKey, "chunk-naming"u8),
-                DeriveSubKey(masterKey, "manifest-encryption"u8)
+                chunkEncryptionKey,
+                chunkNonceKey,
+                namingKey,
+                manifestEncryptionKey
             );
         }
         catch
         {
             CryptographicOperations.ZeroMemory(masterKey);
+            ZeroKeyIfCreated(chunkEncryptionKey);
+            ZeroKeyIfCreated(chunkNonceKey);
+            ZeroKeyIfCreated(namingKey);
+            ZeroKeyIfCreated(manifestEncryptionKey);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Wipes an optional sub-key that was allocated before a later derivation failed.
+    /// </summary>
+    /// <param name="key">The key to wipe, or <see langword="null"/> when it was never created.</param>
+    private static void ZeroKeyIfCreated(byte[]? key)
+    {
+        if (key is not null)
+        {
+            CryptographicOperations.ZeroMemory(key);
         }
     }
 

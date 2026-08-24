@@ -115,6 +115,61 @@ public sealed class UpdateBackupTests
     }
 
     [Fact]
+    internal async Task Update_StoredChunkMissing_RegeneratesItFromUnchangedSource()
+    {
+        const string Content = "unchanged source content used to repair a missing chunk";
+
+        await using var provider = TestHost.CreateProvider();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
+        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restored = new TempDir();
+
+        _ = source.WriteText("only.txt", Content);
+        var createResult = await createHandler.HandleAsync(
+            NewCreateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess);
+
+        var missingChunk = Assert.Single(ChunkFiles(destination.Path));
+        File.Delete(missingChunk);
+
+        var updateResult = await updateHandler.HandleAsync(
+            NewUpdateCommand(source.Path, destination.Path),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.True(
+                updateResult.IsSuccess && updateResult.Value.Completion!.IsSuccess,
+                "Update did not repair the missing chunk."
+            ),
+            () => Assert.Equal(1, updateResult.Value.Completion!.TotalFiles),
+            () => Assert.Equal(1, updateResult.Value.Completion!.ProcessedFiles),
+            () => _ = Assert.Single(ChunkFiles(destination.Path))
+        );
+
+        var restoreResult = await restoreHandler.HandleAsync(
+            NewRestoreCommand(destination.Path, restored.Path),
+            TestContext.Current.CancellationToken
+        );
+        Assert.True(
+            restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
+            "The repaired archive could not be restored."
+        );
+
+        var restoredContent = await File.ReadAllTextAsync(
+            Path.Combine(restored.Path, "only.txt"),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Equal(Content, restoredContent);
+    }
+
+    [Fact]
     internal async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
     {
         await using var provider = TestHost.CreateProvider();
