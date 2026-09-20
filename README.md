@@ -9,7 +9,9 @@
 <p align="center">
 <img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F&logo=github&logoColor=white" />
 <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
-<img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
+<a href="https://github.com/hidden-space-xyz/BackupZCrypt/actions/workflows/ci.yml" title="CodeQL runs after checks and gates releases within CI">
+  <img alt="CodeQL: part of CI" src="https://img.shields.io/badge/CodeQL-in_CI-2088FF?style=for-the-badge&logo=github&logoColor=white" />
+</a>
 </p>
 
 # 🔐 BackupZCrypt
@@ -163,16 +165,21 @@ are what guide where this project goes next.
 3. Implement your changes, with XML documentation and tests
 4. Open a pull request against `develop` — `master` only receives release merges
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). `feat:`,
-`fix:`, `refactor:` and `bump:` are the four prefixes the generated release notes are built from,
-and a `!` marker or a `BREAKING CHANGE:` footer puts a warning banner at the top of them.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). The release
+workflow derives the next version from every commit since the latest stable tag: a breaking `!`
+bumps the major version, `feat:` bumps minor, and `fix:` or `perf:` bumps patch. Other commit types
+do not publish a release by themselves.
 
-Automated checks run on pull requests into `master` only, so run the same three locally before
-opening yours:
+The complete gate runs when changes land on `master`, immediately before any release. Run its local
+equivalents before opening a pull request:
 
 ```bash
-dotnet build BackupZCrypt.sln
-dotnet test BackupZCrypt.sln
+dotnet restore BackupZCrypt.sln
+dotnet tool restore
+dotnet build BackupZCrypt.sln --configuration Release --no-restore
+dotnet test BackupZCrypt.Test/BackupZCrypt.Test.csproj --configuration Release --no-build --no-restore --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --coverage-settings BackupZCrypt.Test/CodeCoverage.config --results-directory TestResults/coverage
+dotnet reportgenerator "-reports:TestResults/coverage/*.cobertura.xml" -targetdir:TestResults/coverage/report "-reporttypes:JsonSummary;Html"
+dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 90
 dotnet format whitespace BackupZCrypt.sln --verify-no-changes
 ```
 
@@ -180,11 +187,11 @@ We especially welcome contributions for UI and security improvements.
 
 ### For Maintainers
 
-The release version is chosen by hand — it is the `<Version>` property in `Directory.Build.props`.
-Landing a commit on `master` publishes `v<version>` as a GitHub Release, and publishes nothing if
-that tag already exists: raising the property is what cuts a release, and a merge that leaves it
-untouched ships no release at all. A version below the latest release fails the workflow.
-[`.github/workflows/README.md`](.github/workflows/README.md) documents both pipelines in full.
+Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate,
+formatting and CodeQL before publishing the four desktop packages. The workflow calculates the tag
+from the latest stable tag and stamps that exact version into every binary; no source version needs
+to be edited. [`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in
+full.
 
 ## 📜 License
 

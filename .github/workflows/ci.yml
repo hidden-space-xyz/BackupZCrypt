@@ -1,56 +1,59 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - master
-  workflow_dispatch:
+  push:
+    branches: [master]
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  DOTNET_VERSION: "10.0.x"
-  DOTNET_NOLOGO: "true"
-  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
-  SOLUTION: BackupZCrypt.sln
+  cancel-in-progress: false
 
 jobs:
-  build-and-test:
-    name: Build and test
+  codeql:
+    needs: quality
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+  release:
+    needs: codeql
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+
+  quality:
+    name: Build, test and quality
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Setup .NET
+      - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Restore
-        run: dotnet restore "$SOLUTION"
-
-      - name: Build
-        run: dotnet build "$SOLUTION" --configuration Debug --no-restore
-
-      - name: Test
-        run: dotnet test "$SOLUTION" --configuration Debug --no-build
-
+          dotnet-version: 10.0.x
+      - name: Restore dependencies and tools
+        run: |
+          dotnet restore BackupZCrypt.sln
+          dotnet tool restore
+      - name: Build application
+        run: dotnet build BackupZCrypt.sln --configuration Release --no-restore
+      - name: Tests with core coverage
+        run: >-
+          dotnet test BackupZCrypt.Test/BackupZCrypt.Test.csproj
+          --configuration Release --no-build --no-restore
+          --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
+          --coverage-settings BackupZCrypt.Test/CodeCoverage.config
+          --results-directory TestResults/coverage
+      - name: Report and enforce core coverage >= 90%
+        run: |
+          dotnet reportgenerator "-reports:TestResults/coverage/*.cobertura.xml" -targetdir:TestResults/coverage/report "-reporttypes:JsonSummary;MarkdownSummaryGithub"
+          cat TestResults/coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 90
       - name: Verify formatting
-        run: dotnet format whitespace "$SOLUTION" --verify-no-changes --no-restore
+        run: dotnet format whitespace BackupZCrypt.sln --verify-no-changes --no-restore

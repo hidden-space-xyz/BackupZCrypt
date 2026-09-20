@@ -1,276 +1,43 @@
-name: Release
+name: Desktop Release
 
 on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
-  DOTNET_VERSION: "10.0.x"
-  DOTNET_NOLOGO: "true"
-  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
-  SOLUTION: BackupZCrypt.sln
   DESKTOP_PROJECT: BackupZCrypt.Desktop/BackupZCrypt.Desktop.csproj
 
 jobs:
-  prepare:
-    name: Resolve version
+  version:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
-      should_release: ${{ steps.gate.outputs.should_release }}
-      version: ${{ steps.declared.outputs.version }}
-      tag: ${{ steps.gate.outputs.tag }}
+      changed: ${{ steps.meta.outputs.changed }}
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      previous: ${{ steps.meta.outputs.previous }}
     steps:
-      - name: Checkout full history
+      - name: Checkout source
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Read the declared version
-        id: declared
-        run: |
-          set -euo pipefail
-
-          raw="$(dotnet msbuild "$DESKTOP_PROJECT" -getProperty:Version -nologo)"
-          version="$(printf '%s\n' "$raw" | tr -d '\r' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -n1 || true)"
-
-          if [ -z "$version" ]; then
-            echo "::error::Could not read a MAJOR.MINOR.PATCH <Version> for ${DESKTOP_PROJECT}. MSBuild returned: ${raw}"
-            exit 1
-          fi
-
-          echo "Declared version : $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Decide whether to release
-        id: gate
-        env:
-          VERSION: ${{ steps.declared.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          tag="v${VERSION}"
-
-          version_gt() {
-            local left right index
-            IFS='.' read -r -a left <<< "$1"
-            IFS='.' read -r -a right <<< "$2"
-            for index in 0 1 2; do
-              if (( ${left[index]:-0} > ${right[index]:-0} )); then return 0; fi
-              if (( ${left[index]:-0} < ${right[index]:-0} )); then return 1; fi
-            done
-            return 1
-          }
-
-          latest=""
-          while read -r candidate; do
-            [ -n "$candidate" ] || continue
-            if [ -z "$latest" ] || version_gt "${candidate#v}" "$latest"; then
-              latest="${candidate#v}"
-            fi
-          done < <(git tag --list 'v[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
-
-          should_release=true
-          if git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
-            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-              echo "::error::Version ${VERSION} is already published as ${tag}. Raise <Version> in Directory.Build.props first."
-              exit 1
-            fi
-            echo "::notice::Version ${VERSION} is already published as ${tag}. Raise <Version> in Directory.Build.props to publish a new release."
-            should_release=false
-          elif [ -n "$latest" ] && ! version_gt "$VERSION" "$latest"; then
-            echo "::error::Declared version ${VERSION} is older than the latest release v${latest}. Raise <Version> in Directory.Build.props."
-            exit 1
-          fi
-
-          echo "Latest release : ${latest:-none}"
-          echo "Publishing     : $tag"
-          echo "Release        : $should_release"
-
-          {
-            echo "should_release=$should_release"
-            echo "tag=$tag"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build the release notes
-        if: steps.gate.outputs.should_release == 'true'
-        env:
-          TAG: ${{ steps.gate.outputs.tag }}
-        run: |
-          set -euo pipefail
-
-          work="$(mktemp -d)"
-          for section in feat fix refactor bump; do
-            : > "$work/$section"
-          done
-
-          previous_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
-          if [ -n "$previous_tag" ]; then
-            range="${previous_tag}..HEAD"
-          else
-            range="HEAD"
-          fi
-          echo "Previous tag : ${previous_tag:-none}"
-          echo "Commit range : $range"
-
-          breaking=false
-          commit_base="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit"
-          subject_re='^([a-zA-Z]+)(\(([^)]*)\))?(!)?[:;][[:space:]]*(.+)$'
-
-          while IFS=$'\t' read -r sha subject; do
-            [ -n "${sha:-}" ] || continue
-            [[ "$subject" =~ $subject_re ]] || continue
-
-            type="${BASH_REMATCH[1],,}"
-            scope="${BASH_REMATCH[3]}"
-            text="${BASH_REMATCH[5]}"
-
-            if [ -n "${BASH_REMATCH[4]}" ]; then
-              breaking=true
-            fi
-
-            case "$type" in
-              feat|fix|refactor|bump) ;;
-              *) continue ;;
-            esac
-
-            prefix=""
-            if [ -n "$scope" ]; then
-              prefix="**${scope}**: "
-            fi
-            printf -- '- %s%s ([`%s`](%s/%s))\n' "$prefix" "$text" "${sha:0:7}" "$commit_base" "$sha" >> "$work/$type"
-          done < <(git log --no-merges --format='%H%x09%s' "$range")
-
-          git log --no-merges --format='%B' "$range" > "$work/bodies.txt"
-          if grep -qE '^BREAKING[ -]CHANGE:' "$work/bodies.txt"; then
-            breaking=true
-          fi
-
-          emit() {
-            local title="$1" file="$2"
-            if [ -s "$work/$file" ]; then
-              printf '## %s\n\n' "$title"
-              cat "$work/$file"
-              printf '\n'
-            fi
-          }
-
-          notes="release-notes.md"
-          {
-            if [ "$breaking" = "true" ]; then
-              printf '> [!WARNING]\n> This release contains breaking changes. Read the notes before updating.\n\n'
-            fi
-            emit "🚀 Features" feat
-            emit "🐛 Fixes" fix
-            emit "♻️ Refactoring" refactor
-            emit "⬆️ Dependencies" bump
-          } > "$notes"
-
-          if [ ! -s "$notes" ]; then
-            printf 'Maintenance release — no user-facing changes recorded.\n\n' > "$notes"
-          fi
-
-          cat >> "$notes" <<'MARKDOWN'
-          ## 📦 Downloads
-
-          | Platform | Asset |
-          | --- | --- |
-          | 🪟 Windows x64 | `BackupZCrypt-__TAG__-win-x64.zip` |
-          | 🐧 Linux x64 | `BackupZCrypt-__TAG__-linux-x64.tar.gz` |
-          | 🍎 macOS Intel | `BackupZCrypt-__TAG__-osx-x64.tar.gz` |
-          | 🍎 macOS Apple Silicon | `BackupZCrypt-__TAG__-osx-arm64.tar.gz` |
-
-          Every asset is a self-contained single-file build — no .NET runtime required.
-          On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
-          MARKDOWN
-
-          sed -i "s/__TAG__/${TAG}/g" "$notes"
-
-          if [ -n "$previous_tag" ]; then
-            printf '\n**Full Changelog**: %s/%s/compare/%s...%s\n' \
-              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$previous_tag" "$TAG" >> "$notes"
-          fi
-
-          {
-            printf '# %s\n\n' "$TAG"
-            cat "$notes"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload release notes
-        if: steps.gate.outputs.should_release == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-notes
-          path: release-notes.md
-          retention-days: 7
-          if-no-files-found: error
-
-  test:
-    name: Test
-    needs: prepare
-    if: needs.prepare.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Restore
-        run: dotnet restore "$SOLUTION"
-
-      - name: Test
-        run: |
-          dotnet test "$SOLUTION" \
-            --configuration Release \
-            --no-restore \
-            --blame-hang-timeout 5m \
-            --logger "trx;LogFileName=test-results.trx" \
-            --results-directory "$GITHUB_WORKSPACE/test-results"
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: test-results
-          retention-days: 7
-          if-no-files-found: ignore
+          node-version: 26
+      - name: Resolve release version
+        id: meta
+        run: node .github/scripts/release-version.mjs
 
   build:
+    needs: version
+    if: needs.version.outputs.changed == 'true'
     name: Publish ${{ matrix.rid }}
-    needs: [prepare, test]
-    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - rid: win-x64
@@ -282,117 +49,117 @@ jobs:
           - rid: osx-arm64
             archive: tar.gz
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Setup .NET
+      - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Publish self-contained single file
+          dotnet-version: 10.0.x
+      - name: Publish self-contained single-file application
         env:
           RID: ${{ matrix.rid }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          dotnet publish "$DESKTOP_PROJECT" \
-            --configuration Release \
-            --runtime "$RID" \
-            --self-contained true \
-            --output publish \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:EnableCompressionInSingleFile=true \
-            -p:DebugType=embedded \
-            -p:ContinuousIntegrationBuild=true \
-            -p:Version="$VERSION"
-
-      - name: Package
+          VERSION: ${{ needs.version.outputs.version }}
+        run: >-
+          dotnet publish "$DESKTOP_PROJECT"
+          --configuration Release
+          --runtime "$RID"
+          --self-contained true
+          --output publish
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=embedded
+          -p:ContinuousIntegrationBuild=true
+          -p:Version="$VERSION"
+      - name: Package portable application
         env:
           RID: ${{ matrix.rid }}
           ARCHIVE: ${{ matrix.archive }}
-          TAG: ${{ needs.prepare.outputs.tag }}
+          TAG: ${{ needs.version.outputs.tag }}
         run: |
           set -euo pipefail
-
           name="BackupZCrypt-${TAG}-${RID}"
-          rm -rf staging
           mkdir -p "staging/${name}" artifacts
-
           cp -R publish/. "staging/${name}/"
           cp LICENSE README.md "staging/${name}/"
           rm -f "staging/${name}"/*.pdb
-
           if [ "$ARCHIVE" = "zip" ]; then
             (cd staging && zip -q -r -X "../artifacts/${name}.zip" "$name")
           else
             chmod +x "staging/${name}/BackupZCrypt"
             tar --owner=0 --group=0 -czf "artifacts/${name}.tar.gz" -C staging "$name"
           fi
-
-          ls -lh artifacts
-
       - name: Upload portable package
         uses: actions/upload-artifact@v7
         with:
           name: portable-${{ matrix.rid }}
           path: artifacts/*
-          retention-days: 7
           if-no-files-found: error
+          retention-days: 7
 
   release:
-    name: Publish release
-    needs: [prepare, build]
-    if: needs.prepare.outputs.should_release == 'true'
+    needs: [version, build]
+    if: needs.version.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Recheck version before publishing the release
+        id: current
+        run: node .github/scripts/release-version.mjs
+      - name: Verify the prepared version is still current
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+        run: test "$CURRENT_VERSION" = "$VERSION"
       - name: Download portable packages
+        if: steps.current.outputs.changed == 'true'
         uses: actions/download-artifact@v8
         with:
           pattern: portable-*
           merge-multiple: true
           path: assets
-
-      - name: Download release notes
-        uses: actions/download-artifact@v8
-        with:
-          name: release-notes
-          path: notes
-
-      - name: Check assets
+      - name: Create GitHub release
+        if: steps.current.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          PREVIOUS_TAG: ${{ needs.version.outputs.previous }}
         run: |
           set -euo pipefail
           shopt -s nullglob
           packages=(assets/*.zip assets/*.tar.gz)
-          if [ "${#packages[@]}" -eq 0 ]; then
-            echo "::error::No release assets were produced."
+          if [ "${#packages[@]}" -ne 4 ]; then
+            echo "::error::Expected four release packages, found ${#packages[@]}."
             exit 1
           fi
-          printf '%s\n' "${packages[@]}"
+          notes="$RUNNER_TEMP/release-notes.md"
+          cat > "$notes" <<EOF
+          ## Portable downloads
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ needs.prepare.outputs.tag }}
-        run: |
-          set -euo pipefail
-          gh release create "$TAG" \
-            --target "$GITHUB_SHA" \
-            --title "BackupZCrypt $TAG" \
-            --notes-file notes/release-notes.md \
-            --latest \
-            assets/*
-          echo "Released $TAG -> ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          | Platform | Asset |
+          | --- | --- |
+          | Windows x64 | \`BackupZCrypt-${RELEASE_TAG}-win-x64.zip\` |
+          | Linux x64 | \`BackupZCrypt-${RELEASE_TAG}-linux-x64.tar.gz\` |
+          | macOS Intel | \`BackupZCrypt-${RELEASE_TAG}-osx-x64.tar.gz\` |
+          | macOS Apple Silicon | \`BackupZCrypt-${RELEASE_TAG}-osx-arm64.tar.gz\` |
+
+          Every package is a self-contained single-file build; no .NET runtime is required.
+          On Linux and macOS, run \`chmod +x BackupZCrypt\` after extracting.
+          EOF
+          args=()
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            args+=(--notes-start-tag "$PREVIOUS_TAG")
+          fi
+          gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" \
+            --title "BackupZCrypt $RELEASE_TAG" --generate-notes \
+            --notes-file "$notes" "${args[@]}" "${packages[@]}"
