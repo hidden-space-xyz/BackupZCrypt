@@ -137,7 +137,7 @@ public sealed class LayerDependencyTests
     /// <returns>The parsed project file.</returns>
     private static XDocument ReadProject(string project)
     {
-        var path = Path.Combine(RepositoryRoot, project, project + ".csproj");
+        var path = Path.Join(RepositoryRoot, project, project + ".csproj");
 
         Assert.True(File.Exists(path), $"Could not find {path}.");
         return XDocument.Load(path);
@@ -149,7 +149,7 @@ public sealed class LayerDependencyTests
     /// <returns>The parsed properties file.</returns>
     private static XDocument ReadSharedBuildProperties()
     {
-        var path = Path.Combine(RepositoryRoot, "Directory.Build.props");
+        var path = Path.Join(RepositoryRoot, "Directory.Build.props");
 
         Assert.True(File.Exists(path), $"Could not find {path}.");
         return XDocument.Load(path);

@@ -38,7 +38,7 @@ public sealed class PathNormalizationHelperTests
             () => Assert.Null(error),
             () =>
                 Assert.Equal(
-                    Path.Combine(Environment.CurrentDirectory, "some-relative-folder"),
+                    Path.Join(Environment.CurrentDirectory, "some-relative-folder"),
                     result
                 )
         );

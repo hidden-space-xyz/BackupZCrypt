@@ -116,13 +116,13 @@ public static class OnDiskFormatFixtures
     /// </summary>
     /// <exception cref="DirectoryNotFoundException">The repository root could not be located.</exception>
     public static string RepositoryTestDataRoot =>
-        Path.Combine(RepositoryRoot, "BackupZCrypt.Test", "TestData", "OnDiskFormatArchives");
+        Path.Join(RepositoryRoot, "BackupZCrypt.Test", "TestData", "OnDiskFormatArchives");
 
     /// <summary>
     /// Gets the fixture root copied next to the test assembly, used by the pinning tests at run time.
     /// </summary>
     public static string DeployedTestDataRoot =>
-        Path.Combine(AppContext.BaseDirectory, "TestData", "OnDiskFormatArchives");
+        Path.Join(AppContext.BaseDirectory, "TestData", "OnDiskFormatArchives");
 
     /// <summary>
     /// Walks up from the test assembly location until it finds the directory holding the solution file.
@@ -137,7 +137,7 @@ public static class OnDiskFormatFixtures
             directory = directory.Parent
         )
         {
-            if (File.Exists(Path.Combine(directory.FullName, "BackupZCrypt.sln")))
+            if (File.Exists(Path.Join(directory.FullName, "BackupZCrypt.sln")))
             {
                 return directory.FullName;
             }

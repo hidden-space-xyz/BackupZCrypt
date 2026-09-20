@@ -185,7 +185,7 @@ internal sealed class BackupRequestValidator(
         {
             errors.Add(new LocalizableMessage(MessageCode.SourceAccessDenied));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             errors.Add(new LocalizableMessage(MessageCode.SourceAccessErrorFormat, ex.Message));
         }
@@ -219,7 +219,7 @@ internal sealed class BackupRequestValidator(
                 );
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             errors.Add(new LocalizableMessage(MessageCode.DestinationInvalidFormat, ex.Message));
         }

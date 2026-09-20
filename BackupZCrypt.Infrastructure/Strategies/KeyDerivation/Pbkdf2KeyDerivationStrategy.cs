@@ -46,7 +46,7 @@ internal sealed class Pbkdf2KeyDerivationStrategy : IKeyDerivationAlgorithmStrat
                 keySize / 8
             );
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             throw new CryptographicException("Failed to derive key with PBKDF2.", ex);
         }

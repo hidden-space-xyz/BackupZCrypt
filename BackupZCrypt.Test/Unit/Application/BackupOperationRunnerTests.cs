@@ -34,14 +34,14 @@ public sealed class BackupOperationRunnerTests
     /// system is substituted, but the path must be absolute to survive path normalization.
     /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-runner-src")
+        Path.Join(Path.GetTempPath(), "bzc-runner-src")
     );
 
     /// <summary>
     /// The rooted destination path the requests point at, kept distinct from <see cref="SourceDir"/>.
     /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-runner-dst")
+        Path.Join(Path.GetTempPath(), "bzc-runner-dst")
     );
 
     /// <summary>

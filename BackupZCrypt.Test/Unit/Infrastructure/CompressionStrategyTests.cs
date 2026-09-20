@@ -123,7 +123,8 @@ public sealed class CompressionStrategyTests
         byte[] input
     )
     {
-        await using var compressed = await strategy.CompressAsync(new MemoryStream(input));
+        await using MemoryStream source = new(input);
+        await using var compressed = await strategy.CompressAsync(source);
         await using MemoryStream collected = new();
         await compressed.CopyToAsync(collected);
         return collected.ToArray();

@@ -42,7 +42,7 @@ internal sealed class SettingsService(
     /// </summary>
     private string BaseDirectoryPath { get; } =
         baseDirectoryPath
-        ?? Path.Combine(
+        ?? Path.Join(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData,
                 Environment.SpecialFolderOption.Create
@@ -58,7 +58,7 @@ internal sealed class SettingsService(
     public string GetFilePath<T>()
         where T : class, ISettings<T>
     {
-        return Path.GetFullPath(Path.Combine(this.BaseDirectoryPath, T.FileName));
+        return Path.GetFullPath(Path.Join(this.BaseDirectoryPath, T.FileName));
     }
 
     /// <summary>

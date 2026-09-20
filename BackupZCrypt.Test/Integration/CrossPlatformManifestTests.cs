@@ -48,8 +48,8 @@ public sealed class CrossPlatformManifestTests
         using var restored = new TempDir();
 
         _ = source.WriteText("root.txt", "root");
-        _ = source.WriteText(Path.Combine("docs", "notes.md"), "# notes");
-        _ = source.WriteText(Path.Combine("docs", "sub", "deep.txt"), "deep");
+        _ = source.WriteText(Path.Join("docs", "notes.md"), "# notes");
+        _ = source.WriteText(Path.Join("docs", "sub", "deep.txt"), "deep");
 
         await CreateBackupAsync(createHandler, source.Path, destination.Path);
 
@@ -73,7 +73,7 @@ public sealed class CrossPlatformManifestTests
             .Select(f => Path.GetRelativePath(restored.Path, f).Replace('\\', '/'))
             .ToList();
         var deepContent = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "docs", "sub", "deep.txt"),
+            Path.Join(restored.Path, "docs", "sub", "deep.txt"),
             TestContext.Current.CancellationToken
         );
 
@@ -94,14 +94,14 @@ public sealed class CrossPlatformManifestTests
         using var destination = new TempDir();
         using var restored = new TempDir();
 
-        _ = source.WriteText(Path.Combine("docs", "notes.md"), "# notes");
+        _ = source.WriteText(Path.Join("docs", "notes.md"), "# notes");
 
         await CreateBackupAsync(createHandler, source.Path, destination.Path);
         await RewriteManifestPathsAsync(provider, destination.Path, static _ => "docs\\notes.md");
 
         await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
 
-        var restoredFile = Path.Combine(restored.Path, "docs", "notes.md");
+        var restoredFile = Path.Join(restored.Path, "docs", "notes.md");
         var restoredNames = Directory
             .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetFileName(f))
@@ -138,7 +138,7 @@ public sealed class CrossPlatformManifestTests
         await CreateBackupAsync(createHandler, source.Path, destination.Path);
 
         var escapedName = "bzc-escaped-" + Guid.NewGuid().ToString("N") + ".txt";
-        var escapeTarget = Path.Combine(Path.GetTempPath(), escapedName);
+        var escapeTarget = Path.Join(Path.GetTempPath(), escapedName);
         await RewriteManifestPathsAsync(provider, destination.Path, _ => "..\\..\\" + escapedName);
 
         var result = await restoreHandler.HandleAsync(

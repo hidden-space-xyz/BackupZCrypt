@@ -321,20 +321,21 @@ internal sealed partial class ChunkedBackupService
     {
         HashSet<string> inspectedHashes = new(StringComparer.Ordinal);
 
-        foreach (var chunk in manifestFiles.SelectMany(static file => file.Chunks))
-        {
-            if (
-                inspectedHashes.Add(chunk.Hash)
-                && !this.IsStoredChunkAvailable(
-                    chunk,
-                    chunksDir,
-                    namingKey,
-                    compressionStrategy
+        foreach (
+            var chunk in manifestFiles
+                .SelectMany(static file => file.Chunks)
+                .Where(chunk =>
+                    inspectedHashes.Add(chunk.Hash)
+                    && !this.IsStoredChunkAvailable(
+                        chunk,
+                        chunksDir,
+                        namingKey,
+                        compressionStrategy
+                    )
                 )
-            )
-            {
-                _ = storedChunks.TryRemove(chunk.Hash, out _);
-            }
+        )
+        {
+            _ = storedChunks.TryRemove(chunk.Hash, out _);
         }
     }
 

@@ -58,21 +58,26 @@ internal sealed class Argon2IdKeyDerivationStrategy : IKeyDerivationAlgorithmStr
 
         var key = new byte[keySize / 8];
         char[] passwordChars = [];
+        var completed = false;
 
         try
         {
             passwordChars = password.ToCharArray();
             _ = argon2.GenerateBytes(passwordChars, key);
+            completed = true;
             return key;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Array.Clear(key, 0, key.Length);
-
             throw new CryptographicException("Failed to derive key with Argon2id.", ex);
         }
         finally
         {
+            if (!completed)
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+
             Array.Clear(passwordChars, 0, passwordChars.Length);
         }
     }

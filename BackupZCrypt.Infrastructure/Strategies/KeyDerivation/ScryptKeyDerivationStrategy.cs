@@ -62,7 +62,7 @@ internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrat
                 keySize / 8
             );
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             throw new CryptographicException("Failed to derive key with scrypt.", ex);
         }

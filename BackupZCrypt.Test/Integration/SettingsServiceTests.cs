@@ -154,7 +154,7 @@ public sealed class SettingsServiceTests
     internal async Task GetOrCreateAsync_WhenBaseDirectoryMissing_CreatesTheTreeAndPersistsDefaults()
     {
         using var dir = new TempDir();
-        var baseDirectory = Path.Combine(dir.Path, "BackupZCrypt", "settings");
+        var baseDirectory = Path.Join(dir.Path, "BackupZCrypt", "settings");
         var service = new SettingsService(new FileOperationsService(), baseDirectory);
         Assert.False(Directory.Exists(baseDirectory));
 
@@ -178,7 +178,7 @@ public sealed class SettingsServiceTests
         string? directoryName
     )
     {
-        var baseDirectory = Path.Combine(Path.GetTempPath(), "bzc-settings-without-directory");
+        var baseDirectory = Path.Join(Path.GetTempPath(), "bzc-settings-without-directory");
 
         var fileOperations = Substitute.For<IFileOperationsService>();
         _ = fileOperations.GetDirectoryName(Arg.Any<string>()).Returns(directoryName);
@@ -212,7 +212,7 @@ public sealed class SettingsServiceTests
     internal void GetFilePath_WithNoBaseDirectoryOverride_ResolvesUnderTheUserApplicationDataFolder()
     {
         var expectedDirectory = Path.GetFullPath(
-            Path.Combine(
+            Path.Join(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "BackupZCrypt"
             )

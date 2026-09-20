@@ -36,8 +36,8 @@ public sealed record class BackupResult
         this.TotalBytes = totalBytes;
         this.ProcessedFiles = processedFiles;
         this.TotalFiles = totalFiles;
-        this.Errors = errors?.ToArray() ?? (LocalizableMessage[])[];
-        this.Warnings = warnings?.ToArray() ?? (LocalizableMessage[])[];
+        this.Errors = errors?.ToArray() ?? Array.Empty<LocalizableMessage>();
+        this.Warnings = warnings?.ToArray() ?? Array.Empty<LocalizableMessage>();
     }
 
     /// <summary>

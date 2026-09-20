@@ -90,7 +90,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var restored = new TempDir();
 
         var keepA = source.WriteText("keep-a.txt", KeepAContent);
-        var keepB = source.WriteText(Path.Combine("dir", "keep-b.txt"), KeepBContent);
+        var keepB = source.WriteText(Path.Join("dir", "keep-b.txt"), KeepBContent);
         var doomed = source.WriteText("doomed.txt", "removed after enumeration, before it is read");
 
         var survivingBytes = new FileInfo(keepA).Length + new FileInfo(keepB).Length;
@@ -146,11 +146,11 @@ public sealed class ChunkedBackupFailurePathTests
         );
 
         var restoredKeepA = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "keep-a.txt"),
+            Path.Join(restored.Path, "keep-a.txt"),
             TestContext.Current.CancellationToken
         );
         var restoredKeepB = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "dir", "keep-b.txt"),
+            Path.Join(restored.Path, "dir", "keep-b.txt"),
             TestContext.Current.CancellationToken
         );
 
@@ -164,7 +164,7 @@ public sealed class ChunkedBackupFailurePathTests
             () => Assert.Equal(KeepBContent, restoredKeepB),
             () =>
                 Assert.False(
-                    File.Exists(Path.Combine(restored.Path, "doomed.txt")),
+                    File.Exists(Path.Join(restored.Path, "doomed.txt")),
                     "The file that failed was recorded in the manifest anyway."
                 )
         );
@@ -215,7 +215,7 @@ public sealed class ChunkedBackupFailurePathTests
                 ),
             () =>
                 Assert.False(
-                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName))
+                    File.Exists(Path.Join(archive.Path, BackupConstants.ManifestFileName))
                 )
         );
     }
@@ -287,7 +287,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var restored = new TempDir();
 
         _ = source.WriteFile("empty-root.dat", []);
-        _ = source.WriteFile(Path.Combine("dir", "empty-nested.dat"), []);
+        _ = source.WriteFile(Path.Join("dir", "empty-nested.dat"), []);
 
         var createResult = await service.CreateAsync(
             source.Path,
@@ -324,8 +324,8 @@ public sealed class ChunkedBackupFailurePathTests
                     "An archive that holds no chunks failed to restore."
                 ),
             () => Assert.Equal(2, FilesUnder(restored.Path).Length),
-            () => Assert.Equal(0L, new FileInfo(Path.Combine(restored.Path, "empty-root.dat")).Length),
-            () => Assert.Equal(0L, new FileInfo(Path.Combine(restored.Path, "dir", "empty-nested.dat")).Length)
+            () => Assert.Equal(0L, new FileInfo(Path.Join(restored.Path, "empty-root.dat")).Length),
+            () => Assert.Equal(0L, new FileInfo(Path.Join(restored.Path, "dir", "empty-nested.dat")).Length)
         );
     }
 
@@ -449,7 +449,7 @@ public sealed class ChunkedBackupFailurePathTests
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess, "The only corrupt file was reported as restored."),
-            () => Assert.Equal(ExistingContent, File.ReadAllText(Path.Combine(restored.Path, "only.txt"))),
+            () => Assert.Equal(ExistingContent, File.ReadAllText(Path.Join(restored.Path, "only.txt"))),
             () =>
                 Assert.Empty(
                     Directory.GetFiles(restored.Path, "*.tmp", SearchOption.AllDirectories)
@@ -473,7 +473,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var restored = new TempDir();
 
         _ = source.WriteText("a.txt", RestoredA);
-        _ = source.WriteText(Path.Combine("dir", "b.txt"), RestoredB);
+        _ = source.WriteText(Path.Join("dir", "b.txt"), RestoredB);
         await CreateBackupAsync(service, source.Path, archive.Path);
 
         _ = restored.WriteText("a.txt", "stale content that is considerably longer than what the archive holds");
@@ -488,15 +488,15 @@ public sealed class ChunkedBackupFailurePathTests
         );
 
         var restoredA = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "a.txt"),
+            Path.Join(restored.Path, "a.txt"),
             TestContext.Current.CancellationToken
         );
         var restoredB = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "dir", "b.txt"),
+            Path.Join(restored.Path, "dir", "b.txt"),
             TestContext.Current.CancellationToken
         );
         var restoredUnrelated = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "unrelated.txt"),
+            Path.Join(restored.Path, "unrelated.txt"),
             TestContext.Current.CancellationToken
         );
 
@@ -566,15 +566,15 @@ public sealed class ChunkedBackupFailurePathTests
         );
 
         var restoredStable = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "stable.txt"),
+            Path.Join(restored.Path, "stable.txt"),
             TestContext.Current.CancellationToken
         );
         var restoredRevised = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "revised.txt"),
+            Path.Join(restored.Path, "revised.txt"),
             TestContext.Current.CancellationToken
         );
         var restoredDoomed = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "doomed.txt"),
+            Path.Join(restored.Path, "doomed.txt"),
             TestContext.Current.CancellationToken
         );
 
@@ -601,11 +601,11 @@ public sealed class ChunkedBackupFailurePathTests
         using var archive = new TempDir();
 
         _ = source.WriteText("a.txt", "content that is not touched between the backup and the update");
-        _ = source.WriteText(Path.Combine("dir", "b.txt"), "nested content that is likewise untouched");
+        _ = source.WriteText(Path.Join("dir", "b.txt"), "nested content that is likewise untouched");
 
         await CreateBackupAsync(service, source.Path, archive.Path);
 
-        var chunksDir = Path.Combine(archive.Path, BackupConstants.ChunksDirectoryName);
+        var chunksDir = Path.Join(archive.Path, BackupConstants.ChunksDirectoryName);
         var result = await service.UpdateAsync(
             source.Path,
             archive.Path,
@@ -629,7 +629,7 @@ public sealed class ChunkedBackupFailurePathTests
             () => Assert.False(Directory.Exists(chunksDir), "Pruning recreated the chunks directory."),
             () =>
                 Assert.True(
-                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
+                    File.Exists(Path.Join(archive.Path, BackupConstants.ManifestFileName)),
                     "The update did not leave a manifest behind."
                 )
         );
@@ -665,7 +665,7 @@ public sealed class ChunkedBackupFailurePathTests
                 ),
             () =>
                 Assert.False(
-                    File.Exists(Path.Combine(archive.Path, BackupConstants.ManifestFileName)),
+                    File.Exists(Path.Join(archive.Path, BackupConstants.ManifestFileName)),
                     "The refused update wrote a manifest anyway."
                 ),
             () => Assert.Single(FilesUnder(archive.Path))
@@ -682,7 +682,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var archive = new TempDir();
 
         _ = source.WriteText("a.txt", "the archived content");
-        _ = source.WriteText(Path.Combine("dir", "b.txt"), "the nested archived content");
+        _ = source.WriteText(Path.Join("dir", "b.txt"), "the nested archived content");
         await CreateBackupAsync(service, source.Path, archive.Path);
 
         _ = source.WriteText("a.txt", "content revised by someone who does not know the password");
@@ -714,7 +714,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var archive = new TempDir();
 
         _ = source.WriteText("a.txt", "alpha payload");
-        _ = source.WriteText(Path.Combine("dir", "b.txt"), "bravo payload");
+        _ = source.WriteText(Path.Join("dir", "b.txt"), "bravo payload");
 
         using var cts = new CancellationTokenSource();
         var request = NewRequest(source.Path, archive.Path, BackupOperation.Create);
@@ -743,7 +743,7 @@ public sealed class ChunkedBackupFailurePathTests
         using var restored = new TempDir();
 
         _ = source.WriteText("a.txt", "alpha payload");
-        _ = source.WriteText(Path.Combine("dir", "b.txt"), "bravo payload");
+        _ = source.WriteText(Path.Join("dir", "b.txt"), "bravo payload");
         await CreateBackupAsync(service, source.Path, archive.Path);
 
         _ = source.WriteText("a.txt", "alpha payload, revised so the update has work to do");
@@ -866,7 +866,7 @@ public sealed class ChunkedBackupFailurePathTests
         var files = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["alpha.txt"] = "alpha content, stored as a single chunk",
-            [Path.Combine("dir", "bravo.txt")] = "bravo content, stored as a single chunk",
+            [Path.Join("dir", "bravo.txt")] = "bravo content, stored as a single chunk",
             ["charlie.txt"] = "charlie content, stored as a single chunk",
         };
 
@@ -888,9 +888,9 @@ public sealed class ChunkedBackupFailurePathTests
     private static int CountReproduced(Dictionary<string, string> expected, string restoredRoot)
     {
         return expected.Count(pair =>
-            File.Exists(Path.Combine(restoredRoot, pair.Key))
+            File.Exists(Path.Join(restoredRoot, pair.Key))
             && string.Equals(
-                File.ReadAllText(Path.Combine(restoredRoot, pair.Key)),
+                File.ReadAllText(Path.Join(restoredRoot, pair.Key)),
                 pair.Value,
                 StringComparison.Ordinal
             )
@@ -909,7 +909,7 @@ public sealed class ChunkedBackupFailurePathTests
         [
             .. Directory
                 .GetFiles(
-                    Path.Combine(archiveRoot, BackupConstants.ChunksDirectoryName),
+                    Path.Join(archiveRoot, BackupConstants.ChunksDirectoryName),
                     "*" + BackupConstants.AppFileExtension
                 )
                 .Order(StringComparer.Ordinal),

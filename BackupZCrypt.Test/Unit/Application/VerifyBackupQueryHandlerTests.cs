@@ -23,7 +23,7 @@ public sealed class VerifyBackupQueryHandlerTests
     /// The rooted archive path the queries point at; nothing is created on disk.
     /// </summary>
     private static readonly string BackupDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-verify-handler-src")
+        Path.Join(Path.GetTempPath(), "bzc-verify-handler-src")
     );
 
     /// <summary>

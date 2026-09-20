@@ -220,7 +220,7 @@ public sealed class ManifestServiceTests
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations
             .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Combine(call.Arg<string[]>() ?? []));
+            .Returns(call => Path.Join(call.Arg<string[]>() ?? []));
         fileOperations
             .When(operations => operations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()))
             .Do(_ => throw readFailure);
@@ -247,7 +247,7 @@ public sealed class ManifestServiceTests
         var backupKind = await manifestService.DetectManifestKindAsync(backup.Path, CancellationToken.None);
         var siblingKind = await manifestService.DetectManifestKindAsync(sibling, CancellationToken.None);
         var absentSiblingKind = await manifestService.DetectManifestKindAsync(
-            Path.Combine(backup.Path, "never-created.txt"),
+            Path.Join(backup.Path, "never-created.txt"),
             CancellationToken.None
         );
         var rootlessKind = await manifestService.DetectManifestKindAsync("bare-name-with-no-directory.txt", CancellationToken.None);
@@ -268,7 +268,7 @@ public sealed class ManifestServiceTests
         var manifestService = CreateServiceWithFailingManifestRead(new UnauthorizedAccessException("injected read failure"));
 
         var kind = await manifestService.DetectManifestKindAsync(
-            Path.Combine(Path.GetTempPath(), "bzc-unreadable"),
+            Path.Join(Path.GetTempPath(), "bzc-unreadable"),
             CancellationToken.None
         );
 
@@ -282,7 +282,7 @@ public sealed class ManifestServiceTests
 
         _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => manifestService.DetectManifestKindAsync(
-                Path.Combine(Path.GetTempPath(), "bzc-cancelled"),
+                Path.Join(Path.GetTempPath(), "bzc-cancelled"),
                 CancellationToken.None
             )
         );
@@ -394,7 +394,7 @@ public sealed class ManifestServiceTests
             () => Assert.Empty(errors),
             () => Assert.Single(Directory.GetFiles(backup.Path)),
             () => Assert.False(
-                File.Exists(Path.Combine(backup.Path, BackupConstants.ManifestFileName + ".tmp")),
+                File.Exists(Path.Join(backup.Path, BackupConstants.ManifestFileName + ".tmp")),
                 "the atomic write left its temp manifest behind for the next run to trip over"
             ),
             () => Assert.Equal(3, reread!.Files.Count)
@@ -579,7 +579,7 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        var manifestPath = Path.Combine(backup.Path, BackupConstants.ManifestFileName);
+        var manifestPath = Path.Join(backup.Path, BackupConstants.ManifestFileName);
         var originalBytes = await File.ReadAllBytesAsync(manifestPath, CancellationToken.None);
 
         var failingFileOperations = Substitute.For<IFileOperationsService>();
@@ -653,7 +653,7 @@ public sealed class ManifestServiceTests
             () => Assert.Equal(MessageCode.ManifestWriteFailedFormat, errors[0].Code),
             () => Assert.Contains<object>("injected atomic write failure", errors[0].Args),
             () => Assert.False(
-                File.Exists(Path.Combine(backup.Path, BackupConstants.ManifestFileName)),
+                File.Exists(Path.Join(backup.Path, BackupConstants.ManifestFileName)),
                 "a save whose rename never happened must not leave a manifest at the destination"
             )
         );
@@ -713,13 +713,13 @@ public sealed class ManifestServiceTests
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations
             .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Combine(call.Arg<string[]>() ?? []));
+            .Returns(call => Path.Join(call.Arg<string[]>() ?? []));
         _ = fileOperations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()).Returns(stream);
 
         var manifestService = new ManifestService(fileOperations, Substitute.For<IEncryptionServiceFactory>());
 
         var kind = await manifestService.DetectManifestKindAsync(
-            Path.Combine(Path.GetTempPath(), "bzc-midread"),
+            Path.Join(Path.GetTempPath(), "bzc-midread"),
             CancellationToken.None
         );
 

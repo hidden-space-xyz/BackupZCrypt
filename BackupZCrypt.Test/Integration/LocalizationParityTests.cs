@@ -20,7 +20,7 @@ public sealed class LocalizationParityTests
     /// culture currently in effect, so the resx XML is parsed instead — read from the copy the build places
     /// in the test output, since the tests run from that directory rather than from the repository.
     /// </summary>
-    private static readonly string EnglishResxPath = Path.Combine(
+    private static readonly string EnglishResxPath = Path.Join(
         AppContext.BaseDirectory,
         "TestData",
         "Strings.resx"
@@ -30,7 +30,7 @@ public sealed class LocalizationParityTests
     /// The path of the Spanish resource file, copied into the test output alongside its English
     /// counterpart.
     /// </summary>
-    private static readonly string SpanishResxPath = Path.Combine(
+    private static readonly string SpanishResxPath = Path.Join(
         AppContext.BaseDirectory,
         "TestData",
         "Strings.es.resx"

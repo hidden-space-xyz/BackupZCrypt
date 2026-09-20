@@ -21,7 +21,7 @@ public sealed class SettingsRoundTripTests
     /// A stand-in for a remembered source path. Nothing is created on disk because the settings
     /// records simply store whatever text the user last selected.
     /// </summary>
-    private static readonly string SourcePath = Path.Combine(
+    private static readonly string SourcePath = Path.Join(
         Path.GetTempPath(),
         "bzc-recent-source"
     );
@@ -30,7 +30,7 @@ public sealed class SettingsRoundTripTests
     /// A stand-in for a remembered destination path, kept distinct from <see cref="SourcePath"/> so a
     /// reload that mixed the two members up would be visible.
     /// </summary>
-    private static readonly string DestinationPath = Path.Combine(
+    private static readonly string DestinationPath = Path.Join(
         Path.GetTempPath(),
         "bzc-recent-destination"
     );

@@ -155,7 +155,7 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// <returns>The combined path.</returns>
     public string CombinePath(params string[] paths)
     {
-        return Path.Combine(paths);
+        return Path.Join(paths);
     }
 
     /// <summary>
@@ -238,7 +238,7 @@ internal sealed class FileOperationsService : IFileOperationsService
 
         try
         {
-            tempPath = Path.Combine(
+            tempPath = Path.Join(
                 directory,
                 "." + Convert.ToHexStringLower(randomSuffix) + ".tmp"
             );

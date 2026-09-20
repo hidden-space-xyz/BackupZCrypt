@@ -24,14 +24,14 @@ public sealed class RestoreBackupCommandHandlerTests
     /// The rooted archive path the commands point at; nothing is created on disk.
     /// </summary>
     private static readonly string BackupDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-restore-handler-src")
+        Path.Join(Path.GetTempPath(), "bzc-restore-handler-src")
     );
 
     /// <summary>
     /// The rooted destination path the commands point at, kept distinct from <see cref="BackupDir"/>.
     /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-restore-handler-dst")
+        Path.Join(Path.GetTempPath(), "bzc-restore-handler-dst")
     );
 
     /// <summary>

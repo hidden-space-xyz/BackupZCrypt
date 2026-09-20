@@ -119,7 +119,7 @@ public sealed class BackupRestoreRoundtripTests
                 )
         );
 
-        var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
+        var manifestPath = Path.Join(destination.Path, BackupConstants.ManifestFileName);
         Assert.Multiple(
             () => Assert.True(File.Exists(manifestPath), $"Manifest not written at '{manifestPath}'."),
             () => Assert.NotEmpty(createProgress.Reports),
@@ -196,7 +196,7 @@ public sealed class BackupRestoreRoundtripTests
         Assert.Equal(
             content,
             await File.ReadAllBytesAsync(
-                Path.Combine(restored.Path, "split.bin"),
+                Path.Join(restored.Path, "split.bin"),
                 TestContext.Current.CancellationToken
             )
         );
@@ -251,7 +251,7 @@ public sealed class BackupRestoreRoundtripTests
 
         foreach (var (relativePath, content) in expected)
         {
-            var restoredFile = Path.Combine(restored.Path, relativePath);
+            var restoredFile = Path.Join(restored.Path, relativePath);
             if (File.Exists(restoredFile))
             {
                 Assert.NotEqual(
@@ -361,11 +361,11 @@ public sealed class BackupRestoreRoundtripTests
         var repeated = "Repeated content stored once and referenced twice.\n"u8.ToArray();
 
         Add("readme.txt", "Hello, BackupZCrypt integration test.\n"u8.ToArray());
-        Add(Path.Combine("docs", "notes.md"), "# Notes\n\nNested file content.\n"u8.ToArray());
-        Add(Path.Combine("docs", "sub", "deep.txt"), "Deeply nested.\n"u8.ToArray());
+        Add(Path.Join("docs", "notes.md"), "# Notes\n\nNested file content.\n"u8.ToArray());
+        Add(Path.Join("docs", "sub", "deep.txt"), "Deeply nested.\n"u8.ToArray());
         Add("empty.dat", []);
         Add("twin-a.txt", repeated);
-        Add(Path.Combine("docs", "twin-b.txt"), repeated);
+        Add(Path.Join("docs", "twin-b.txt"), repeated);
         Add("small.bin", DeterministicBytes(37, seed: 99));
 
         return files;
@@ -392,7 +392,7 @@ public sealed class BackupRestoreRoundtripTests
     private static string[] ChunkFiles(string backupRoot)
     {
         return Directory.GetFiles(
-            Path.Combine(backupRoot, BackupConstants.ChunksDirectoryName),
+            Path.Join(backupRoot, BackupConstants.ChunksDirectoryName),
             "*" + BackupConstants.AppFileExtension
         );
     }
@@ -410,7 +410,7 @@ public sealed class BackupRestoreRoundtripTests
     {
         foreach (var (relativePath, content) in expected)
         {
-            var restoredFile = Path.Combine(restoredRoot, relativePath);
+            var restoredFile = Path.Join(restoredRoot, relativePath);
             Assert.Multiple(
                 () => Assert.True(File.Exists(restoredFile), $"Missing restored file '{relativePath}'."),
                 () => Assert.Equal(content, File.ReadAllBytes(restoredFile))

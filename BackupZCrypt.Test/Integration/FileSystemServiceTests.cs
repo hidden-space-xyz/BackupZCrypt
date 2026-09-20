@@ -68,8 +68,8 @@ public sealed class FileSystemServiceTests
         var service = new FileOperationsService();
 
         var root = dir.WriteText("root.txt", "1");
-        var child = dir.WriteText(Path.Combine("nested", "child.txt"), "2");
-        var grandchild = dir.WriteText(Path.Combine("nested", "deep", "grandchild.txt"), "3");
+        var child = dir.WriteText(Path.Join("nested", "child.txt"), "2");
+        var grandchild = dir.WriteText(Path.Join("nested", "deep", "grandchild.txt"), "3");
 
         var files = await service.GetFilesAsync(
             dir.Path,
@@ -87,9 +87,9 @@ public sealed class FileSystemServiceTests
         var service = new FileOperationsService();
 
         var rootText = dir.WriteText("a.txt", "1");
-        var nestedText = dir.WriteText(Path.Combine("sub", "c.txt"), "3");
+        var nestedText = dir.WriteText(Path.Join("sub", "c.txt"), "3");
         _ = dir.WriteText("b.log", "2");
-        _ = dir.WriteText(Path.Combine("sub", "d.log"), "4");
+        _ = dir.WriteText(Path.Join("sub", "d.log"), "4");
 
         var files = await service.GetFilesAsync(
             dir.Path,
@@ -109,12 +109,12 @@ public sealed class FileSystemServiceTests
 
         var source = dir.Combine("source");
         _ = Directory.CreateDirectory(source);
-        var included = dir.WriteText(Path.Combine("source", "root.txt"), "1");
-        _ = dir.WriteText(Path.Combine("outside", "secret.txt"), "2");
+        var included = dir.WriteText(Path.Join("source", "root.txt"), "1");
+        _ = dir.WriteText(Path.Join("outside", "secret.txt"), "2");
 
         try
         {
-            _ = Directory.CreateSymbolicLink(Path.Combine(source, "link"), dir.Combine("outside"));
+            _ = Directory.CreateSymbolicLink(Path.Join(source, "link"), dir.Combine("outside"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -144,9 +144,9 @@ public sealed class FileSystemServiceTests
 
         var source = dir.Combine("source");
         _ = Directory.CreateDirectory(source);
-        var included = dir.WriteText(Path.Combine("source", "root.txt"), "1");
-        var outside = dir.WriteText(Path.Combine("outside", "secret.txt"), "2");
-        var link = Path.Combine(source, "linked-secret.txt");
+        var included = dir.WriteText(Path.Join("source", "root.txt"), "1");
+        var outside = dir.WriteText(Path.Join("outside", "secret.txt"), "2");
+        var link = Path.Join(source, "linked-secret.txt");
 
         try
         {
@@ -205,7 +205,7 @@ public sealed class FileSystemServiceTests
         var service = new FileOperationsService();
 
         _ = dir.WriteText("top.txt", "x");
-        _ = dir.WriteText(Path.Combine("sub", "inner.txt"), "y");
+        _ = dir.WriteText(Path.Join("sub", "inner.txt"), "y");
 
         await service.CleanDirectoryAsync(dir.Path, TestContext.Current.CancellationToken);
 
@@ -267,7 +267,7 @@ public sealed class FileSystemServiceTests
     {
         if (!OperatingSystem.IsWindows())
         {
-            return Path.Combine(
+            return Path.Join(
                 Path.GetPathRoot(Path.GetTempPath()) ?? Path.DirectorySeparatorChar.ToString(),
                 "bzc-unmounted-" + Guid.NewGuid().ToString("N")
             );

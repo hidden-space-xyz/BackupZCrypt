@@ -98,9 +98,10 @@ public sealed class FastCdcChunkingTests
     /// </summary>
     /// <param name="input">The bytes to feed through the chunker.</param>
     /// <returns>The chunks in the order they were produced.</returns>
-    private static Task<List<byte[]>> DrainAsync(byte[] input)
+    private static async Task<List<byte[]>> DrainAsync(byte[] input)
     {
-        return DrainAsync(new MemoryStream(input));
+        await using MemoryStream source = new(input);
+        return await DrainAsync(source);
     }
 
     /// <summary>
@@ -225,7 +226,8 @@ public sealed class FastCdcChunkingTests
     {
         var input = RandomBytes(4 * 1024 * 1024, seed: 23);
 
-        var reference = await DrainAsync(new MemoryStream(input));
+        await using MemoryStream referenceStream = new(input);
+        var reference = await DrainAsync(referenceStream);
 
         using var drippedStream = new DripStream(input, maxBytesPerRead: 997);
         var dripped = await DrainAsync(drippedStream);
@@ -281,7 +283,7 @@ public sealed class FastCdcChunkingTests
 
         _ = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
-            var source = new MemoryStream(RandomBytes(64 * 1024, seed: 81));
+            await using MemoryStream source = new(RandomBytes(64 * 1024, seed: 81));
 
             await foreach (var _ in strategy.ChunkAsync(source, cts.Token))
             {

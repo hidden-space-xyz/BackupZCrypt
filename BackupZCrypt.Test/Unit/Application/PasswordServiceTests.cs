@@ -46,7 +46,7 @@ public sealed class PasswordServiceTests
     private readonly PasswordService sut = new();
 
     [Theory]
-    [InlineData((string?)null)]
+    [InlineData(null)]
     [InlineData("")]
     internal void AnalyzePasswordStrength_NullOrEmpty_ReturnsVeryWeakWithNoTips(string? password)
     {

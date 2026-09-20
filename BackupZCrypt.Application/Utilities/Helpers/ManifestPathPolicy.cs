@@ -140,7 +140,7 @@ internal static class ManifestPathPolicy
 
         var rootFullPath = Path.GetFullPath(destinationRoot);
         var destinationFullPath = Path.GetFullPath(
-            Path.Combine(rootFullPath, ToPlatformPath(relativePath))
+            Path.Join(rootFullPath, ToPlatformPath(relativePath))
         );
         var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
 
@@ -198,7 +198,7 @@ internal static class ManifestPathPolicy
             )
         )
         {
-            current = Path.Combine(current, segment);
+            current = Path.Join(current, segment);
             if (
                 fileOperationsService.DirectoryExists(current)
                 && fileOperationsService.IsReparsePoint(current)

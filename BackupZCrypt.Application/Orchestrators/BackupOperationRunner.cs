@@ -90,7 +90,7 @@ internal sealed class BackupOperationRunner(
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
         }
@@ -149,7 +149,7 @@ internal sealed class BackupOperationRunner(
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
         }

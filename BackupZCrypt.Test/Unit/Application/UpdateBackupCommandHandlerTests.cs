@@ -24,14 +24,14 @@ public sealed class UpdateBackupCommandHandlerTests
     /// The rooted source path the commands point at; nothing is created on disk.
     /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-update-handler-src")
+        Path.Join(Path.GetTempPath(), "bzc-update-handler-src")
     );
 
     /// <summary>
     /// The rooted archive path the commands point at, kept distinct from <see cref="SourceDir"/>.
     /// </summary>
     private static readonly string BackupDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-update-handler-dst")
+        Path.Join(Path.GetTempPath(), "bzc-update-handler-dst")
     );
 
     /// <summary>

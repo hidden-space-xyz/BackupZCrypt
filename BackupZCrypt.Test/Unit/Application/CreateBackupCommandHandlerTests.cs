@@ -24,14 +24,14 @@ public sealed class CreateBackupCommandHandlerTests
     /// The rooted source path the commands point at; nothing is created on disk.
     /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-create-handler-src")
+        Path.Join(Path.GetTempPath(), "bzc-create-handler-src")
     );
 
     /// <summary>
     /// The rooted destination path the commands point at, kept distinct from <see cref="SourceDir"/>.
     /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-create-handler-dst")
+        Path.Join(Path.GetTempPath(), "bzc-create-handler-dst")
     );
 
     /// <summary>

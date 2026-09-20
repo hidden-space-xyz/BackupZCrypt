@@ -42,7 +42,7 @@ public sealed class UpdateBackupTests
 
         _ = source.WriteText("unchanged.txt", "stays the same");
         _ = source.WriteText("changing.txt", "original content");
-        _ = source.WriteText(Path.Combine("dir", "keep.txt"), "nested keep");
+        _ = source.WriteText(Path.Join("dir", "keep.txt"), "nested keep");
 
         var createResult = await createHandler.HandleAsync(
             NewCreateCommand(source.Path, destination.Path),
@@ -56,7 +56,7 @@ public sealed class UpdateBackupTests
         const string ModifiedContent = "MODIFIED content that is clearly different from the original";
         _ = source.WriteText("changing.txt", ModifiedContent);
         const string AddedContent = "freshly added file";
-        _ = source.WriteText(Path.Combine("dir", "added.txt"), AddedContent);
+        _ = source.WriteText(Path.Join("dir", "added.txt"), AddedContent);
 
         var updateResult = await updateHandler.HandleAsync(
             NewUpdateCommand(source.Path, destination.Path),
@@ -90,19 +90,19 @@ public sealed class UpdateBackupTests
         // synchronous lambdas; they run only after the restore itself is known to have succeeded,
         // so a failed restore still reports the message above rather than a file-not-found error.
         var unchangedText = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "unchanged.txt"),
+            Path.Join(restored.Path, "unchanged.txt"),
             TestContext.Current.CancellationToken
         );
         var changingText = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "changing.txt"),
+            Path.Join(restored.Path, "changing.txt"),
             TestContext.Current.CancellationToken
         );
         var keepText = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "dir", "keep.txt"),
+            Path.Join(restored.Path, "dir", "keep.txt"),
             TestContext.Current.CancellationToken
         );
         var addedText = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "dir", "added.txt"),
+            Path.Join(restored.Path, "dir", "added.txt"),
             TestContext.Current.CancellationToken
         );
 
@@ -163,7 +163,7 @@ public sealed class UpdateBackupTests
         );
 
         var restoredContent = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, "only.txt"),
+            Path.Join(restored.Path, "only.txt"),
             TestContext.Current.CancellationToken
         );
         Assert.Equal(Content, restoredContent);
@@ -183,7 +183,7 @@ public sealed class UpdateBackupTests
 
         var uniquePath = source.WriteText("unique.txt", "unique content");
         var twinPath = source.WriteText("twin-a.txt", SharedContent);
-        var survivorRelativePath = Path.Combine("dir", "twin-b.txt");
+        var survivorRelativePath = Path.Join("dir", "twin-b.txt");
         _ = source.WriteText(survivorRelativePath, SharedContent);
 
         var createResult = await createHandler.HandleAsync(
@@ -222,7 +222,7 @@ public sealed class UpdateBackupTests
         // Hoisted out of the grouped assertion for the same reason as in the test above: the read
         // only makes sense once the restore is known to have succeeded.
         var survivorText = await File.ReadAllTextAsync(
-            Path.Combine(restored.Path, survivorRelativePath),
+            Path.Join(restored.Path, survivorRelativePath),
             TestContext.Current.CancellationToken
         );
 
@@ -241,7 +241,7 @@ public sealed class UpdateBackupTests
     private static string[] ChunkFiles(string backupRoot)
     {
         return Directory.GetFiles(
-            Path.Combine(backupRoot, BackupConstants.ChunksDirectoryName),
+            Path.Join(backupRoot, BackupConstants.ChunksDirectoryName),
             "*" + BackupConstants.AppFileExtension
         );
     }

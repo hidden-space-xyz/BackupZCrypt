@@ -84,7 +84,7 @@ internal sealed class ManifestService(
         {
             throw;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return ManifestKind.Missing;
         }
@@ -135,7 +135,7 @@ internal sealed class ManifestService(
         {
             throw;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return null;
         }
@@ -215,7 +215,7 @@ internal sealed class ManifestService(
 
             return documentMatchesPreamble ? ToChunkManifestData(document) : null;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return null;
         }

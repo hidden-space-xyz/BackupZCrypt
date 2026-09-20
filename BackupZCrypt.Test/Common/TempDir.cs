@@ -13,7 +13,7 @@ public sealed class TempDir : IDisposable
     /// </summary>
     public TempDir()
     {
-        Path = System.IO.Path.Combine(
+        Path = System.IO.Path.Join(
             System.IO.Path.GetTempPath(),
             "bzc-tests",
             Guid.NewGuid().ToString("N")
@@ -33,7 +33,7 @@ public sealed class TempDir : IDisposable
     /// <returns>The combined absolute path.</returns>
     public string Combine(params string[] parts)
     {
-        return System.IO.Path.Combine([Path, .. parts]);
+        return System.IO.Path.Join([Path, .. parts]);
     }
 
     /// <summary>

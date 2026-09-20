@@ -102,7 +102,7 @@ public sealed class OnDiskFormatTests
 
         foreach (var (relativePath, expected) in OnDiskFormatFixtures.SourceTree)
         {
-            var restoredFile = Path.Combine(
+            var restoredFile = Path.Join(
                 restored.Path,
                 relativePath.Replace('/', Path.DirectorySeparatorChar)
             );
@@ -167,7 +167,7 @@ public sealed class OnDiskFormatTests
         OnDiskFormatFixture fixture
     )
     {
-        var manifest = Path.Combine(RequireFixture(fixture), "manifest.bzc");
+        var manifest = Path.Join(RequireFixture(fixture), "manifest.bzc");
         var raw = File.ReadAllBytes(manifest);
 
         Assert.Multiple(
@@ -315,10 +315,10 @@ public sealed class OnDiskFormatTests
     /// <returns>The absolute path of the deployed fixture archive.</returns>
     private static string RequireFixture(OnDiskFormatFixture fixture)
     {
-        var path = Path.Combine(OnDiskFormatFixtures.DeployedTestDataRoot, fixture.Name);
+        var path = Path.Join(OnDiskFormatFixtures.DeployedTestDataRoot, fixture.Name);
 
         Assert.True(
-            Directory.Exists(path) && File.Exists(Path.Combine(path, "manifest.bzc")),
+            Directory.Exists(path) && File.Exists(Path.Join(path, "manifest.bzc")),
             $"The '{fixture.Name}' fixture archive is missing from {path}. It is committed binary test "
                 + "data; restore it from source control rather than regenerating it, or the format it "
                 + "pins is lost."

@@ -31,7 +31,11 @@ public sealed partial class MessageLocalizerTests
     /// argument index.
     /// </summary>
     /// <value>The placeholder pattern.</value>
-    [GeneratedRegex(@"\{(?<index>\d+)", RegexOptions.ExplicitCapture, RegexTimeoutMilliseconds)]
+    [GeneratedRegex(
+        @"\{(?<index>\d+)[^}]*\}",
+        RegexOptions.ExplicitCapture,
+        RegexTimeoutMilliseconds
+    )]
     private static partial Regex PlaceholderPattern { get; }
 
     [Fact]

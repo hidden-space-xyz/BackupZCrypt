@@ -20,7 +20,7 @@ internal sealed class SystemStorageService : ISystemStorageService
         {
             return Path.GetPathRoot(fullPath);
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return null;
         }
@@ -38,7 +38,7 @@ internal sealed class SystemStorageService : ISystemStorageService
             DriveInfo driveInfo = new(rootPath);
             return driveInfo.IsReady ? driveInfo.AvailableFreeSpace : -1;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return -1;
         }
@@ -56,7 +56,7 @@ internal sealed class SystemStorageService : ISystemStorageService
             DriveInfo driveInfo = new(rootPath);
             return driveInfo.IsReady;
         }
-        catch
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             return false;
         }

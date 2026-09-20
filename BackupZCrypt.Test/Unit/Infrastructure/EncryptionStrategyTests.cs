@@ -101,10 +101,8 @@ public sealed class EncryptionStrategyTests
     {
         int[] sizes = [0, 1, 1024, 64 * 1024];
 
-        foreach (var size in sizes)
+        foreach (var plaintext in sizes.Select(size => RandomBytes(size, seed: 1000 + size)))
         {
-            var plaintext = RandomBytes(size, seed: 1000 + size);
-
             var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
             var decrypted = cipher.DecryptChunk(ciphertext, Key, Nonce, AssociatedData);
 

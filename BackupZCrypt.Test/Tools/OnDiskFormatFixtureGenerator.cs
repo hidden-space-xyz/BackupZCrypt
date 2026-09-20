@@ -134,7 +134,7 @@ public sealed class OnDiskFormatFixtureGenerator
     /// <returns>A task that completes once the archive has been written.</returns>
     private static async Task RegenerateAsync(OnDiskFormatFixture fixture)
     {
-        var target = Path.Combine(OnDiskFormatFixtures.RepositoryTestDataRoot, fixture.Name);
+        var target = Path.Join(OnDiskFormatFixtures.RepositoryTestDataRoot, fixture.Name);
 
         if (Directory.Exists(target))
         {

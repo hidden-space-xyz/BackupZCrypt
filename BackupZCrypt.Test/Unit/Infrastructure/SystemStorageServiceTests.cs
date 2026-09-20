@@ -75,7 +75,7 @@ public sealed class SystemStorageServiceTests
         var service = new SystemStorageService();
 
         Assert.Multiple(
-            () => Assert.Empty(service.GetPathRoot(Path.Combine("relative", "destination"))!),
+            () => Assert.Empty(service.GetPathRoot(Path.Join("relative", "destination"))!),
             () => Assert.Null(service.GetPathRoot(string.Empty))
         );
     }

@@ -8,6 +8,7 @@ using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReturnsExtensions;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
@@ -36,7 +37,7 @@ public sealed class BackupRequestValidatorTests
     /// system is substituted, but the path must be absolute to survive path normalization.
     /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-validator-src")
+        Path.Join(Path.GetTempPath(), "bzc-validator-src")
     );
 
     /// <summary>
@@ -44,7 +45,7 @@ public sealed class BackupRequestValidatorTests
     /// so overlap checks only fire when a test asks for it.
     /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "bzc-validator-dst")
+        Path.Join(Path.GetTempPath(), "bzc-validator-dst")
     );
 
     /// <summary>
@@ -129,8 +130,8 @@ public sealed class BackupRequestValidatorTests
     {
         return new()
         {
-            { SourceDir, Path.Combine(SourceDir, "backup"), DestinationInsideSourceOnly },
-            { Path.Combine(DestinationDir, "data"), DestinationDir, SourceInsideDestinationOnly },
+            { SourceDir, Path.Join(SourceDir, "backup"), DestinationInsideSourceOnly },
+            { Path.Join(DestinationDir, "data"), DestinationDir, SourceInsideDestinationOnly },
             { SourceDir, SourceDir + "-backup", Array.Empty<MessageCode>() },
             { SourceDir, VolumeRoot, SourceInsideDestinationOnly },
             { VolumeRoot, SourceDir, DestinationInsideSourceOnly },
@@ -226,7 +227,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: string.Empty);
@@ -243,7 +244,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: "Ab1!xyz");
@@ -260,7 +261,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = new BackupRequest(
@@ -286,7 +287,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, SourceDir);
@@ -305,7 +306,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
 
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("C:\\");
         _ = this.systemStorage.IsDriveReady("C:\\").Returns(true);
@@ -390,7 +391,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
 
-        var sourceFile = Path.Combine(SourceDir, "big.bin");
+        var sourceFile = Path.Join(SourceDir, "big.bin");
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([sourceFile]);
@@ -426,7 +427,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations
             .GetFilesAsync(DestinationDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(DestinationDir, "existing.bin")]);
+            .Returns([Path.Join(DestinationDir, "existing.bin")]);
 
         _ = this.passwordService
             .AnalyzePasswordStrength(Arg.Any<string>())
@@ -451,7 +452,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
     }
 
     [Fact]
@@ -566,7 +567,7 @@ public sealed class BackupRequestValidatorTests
     internal async Task AnalyzeErrors_DestinationRootUnknown_ReportsNothingAndSkipsTheReadinessProbe()
     {
         this.StubReadableSource();
-        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns((string?)null);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).ReturnsNull();
 
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(
@@ -739,7 +740,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(source).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(source, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(source, "a.txt")]);
+            .Returns([Path.Join(source, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -768,7 +769,7 @@ public sealed class BackupRequestValidatorTests
             .Returns(_ => true, _ => throw new IOException("probe failed"));
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -787,7 +788,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Combine(SourceDir, "a.txt")]);
+            .Returns([Path.Join(SourceDir, "a.txt")]);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -835,7 +836,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
 
-        var sourceFile = Path.Combine(SourceDir, "big.bin");
+        var sourceFile = Path.Join(SourceDir, "big.bin");
         _ = this.fileOperations
             .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns([sourceFile]);
@@ -893,8 +894,8 @@ public sealed class BackupRequestValidatorTests
     internal async Task AnalyzeWarnings_FileSizeProbeThrows_CountsThatFileAsZeroAndKeepsSweeping()
     {
         var driveRoot = Path.GetPathRoot(DestinationDir)!;
-        var readable = Path.Combine(SourceDir, "readable.bin");
-        var unreadable = Path.Combine(SourceDir, "unreadable.bin");
+        var readable = Path.Join(SourceDir, "readable.bin");
+        var unreadable = Path.Join(SourceDir, "unreadable.bin");
 
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
@@ -938,7 +939,7 @@ public sealed class BackupRequestValidatorTests
         bool rootKnown
     )
     {
-        var sourceFile = Path.Combine(SourceDir, "big.bin");
+        var sourceFile = Path.Join(SourceDir, "big.bin");
         var driveRoot = rootKnown ? Path.GetPathRoot(DestinationDir) : null;
 
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);

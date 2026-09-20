@@ -44,159 +44,154 @@ internal sealed partial class ChunkedBackupService
             return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
         }
 
-        DerivedKeySet? keys = null;
+        using var keys = DeriveKeySet(
+            request.Password,
+            preamble.MasterSalt,
+            preamble.KeyDerivation
+        );
+
+        var manifest = manifestService.DecryptChunkManifest(
+            preamble,
+            keys.ManifestEncryptionKey
+        );
+
+        if (manifest is null)
+        {
+            return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
+        }
+
+        var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
+
+        var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
+
+        var chunksDir = fileOperationsService.CombinePath(
+            sourcePath,
+            BackupConstants.ChunksDirectoryName
+        );
+
+        ValidateManifestEntries(manifest.Files);
+
+        var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
+
+        var totalFiles = manifest.Files.Count;
+        var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
+        progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
+
+        ConcurrentBag<LocalizableMessage> errors = [];
+        long processedBytes = 0;
+        var processedFiles = 0;
+        LocalizableMessage? fatalError = null;
+
+        await fileOperationsService
+            .CreateDirectoryAsync(destinationPath, cancellationToken)
+            .ConfigureAwait(false);
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken
+        );
 
         try
         {
-            keys = DeriveKeySet(request.Password, preamble.MasterSalt, preamble.KeyDerivation);
-
-            var manifest = manifestService.DecryptChunkManifest(
-                preamble,
-                keys.ManifestEncryptionKey
-            );
-
-            if (manifest is null)
-            {
-                return Result<BackupResult>.Failure(MessageCode.InvalidPassword);
-            }
-
-            var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
-
-            var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
-
-            var chunksDir = fileOperationsService.CombinePath(
-                sourcePath,
-                BackupConstants.ChunksDirectoryName
-            );
-
-            ValidateManifestEntries(manifest.Files);
-
-            var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
-
-            var totalFiles = manifest.Files.Count;
-            var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
-            progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
-
-            ConcurrentBag<LocalizableMessage> errors = [];
-            long processedBytes = 0;
-            var processedFiles = 0;
-            LocalizableMessage? fatalError = null;
-
-            await fileOperationsService
-                .CreateDirectoryAsync(destinationPath, cancellationToken)
-                .ConfigureAwait(false);
-
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken
-            );
-
-            try
-            {
-                await Parallel
-                    .ForEachAsync(
-                        manifest.Files,
-                        new ParallelOptions
+            await Parallel
+                .ForEachAsync(
+                    manifest.Files,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = MaximumParallelFileOperations,
+                        CancellationToken = linkedCts.Token,
+                    },
+                    async (fileEntry, token) =>
+                    {
+                        try
                         {
-                            MaxDegreeOfParallelism = MaximumParallelFileOperations,
-                            CancellationToken = linkedCts.Token,
-                        },
-                        async (fileEntry, token) =>
-                        {
-                            try
-                            {
-                                await RestoreFileFromChunksAsync(
-                                        fileEntry,
-                                        chunksDir,
-                                        destinationPath,
-                                        keys.ChunkEncryptionKey,
-                                        keys.NamingKey,
-                                        encryptionStrategy,
-                                        storedChunkNonces,
-                                        compressionStrategy,
-                                        token
-                                    )
-                                    .ConfigureAwait(false);
+                            await RestoreFileFromChunksAsync(
+                                    fileEntry,
+                                    chunksDir,
+                                    destinationPath,
+                                    keys.ChunkEncryptionKey,
+                                    keys.NamingKey,
+                                    encryptionStrategy,
+                                    storedChunkNonces,
+                                    compressionStrategy,
+                                    token
+                                )
+                                .ConfigureAwait(false);
 
-                                _ = Interlocked.Increment(ref processedFiles);
-                                var currentBytes = Interlocked.Add(
-                                    ref processedBytes,
-                                    fileEntry.TotalSize
-                                );
+                            _ = Interlocked.Increment(ref processedFiles);
+                            var currentBytes = Interlocked.Add(
+                                ref processedBytes,
+                                fileEntry.TotalSize
+                            );
 
-                                progress?.Report(
-                                    new BackupStatus(
-                                        Volatile.Read(ref processedFiles),
-                                        totalFiles,
-                                        currentBytes,
-                                        totalBytes,
-                                        stopwatch.Elapsed
-                                    )
-                                );
-                            }
-                            catch (CryptographicException ex)
-                            {
-                                errors.Add(
-                                    new LocalizableMessage(
-                                        MessageCode.DecryptionErrorFormat,
-                                        fileEntry.OriginalPath,
-                                        ex.Message
-                                    )
-                                );
-                            }
-                            catch (Exception ex)
-                                when (ex is not OperationCanceledException && IsFileLevelError(ex))
-                            {
-                                errors.Add(
-                                    new LocalizableMessage(
-                                        MessageCode.DecryptionErrorFormat,
-                                        fileEntry.OriginalPath,
-                                        ex.Message
-                                    )
-                                );
-                            }
-                            catch (Exception ex) when (ex is not OperationCanceledException)
-                            {
-                                _ = Interlocked.CompareExchange(
-                                    ref fatalError,
-                                    new LocalizableMessage(
-                                        MessageCode.UnexpectedErrorFormat,
-                                        ex.Message
-                                    ),
-                                    null
-                                );
-                                await linkedCts.CancelAsync().ConfigureAwait(false);
-                            }
+                            progress?.Report(
+                                new BackupStatus(
+                                    Volatile.Read(ref processedFiles),
+                                    totalFiles,
+                                    currentBytes,
+                                    totalBytes,
+                                    stopwatch.Elapsed
+                                )
+                            );
                         }
-                    )
-                    .ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (fatalError is not null)
-            {
-                stopwatch.Stop();
-                return Result<BackupResult>.Failure(fatalError);
-            }
-
-            List<LocalizableMessage> errorList = [.. errors];
-            stopwatch.Stop();
-
-            return errorList.Count > 0 && processedFiles is 0
-                ? Result<BackupResult>.Failure(
-                    [new LocalizableMessage(MessageCode.AllFilesFailed), .. errorList]
+                        catch (CryptographicException ex)
+                        {
+                            errors.Add(
+                                new LocalizableMessage(
+                                    MessageCode.DecryptionErrorFormat,
+                                    fileEntry.OriginalPath,
+                                    ex.Message
+                                )
+                            );
+                        }
+                        catch (Exception ex)
+                            when (ex is not OperationCanceledException && IsFileLevelError(ex))
+                        {
+                            errors.Add(
+                                new LocalizableMessage(
+                                    MessageCode.DecryptionErrorFormat,
+                                    fileEntry.OriginalPath,
+                                    ex.Message
+                                )
+                            );
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _ = Interlocked.CompareExchange(
+                                ref fatalError,
+                                new LocalizableMessage(
+                                    MessageCode.UnexpectedErrorFormat,
+                                    ex.Message
+                                ),
+                                null
+                            );
+                            await linkedCts.CancelAsync().ConfigureAwait(false);
+                        }
+                    }
                 )
-                : Result<BackupResult>.Success(
-                    new BackupResult(
-                        stopwatch.Elapsed,
-                        totalBytes,
-                        processedFiles,
-                        totalFiles,
-                        errors: errorList
-                    )
-                );
+                .ConfigureAwait(false);
         }
-        finally
+        catch (OperationCanceledException) when (fatalError is not null)
         {
-            keys?.Dispose();
+            stopwatch.Stop();
+            return Result<BackupResult>.Failure(fatalError);
         }
+
+        List<LocalizableMessage> errorList = [.. errors];
+        stopwatch.Stop();
+
+        return errorList.Count > 0 && processedFiles is 0
+            ? Result<BackupResult>.Failure(
+                [new LocalizableMessage(MessageCode.AllFilesFailed), .. errorList]
+            )
+            : Result<BackupResult>.Success(
+                new BackupResult(
+                    stopwatch.Elapsed,
+                    totalBytes,
+                    processedFiles,
+                    totalFiles,
+                    errors: errorList
+                )
+            );
     }
 
     /// <summary>
@@ -230,114 +225,109 @@ internal sealed partial class ChunkedBackupService
             return Result<BackupResult>.Failure(MessageCode.ManifestRequiredForDecryption);
         }
 
-        DerivedKeySet? keys = null;
+        using var keys = DeriveKeySet(
+            request.Password,
+            preamble.MasterSalt,
+            preamble.KeyDerivation
+        );
 
-        try
+        var manifest = manifestService.DecryptChunkManifest(
+            preamble,
+            keys.ManifestEncryptionKey
+        );
+
+        if (manifest is null)
         {
-            keys = DeriveKeySet(request.Password, preamble.MasterSalt, preamble.KeyDerivation);
+            return Result<BackupResult>.Failure(MessageCode.VerifyInvalidPassword);
+        }
 
-            var manifest = manifestService.DecryptChunkManifest(
-                preamble,
-                keys.ManifestEncryptionKey
-            );
+        var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
+        var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
 
-            if (manifest is null)
-            {
-                return Result<BackupResult>.Failure(MessageCode.VerifyInvalidPassword);
-            }
+        var chunksDir = fileOperationsService.CombinePath(
+            sourcePath,
+            BackupConstants.ChunksDirectoryName
+        );
 
-            var encryptionStrategy = encryptionServiceFactory.Create(manifest.Header.EncryptionAlgorithm);
-            var compressionStrategy = CreateCompressionStrategy(manifest.Header.Compression);
+        ValidateManifestEntries(manifest.Files);
 
-            var chunksDir = fileOperationsService.CombinePath(
-                sourcePath,
-                BackupConstants.ChunksDirectoryName
-            );
+        var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
 
-            ValidateManifestEntries(manifest.Files);
+        var totalFiles = manifest.Files.Count;
+        var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
+        progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
 
-            var storedChunkNonces = BuildStoredChunkNonceCache(manifest.Files);
+        ConcurrentBag<LocalizableMessage> errors = [];
+        long processedBytes = 0;
+        var processedFiles = 0;
 
-            var totalFiles = manifest.Files.Count;
-            var totalBytes = manifest.Files.Sum(static f => f.TotalSize);
-            progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
-
-            ConcurrentBag<LocalizableMessage> errors = [];
-            long processedBytes = 0;
-            var processedFiles = 0;
-
-            await Parallel
-                .ForEachAsync(
-                    manifest.Files,
-                    new ParallelOptions
+        await Parallel
+            .ForEachAsync(
+                manifest.Files,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = MaximumParallelFileOperations,
+                    CancellationToken = cancellationToken,
+                },
+                async (fileEntry, token) =>
+                {
+                    try
                     {
-                        MaxDegreeOfParallelism = MaximumParallelFileOperations,
-                        CancellationToken = cancellationToken,
-                    },
-                    async (fileEntry, token) =>
-                    {
-                        try
-                        {
-                            await VerifyFileChunksAsync(
-                                    fileEntry,
-                                    chunksDir,
-                                    keys.ChunkEncryptionKey,
-                                    keys.NamingKey,
-                                    encryptionStrategy,
-                                    storedChunkNonces,
-                                    compressionStrategy,
-                                    Stream.Null,
-                                    token
-                                )
-                                .ConfigureAwait(false);
+                        await VerifyFileChunksAsync(
+                                fileEntry,
+                                chunksDir,
+                                keys.ChunkEncryptionKey,
+                                keys.NamingKey,
+                                encryptionStrategy,
+                                storedChunkNonces,
+                                compressionStrategy,
+                                Stream.Null,
+                                token
+                            )
+                            .ConfigureAwait(false);
 
-                            _ = Interlocked.Increment(ref processedFiles);
-                            var currentBytes = Interlocked.Add(
-                                ref processedBytes,
-                                fileEntry.TotalSize
-                            );
+                        _ = Interlocked.Increment(ref processedFiles);
+                        var currentBytes = Interlocked.Add(
+                            ref processedBytes,
+                            fileEntry.TotalSize
+                        );
 
-                            progress?.Report(
-                                new BackupStatus(
-                                    Volatile.Read(ref processedFiles),
-                                    totalFiles,
-                                    currentBytes,
-                                    totalBytes,
-                                    stopwatch.Elapsed
-                                )
-                            );
-                        }
-                        catch (Exception ex) when (ex is not OperationCanceledException)
-                        {
-                            errors.Add(
-                                new LocalizableMessage(
-                                    MessageCode.IntegrityErrorFormat,
-                                    fileEntry.OriginalPath,
-                                    ex.Message
-                                )
-                            );
-                        }
+                        progress?.Report(
+                            new BackupStatus(
+                                Volatile.Read(ref processedFiles),
+                                totalFiles,
+                                currentBytes,
+                                totalBytes,
+                                stopwatch.Elapsed
+                            )
+                        );
                     }
-                )
-                .ConfigureAwait(false);
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        errors.Add(
+                            new LocalizableMessage(
+                                MessageCode.IntegrityErrorFormat,
+                                fileEntry.OriginalPath,
+                                ex.Message
+                            )
+                        );
+                    }
+                }
+            )
+            .ConfigureAwait(false);
 
-            List<LocalizableMessage> errorList = [.. errors];
-            stopwatch.Stop();
+        List<LocalizableMessage> errorList = [.. errors];
+        stopwatch.Stop();
 
-            return Result<BackupResult>.Success(
-                new BackupResult(
-                    stopwatch.Elapsed,
-                    totalBytes,
-                    processedFiles,
-                    totalFiles,
-                    errors: errorList
-                )
-            );
-        }
-        finally
-        {
-            keys?.Dispose();
-        }
+        return Result<BackupResult>.Success(
+            new BackupResult(
+                stopwatch.Elapsed,
+                totalBytes,
+                processedFiles,
+                totalFiles,
+                errors: errorList
+            )
+        );
     }
 
     /// <summary>

@@ -87,35 +87,35 @@ public sealed class ChunkedBackupSecurityTests
         var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
         var entry = manifest.Files[0];
 
-        var rootsDir = Path.Combine(restoreArea.Path, "roots");
+        var rootsDir = Path.Join(restoreArea.Path, "roots");
 
         (string Name, string EntryPath, string EscapeTarget)[] craftedCases =
         [
             (
                 "forward",
                 "../../escaped-forward.txt",
-                Path.Combine(restoreArea.Path, "escaped-forward.txt")
+                Path.Join(restoreArea.Path, "escaped-forward.txt")
             ),
             (
                 "backslash",
                 "..\\..\\escaped-backslash.txt",
-                Path.Combine(restoreArea.Path, "escaped-backslash.txt")
+                Path.Join(restoreArea.Path, "escaped-backslash.txt")
             ),
             (
                 "rooted",
-                Path.Combine(restoreArea.Path, "escaped-rooted.txt"),
-                Path.Combine(restoreArea.Path, "escaped-rooted.txt")
+                Path.Join(restoreArea.Path, "escaped-rooted.txt"),
+                Path.Join(restoreArea.Path, "escaped-rooted.txt")
             ),
             (
                 "sibling",
                 "../sibling-evil/escaped-sibling.txt",
-                Path.Combine(rootsDir, "sibling-evil", "escaped-sibling.txt")
+                Path.Join(rootsDir, "sibling-evil", "escaped-sibling.txt")
             ),
         ];
 
         foreach (var (name, entryPath, escapeTarget) in craftedCases)
         {
-            var caseRoot = Path.Combine(rootsDir, name);
+            var caseRoot = Path.Join(rootsDir, name);
             var crafted = manifest with { Files = [entry with { OriginalPath = entryPath }] };
             await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
@@ -248,7 +248,7 @@ public sealed class ChunkedBackupSecurityTests
         _ = source.WriteText("b.txt", "preamble tamper probe beta");
         await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
 
-        var manifestPath = Path.Combine(destination.Path, BackupConstants.ManifestFileName);
+        var manifestPath = Path.Join(destination.Path, BackupConstants.ManifestFileName);
         var pristine = await File.ReadAllBytesAsync(manifestPath, TestContext.Current.CancellationToken);
 
         Assert.Multiple(
@@ -291,7 +291,7 @@ public sealed class ChunkedBackupSecurityTests
 
             await File.WriteAllBytesAsync(manifestPath, tampered, TestContext.Current.CancellationToken);
 
-            var caseRoot = Path.Combine(
+            var caseRoot = Path.Join(
                 restoreArea.Path,
                 "case" + caseIndex.ToString(CultureInfo.InvariantCulture)
             );
@@ -325,7 +325,7 @@ public sealed class ChunkedBackupSecurityTests
         using var restoreArea = new TempDir();
 
         _ = source.WriteText(
-            Path.Combine("nested", "only.txt"),
+            Path.Join("nested", "only.txt"),
             "metadata validation probe stored in one chunk"
         );
         await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
@@ -429,7 +429,7 @@ public sealed class ChunkedBackupSecurityTests
             var (name, crafted) = craftedCases[index];
             await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
 
-            var caseRoot = Path.Combine(
+            var caseRoot = Path.Join(
                 restoreArea.Path,
                 index.ToString(CultureInfo.InvariantCulture)
             );
@@ -731,7 +731,7 @@ public sealed class ChunkedBackupSecurityTests
     /// <returns>The chunk file names, without their directory.</returns>
     private static string[] ChunkFileNames(string backupRoot)
     {
-        var chunksDir = Path.Combine(backupRoot, BackupConstants.ChunksDirectoryName);
+        var chunksDir = Path.Join(backupRoot, BackupConstants.ChunksDirectoryName);
         var files = Directory.GetFiles(chunksDir, "*" + BackupConstants.AppFileExtension);
         var names = new string[files.Length];
 

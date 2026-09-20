@@ -117,7 +117,7 @@ public sealed class CreateBackupViewModelTests
     internal async Task StartCommand_CanExecute_AgreesWithTheRequestValidatorOnEveryPasswordRule()
     {
         using TempDir temp = new();
-        _ = temp.WriteText(Path.Combine("source", "file.txt"), "content");
+        _ = temp.WriteText(Path.Join("source", "file.txt"), "content");
         var source = temp.Combine("source");
         var destination = temp.Combine("destination");
         _ = Directory.CreateDirectory(destination);

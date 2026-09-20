@@ -41,7 +41,7 @@ internal static class PathNormalizationHelper
             var expanded = Environment.ExpandEnvironmentVariables(rawPath.Trim());
             return Path.GetFullPath(expanded);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             error = new LocalizableMessage(MessageCode.InvalidPathFormat, ex.Message);
             return null;

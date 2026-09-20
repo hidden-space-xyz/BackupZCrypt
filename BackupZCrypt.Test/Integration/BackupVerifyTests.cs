@@ -191,7 +191,7 @@ public sealed class BackupVerifyTests
         await using var provider = TestHost.CreateProvider();
         var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
 
-        var missing = Path.Combine(Path.GetTempPath(), "bzc-missing", Guid.NewGuid().ToString("N"));
+        var missing = Path.Join(Path.GetTempPath(), "bzc-missing", Guid.NewGuid().ToString("N"));
 
         var result = await verifyHandler.HandleAsync(
             NewVerifyQuery(missing),
@@ -236,7 +236,7 @@ public sealed class BackupVerifyTests
     {
         _ = source.WriteText("a.txt", new string('a', 4096));
         _ = source.WriteText("b.txt", new string('b', 8192));
-        _ = source.WriteText(Path.Combine("sub", "c.txt"), "hello world");
+        _ = source.WriteText(Path.Join("sub", "c.txt"), "hello world");
 
         var result = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path, compression));
 
@@ -297,7 +297,7 @@ public sealed class BackupVerifyTests
         [
             .. Directory
                 .GetFiles(
-                    Path.Combine(backupPath, BackupConstants.ChunksDirectoryName),
+                    Path.Join(backupPath, BackupConstants.ChunksDirectoryName),
                     "*" + BackupConstants.AppFileExtension
                 )
                 .Order(StringComparer.Ordinal),

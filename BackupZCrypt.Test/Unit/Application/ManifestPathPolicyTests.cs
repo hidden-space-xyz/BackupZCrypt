@@ -74,7 +74,7 @@ public sealed class ManifestPathPolicyTests
     [Fact]
     internal void ValidateRelative_RootedPath_IsRejected()
     {
-        var rooted = Path.Combine(Path.GetTempPath(), "escape.txt");
+        var rooted = Path.Join(Path.GetTempPath(), "escape.txt");
 
         _ = Assert.Throws<InvalidDataException>(() => ManifestPathPolicy.ValidateRelative(rooted));
     }
@@ -82,7 +82,7 @@ public sealed class ManifestPathPolicyTests
     [Fact]
     internal void ResolveSafeDestination_OrdinaryEntry_LandsInsideTheRoot()
     {
-        var root = Path.Combine(Path.GetTempPath(), "bzc-policy-root");
+        var root = Path.Join(Path.GetTempPath(), "bzc-policy-root");
 
         var resolved = ManifestPathPolicy.ResolveSafeDestination(root, "docs/sub/deep.txt");
 
@@ -96,7 +96,7 @@ public sealed class ManifestPathPolicyTests
     [Fact]
     internal void ResolveSafeDestination_SiblingWhoseNameSharesThePrefix_IsNotTreatedAsInside()
     {
-        var root = Path.Combine(Path.GetTempPath(), "bzc-root");
+        var root = Path.Join(Path.GetTempPath(), "bzc-root");
 
         _ = Assert.Throws<InvalidDataException>(
             () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt")
@@ -111,7 +111,7 @@ public sealed class ManifestPathPolicyTests
         var outside = dir.Combine("outside");
         _ = Directory.CreateDirectory(root);
         _ = Directory.CreateDirectory(outside);
-        var link = Path.Combine(root, "linked");
+        var link = Path.Join(root, "linked");
 
         try
         {
@@ -128,7 +128,7 @@ public sealed class ManifestPathPolicyTests
                 ManifestPathPolicy.EnsureNoReparsePointDescendants(
                     service,
                     root,
-                    Path.Combine(link, "nested")
+                    Path.Join(link, "nested")
                 )
         );
     }
@@ -177,7 +177,7 @@ public sealed class ManifestPathPolicyTests
     [Fact]
     internal void ToManifestPathThenToPlatformPath_RoundTripsAnEntry()
     {
-        var original = Path.Combine("docs", "sub", "deep.txt");
+        var original = Path.Join("docs", "sub", "deep.txt");
 
         var roundTripped = ManifestPathPolicy.ToPlatformPath(
             ManifestPathPolicy.ToManifestPath(original)
