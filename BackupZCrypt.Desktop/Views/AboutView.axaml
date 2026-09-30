@@ -9,8 +9,9 @@
 
   <UserControl.Resources>
     <DataTemplate x:Key="AlgorithmTemplate" x:DataType="m:AlgorithmInfo">
-      <StackPanel Spacing="3" Margin="0,4,0,8">
+      <StackPanel Spacing="5">
         <TextBlock Text="{Binding Name}"
+                   FontSize="14"
                    FontWeight="SemiBold"
                    Foreground="{StaticResource PrimaryTextBrush}" />
         <TextBlock Text="{Binding Summary}"
@@ -18,107 +19,143 @@
                    FontWeight="Medium"
                    TextWrapping="Wrap"
                    Foreground="{StaticResource AccentBrush}" />
-        <TextBlock Text="{Binding Description}"
-                   Classes="dim"
-                   FontSize="13"
-                   TextWrapping="Wrap" />
+        <TextBlock Classes="body" Text="{Binding Description}" />
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
 
-  <ScrollViewer>
-    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+  <UserControl.Styles>
+    <Style Selector="ItemsControl.algorithms > ContentPresenter:nth-child(n+2)">
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+      <Setter Property="Margin" Value="0,16,0,0" />
+      <Setter Property="Padding" Value="0,16,0,0" />
+    </Style>
 
-      <StackPanel Spacing="6" Margin="0,0,0,8">
-        <TextBlock Classes="h1" Text="{x:Static res:Strings.AboutTitle}" />
-        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.AboutSubtitle}" />
-      </StackPanel>
+    <Style Selector="Grid.guideItem TextBlock.body">
+      <Setter Property="Margin" Value="0,3,0,0" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer>
+    <StackPanel Margin="40,28,40,40" Spacing="16" MaxWidth="820">
+
+      <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+        <Border Grid.Column="0" Classes="pageIcon">
+          <PathIcon Data="{x:Static local:Icons.Info}" />
+        </Border>
+        <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
+          <TextBlock Classes="h1" Text="{x:Static res:Strings.AboutTitle}" />
+          <TextBlock Classes="subtitle" Text="{x:Static res:Strings.AboutSubtitle}" />
+        </StackPanel>
+      </Grid>
 
       <Border Classes="card">
-        <StackPanel Spacing="18">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.HelpGuideSection}" />
+        <StackPanel Spacing="20">
+          <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.HelpGuideSection}" />
 
-          <StackPanel Spacing="16">
-            <Grid ColumnDefinitions="Auto,*">
+          <StackPanel Spacing="18">
+            <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
                 <PathIcon Data="{x:Static local:Icons.ShieldLock}" />
               </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpCreateTitle}" />
-                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpCreateText}" />
+                <TextBlock Classes="body" Text="{x:Static res:Strings.HelpCreateText}" />
               </StackPanel>
             </Grid>
 
-            <Grid ColumnDefinitions="Auto,*">
+            <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
                 <PathIcon Data="{x:Static local:Icons.ArrowSync}" />
               </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpUpdateTitle}" />
-                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpUpdateText}" />
+                <TextBlock Classes="body" Text="{x:Static res:Strings.HelpUpdateText}" />
               </StackPanel>
             </Grid>
 
-            <Grid ColumnDefinitions="Auto,*">
+            <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
                 <PathIcon Data="{x:Static local:Icons.BoxArrowDown}" />
               </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpRestoreTitle}" />
-                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpRestoreText}" />
+                <TextBlock Classes="body" Text="{x:Static res:Strings.HelpRestoreText}" />
               </StackPanel>
             </Grid>
 
-            <Grid ColumnDefinitions="Auto,*">
+            <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
                 <PathIcon Data="{x:Static local:Icons.ShieldCheck}" />
               </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpVerifyTitle}" />
-                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpVerifyText}" />
+                <TextBlock Classes="body" Text="{x:Static res:Strings.HelpVerifyText}" />
               </StackPanel>
             </Grid>
 
-            <Grid ColumnDefinitions="Auto,*">
+            <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
                 <PathIcon Data="{x:Static local:Icons.Settings}" />
               </Border>
-              <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="3" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpSettingsTitle}" />
-                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpSettingsText}" />
+                <TextBlock Classes="body" Text="{x:Static res:Strings.HelpSettingsText}" />
               </StackPanel>
             </Grid>
           </StackPanel>
         </StackPanel>
       </Border>
 
-      <Border Classes="card">
-        <StackPanel Spacing="8">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.HelpPasswordTitle}" />
-          <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap" Text="{x:Static res:Strings.HelpPasswordText}" />
-        </StackPanel>
+      <Border Classes="notice warning" Padding="18,16">
+        <Grid ColumnDefinitions="Auto,*">
+          <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Key}" Width="18" Height="18" Margin="0,1,14,0" />
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock FontSize="14" FontWeight="SemiBold" Text="{x:Static res:Strings.HelpPasswordTitle}" />
+            <TextBlock Foreground="{StaticResource PrimaryTextBrush}" Text="{x:Static res:Strings.HelpPasswordText}" />
+          </StackPanel>
+        </Grid>
       </Border>
 
       <Border Classes="card">
-        <StackPanel Spacing="6">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.EncryptionLabel}" />
-          <ItemsControl ItemsSource="{Binding EncryptionAlgorithms}"
+        <StackPanel Spacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Classes="stepBadge">
+              <PathIcon Data="{x:Static local:Icons.Lock}" />
+            </Border>
+            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.EncryptionLabel}" />
+          </StackPanel>
+          <ItemsControl Classes="algorithms"
+                        ItemsSource="{Binding EncryptionAlgorithms}"
                         ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>
 
       <Border Classes="card">
-        <StackPanel Spacing="6">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.KeyDerivationLabel}" />
-          <ItemsControl ItemsSource="{Binding KeyDerivationAlgorithms}"
+        <StackPanel Spacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Classes="stepBadge">
+              <PathIcon Data="{x:Static local:Icons.Key}" />
+            </Border>
+            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+          </StackPanel>
+          <ItemsControl Classes="algorithms"
+                        ItemsSource="{Binding KeyDerivationAlgorithms}"
                         ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>
 
       <Border Classes="card">
-        <StackPanel Spacing="6">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.CompressionLabel}" />
-          <ItemsControl ItemsSource="{Binding CompressionAlgorithms}"
+        <StackPanel Spacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Classes="stepBadge">
+              <PathIcon Data="{x:Static local:Icons.Archive}" />
+            </Border>
+            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.CompressionLabel}" />
+          </StackPanel>
+          <ItemsControl Classes="algorithms"
+                        ItemsSource="{Binding CompressionAlgorithms}"
                         ItemTemplate="{StaticResource AlgorithmTemplate}" />
         </StackPanel>
       </Border>

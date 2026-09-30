@@ -303,6 +303,9 @@
   <data name="DetectMissing" xml:space="preserve">
     <value>No backup manifest found at this location.</value>
   </data>
+  <data name="DetectFound" xml:space="preserve">
+    <value>Encrypted backup found. Enter its password to continue.</value>
+  </data>
   <data name="WarningsTitle" xml:space="preserve">
     <value>Warnings</value>
   </data>

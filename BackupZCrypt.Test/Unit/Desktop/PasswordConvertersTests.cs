@@ -17,6 +17,11 @@ public sealed class PasswordConvertersTests
     /// </summary>
     private static readonly string[] Bands = ["danger", "warning", "good", "strong"];
 
+    /// <summary>
+    /// The level of every strength meter segment, as the XAML passes it to the converter.
+    /// </summary>
+    private static readonly string[] MeterLevels = ["1", "2", "3", "4", "5"];
+
     [Fact]
     internal void RevealToPasswordChar_MasksUnlessTheUserAskedToReveal()
     {
@@ -64,6 +69,39 @@ public sealed class PasswordConvertersTests
         Assert.Equal(expected, matched);
     }
 
+    [Theory]
+    [InlineData(PasswordStrength.VeryWeak, 1)]
+    [InlineData(PasswordStrength.Weak, 2)]
+    [InlineData(PasswordStrength.Fair, 3)]
+    [InlineData(PasswordStrength.Good, 4)]
+    [InlineData(PasswordStrength.Strong, 5)]
+    internal void StrengthReaches_LightsOneMoreMeterSegmentForEachStrongerStrength(
+        PasswordStrength strength,
+        int expectedLitSegments
+    )
+    {
+        var lit = MeterLevels.Count(level => Reaches(strength, level));
+
+        Assert.Equal(expectedLitSegments, lit);
+    }
+
+    [Fact]
+    internal void StrengthReaches_ForAStrengthOutsideTheEnum_LightsOnlyTheFirstSegment()
+    {
+        var lit = MeterLevels.Where(level => Reaches((PasswordStrength)99, level)).ToList();
+
+        Assert.Equal<string>(["1"], lit);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("first")]
+    internal void StrengthReaches_WithoutANumericLevel_LightsNothing(string? level)
+    {
+        Assert.False(Reaches(PasswordStrength.Strong, level));
+    }
+
     [Fact]
     internal void StrengthIsBand_EveryDeclaredStrength_HasABand()
     {
@@ -83,5 +121,22 @@ public sealed class PasswordConvertersTests
             .ToList();
 
         Assert.Empty(unmapped);
+    }
+
+    /// <summary>
+    /// Asks the meter converter whether a strength lights the segment at the given level.
+    /// </summary>
+    /// <param name="strength">The strength being shown.</param>
+    /// <param name="level">The segment level, as the XAML passes it.</param>
+    /// <returns><see langword="true"/> if the segment is lit; otherwise <see langword="false"/>.</returns>
+    private static bool Reaches(PasswordStrength strength, string? level)
+    {
+        return (bool)
+            PasswordConverters.StrengthReaches.Convert(
+                strength,
+                typeof(bool),
+                level,
+                CultureInfo.InvariantCulture
+            )!;
     }
 }

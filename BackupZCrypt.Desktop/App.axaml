@@ -9,66 +9,99 @@
   </Application.DataTemplates>
 
   <Application.Resources>
-    <Color x:Key="SystemAccentColor">#8FCC3B</Color>
-    <Color x:Key="SystemAccentColorDark1">#7BB52C</Color>
-    <Color x:Key="SystemAccentColorDark2">#689A24</Color>
-    <Color x:Key="SystemAccentColorDark3">#567F1D</Color>
-    <Color x:Key="SystemAccentColorLight1">#9FD855</Color>
-    <Color x:Key="SystemAccentColorLight2">#B3E175</Color>
-    <Color x:Key="SystemAccentColorLight3">#C8EA98</Color>
+    <Color x:Key="SystemAccentColor">#8AD65E</Color>
+    <Color x:Key="SystemAccentColorDark1">#76C34B</Color>
+    <Color x:Key="SystemAccentColorDark2">#62A93B</Color>
+    <Color x:Key="SystemAccentColorDark3">#4E8C2E</Color>
+    <Color x:Key="SystemAccentColorLight1">#A0E07B</Color>
+    <Color x:Key="SystemAccentColorLight2">#B6E999</Color>
+    <Color x:Key="SystemAccentColorLight3">#CDF1B8</Color>
 
-    <Color x:Key="FieldBackgroundColor">#12151F</Color>
-    <Color x:Key="FieldBackgroundHoverColor">#151926</Color>
-    <Color x:Key="StrongBorderColor">#363E55</Color>
-    <Color x:Key="FieldBorderHoverColor">#4A5470</Color>
-    <Color x:Key="DimTextColor">#A6ADC2</Color>
-    <Color x:Key="OverlayBackgroundColor">#1B2130</Color>
+    <Color x:Key="AppBackgroundColor">#0C0F16</Color>
+    <Color x:Key="SidebarBackgroundColor">#10141C</Color>
+    <Color x:Key="SurfaceColor">#151A24</Color>
+    <Color x:Key="SurfaceRaisedColor">#1A202D</Color>
+    <Color x:Key="FieldBackgroundColor">#0E1219</Color>
+    <Color x:Key="FieldBackgroundHoverColor">#11161F</Color>
+    <Color x:Key="BorderColor">#222938</Color>
+    <Color x:Key="StrongBorderColor">#2B3344</Color>
+    <Color x:Key="HoverBorderColor">#3B455A</Color>
+    <Color x:Key="DividerColor">#1C2230</Color>
+    <Color x:Key="PrimaryTextColor">#ECEFF6</Color>
+    <Color x:Key="DimTextColor">#A3ACBD</Color>
+    <Color x:Key="MutedTextColor">#6F7A8E</Color>
 
-    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0E1119" />
-    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#131724" />
-    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#181D2B" />
-
-    <SolidColorBrush x:Key="CardBorderBrush" Color="#262C3D" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource SurfaceColor}" />
+    <SolidColorBrush x:Key="RaisedBackgroundBrush" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="FieldBackgroundBrush" Color="{StaticResource FieldBackgroundColor}" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource BorderColor}" />
     <SolidColorBrush x:Key="StrongBorderBrush" Color="{StaticResource StrongBorderColor}" />
-
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#EDEFF6" />
+    <SolidColorBrush x:Key="HoverBorderBrush" Color="{StaticResource HoverBorderColor}" />
+    <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource DividerColor}" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor}" />
     <SolidColorBrush x:Key="DimTextBrush" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="TransparentBrush" Color="#00000000" />
+
+    <LinearGradientBrush x:Key="CardOutlineBrush" StartPoint="50%,0%" EndPoint="50%,100%">
+      <GradientStop Offset="0" Color="#293144" />
+      <GradientStop Offset="1" Color="#1D2330" />
+    </LinearGradientBrush>
 
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource SystemAccentColor}" />
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource SystemAccentColorLight1}" />
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource SystemAccentColorDark1}" />
-    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#0D1207" />
-    <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1F8FCC3B" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#07140A" />
+    <SolidColorBrush x:Key="AccentTintBrush" Color="#178AD65E" />
+    <SolidColorBrush x:Key="AccentTintStrongBrush" Color="#268AD65E" />
+    <SolidColorBrush x:Key="AccentSelectionBrush" Color="#4D8AD65E" />
 
-    <SolidColorBrush x:Key="FieldBackgroundBrush" Color="{StaticResource FieldBackgroundColor}" />
-    <SolidColorBrush x:Key="FieldBackgroundHoverBrush" Color="{StaticResource FieldBackgroundHoverColor}" />
-    <SolidColorBrush x:Key="FieldBorderHoverBrush" Color="{StaticResource FieldBorderHoverColor}" />
+    <LinearGradientBrush x:Key="PrimaryButtonBrush" StartPoint="50%,0%" EndPoint="50%,100%">
+      <GradientStop Offset="0" Color="#9FE276" />
+      <GradientStop Offset="1" Color="#79CA55" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="DisabledButtonBrush" Color="#212836" />
 
-    <SolidColorBrush x:Key="NavHoverBrush" Color="#1B2030" />
-    <SolidColorBrush x:Key="NavSelectedBrush" Color="#222941" />
-    <SolidColorBrush x:Key="NavSelectedHoverBrush" Color="#2C3042" />
-    <SolidColorBrush x:Key="DisabledButtonBrush" Color="#2B3145" />
+    <LinearGradientBrush x:Key="ProgressFillBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+      <GradientStop Offset="0" Color="#2FBF95" />
+      <GradientStop Offset="1" Color="#A4E36E" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#232A39" />
 
-    <SolidColorBrush x:Key="NavHoverTransparentBrush" Color="#001B2030" />
-    <SolidColorBrush x:Key="AccentTransparentBrush" Color="#008FCC3B" />
+    <LinearGradientBrush x:Key="IconTileBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#338AD65E" />
+      <GradientStop Offset="1" Color="#0F22B79A" />
+    </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="SuccessBrush" Color="#45C08B" />
-    <SolidColorBrush x:Key="WarningBrush" Color="#E8B95C" />
-    <SolidColorBrush x:Key="DangerBrush" Color="#E56A76" />
-    <SolidColorBrush x:Key="StrengthGoodBrush" Color="#86C255" />
-    <SolidColorBrush x:Key="SuccessCardBrush" Color="#14251D" />
-    <SolidColorBrush x:Key="WarningCardBrush" Color="#2A2314" />
-    <SolidColorBrush x:Key="DangerCardBrush" Color="#2B181C" />
-    <SolidColorBrush x:Key="InfoCardBrush" Color="#192338" />
-    <SolidColorBrush x:Key="WarningBorderBrush" Color="#4DE8B95C" />
+    <LinearGradientBrush x:Key="NavSelectedBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+      <GradientStop Offset="0" Color="#268AD65E" />
+      <GradientStop Offset="1" Color="#0A8AD65E" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="NavHoverBrush" Color="#0DFFFFFF" />
+    <SolidColorBrush x:Key="NavPressedBrush" Color="#08FFFFFF" />
+    <SolidColorBrush x:Key="GhostHoverBrush" Color="#12FFFFFF" />
+    <SolidColorBrush x:Key="GhostPressedBrush" Color="#0AFFFFFF" />
+    <SolidColorBrush x:Key="ScrimBrush" Color="#B8060910" />
 
-    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#232736" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#45D08F" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#F2C14E" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#F2707B" />
+    <SolidColorBrush x:Key="StrengthGoodBrush" Color="#B5D957" />
+    <SolidColorBrush x:Key="SuccessTintBrush" Color="#1A45D08F" />
+    <SolidColorBrush x:Key="WarningTintBrush" Color="#17F2C14E" />
+    <SolidColorBrush x:Key="DangerTintBrush" Color="#17F2707B" />
+    <SolidColorBrush x:Key="SuccessOutlineBrush" Color="#4045D08F" />
+    <SolidColorBrush x:Key="WarningOutlineBrush" Color="#3DF2C14E" />
+    <SolidColorBrush x:Key="DangerOutlineBrush" Color="#3DF2707B" />
 
-    <BoxShadows x:Key="CardShadow">0 1 2 0 #33000000, 0 4 16 0 #26000000</BoxShadows>
-    <BoxShadows x:Key="DialogShadow">0 2 8 0 #4D000000, 0 16 48 0 #66000000</BoxShadows>
-    <BoxShadows x:Key="PrimaryButtonShadow">0 1 3 0 #40000000, 0 0 0 0 #008FCC3B</BoxShadows>
-    <BoxShadows x:Key="PrimaryButtonHoverShadow">0 2 8 0 #40000000, 0 0 18 0 #478FCC3B</BoxShadows>
-    <BoxShadows x:Key="PrimaryButtonPressedShadow">0 1 2 0 #40000000, 0 0 6 0 #338FCC3B</BoxShadows>
+    <BoxShadows x:Key="CardShadow">0 1 2 0 #24000000, 0 8 24 0 #14000000</BoxShadows>
+    <BoxShadows x:Key="DialogShadow">0 8 24 0 #59000000, 0 32 80 0 #8C000000</BoxShadows>
+    <BoxShadows x:Key="ButtonShadow">0 1 2 0 #40000000, 0 2 6 0 #1F000000</BoxShadows>
+    <BoxShadows x:Key="ButtonHoverShadow">0 2 4 0 #40000000, 0 6 16 0 #2E000000</BoxShadows>
+    <BoxShadows x:Key="ButtonPressedShadow">0 1 1 0 #40000000, 0 1 3 0 #1F000000</BoxShadows>
+    <BoxShadows x:Key="NoButtonShadow">0 0 0 0 #00000000, 0 0 0 0 #00000000</BoxShadows>
+    <BoxShadows x:Key="FocusRingShadow">0 0 0 3 #408AD65E</BoxShadows>
+    <BoxShadows x:Key="NoFocusRingShadow">0 0 0 0 #008AD65E</BoxShadows>
 
     <FontFamily x:Key="MonoFontFamily">Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace</FontFamily>
 
@@ -76,21 +109,64 @@
     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource FieldBackgroundHoverColor}" />
     <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource FieldBackgroundColor}" />
     <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource StrongBorderColor}" />
-    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource FieldBorderHoverColor}" />
+    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource HoverBorderColor}" />
     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{StaticResource SystemAccentColor}" />
-    <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#4D8FCC3B" />
+    <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource PrimaryTextColor}" />
+    <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{StaticResource PrimaryTextColor}" />
+    <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{StaticResource PrimaryTextColor}" />
+    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#4D8AD65E" />
+    <x:Double x:Key="TextControlPlaceholderOpacity">1</x:Double>
     <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
 
-    <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource FieldBackgroundColor}" />
-    <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource FieldBackgroundHoverColor}" />
-    <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="{StaticResource FieldBackgroundHoverColor}" />
-    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource StrongBorderColor}" />
-    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource FieldBorderHoverColor}" />
-    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource SystemAccentColor}" />
-    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushFocused" Color="{StaticResource SystemAccentColor}" />
-    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource OverlayBackgroundColor}" />
-    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource StrongBorderColor}" />
-    <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="ToolTipBackground" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="ToolTipForeground" Color="{StaticResource PrimaryTextColor}" />
+    <SolidColorBrush x:Key="ToolTipBorderBrush" Color="{StaticResource StrongBorderColor}" />
+    <Thickness x:Key="ToolTipBorderThemePadding">9,6</Thickness>
+    <x:Double x:Key="ToolTipContentThemeFontSize">12</x:Double>
+    <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource StrongBorderColor}" />
+
+    <DrawingImage x:Key="AppLogoImage">
+      <DrawingGroup>
+        <GeometryDrawing Geometry="M64,8 H192 A56,56 0 0 1 248,64 V192 A56,56 0 0 1 192,248 H64 A56,56 0 0 1 8,192 V64 A56,56 0 0 1 64,8 Z">
+          <GeometryDrawing.Brush>
+            <LinearGradientBrush StartPoint="11.67%,0%" EndPoint="88.33%,100%">
+              <GradientStop Offset="0" Color="#BDF05E" />
+              <GradientStop Offset="0.48" Color="#58C75A" />
+              <GradientStop Offset="1" Color="#0B9A80" />
+            </LinearGradientBrush>
+          </GeometryDrawing.Brush>
+        </GeometryDrawing>
+        <GeometryDrawing Geometry="M64,8 H192 A56,56 0 0 1 248,64 V192 A56,56 0 0 1 192,248 H64 A56,56 0 0 1 8,192 V64 A56,56 0 0 1 64,8 Z">
+          <GeometryDrawing.Brush>
+            <RadialGradientBrush Center="31.67%,11.67%" GradientOrigin="31.67%,11.67%" RadiusX="83.33%" RadiusY="83.33%">
+              <GradientStop Offset="0" Color="#4DFFFFFF" />
+              <GradientStop Offset="1" Color="#00FFFFFF" />
+            </RadialGradientBrush>
+          </GeometryDrawing.Brush>
+        </GeometryDrawing>
+        <GeometryDrawing Geometry="M64,9 H192 A55,55 0 0 1 247,64 V192 A55,55 0 0 1 192,247 H64 A55,55 0 0 1 9,192 V64 A55,55 0 0 1 64,9 Z">
+          <GeometryDrawing.Pen>
+            <Pen Brush="#33FFFFFF" Thickness="2" />
+          </GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#3D064E3B"
+                         Geometry="F1 M92,117 V95 A36,36 0 0 1 164,95 V117 H144 V95 A16,16 0 0 0 112,95 V117 Z M71,111 H185 A13,13 0 0 1 198,124 V211 A13,13 0 0 1 185,224 H71 A13,13 0 0 1 58,211 V124 A13,13 0 0 1 71,111 Z" />
+        <GeometryDrawing Geometry="F1 M92,110 V88 A36,36 0 0 1 164,88 V110 H144 V88 A16,16 0 0 0 112,88 V110 Z M69,104 H187 A11,11 0 0 1 198,115 V126 A11,11 0 0 1 187,137 H69 A11,11 0 0 1 58,126 V115 A11,11 0 0 1 69,104 Z M69,144 H187 A11,11 0 0 1 198,155 V166 A11,11 0 0 1 187,177 H69 A11,11 0 0 1 58,166 V155 A11,11 0 0 1 69,144 Z M69,184 H187 A11,11 0 0 1 198,195 V206 A11,11 0 0 1 187,217 H69 A11,11 0 0 1 58,206 V195 A11,11 0 0 1 69,184 Z">
+          <GeometryDrawing.Brush>
+            <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+              <GradientStop Offset="0" Color="#FFFFFF" />
+              <GradientStop Offset="1" Color="#E2F6E8" />
+            </LinearGradientBrush>
+          </GeometryDrawing.Brush>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#16A34A"
+                         Geometry="M183.5,120.5 A6.5,6.5 0 1 1 170.5,120.5 A6.5,6.5 0 1 1 183.5,120.5 Z M183.5,160.5 A6.5,6.5 0 1 1 170.5,160.5 A6.5,6.5 0 1 1 183.5,160.5 Z M183.5,200.5 A6.5,6.5 0 1 1 170.5,200.5 A6.5,6.5 0 1 1 183.5,200.5 Z" />
+      </DrawingGroup>
+    </DrawingImage>
   </Application.Resources>
 
   <Application.Styles>

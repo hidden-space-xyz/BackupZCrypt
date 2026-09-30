@@ -361,7 +361,8 @@ internal abstract partial class OperationViewModelBase(
     /// reached only when something escaped it. The raw exception text is wrapped in the localized
     /// unexpected-error frame rather than shown bare, so the sentence the user reads follows their
     /// language even when the detail inside it cannot be translated. The progress sink is constructed
-    /// here, on the UI thread, so its callbacks marshal back to it.
+    /// here, on the UI thread, so its callbacks marshal back to it; it coalesces the per-file reports the
+    /// engine sends from its worker threads, so the page is not flooded and never sees progress run backwards.
     /// </remarks>
     /// <param name="proceedOnWarnings">Whether the request should continue past advisory warnings.</param>
     /// <returns>A task that completes once the result has been presented.</returns>
@@ -376,7 +377,7 @@ internal abstract partial class OperationViewModelBase(
 
         try
         {
-            Progress<BackupStatus> progress = new(ReportProgress);
+            CoalescingStatusProgress progress = new(ReportProgress);
 
             var result = await Task.Run(
                 () => ExecuteOperationAsync(proceedOnWarnings, progress, cts.Token),

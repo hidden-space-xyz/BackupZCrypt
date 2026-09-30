@@ -40,7 +40,7 @@ internal static class PasswordStrengthFormatter
 
         StringBuilder sb = new();
         _ = sb.Append(label)
-            .Append(" // ")
+            .Append(" · ")
             .AppendFormat(
             CultureInfo.CurrentCulture,
             Strings.EntropyFormat,
@@ -49,7 +49,7 @@ internal static class PasswordStrengthFormatter
 
         if (analysis.Tips.Count > 0)
         {
-            _ = sb.Append(" // ")
+            _ = sb.Append(" · ")
                 .Append(Strings.Suggestions)
                 .Append(' ')
                 .AppendJoin(
@@ -61,7 +61,7 @@ internal static class PasswordStrengthFormatter
         }
         else if (analysis.Strength is PasswordStrength.Strong)
         {
-            _ = sb.Append(" // ").Append(Strings.GoodJob);
+            _ = sb.Append(" · ").Append(Strings.GoodJob);
         }
 
         return sb.ToString();

@@ -334,6 +334,11 @@ internal static class Strings
     public static string DetectMissing => Get();
 
     /// <summary>
+    /// Gets the message confirming that an encrypted backup was found at the selected location.
+    /// </summary>
+    public static string DetectFound => Get();
+
+    /// <summary>
     /// Gets the warnings panel title.
     /// </summary>
     public static string WarningsTitle => Get();

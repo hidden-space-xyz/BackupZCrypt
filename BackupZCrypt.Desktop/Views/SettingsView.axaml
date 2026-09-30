@@ -3,180 +3,248 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:m="using:BackupZCrypt.Desktop.Models"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:conv="using:BackupZCrypt.Desktop.Converters"
+             xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <ScrollViewer>
-    <StackPanel Margin="40,32,40,40" Spacing="20" MaxWidth="860">
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer Grid.Row="0">
+      <StackPanel Margin="40,28,40,32" Spacing="16" MaxWidth="820">
 
-      <StackPanel Spacing="6" Margin="0,0,0,8">
-        <TextBlock Classes="h1" Text="{x:Static res:Strings.SettingsTitle}" />
-        <TextBlock Classes="subtitle" Text="{x:Static res:Strings.SettingsSubtitle}" />
-      </StackPanel>
-
-      <Border Classes="card">
-        <StackPanel Spacing="16">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.SectionDefaults}" />
-
-          <StackPanel Spacing="6">
-            <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
-            <ComboBox Classes="field"
-                      ItemsSource="{Binding EncryptionOptions}"
-                      SelectedItem="{Binding SelectedEncryption}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="m:EncryptionOption">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Description}"
-                               Classes="dim"
-                               FontSize="12"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+        <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+          <Border Grid.Column="0" Classes="pageIcon">
+            <PathIcon Data="{x:Static local:Icons.Settings}" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Classes="h1" Text="{x:Static res:Strings.SettingsTitle}" />
+            <TextBlock Classes="subtitle" Text="{x:Static res:Strings.SettingsSubtitle}" />
           </StackPanel>
+        </Grid>
 
-          <StackPanel Spacing="6">
-            <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
-            <ComboBox Classes="field"
-                      ItemsSource="{Binding KeyDerivationOptions}"
-                      SelectedItem="{Binding SelectedKeyDerivation}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="m:KeyDerivationOption">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Description}"
-                               Classes="dim"
-                               FontSize="12"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </StackPanel>
+        <Border Classes="card">
+          <StackPanel Spacing="22">
+            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.SectionDefaults}" />
 
-          <StackPanel Spacing="6">
-            <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
-            <ComboBox Classes="field"
-                      ItemsSource="{Binding CompressionOptions}"
-                      SelectedItem="{Binding SelectedCompression}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="m:CompressionOption">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Description}"
-                               Classes="dim"
-                               FontSize="12"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card">
-        <StackPanel Spacing="16">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.BenchmarkSection}" />
-          <TextBlock Classes="dim"
-                     FontSize="12"
-                     TextWrapping="Wrap"
-                     Text="{x:Static res:Strings.BenchmarkDescription}" />
-
-          <StackPanel Spacing="6">
-            <TextBlock Classes="label" Text="{x:Static res:Strings.BenchmarkDataAmountLabel}" />
-            <Grid ColumnDefinitions="*,12,Auto">
-              <TextBox Grid.Column="0"
-                       Classes="field"
-                       Text="{Binding BenchmarkDataAmount}"
-                       PlaceholderText="{x:Static res:Strings.BenchmarkDataAmountHint}" />
-              <ComboBox Grid.Column="2"
-                        MinWidth="90"
-                        VerticalAlignment="Stretch"
-                        ItemsSource="{Binding DataUnitOptions}"
-                        SelectedItem="{Binding SelectedDataUnit}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="m:DataSizeUnitOption">
-                    <TextBlock Text="{Binding Name}" />
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{x:Static local:Icons.Lock}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
+              </StackPanel>
+              <ListBox Classes="tiles"
+                       ItemsSource="{Binding EncryptionOptions}"
+                       SelectedItem="{Binding SelectedEncryption}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding $parent[ListBox].Bounds.Width, Converter={x:Static conv:LayoutConverters.ColumnsForWidth}, ConverterParameter=230}"
+                                 ColumnSpacing="10"
+                                 RowSpacing="10" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="m:EncryptionOption">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="tileTitle" Text="{Binding Name}" />
+                      <TextBlock Classes="tileText" Text="{Binding Description}" />
+                    </StackPanel>
                   </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-            </Grid>
-          </StackPanel>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <Button Classes="primary"
-                    Content="{x:Static res:Strings.BenchmarkRunButton}"
-                    Command="{Binding RunBenchmarkCommand}" />
-            <TextBlock Classes="dim"
-                       VerticalAlignment="Center"
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{x:Static local:Icons.Key}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+              </StackPanel>
+              <ListBox Classes="tiles"
+                       ItemsSource="{Binding KeyDerivationOptions}"
+                       SelectedItem="{Binding SelectedKeyDerivation}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding $parent[ListBox].Bounds.Width, Converter={x:Static conv:LayoutConverters.ColumnsForWidth}, ConverterParameter=230}"
+                                 ColumnSpacing="10"
+                                 RowSpacing="10" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="m:KeyDerivationOption">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="tileTitle" Text="{Binding Name}" />
+                      <TextBlock Classes="tileText" Text="{Binding Description}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{x:Static local:Icons.Archive}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
+              </StackPanel>
+              <ListBox Classes="tiles"
+                       ItemsSource="{Binding CompressionOptions}"
+                       SelectedItem="{Binding SelectedCompression}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="2" ColumnSpacing="10" RowSpacing="10" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="m:CompressionOption">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="tileTitle" Text="{Binding Name}" />
+                      <TextBlock Classes="tileText" Text="{Binding Description}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="stepBadge">
+                <PathIcon Data="{x:Static local:Icons.Gauge}" />
+              </Border>
+              <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.BenchmarkSection}" />
+            </StackPanel>
+
+            <TextBlock Classes="body" Text="{x:Static res:Strings.BenchmarkDescription}" />
+
+            <StackPanel Spacing="8">
+              <TextBlock Classes="label" Text="{x:Static res:Strings.BenchmarkDataAmountLabel}" />
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <TextBox Grid.Column="0"
+                         Classes="field"
+                         Text="{Binding BenchmarkDataAmount}"
+                         PlaceholderText="{x:Static res:Strings.BenchmarkDataAmountHint}" />
+                <ListBox Grid.Column="1"
+                         Classes="segmented"
+                         VerticalAlignment="Center"
+                         ItemsSource="{Binding DataUnitOptions}"
+                         SelectedItem="{Binding SelectedDataUnit}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="m:DataSizeUnitOption">
+                      <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Button Grid.Column="2"
+                        Classes="secondary"
+                        VerticalAlignment="Center"
+                        Command="{Binding RunBenchmarkCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                      <PathIcon Data="{x:Static local:Icons.Gauge}"
+                                IsVisible="{Binding !IsBenchmarkRunning}" />
+                      <Panel IsVisible="{Binding IsBenchmarkRunning}">
+                        <Ellipse Classes="spinnerTrack" StrokeThickness="2" />
+                        <Arc Classes="spinner" StrokeThickness="2">
+                          <Arc.RenderTransform>
+                            <RotateTransform />
+                          </Arc.RenderTransform>
+                        </Arc>
+                      </Panel>
+                    </Panel>
+                    <TextBlock Text="{x:Static res:Strings.BenchmarkRunButton}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </Grid>
+            </StackPanel>
+
+            <TextBlock Classes="caption reveal"
                        IsVisible="{Binding IsBenchmarkRunning}"
                        Text="{x:Static res:Strings.BenchmarkRunningText}" />
+
+            <Border Classes="notice success reveal" IsVisible="{Binding ShowBenchmarkResult}">
+              <StackPanel Spacing="6">
+                <TextBlock Classes="numeric"
+                           FontSize="17"
+                           FontWeight="SemiBold"
+                           Text="{Binding BenchmarkDurationText}" />
+                <TextBlock Classes="numeric"
+                           FontSize="13"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Text="{Binding BenchmarkThroughputText}" />
+                <TextBlock FontSize="12"
+                           LineHeight="18"
+                           Foreground="{StaticResource DimTextBrush}"
+                           Text="{x:Static res:Strings.BenchmarkDisclaimer}" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="notice danger reveal" IsVisible="{Binding HasBenchmarkError}">
+              <Grid ColumnDefinitions="Auto,*">
+                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.ErrorCircle}" />
+                <TextBlock Grid.Column="1" Text="{Binding BenchmarkError}" />
+              </Grid>
+            </Border>
           </StackPanel>
+        </Border>
 
-          <StackPanel Spacing="4" IsVisible="{Binding ShowBenchmarkResult}">
-            <TextBlock FontWeight="SemiBold"
-                       Foreground="{StaticResource SuccessBrush}"
-                       Text="{Binding BenchmarkDurationText}" />
-            <TextBlock Classes="dim"
-                       FontSize="12"
-                       Text="{Binding BenchmarkThroughputText}" />
-            <TextBlock Classes="dim"
-                       FontSize="12"
-                       TextWrapping="Wrap"
-                       Text="{x:Static res:Strings.BenchmarkDisclaimer}" />
+        <Border Classes="card">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.LanguageLabel}" />
+            <ListBox Classes="segmented"
+                     ItemsSource="{Binding LanguageOptions}"
+                     SelectedItem="{Binding SelectedLanguage}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="m:LanguageOption">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <Border Classes="notice warning reveal" IsVisible="{Binding ShowRestartNote}">
+              <Grid ColumnDefinitions="Auto,*">
+                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Info}" />
+                <TextBlock Grid.Column="1" Text="{x:Static res:Strings.LanguageRestartNote}" />
+              </Grid>
+            </Border>
           </StackPanel>
+        </Border>
 
-          <TextBlock FontSize="12"
-                     TextWrapping="Wrap"
-                     IsVisible="{Binding HasBenchmarkError}"
-                     Foreground="{StaticResource DangerBrush}"
-                     Text="{Binding BenchmarkError}" />
+        <StackPanel Spacing="6" Margin="4,4,4,0">
+          <TextBlock Classes="muted" FontSize="12" FontWeight="Medium" Text="{x:Static res:Strings.SettingsFileLabel}" />
+          <SelectableTextBlock Classes="mono"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource DimTextBrush}"
+                               SelectionBrush="{StaticResource AccentSelectionBrush}"
+                               Text="{Binding SettingsFilePath}" />
         </StackPanel>
-      </Border>
+      </StackPanel>
+    </ScrollViewer>
 
-      <Border Classes="card">
-        <StackPanel Spacing="16">
-          <TextBlock Classes="section" Text="{x:Static res:Strings.LanguageLabel}" />
-          <ComboBox Classes="field"
-                    ItemsSource="{Binding LanguageOptions}"
-                    SelectedItem="{Binding SelectedLanguage}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="m:LanguageOption">
-                <TextBlock Text="{Binding Name}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <TextBlock Classes="dim"
-                     FontSize="12"
-                     TextWrapping="Wrap"
-                     IsVisible="{Binding ShowRestartNote}"
-                     Foreground="{StaticResource WarningBrush}"
-                     Text="{x:Static res:Strings.LanguageRestartNote}" />
+    <Border Grid.Row="1" Classes="actionBar">
+      <Grid MaxWidth="820" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Grid.Column="0"
+                    Classes="reveal"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding ShowSavedNotice}">
+          <PathIcon Data="{x:Static local:Icons.CheckCircle}"
+                    Width="16" Height="16"
+                    Foreground="{StaticResource SuccessBrush}" />
+          <TextBlock FontSize="13"
+                     FontWeight="Medium"
+                     VerticalAlignment="Center"
+                     Foreground="{StaticResource SuccessBrush}"
+                     Text="{x:Static res:Strings.SettingsSavedNotice}" />
         </StackPanel>
-      </Border>
 
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <Button Classes="primary"
-                Content="{x:Static res:Strings.SaveButton}"
-                Command="{Binding SaveCommand}" />
-        <TextBlock Classes="dim"
-                   VerticalAlignment="Center"
-                   IsVisible="{Binding ShowSavedNotice}"
-                   Foreground="{StaticResource SuccessBrush}"
-                   Text="{x:Static res:Strings.SettingsSavedNotice}" />
-      </StackPanel>
-
-      <StackPanel Spacing="4">
-        <TextBlock Classes="section" Text="{x:Static res:Strings.SettingsFileLabel}" />
-        <SelectableTextBlock Classes="mono"
-                             TextWrapping="Wrap"
-                             Foreground="{StaticResource DimTextBrush}"
-                             SelectionBrush="{StaticResource AccentBrush}"
-                             Text="{Binding SettingsFilePath}" />
-      </StackPanel>
-    </StackPanel>
-  </ScrollViewer>
+        <Button Grid.Column="1"
+                Classes="primary"
+                Command="{Binding SaveCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <PathIcon Data="{x:Static local:Icons.CheckCircle}" />
+            <TextBlock Text="{x:Static res:Strings.SaveButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
 </UserControl>

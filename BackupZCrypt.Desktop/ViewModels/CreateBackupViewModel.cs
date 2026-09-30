@@ -111,6 +111,25 @@ internal sealed partial class CreateBackupViewModel(
     public partial bool ShowPasswordMismatch { get; set; }
 
     /// <summary>
+    /// Gets the display name of the encryption algorithm the next backup will use.
+    /// </summary>
+    /// <remarks>
+    /// The algorithms come from the saved defaults and cannot be changed on this page, so the page shows them
+    /// rather than letting a backup be created with choices the user never sees.
+    /// </remarks>
+    public string EncryptionName => AlgorithmMetadataProvider.GetName(encryptionAlgorithm);
+
+    /// <summary>
+    /// Gets the display name of the key-derivation algorithm the next backup will use.
+    /// </summary>
+    public string KeyDerivationName => AlgorithmMetadataProvider.GetName(keyDerivationAlgorithm);
+
+    /// <summary>
+    /// Gets the display name of the compression the next backup will apply to its chunks.
+    /// </summary>
+    public string CompressionName => AlgorithmMetadataProvider.GetName(compressionMode);
+
+    /// <summary>
     /// Refreshes the encryption state from the latest settings defaults, unless an operation is
     /// currently in flight.
     /// </summary>
@@ -138,6 +157,10 @@ internal sealed partial class CreateBackupViewModel(
             : EncryptionAlgorithm.Aes;
         keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
         compressionMode = defaults.CompressionMode;
+
+        OnPropertyChanged(nameof(EncryptionName));
+        OnPropertyChanged(nameof(KeyDerivationName));
+        OnPropertyChanged(nameof(CompressionName));
     }
 
     /// <summary>

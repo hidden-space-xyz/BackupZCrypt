@@ -303,6 +303,9 @@
   <data name="DetectMissing" xml:space="preserve">
     <value>No se encontró un manifiesto de copia en esta ubicación.</value>
   </data>
+  <data name="DetectFound" xml:space="preserve">
+    <value>Copia cifrada encontrada. Introduce su contraseña para continuar.</value>
+  </data>
   <data name="WarningsTitle" xml:space="preserve">
     <value>Advertencias</value>
   </data>

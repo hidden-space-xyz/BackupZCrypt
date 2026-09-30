@@ -312,7 +312,73 @@ public sealed class CreateBackupViewModelTests
             () => Assert.Equal(CompressionMode.ZstdBest, commands[0].Compression),
             () => Assert.Equal("good-password", commands[0].Password),
             () => Assert.Equal("good-password", commands[0].ConfirmPassword),
-            () => Assert.False(commands[0].ProceedOnWarnings)
+            () => Assert.False(commands[0].ProceedOnWarnings),
+            () =>
+                Assert.Equal(
+                    AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes),
+                    sut.EncryptionName
+                )
+        );
+    }
+
+    [Fact]
+    internal async Task OnNavigatedToAsync_ShowsTheNamesOfTheAlgorithmsTheNextBackupWillUse()
+    {
+        var sut = CreateSut();
+        _ = this
+            .creationDefaultsQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                new BackupCreationSettings(
+                    EncryptionAlgorithm.Serpent,
+                    KeyDerivationAlgorithm.Scrypt,
+                    CompressionMode.ZstdBest
+                )
+            );
+
+        string[] namesBeforeLoading = [sut.EncryptionName, sut.KeyDerivationName, sut.CompressionName];
+        List<string?> changed = [];
+        sut.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Multiple(
+            () =>
+                Assert.Equal<string>(
+                    [
+                        AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes),
+                        AlgorithmMetadataProvider.GetName(KeyDerivationAlgorithm.Argon2id),
+                        AlgorithmMetadataProvider.GetName(CompressionMode.None),
+                    ],
+                    namesBeforeLoading
+                ),
+            () =>
+                Assert.Equal(
+                    AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Serpent),
+                    sut.EncryptionName
+                ),
+            () =>
+                Assert.Equal(
+                    AlgorithmMetadataProvider.GetName(KeyDerivationAlgorithm.Scrypt),
+                    sut.KeyDerivationName
+                ),
+            () =>
+                Assert.Equal(
+                    AlgorithmMetadataProvider.GetName(CompressionMode.ZstdBest),
+                    sut.CompressionName
+                ),
+            () =>
+                Assert.Superset(
+                    new HashSet<string?>(StringComparer.Ordinal)
+                    {
+                        nameof(CreateBackupViewModel.EncryptionName),
+                        nameof(CreateBackupViewModel.KeyDerivationName),
+                        nameof(CreateBackupViewModel.CompressionName),
+                    },
+                    new HashSet<string?>(changed, StringComparer.Ordinal)
+                )
         );
     }
 

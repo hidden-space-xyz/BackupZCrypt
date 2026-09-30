@@ -1,6 +1,7 @@
 using System.ComponentModel;
 
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 
 using BackupZCrypt.Desktop.ViewModels;
@@ -8,8 +9,8 @@ using BackupZCrypt.Desktop.ViewModels;
 namespace BackupZCrypt.Desktop.Views;
 
 /// <summary>
-/// Reusable control that displays live operation progress inline and surfaces the warnings
-/// confirmation and final result in a modal dialog.
+/// Invisible, per-page control that watches the page's operation and presents its progress, warnings
+/// confirmation, and final result in a modal overlay over the whole window.
 /// </summary>
 internal sealed partial class OperationStatusView : UserControl
 {
@@ -102,37 +103,51 @@ internal sealed partial class OperationStatusView : UserControl
     }
 
     /// <summary>
-    /// Shows the operation dialog over the owning window, unless one is already open, the view model
+    /// Shows the operation dialog in the window's overlay layer, unless one is already open, the view model
     /// has nothing to report, or the control is not yet attached to a window.
     /// </summary>
+    /// <remarks>
+    /// The dialog takes a moment to animate out. Should the operation become busy again during that time, the
+    /// change that announced it is ignored because a dialog is still open, so the state is checked again after
+    /// every dialog closes and a fresh one is shown while there is still something to report.
+    /// </remarks>
     /// <returns>
-    /// <see langword="true"/> if the dialog was shown and dismissed; <see langword="false"/> if there was
-    /// nothing to show or the dialog failed to open.
+    /// <see langword="true"/> if at least one dialog was shown and dismissed; <see langword="false"/> if there
+    /// was nothing to show or the dialog failed to open.
     /// </returns>
     private async Task<bool> TryShowDialogAsync()
     {
-        if (dialogOpen || viewModel is null)
+        if (dialogOpen)
         {
             return false;
         }
 
-        if (!viewModel.IsRunning && !viewModel.ShowWarnings && !viewModel.HasResult)
-        {
-            return false;
-        }
-
-        if (TopLevel.GetTopLevel(this) is not Window owner)
-        {
-            return false;
-        }
-
+        var shown = false;
         dialogOpen = true;
         try
         {
-            var dialog = new OperationDialog { DataContext = viewModel };
-            await dialog.ShowDialog(owner);
+            while (
+                viewModel is { } vm
+                && (vm.IsRunning || vm.ShowWarnings || vm.HasResult)
+                && OverlayLayer.GetOverlayLayer(this) is { } layer
+            )
+            {
+                OperationDialog dialog = new() { DataContext = vm };
+                layer.Children.Add(dialog);
 
-            return true;
+                try
+                {
+                    await dialog.Completion;
+                }
+                finally
+                {
+                    _ = layer.Children.Remove(dialog);
+                }
+
+                shown = true;
+            }
+
+            return shown;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

@@ -11,6 +11,7 @@
 - `dotnet run --project BackupZCrypt.Desktop` launches the desktop application locally.
 - `dotnet test BackupZCrypt.sln` runs the complete xUnit v3 suite.
 - `dotnet format whitespace BackupZCrypt.sln --verify-no-changes` verifies formatting before review.
+- `dotnet run --file scripts/render-icon.cs` regenerates `BackupZCrypt.png` and `BackupZCrypt.ico` from `BackupZCrypt.Desktop/Resources/BackupZCrypt.svg`; edit the SVG, not the rasters. The sidebar logo is the `AppLogoImage` drawing in `App.axaml` and must be kept in step with the SVG by hand.
 
 Use the .NET 10 SDK or newer. Publishing and distributable packaging are handled by the release workflow, not normal builds.
 

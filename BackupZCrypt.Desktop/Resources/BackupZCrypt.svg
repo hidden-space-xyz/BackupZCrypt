@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>BackupZCrypt</title>
+  <defs>
+    <linearGradient id="tile" x1="36" y1="8" x2="220" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#BDF05E"/>
+      <stop offset="0.48" stop-color="#58C75A"/>
+      <stop offset="1" stop-color="#0B9A80"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="84" cy="36" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="face" x1="0" y1="52" x2="0" y2="217" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2F6E8"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#tile)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#shine)"/>
+  <rect x="9" y="9" width="238" height="238" rx="55" fill="none" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="2"/>
+  <g fill="#064E3B" fill-opacity="0.24" transform="translate(0 7)">
+    <path d="M92 110V88a36 36 0 0 1 72 0v22h-20V88a16 16 0 0 0-32 0v22z"/>
+    <rect x="58" y="104" width="140" height="113" rx="13"/>
+  </g>
+  <g fill="url(#face)">
+    <path d="M92 110V88a36 36 0 0 1 72 0v22h-20V88a16 16 0 0 0-32 0v22z"/>
+    <rect x="58" y="104" width="140" height="33" rx="11"/>
+    <rect x="58" y="144" width="140" height="33" rx="11"/>
+    <rect x="58" y="184" width="140" height="33" rx="11"/>
+  </g>
+  <g fill="#16A34A">
+    <circle cx="177" cy="120.5" r="6.5"/>
+    <circle cx="177" cy="160.5" r="6.5"/>
+    <circle cx="177" cy="200.5" r="6.5"/>
+  </g>
+</svg>

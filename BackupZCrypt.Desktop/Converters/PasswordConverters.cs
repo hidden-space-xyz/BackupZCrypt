@@ -37,6 +37,17 @@ internal static class PasswordConverters
     public static readonly IValueConverter StrengthIsBand = new StrengthBandConverter();
 
     /// <summary>
+    /// The converter that reports whether a password strength reaches the meter level named by the converter
+    /// parameter, counting from 1 for <see cref="PasswordStrength.VeryWeak"/> to 5 for
+    /// <see cref="PasswordStrength.Strong"/>, so each segment of the strength meter lights up through a style class.
+    /// </summary>
+    /// <remarks>
+    /// A value outside the enum counts as the weakest level, matching how the strength caption treats it: an
+    /// unexpected analysis must never be shown as a strong password.
+    /// </remarks>
+    public static readonly IValueConverter StrengthReaches = new StrengthLevelConverter();
+
+    /// <summary>
     /// Reports whether the bound <see cref="PasswordStrength"/> belongs to the band named by the
     /// converter parameter.
     /// </summary>
@@ -82,6 +93,49 @@ internal static class PasswordConverters
                 PasswordStrength.Strong => "strong",
                 _ => "strong",
             };
+        }
+    }
+
+    /// <summary>
+    /// Reports whether the bound <see cref="PasswordStrength"/> reaches the meter level given as the
+    /// converter parameter.
+    /// </summary>
+    private sealed class StrengthLevelConverter : IValueConverter
+    {
+        /// <inheritdoc/>
+        public object Convert(
+            object? value,
+            Type targetType,
+            object? parameter,
+            CultureInfo culture
+        )
+        {
+            return value is PasswordStrength strength
+                && parameter is string text
+                && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var level)
+                && LevelOf(strength) >= level;
+        }
+
+        /// <inheritdoc/>
+        /// <exception cref="NotSupportedException">Always: a style class never writes back.</exception>
+        public object ConvertBack(
+            object? value,
+            Type targetType,
+            object? parameter,
+            CultureInfo culture
+        )
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Maps a <see cref="PasswordStrength"/> to its meter level, from 1 (very weak) to 5 (strong).
+        /// </summary>
+        /// <param name="strength">The strength to place on the meter.</param>
+        /// <returns>The meter level; 1 for a value outside the enum.</returns>
+        private static int LevelOf(PasswordStrength strength)
+        {
+            return Enum.IsDefined(strength) ? (int)strength + 1 : 1;
         }
     }
 }

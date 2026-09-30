@@ -132,12 +132,66 @@ internal static class Icons
         "M7.4,12.2 L8.8,10.8 L10.8,12.8 L15.2,8.4 L16.6,9.8 L10.8,15.6 Z");
 
     /// <summary>
-    /// Gets the operation-in-progress icon: two horizontal capsule caps (top and bottom bars) framing a solid
-    /// hourglass body whose sides curve inward to a narrow waist at mid-height.
+    /// Gets the encryption icon: a padlock built from a 2px half-ring shackle (outer radius 5) that stops 0.8px
+    /// above a rounded-rectangle body, with a capsule keyhole cut out of the body's center.
     /// </summary>
-    public static StreamGeometry Hourglass { get; } = StreamGeometry.Parse(
-        "M6.5,2.8 H17.5 A1,1 0 0 1 17.5,4.8 H6.5 A1,1 0 0 1 6.5,2.8 Z " +
-        "M7.2,5.8 H16.8 V7 C16.8,9 15.2,10.6 13.6,11.5 C13.2,11.7 13.2,12.3 13.6,12.5 C15.2,13.4 16.8,15 16.8,17 " +
-        "V18.2 H7.2 V17 C7.2,15 8.8,13.4 10.4,12.5 C10.8,12.3 10.8,11.7 10.4,11.5 C8.8,10.6 7.2,9 7.2,7 Z " +
-        "M6.5,19.2 H17.5 A1,1 0 0 1 17.5,21.2 H6.5 A1,1 0 0 1 6.5,19.2 Z");
+    public static StreamGeometry Lock { get; } = StreamGeometry.Parse(
+        "M7.5,10 H16.5 A2.5,2.5 0 0 1 19,12.5 V18.5 A2.5,2.5 0 0 1 16.5,21 H7.5 A2.5,2.5 0 0 1 5,18.5 V12.5 " +
+        "A2.5,2.5 0 0 1 7.5,10 Z " +
+        "M7,9.2 V7.5 A5,5 0 0 1 17,7.5 V9.2 H15 V7.5 A3,3 0 0 0 9,7.5 V9.2 Z " +
+        "M11,13.6 A1,1 0 0 1 13,13.6 V17 A1,1 0 0 1 11,17 Z");
+
+    /// <summary>
+    /// Gets the key-derivation icon: a single contour tracing a radius-4.5 bow and a 2.2px shaft that ends in two
+    /// rounded teeth, with a radius-1.8 hole cut out of the bow.
+    /// </summary>
+    public static StreamGeometry Key { get; } = StreamGeometry.Parse(
+        "M11.9,10.9 H20 A1,1 0 0 1 21,11.9 V15.2 A0.8,0.8 0 0 1 20.2,16 H19.6 A0.8,0.8 0 0 1 18.8,15.2 V13.1 " +
+        "H17.6 V14.8 A0.8,0.8 0 0 1 16.8,15.6 H16.2 A0.8,0.8 0 0 1 15.4,14.8 V13.1 H11.9 " +
+        "A4.5,4.5 0 1 1 11.9,10.9 Z " +
+        "M9.3,12 A1.8,1.8 0 1 1 5.7,12 A1.8,1.8 0 1 1 9.3,12 Z");
+
+    /// <summary>
+    /// Gets the compression icon: an archive box made of a rounded lid bar floating 1.5px above a body with
+    /// rounded bottom corners, and a capsule handle slot cut out of the body.
+    /// </summary>
+    public static StreamGeometry Archive { get; } = StreamGeometry.Parse(
+        "M4.5,4 H19.5 A1.5,1.5 0 0 1 21,5.5 V7.5 A1.5,1.5 0 0 1 19.5,9 H4.5 A1.5,1.5 0 0 1 3,7.5 V5.5 " +
+        "A1.5,1.5 0 0 1 4.5,4 Z " +
+        "M4.5,10.5 H19.5 V18 A2,2 0 0 1 17.5,20 H6.5 A2,2 0 0 1 4.5,18 Z " +
+        "M9.9,13 H14.1 A0.9,0.9 0 0 1 14.1,14.8 H9.9 A0.9,0.9 0 0 1 9.9,13 Z");
+
+    /// <summary>
+    /// Gets the files icon: a page with rounded corners and a 45-degree cut top-right corner, with two
+    /// rounded-capsule text lines of unequal length cut out of it.
+    /// </summary>
+    public static StreamGeometry Document { get; } = StreamGeometry.Parse(
+        "M6.5,2.5 H13.5 L19.5,8.5 V19.5 A2,2 0 0 1 17.5,21.5 H6.5 A2,2 0 0 1 4.5,19.5 V4.5 A2,2 0 0 1 6.5,2.5 Z " +
+        "M8.5,12 H15.5 A0.9,0.9 0 0 1 15.5,13.8 H8.5 A0.9,0.9 0 0 1 8.5,12 Z " +
+        "M8.5,15.8 H13 A0.9,0.9 0 0 1 13,17.6 H8.5 A0.9,0.9 0 0 1 8.5,15.8 Z");
+
+    /// <summary>
+    /// Gets the duration icon: a solid radius-10 disc with a single L-shaped cut-out drawing the hour and minute
+    /// hands at twelve and three o'clock, 1.8px wide with rounded ends.
+    /// </summary>
+    public static StreamGeometry Clock { get; } = StreamGeometry.Parse(
+        "M22,12 A10,10 0 1 1 2,12 A10,10 0 1 1 22,12 Z " +
+        "M11.1,6.6 A0.9,0.9 0 0 1 12.9,6.6 V11.1 H15.9 A0.9,0.9 0 0 1 15.9,12.9 H12 A0.9,0.9 0 0 1 11.1,12 Z");
+
+    /// <summary>
+    /// Gets the size icon: a database cylinder drawn as an elliptical cap (radii 7.5 by 3) over two slices whose
+    /// top and bottom edges follow the same ellipse, separated by 1.4px gaps.
+    /// </summary>
+    public static StreamGeometry Database { get; } = StreamGeometry.Parse(
+        "M19.5,6 A7.5,3 0 1 1 4.5,6 A7.5,3 0 1 1 19.5,6 Z " +
+        "M4.5,7.4 A7.5,3 0 0 0 19.5,7.4 V11.6 A7.5,3 0 0 1 4.5,11.6 Z " +
+        "M4.5,13 A7.5,3 0 0 0 19.5,13 V17.2 A7.5,3 0 0 1 4.5,17.2 Z");
+
+    /// <summary>
+    /// Gets the benchmark icon: a speedometer made of a half-ring dial (outer radius 9, inner radius 6.4) and a
+    /// 2px capsule needle pointing up and to the right from the dial's center.
+    /// </summary>
+    public static StreamGeometry Gauge { get; } = StreamGeometry.Parse(
+        "M3,17 A9,9 0 0 1 21,17 H18.4 A6.4,6.4 0 0 0 5.6,17 Z " +
+        "M11.29,16.29 L14.79,12.79 A1,1 0 0 1 16.21,14.21 L12.71,17.71 A1,1 0 0 1 11.29,16.29 Z");
 }
