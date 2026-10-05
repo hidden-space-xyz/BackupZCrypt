@@ -103,10 +103,7 @@ internal static class AlgorithmMetadataProvider
     /// Gets the localized short summary for a compression mode.
     /// </summary>
     /// <param name="id">The compression mode.</param>
-    /// <returns>
-    /// The localized summary for a Zstandard level, or the "no compression" description for every other value,
-    /// because no separate "no compression" summary resource exists.
-    /// </returns>
+    /// <returns>The localized summary for a Zstandard level, or the "no compression" summary for every other value.</returns>
     public static string GetSummary(CompressionMode id)
     {
         return id switch
@@ -114,8 +111,8 @@ internal static class AlgorithmMetadataProvider
             CompressionMode.ZstdFast => Strings.ZstdFastSummary,
             CompressionMode.Zstd => Strings.ZstdSummary,
             CompressionMode.ZstdBest => Strings.ZstdBestSummary,
-            CompressionMode.None => Strings.NoneCompressionDescription,
-            _ => Strings.NoneCompressionDescription,
+            CompressionMode.None => Strings.NoneCompressionSummary,
+            _ => Strings.NoneCompressionSummary,
         };
     }
 

@@ -202,7 +202,7 @@
     <value>Cambiar los ajustes</value>
   </data>
   <data name="HelpSettingsText" xml:space="preserve">
-    <value>Abre «Ajustes» en la barra lateral para cambiar el cifrado, la derivación de clave, la compresión y el idioma que se aplican a las nuevas copias.</value>
+    <value>Abre «Ajustes» en la barra lateral para elegir el cifrado, la derivación de clave y la compresión de las copias nuevas, además del idioma. Si tienes dudas, deja los valores predeterminados. La prueba de rendimiento estima cuánto tardaría una copia en tu equipo con las opciones elegidas. Las copias existentes conservan siempre sus propios algoritmos.</value>
   </data>
   <data name="SectionLocations" xml:space="preserve">
     <value>Ubicaciones</value>
@@ -212,6 +212,9 @@
   </data>
   <data name="SectionDefaults" xml:space="preserve">
     <value>Valores predeterminados</value>
+  </data>
+  <data name="DefaultsNote" xml:space="preserve">
+    <value>Se aplican a las copias nuevas. Cada copia existente conserva los algoritmos con los que se creó, y BackupZCrypt los detecta automáticamente al actualizarla, restaurarla o verificarla.</value>
   </data>
   <data name="SourceLabel" xml:space="preserve">
     <value>Origen</value>
@@ -246,11 +249,23 @@
   <data name="CompressionLabel" xml:space="preserve">
     <value>Compresión</value>
   </data>
+  <data name="EncryptionIntro" xml:space="preserve">
+    <value>Protege el contenido de tus archivos. Las cinco opciones usan claves de 256 bits y cifrado autenticado, que además detecta cualquier manipulación, y ninguna tiene ataques prácticos conocidos. La elección influye sobre todo en la velocidad.</value>
+  </data>
+  <data name="KeyDerivationIntro" xml:space="preserve">
+    <value>Convierte tu contraseña en la clave de cifrado. Es lenta a propósito, para que cada intento de adivinarla le resulte costoso a un atacante, pero solo se ejecuta una vez por operación y añade unos segundos como mucho. Aun así, lo que más te protege es una contraseña larga y única.</value>
+  </data>
+  <data name="CompressionIntro" xml:space="preserve">
+    <value>Reduce el tamaño de los datos antes de cifrarlos. Ahorra mucho espacio con texto, código, bases de datos o programas, pero las fotos, los vídeos, la música, los archivos ZIP y los documentos de Office ya vienen comprimidos y apenas se reducen.</value>
+  </data>
   <data name="NoneCompressionName" xml:space="preserve">
     <value>Ninguna</value>
   </data>
+  <data name="NoneCompressionSummary" xml:space="preserve">
+    <value>Predeterminada. La más rápida; ideal para fotos, vídeo y música.</value>
+  </data>
   <data name="NoneCompressionDescription" xml:space="preserve">
-    <value>Los bloques se almacenan sin comprimir.</value>
+    <value>Los datos se cifran tal cual, sin comprimir. Es la opción más rápida y la adecuada si la mayoría de tus archivos ya están comprimidos (fotos, vídeos, música, archivos ZIP o documentos de Office), porque volver a comprimirlos apenas ahorraría espacio.</value>
   </data>
   <data name="PasswordLabel" xml:space="preserve">
     <value>Contraseña</value>
@@ -373,100 +388,100 @@
     <value>AES-256 GCM</value>
   </data>
   <data name="AesDescription" xml:space="preserve">
-    <value>El estándar de cifrado utilizado por gobiernos, bancos y la mayoría de aplicaciones seguras en todo el mundo. Muy rápido en ordenadores y teléfonos modernos gracias al soporte de hardware integrado. Recomendado para la mayoría de usuarios.</value>
+    <value>El estándar mundial de cifrado y el algoritmo más estudiado. Casi todos los procesadores actuales tienen instrucciones específicas para AES, que lo convierten, con diferencia, en la opción más rápida. Elígelo salvo que tengas un motivo concreto para usar otro.</value>
   </data>
   <data name="AesSummary" xml:space="preserve">
-    <value>Recomendado — rápido y ampliamente confiable (por defecto)</value>
+    <value>Recomendado (predeterminado). El más rápido en casi cualquier equipo.</value>
   </data>
   <data name="SerpentDisplayName" xml:space="preserve">
     <value>Serpent-256 GCM</value>
   </data>
   <data name="SerpentDescription" xml:space="preserve">
-    <value>Diseñado con un margen de seguridad extra grande, siendo una de las opciones más conservadoras disponibles. Notablemente más lento que AES, pero preferido cuando la máxima precaución es prioritaria sobre la velocidad.</value>
+    <value>Segundo clasificado en el concurso del que salió AES, diseñado con un margen de seguridad deliberadamente amplio: aplica 32 rondas de cifrado frente a las 14 de AES. A cambio, es la opción más lenta. Elígelo si la máxima prudencia te importa más que la velocidad.</value>
   </data>
   <data name="SerpentSummary" xml:space="preserve">
-    <value>Máximo margen de seguridad (más lento que AES)</value>
+    <value>Diseño muy conservador. La opción más lenta.</value>
   </data>
   <data name="CamelliaDisplayName" xml:space="preserve">
     <value>Camellia-256 GCM</value>
   </data>
   <data name="CamelliaDescription" xml:space="preserve">
-    <value>Una alternativa sólida a AES desarrollada en Japón, con seguridad y rendimiento comparables. Reconocido por organismos internacionales de estándares y una buena opción cuando se prefiere un algoritmo de origen no estadounidense.</value>
+    <value>Desarrollado en Japón por Mitsubishi Electric y NTT, con una seguridad comparable a la de AES. Está aprobado por ISO/IEC y fue seleccionado por el proyecto europeo NESSIE y por el CRYPTREC japonés. Elígelo si quieres un estándar reconocido que no proceda de Estados Unidos. Aquí funciona solo por software, por lo que es mucho más lento que AES.</value>
   </data>
   <data name="CamelliaSummary" xml:space="preserve">
-    <value>Alternativa sólida a AES (estándar internacional)</value>
+    <value>Estándar internacional de origen japonés. Más lento.</value>
   </data>
   <data name="ChaCha20DisplayName" xml:space="preserve">
     <value>ChaCha20-Poly1305</value>
   </data>
   <data name="ChaCha20Description" xml:space="preserve">
-    <value>Un método de cifrado moderno y rápido que destaca en dispositivos antiguos o de bajo consumo que carecen de hardware AES dedicado. Ampliamente usado en VPNs (WireGuard), navegación web (TLS) y aplicaciones de mensajería.</value>
+    <value>Un cifrado moderno diseñado para ser rápido sin ayuda del hardware, usado en TLS 1.3 y WireGuard. Es la alternativa a AES más rápida de la lista y la mejor opción en procesadores antiguos o de bajo consumo que no tienen instrucciones AES. En el resto de equipos, AES es varias veces más rápido.</value>
   </data>
   <data name="ChaCha20Summary" xml:space="preserve">
-    <value>Rápido en todos los dispositivos, incluso sin hardware AES</value>
+    <value>Moderno y rápido, incluso sin aceleración AES.</value>
   </data>
   <data name="TwofishDisplayName" xml:space="preserve">
     <value>Twofish-256 GCM</value>
   </data>
   <data name="TwofishDescription" xml:space="preserve">
-    <value>Un algoritmo de cifrado respetado que utiliza un diseño interno fundamentalmente diferente al de AES. Una opción sólida si desea evitar depender de una única familia de algoritmos.</value>
+    <value>Uno de los cinco finalistas del concurso del que salió AES. Su diseño interno es muy distinto del de AES, así que es una opción sensata si prefieres no depender de él. Aquí funciona solo por software, por lo que es mucho más lento que AES o ChaCha20.</value>
   </data>
   <data name="TwofishSummary" xml:space="preserve">
-    <value>Buena alternativa con un enfoque de diseño diferente</value>
+    <value>Finalista de AES con un diseño independiente. Más lento.</value>
   </data>
   <data name="Pbkdf2DisplayName" xml:space="preserve">
     <value>PBKDF2 (HMAC-SHA256)</value>
   </data>
   <data name="Pbkdf2Description" xml:space="preserve">
-    <value>Un método tradicional y ampliamente compatible para convertir su contraseña en una clave de cifrado. Soportado en todas partes, pero ofrece menos protección contra atacantes con hardware especializado (GPUs). Elíjalo cuando la compatibilidad con sistemas antiguos sea importante.</value>
+    <value>Un estándar veterano (NIST SP 800-132) que repite HMAC-SHA256 800&#160;000 veces. Apenas necesita memoria, así que un atacante con tarjetas gráficas puede probar muchas más contraseñas por segundo que con Argon2id o Scrypt. Su principal ventaja es figurar entre los algoritmos aprobados por el NIST: si no lo necesitas, elige Argon2id, y si lo eliges, usa una contraseña larga.</value>
   </data>
   <data name="Pbkdf2Summary" xml:space="preserve">
-    <value>Máxima compatibilidad con sistemas antiguos</value>
+    <value>Aprobado por el NIST, pero el menos resistente a ataques con GPU.</value>
   </data>
   <data name="Argon2idDisplayName" xml:space="preserve">
     <value>Argon2id</value>
   </data>
   <data name="Argon2idDescription" xml:space="preserve">
-    <value>La forma más moderna y segura de convertir su contraseña en una clave de cifrado. Diseñado específicamente para resistir ataques con hardware especializado (GPUs, chips personalizados) al requerir grandes cantidades de memoria. Recomendado para la mayoría de usuarios.</value>
+    <value>La variante recomendada de Argon2, ganador de la Password Hashing Competition, y el método que aconsejan hoy OWASP y el RFC 9106. Cada intento de contraseña necesita 256 MB de memoria, lo que encarece mucho los ataques masivos con tarjetas gráficas o hardware especializado. Es la opción adecuada para casi todo el mundo.</value>
   </data>
   <data name="Argon2idSummary" xml:space="preserve">
-    <value>Recomendado — protección de contraseña más fuerte (por defecto)</value>
+    <value>Recomendado (predeterminado). La mejor protección frente a ataques.</value>
   </data>
   <data name="ScryptDisplayName" xml:space="preserve">
     <value>Scrypt</value>
   </data>
   <data name="ScryptDescription" xml:space="preserve">
-    <value>Un método robusto para convertir su contraseña en una clave de cifrado que también resiste ataques basados en hardware al requerir memoria significativa. Un buen punto intermedio entre PBKDF2 y Argon2id, con mayor soporte de software que Argon2id.</value>
+    <value>La primera función de derivación de claves diseñada para exigir mucha memoria (2009), y sigue siendo sólida: aquí también usa 256 MB por intento. Argon2id, más moderno, resiste mejor algunos ataques avanzados. Elígelo si prefieres un algoritmo con más años de trayectoria.</value>
   </data>
   <data name="ScryptSummary" xml:space="preserve">
-    <value>Protección fuerte, mayor compatibilidad que Argon2id</value>
+    <value>También exige mucha memoria. Más veterano que Argon2id.</value>
   </data>
   <data name="ZstdFastDisplayName" xml:space="preserve">
-    <value>Zstandard (Rápido)</value>
+    <value>Zstandard (Rápida)</value>
   </data>
   <data name="ZstdFastDescription" xml:space="preserve">
-    <value>Compresión Zstandard a nivel mínimo, priorizando la velocidad sobre el tamaño del archivo. Ideal cuando desea algo de compresión con impacto mínimo en el rendimiento.</value>
+    <value>Zstandard en el nivel 1. Ahorra casi tanto espacio como Normal y comprime algo más deprisa. Útil con grandes volúmenes de datos cuando el tiempo de copia importa más que el espacio.</value>
   </data>
   <data name="ZstdFastSummary" xml:space="preserve">
-    <value>Compresión más rápida, archivos más grandes</value>
+    <value>Comprime más deprisa que Normal, pero ahorra algo menos.</value>
   </data>
   <data name="ZstdDisplayName" xml:space="preserve">
     <value>Zstandard (Normal)</value>
   </data>
   <data name="ZstdDescription" xml:space="preserve">
-    <value>Compresión Zstandard a nivel predeterminado, ofreciendo un buen equilibrio entre velocidad y ratio de compresión. Recomendado para la mayoría de casos de uso.</value>
+    <value>Zstandard en el nivel 3, su ajuste estándar. Comprime bien sin dejar de ser rápido, así que es la mejor opción si tus datos incluyen bastante texto, código, bases de datos o programas.</value>
   </data>
   <data name="ZstdSummary" xml:space="preserve">
-    <value>Recomendado — Buen equilibrio entre velocidad y compresión</value>
+    <value>Buen equilibrio entre ahorro y velocidad. Recomendada para texto, código y bases de datos.</value>
   </data>
   <data name="ZstdBestDisplayName" xml:space="preserve">
-    <value>Zstandard (Mejor)</value>
+    <value>Zstandard (Máxima)</value>
   </data>
   <data name="ZstdBestDescription" xml:space="preserve">
-    <value>Compresión Zstandard a nivel máximo, logrando los archivos más pequeños a costa de mayor tiempo de compresión. Ideal para archivos grandes donde minimizar el tamaño es lo más importante.</value>
+    <value>Zstandard en el nivel 19. Genera las copias más pequeñas, pero comprimir lleva decenas de veces más tiempo que con Normal, incluso con archivos que no se reducen. Solo compensa si el espacio es muy limitado y tus datos se comprimen bien. Restaurar sigue siendo rápido, porque la velocidad de descompresión apenas depende del nivel.</value>
   </data>
   <data name="ZstdBestSummary" xml:space="preserve">
-    <value>Archivos más pequeños, compresión más lenta</value>
+    <value>Las copias más pequeñas, pero comprime mucho más despacio.</value>
   </data>
   <data name="SourcePathEmpty" xml:space="preserve">
     <value>Seleccione una carpeta de origen para procesar.</value>

@@ -210,8 +210,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         [
             new CompressionOption(
                 CompressionMode.None,
-                Strings.NoneCompressionName,
-                Strings.NoneCompressionDescription
+                AlgorithmMetadataProvider.GetName(CompressionMode.None),
+                AlgorithmMetadataProvider.GetSummary(CompressionMode.None)
             ),
             .. compressionStrategies
                 .OrderBy(static s => s.Id)

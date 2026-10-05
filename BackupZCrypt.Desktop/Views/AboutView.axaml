@@ -25,11 +25,14 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <Style Selector="ItemsControl.algorithms > ContentPresenter:nth-child(n+2)">
+    <Style Selector="ItemsControl.algorithms > ContentPresenter">
       <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
-      <Setter Property="Margin" Value="0,16,0,0" />
       <Setter Property="Padding" Value="0,16,0,0" />
+    </Style>
+
+    <Style Selector="ItemsControl.algorithms > ContentPresenter:nth-child(n+2)">
+      <Setter Property="Margin" Value="0,16,0,0" />
     </Style>
 
     <Style Selector="Grid.guideItem TextBlock.body">
@@ -120,11 +123,14 @@
 
       <Border Classes="card">
         <StackPanel Spacing="18">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Classes="stepBadge">
-              <PathIcon Data="{x:Static local:Icons.Lock}" />
-            </Border>
-            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.EncryptionLabel}" />
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="stepBadge">
+                <PathIcon Data="{x:Static local:Icons.Lock}" />
+              </Border>
+              <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.EncryptionLabel}" />
+            </StackPanel>
+            <TextBlock Classes="body" Text="{x:Static res:Strings.EncryptionIntro}" />
           </StackPanel>
           <ItemsControl Classes="algorithms"
                         ItemsSource="{Binding EncryptionAlgorithms}"
@@ -134,11 +140,14 @@
 
       <Border Classes="card">
         <StackPanel Spacing="18">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Classes="stepBadge">
-              <PathIcon Data="{x:Static local:Icons.Key}" />
-            </Border>
-            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="stepBadge">
+                <PathIcon Data="{x:Static local:Icons.Key}" />
+              </Border>
+              <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+            </StackPanel>
+            <TextBlock Classes="body" Text="{x:Static res:Strings.KeyDerivationIntro}" />
           </StackPanel>
           <ItemsControl Classes="algorithms"
                         ItemsSource="{Binding KeyDerivationAlgorithms}"
@@ -148,11 +157,14 @@
 
       <Border Classes="card">
         <StackPanel Spacing="18">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Classes="stepBadge">
-              <PathIcon Data="{x:Static local:Icons.Archive}" />
-            </Border>
-            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.CompressionLabel}" />
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="stepBadge">
+                <PathIcon Data="{x:Static local:Icons.Archive}" />
+              </Border>
+              <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.CompressionLabel}" />
+            </StackPanel>
+            <TextBlock Classes="body" Text="{x:Static res:Strings.CompressionIntro}" />
           </StackPanel>
           <ItemsControl Classes="algorithms"
                         ItemsSource="{Binding CompressionAlgorithms}"

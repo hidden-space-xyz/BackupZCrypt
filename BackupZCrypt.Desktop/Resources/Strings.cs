@@ -179,6 +179,12 @@ internal static class Strings
     public static string SectionDefaults => Get();
 
     /// <summary>
+    /// Gets the note explaining that the defaults apply only to new backups, because each existing backup
+    /// keeps the algorithms it was created with.
+    /// </summary>
+    public static string DefaultsNote => Get();
+
+    /// <summary>
     /// Gets the source field label.
     /// </summary>
     public static string SourceLabel => Get();
@@ -234,9 +240,32 @@ internal static class Strings
     public static string CompressionLabel => Get();
 
     /// <summary>
+    /// Gets the explanation of what the encryption choice affects, shown above the encryption options on the
+    /// settings and help pages.
+    /// </summary>
+    public static string EncryptionIntro => Get();
+
+    /// <summary>
+    /// Gets the explanation of what key derivation does, shown above the key-derivation options on the
+    /// settings and help pages.
+    /// </summary>
+    public static string KeyDerivationIntro => Get();
+
+    /// <summary>
+    /// Gets the explanation of when compression saves space, shown above the compression options on the
+    /// settings and help pages.
+    /// </summary>
+    public static string CompressionIntro => Get();
+
+    /// <summary>
     /// Gets the display name for the "no compression" option.
     /// </summary>
     public static string NoneCompressionName => Get();
+
+    /// <summary>
+    /// Gets the short summary for the "no compression" option.
+    /// </summary>
+    public static string NoneCompressionSummary => Get();
 
     /// <summary>
     /// Gets the description for the "no compression" option.

@@ -5,6 +5,7 @@ using System.Reflection;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Desktop.ViewModels;
@@ -52,6 +53,11 @@ internal sealed class AboutViewModel : ViewModelBase
 
         CompressionAlgorithms =
         [
+            new AlgorithmInfo(
+                AlgorithmMetadataProvider.GetName(CompressionMode.None),
+                AlgorithmMetadataProvider.GetSummary(CompressionMode.None),
+                AlgorithmMetadataProvider.GetDescription(CompressionMode.None)
+            ),
             .. compressionStrategies
                 .OrderBy(static s => s.Id)
                 .Select(static s => new AlgorithmInfo(
@@ -77,7 +83,8 @@ internal sealed class AboutViewModel : ViewModelBase
     public ObservableCollection<AlgorithmInfo> KeyDerivationAlgorithms { get; }
 
     /// <summary>
-    /// Gets the available compression algorithms with their descriptions.
+    /// Gets the available compression modes with their descriptions, led by the "no compression" option
+    /// so the list matches the choices offered on the settings page.
     /// </summary>
     public ObservableCollection<AlgorithmInfo> CompressionAlgorithms { get; }
 

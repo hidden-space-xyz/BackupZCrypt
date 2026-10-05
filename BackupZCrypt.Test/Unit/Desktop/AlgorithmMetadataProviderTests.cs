@@ -39,6 +39,7 @@ public sealed class AlgorithmMetadataProviderTests
     internal void Metadata_EveryCompressionModeExceptNone_DiffersFromTheNoneFallbackText()
     {
         var noneName = Strings.NoneCompressionName;
+        var noneSummary = Strings.NoneCompressionSummary;
         var noneDescription = Strings.NoneCompressionDescription;
 
         var unlabeled = Enum.GetValues<CompressionMode>()
@@ -46,7 +47,7 @@ public sealed class AlgorithmMetadataProviderTests
                 mode is not CompressionMode.None
                 && (
                     string.Equals(AlgorithmMetadataProvider.GetName(mode), noneName, StringComparison.Ordinal)
-                    || string.Equals(AlgorithmMetadataProvider.GetSummary(mode), noneDescription, StringComparison.Ordinal)
+                    || string.Equals(AlgorithmMetadataProvider.GetSummary(mode), noneSummary, StringComparison.Ordinal)
                     || string.Equals(AlgorithmMetadataProvider.GetDescription(mode), noneDescription, StringComparison.Ordinal)
                 )
             )
@@ -55,7 +56,10 @@ public sealed class AlgorithmMetadataProviderTests
 
         Assert.Multiple(
             () => Assert.Empty(unlabeled),
-            () => Assert.Equal(noneName, AlgorithmMetadataProvider.GetName(CompressionMode.None))
+            () => Assert.Equal(noneName, AlgorithmMetadataProvider.GetName(CompressionMode.None)),
+            () => Assert.Equal(noneSummary, AlgorithmMetadataProvider.GetSummary(CompressionMode.None)),
+            () => Assert.Equal(noneDescription, AlgorithmMetadataProvider.GetDescription(CompressionMode.None)),
+            () => Assert.NotEqual(noneSummary, noneDescription)
         );
     }
 

@@ -4,6 +4,7 @@ using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Test.Common;
 
@@ -48,7 +49,7 @@ public sealed class AboutViewModelTests
         );
 
         var expectedCompression = Describe(
-            compression.Select(static strategy => strategy.Id),
+            compression.Select(static strategy => strategy.Id).Prepend(CompressionMode.None),
             static id => AlgorithmMetadataProvider.GetName(id),
             static id => AlgorithmMetadataProvider.GetSummary(id),
             static id => AlgorithmMetadataProvider.GetDescription(id)

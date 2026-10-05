@@ -24,12 +24,18 @@
 
         <Border Classes="card">
           <StackPanel Spacing="22">
-            <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.SectionDefaults}" />
+            <StackPanel Spacing="6">
+              <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.SectionDefaults}" />
+              <TextBlock Classes="body" Text="{x:Static res:Strings.DefaultsNote}" />
+            </StackPanel>
 
             <StackPanel Spacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <PathIcon Data="{x:Static local:Icons.Lock}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
-                <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{x:Static local:Icons.Lock}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{x:Static res:Strings.EncryptionIntro}" />
               </StackPanel>
               <ListBox Classes="tiles"
                        ItemsSource="{Binding EncryptionOptions}"
@@ -53,9 +59,12 @@
             </StackPanel>
 
             <StackPanel Spacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <PathIcon Data="{x:Static local:Icons.Key}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
-                <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{x:Static local:Icons.Key}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{x:Static res:Strings.KeyDerivationIntro}" />
               </StackPanel>
               <ListBox Classes="tiles"
                        ItemsSource="{Binding KeyDerivationOptions}"
@@ -79,9 +88,12 @@
             </StackPanel>
 
             <StackPanel Spacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <PathIcon Data="{x:Static local:Icons.Archive}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
-                <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{x:Static local:Icons.Archive}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{x:Static res:Strings.CompressionIntro}" />
               </StackPanel>
               <ListBox Classes="tiles"
                        ItemsSource="{Binding CompressionOptions}"
