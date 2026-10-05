@@ -58,14 +58,11 @@ internal sealed partial class ChunkedBackupService(
         BackupConstants.MaximumChunkSize + (64 * 1024) + EncryptionConstants.TagSize;
 
     /// <summary>
-    /// Caps simultaneous file pipelines because each worker can hold several four-megabyte plaintext,
-    /// compressed, and ciphertext buffers at once.
+    /// The number of file pipelines run at once on this machine, as decided by
+    /// <see cref="FileParallelismPolicy"/>.
     /// </summary>
-    private static readonly int MaximumParallelFileOperations = Math.Clamp(
-        Environment.ProcessorCount,
-        1,
-        4
-    );
+    private static readonly int MaximumParallelFileOperations =
+        FileParallelismPolicy.ForProcessorCount(Environment.ProcessorCount);
 
     /// <summary>
     /// The comparison applied to backup paths, shared with every other layer that compares them.

@@ -192,6 +192,18 @@ internal sealed class BackupBenchmarkService(
     }
 
     /// <summary>
+    /// Returns how many workers the timed pass runs at once on a machine with the given number of
+    /// logical processors: as many as the file pipelines a real backup runs there, so the measured
+    /// throughput is not multiplied by processors the backup would leave idle.
+    /// </summary>
+    /// <param name="processorCount">The number of logical processors available to the process.</param>
+    /// <returns>The number of concurrent measurement workers.</returns>
+    internal static int ComputeWorkerCount(int processorCount)
+    {
+        return FileParallelismPolicy.ForProcessorCount(processorCount);
+    }
+
+    /// <summary>
     /// Times a single master-key derivation with the selected algorithm and zeroes the derived key.
     /// </summary>
     /// <param name="keyDerivationStrategy">The key derivation strategy to exercise.</param>
@@ -253,8 +265,8 @@ internal sealed class BackupBenchmarkService(
     }
 
     /// <summary>
-    /// Saturates every logical processor with the chunk pipeline for the measure window and reports the
-    /// aggregate rate at which source bytes were consumed.
+    /// Runs the chunk pipeline on as many concurrent workers as a real backup runs file pipelines, for the
+    /// measure window, and reports the aggregate rate at which source bytes were consumed.
     /// </summary>
     /// <param name="sample">The synthetic sample data each worker reads from.</param>
     /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
@@ -272,7 +284,7 @@ internal sealed class BackupBenchmarkService(
         CancellationToken cancellationToken
     )
     {
-        var workerCount = Math.Max(1, Environment.ProcessorCount);
+        var workerCount = ComputeWorkerCount(Environment.ProcessorCount);
         var stopwatch = Stopwatch.StartNew();
         var workers = new Task<long>[workerCount];
 

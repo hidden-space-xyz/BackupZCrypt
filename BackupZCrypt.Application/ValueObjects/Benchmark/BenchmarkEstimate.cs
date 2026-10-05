@@ -8,8 +8,8 @@ namespace BackupZCrypt.Application.ValueObjects.Benchmark;
 /// The estimated total time to process the requested amount of data, including the one-time key derivation cost.
 /// </param>
 /// <param name="ThroughputBytesPerSecond">
-/// The measured effective processing throughput (chunking, hashing, optional compression, and encryption) across all
-/// logical processors, in source bytes per second.
+/// The measured effective processing throughput (chunking, hashing, optional compression, and encryption) across as
+/// many concurrent file pipelines as a real backup runs on this machine, in source bytes per second.
 /// </param>
 /// <param name="KeyDerivationDuration">
 /// The measured one-time cost of deriving the master key with the selected key derivation function.
