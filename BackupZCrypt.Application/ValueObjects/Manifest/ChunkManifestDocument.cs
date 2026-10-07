@@ -7,23 +7,18 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <summary>
 /// The JSON-serializable on-disk shape of a chunked backup manifest before encryption.
 /// </summary>
-/// <param name="EncryptionAlgorithm">The encryption algorithm used for the backup.</param>
-/// <param name="KeyDerivationAlgorithm">The key derivation algorithm used for the backup.</param>
+/// <remarks>
+/// The encryption algorithm, the key derivation function, and the master salt are recorded only in
+/// the unencrypted preamble, which is bound into the ciphertext as associated data, so the document
+/// holds nothing the preamble already does.
+/// </remarks>
 /// <param name="Compression">The compression mode applied to chunks.</param>
-/// <param name="MasterSalt">
-/// The Base64-encoded master salt. The same salt is echoed in the unencrypted preamble header, and the two are
-/// compared in constant time after decryption to detect tampering.
-/// </param>
 /// <param name="Files">The serialized file entries contained in the backup.</param>
 /// <param name="Directories">
-/// The relative paths of the empty folders a restore recreates. Omitted when there are none, so
-/// readers that predate it are unaffected.
+/// The relative paths of the empty folders a restore recreates, omitted when there are none.
 /// </param>
 internal sealed record class ChunkManifestDocument(
-    EncryptionAlgorithm EncryptionAlgorithm,
-    KeyDerivationAlgorithm KeyDerivationAlgorithm,
     CompressionMode Compression,
-    string MasterSalt,
     List<ChunkManifestFileEntrySerialized> Files,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] List<string>? Directories = null
 );

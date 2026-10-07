@@ -38,6 +38,17 @@ internal sealed class ManifestService(
         ChunkPreambleHeaderSize + EncryptionConstants.NonceSize + EncryptionConstants.TagSize;
 
     /// <summary>
+    /// The serializer settings of the manifest document. A member the document requires that is
+    /// missing or <see langword="null"/> fails deserialization instead of reaching the backup engine
+    /// as a default value.
+    /// </summary>
+    private static readonly JsonSerializerOptions DocumentSerializerOptions = new()
+    {
+        RespectNullableAnnotations = true,
+        RespectRequiredConstructorParameters = true,
+    };
+
+    /// <summary>
     /// Classifies the location a user picked as a backup: a missing path, a file instead of the backup
     /// folder, a folder without a manifest, or a folder whose manifest is readable, damaged, or names an
     /// algorithm this version does not support.
@@ -188,8 +199,8 @@ internal sealed class ManifestService(
     }
 
     /// <summary>
-    /// Decrypts a chunked manifest payload and verifies that the embedded master salt matches the
-    /// preamble in constant time, guarding against tampering.
+    /// Decrypts a chunked manifest payload and combines the document with the algorithms and master
+    /// salt of the preamble, which the ciphertext authenticates as associated data.
     /// </summary>
     /// <param name="preamble">The manifest preamble previously read from disk.</param>
     /// <param name="encryptionKey">The derived manifest encryption key.</param>
@@ -203,7 +214,6 @@ internal sealed class ManifestService(
         ArgumentNullException.ThrowIfNull(encryptionKey);
 
         byte[]? plaintext = null;
-        byte[]? documentMasterSalt = null;
 
         try
         {
@@ -235,24 +245,14 @@ internal sealed class ManifestService(
                 associatedData
             );
 
-            var document = JsonSerializer.Deserialize<ChunkManifestDocument>(plaintext);
+            var document = JsonSerializer.Deserialize<ChunkManifestDocument>(
+                plaintext,
+                DocumentSerializerOptions
+            );
 
-            if (document is null)
-            {
-                return null;
-            }
-
-            var documentMatchesPreamble =
-                document.EncryptionAlgorithm == preamble.Algorithm
-                && document.KeyDerivationAlgorithm == preamble.KeyDerivation
-                && TryDecodeBase64(
-                    document.MasterSalt,
-                    EncryptionConstants.SaltSize,
-                    out documentMasterSalt
-                )
-                && CryptographicOperations.FixedTimeEquals(documentMasterSalt, preamble.MasterSalt);
-
-            return documentMatchesPreamble ? ToChunkManifestData(document) : null;
+            return document is null || !Enum.IsDefined(document.Compression)
+                ? null
+                : ToChunkManifestData(preamble, document);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -263,11 +263,6 @@ internal sealed class ManifestService(
             if (plaintext is not null)
             {
                 CryptographicOperations.ZeroMemory(plaintext);
-            }
-
-            if (documentMasterSalt is not null)
-            {
-                CryptographicOperations.ZeroMemory(documentMasterSalt);
             }
         }
     }
@@ -332,29 +327,18 @@ internal sealed class ManifestService(
             }
 
             ChunkManifestDocument document = new(
-                algorithm,
-                manifestData.Header.KeyDerivationAlgorithm,
                 manifestData.Header.Compression,
-                manifestData.MasterSalt,
                 [
                     .. manifestData
                         .Files.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)
-                        .Select(static f => new ChunkManifestFileEntrySerialized(
-                            f.OriginalPath,
-                            f.FileHash,
-                            f.TotalSize,
-                            [.. f.Chunks],
-                            f.LastWriteTimeUtc,
-                            f.Attributes,
-                            f.UnixMode
-                        )),
+                        .Select(ToSerializedEntry),
                 ],
                 manifestData.Directories is { Count: > 0 } directories
                     ? [.. directories.Order(StringComparer.Ordinal)]
                     : null
             );
 
-            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
+            manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document, DocumentSerializerOptions);
 
             var nonce = new byte[EncryptionConstants.NonceSize];
             RandomNumberGenerator.Fill(nonce);
@@ -442,67 +426,94 @@ internal sealed class ManifestService(
     }
 
     /// <summary>
-    /// Attempts to decode a Base64 string and confirm that it yields exactly the expected number of bytes.
+    /// Projects a deserialized manifest document into the in-memory manifest model used by the backup
+    /// engine, taking the algorithms and the master salt from the preamble.
     /// </summary>
-    /// <param name="value">The Base64 text to decode.</param>
-    /// <param name="expectedLength">The byte length the decoded value must have.</param>
-    /// <param name="decoded">
-    /// Receives the decoded bytes; empty when <paramref name="value"/> is missing or not valid Base64, but
-    /// populated with the decoded bytes when only the length check failed.
-    /// </param>
-    /// <returns>
-    /// <see langword="true"/> if the value decoded to exactly <paramref name="expectedLength"/> bytes;
-    /// otherwise <see langword="false"/>.
-    /// </returns>
-    private static bool TryDecodeBase64(string value, int expectedLength, out byte[] decoded)
-    {
-        decoded = [];
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        try
-        {
-            decoded = Convert.FromBase64String(value);
-            return decoded.Length == expectedLength;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Projects a deserialized manifest document into the in-memory manifest model used by the backup engine.
-    /// </summary>
+    /// <param name="preamble">The preamble the document was decrypted under.</param>
     /// <param name="document">The document deserialized from the decrypted manifest payload.</param>
     /// <returns>The equivalent manifest data.</returns>
-    private static ChunkManifestData ToChunkManifestData(ChunkManifestDocument document)
+    /// <exception cref="InvalidDataException">An entry's chunk list is missing or holds an empty reference.</exception>
+    private static ChunkManifestData ToChunkManifestData(
+        ManifestPreamble preamble,
+        ChunkManifestDocument document
+    )
     {
-        ManifestHeader header = new(
-            document.EncryptionAlgorithm,
-            document.KeyDerivationAlgorithm,
-            document.Compression
-        );
-
-        var files = document
-            .Files.ConvertAll(static f => new ChunkManifestFileEntry(
+        return new ChunkManifestData(
+            new ManifestHeader(preamble.Algorithm, preamble.KeyDerivation, document.Compression),
+            Convert.ToBase64String(preamble.MasterSalt),
+            document.Files.ConvertAll(static f => new ChunkManifestFileEntry(
                 f.OriginalPath,
                 f.FileHash,
                 f.TotalSize,
-                [.. f.Chunks],
+                ExpandChunks(f),
                 f.LastWriteTimeUtc,
                 f.Attributes,
                 f.UnixMode
-            ));
-
-        return new ChunkManifestData(
-            header,
-            document.MasterSalt,
-            files,
+            )),
             document.Directories is { } directories ? [.. directories] : null
         );
+    }
+
+    /// <summary>
+    /// Returns the chunks of a serialized entry, rebuilding the single chunk of a file that leaves its
+    /// chunk list out.
+    /// </summary>
+    /// <param name="entry">The serialized entry.</param>
+    /// <returns>The entry's ordered chunk references.</returns>
+    /// <exception cref="InvalidDataException">
+    /// The chunk list holds an empty reference, or is missing although the file size needs one.
+    /// </exception>
+    private static List<ChunkManifestChunkRef> ExpandChunks(ChunkManifestFileEntrySerialized entry)
+    {
+        if (entry.Chunks is { } chunks)
+        {
+            return chunks.Any(static chunk => chunk is null)
+                ? throw new InvalidDataException("Manifest chunk list holds an empty reference.")
+                : [.. chunks];
+        }
+
+        return entry.TotalSize switch
+        {
+            0 => [],
+            > 0 and <= BackupConstants.MaximumChunkSize =>
+                [new ChunkManifestChunkRef(entry.FileHash, (int)entry.TotalSize)],
+            _ => throw new InvalidDataException("Manifest entry omits the chunk list its size requires."),
+        };
+    }
+
+    /// <summary>
+    /// Projects an in-memory entry onto its on-disk shape, leaving the chunk list out when the entry
+    /// itself implies it.
+    /// </summary>
+    /// <param name="entry">The entry to serialize.</param>
+    /// <returns>The serialized entry.</returns>
+    private static ChunkManifestFileEntrySerialized ToSerializedEntry(ChunkManifestFileEntry entry)
+    {
+        return new ChunkManifestFileEntrySerialized(
+            entry.OriginalPath,
+            entry.FileHash,
+            entry.TotalSize,
+            entry.LastWriteTimeUtc,
+            ChunksAreImplied(entry) ? null : [.. entry.Chunks],
+            entry.Attributes,
+            entry.UnixMode
+        );
+    }
+
+    /// <summary>
+    /// Determines whether an entry's chunk list follows from the entry itself: an empty file has no
+    /// chunks, and a file stored as one chunk is that chunk, with the file's hash and size.
+    /// </summary>
+    /// <param name="entry">The entry to inspect.</param>
+    /// <returns><see langword="true"/> when the manifest can leave the chunk list out.</returns>
+    private static bool ChunksAreImplied(ChunkManifestFileEntry entry)
+    {
+        return entry.Chunks switch
+        {
+            [] => entry.TotalSize is 0,
+            [var chunk] => chunk.Size == entry.TotalSize
+                && string.Equals(chunk.Hash, entry.FileHash, StringComparison.Ordinal),
+            _ => false,
+        };
     }
 }

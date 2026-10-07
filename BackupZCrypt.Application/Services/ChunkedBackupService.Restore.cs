@@ -368,7 +368,7 @@ internal sealed partial class ChunkedBackupService
     /// <summary>
     /// Recreates the empty folders the manifest records, reporting any that cannot be created.
     /// </summary>
-    /// <param name="directories">The recorded folders, or <see langword="null"/> for older manifests.</param>
+    /// <param name="directories">The recorded folders, or <see langword="null"/> when there are none.</param>
     /// <param name="backupRoot">The backup folder being read.</param>
     /// <param name="destinationPath">The restore root.</param>
     /// <param name="errors">The collector the per-folder problems are added to.</param>
@@ -461,9 +461,9 @@ internal sealed partial class ChunkedBackupService
         return new ChunkReader(
             fileOperationsService.CombinePath(backupRoot, BackupConstants.ChunksDirectoryName),
             backup.Keys.ChunkEncryptionKey,
+            backup.Keys.ChunkNonceKey,
             backup.Keys.NamingKey,
             encryptionServiceFactory.Create(backup.Manifest.Header.EncryptionAlgorithm),
-            BuildStoredChunkNonceCache(backup.Manifest.Files),
             this.CreateCompressionStrategy(backup.Manifest.Header.Compression)
         );
     }
@@ -616,14 +616,7 @@ internal sealed partial class ChunkedBackupService
                     SHA256.HashSizeInBytes,
                     "Invalid chunk hash."
                 );
-                var nonceB64 = reader.StoredChunkNonces.TryGetValue(chunkRef.Hash, out var storedChunk)
-                    ? await storedChunk.Value.ConfigureAwait(false)
-                    : chunkRef.Nonce;
-                nonce = DecodeBase64FixedLength(
-                    nonceB64,
-                    EncryptionConstants.NonceSize,
-                    "Invalid chunk nonce."
-                );
+                nonce = ChunkCryptoHelper.ComputeChunkNonce(reader.NonceKey, chunkHash);
                 chunkFilePath = this.ComputeChunkFilePath(reader.ChunksDirectory, reader.NamingKey, chunkHash);
 
                 if (!fileOperationsService.FileExists(chunkFilePath))
@@ -836,16 +829,16 @@ internal sealed partial class ChunkedBackupService
     /// </summary>
     /// <param name="ChunksDirectory">The directory holding the chunk files.</param>
     /// <param name="EncryptionKey">The chunk encryption sub-key.</param>
+    /// <param name="NonceKey">The sub-key each chunk's nonce is derived from.</param>
     /// <param name="NamingKey">The sub-key each chunk's on-disk file name is derived from.</param>
     /// <param name="EncryptionStrategy">The strategy used to decrypt chunks.</param>
-    /// <param name="StoredChunkNonces">The cache resolving a chunk hash to the nonce its stored ciphertext authenticates under.</param>
     /// <param name="CompressionStrategy">The decompression strategy, or <see langword="null"/> if chunks are uncompressed.</param>
     private sealed record class ChunkReader(
         string ChunksDirectory,
         byte[] EncryptionKey,
+        byte[] NonceKey,
         byte[] NamingKey,
         IEncryptionAlgorithmStrategy EncryptionStrategy,
-        ConcurrentDictionary<string, Lazy<Task<string>>> StoredChunkNonces,
         ICompressionStrategy? CompressionStrategy
     );
 }

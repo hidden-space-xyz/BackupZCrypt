@@ -84,7 +84,7 @@ public sealed class CrossPlatformManifestTests
     }
 
     [Fact]
-    internal async Task Restore_ForeignManifestEntryWithBackslashSeparators_RebuildsNestedDirectoriesNotAFlatName()
+    internal async Task Restore_ManifestEntryWithBackslashSeparators_IsRejectedOnEveryPlatform()
     {
         await using var provider = TestHost.CreateProvider();
         var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
@@ -99,27 +99,21 @@ public sealed class CrossPlatformManifestTests
         await CreateBackupAsync(createHandler, source.Path, destination.Path);
         await RewriteManifestPathsAsync(provider, destination.Path, static _ => "docs\\notes.md");
 
-        await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
-
-        var restoredFile = Path.Join(restored.Path, "docs", "notes.md");
-        var restoredNames = Directory
-            .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
-            .Select(f => Path.GetFileName(f))
-            .ToList();
-        string[] expectedRestoredNames = ["notes.md"];
+        var result = await restoreHandler.HandleAsync(
+            new RestoreBackupCommand(destination.Path, restored.Path, Password, ProceedOnWarnings: true)
+            {
+                Progress = new RecordingProgress<BackupStatus>(),
+            },
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Multiple(
             () =>
-                Assert.True(
-                    File.Exists(restoredFile),
-                    "An entry recorded with Windows separators must restore as a nested directory tree on every platform."
+                Assert.False(
+                    result.IsSuccess,
+                    "Every manifest records paths with forward slashes, so an entry with backslashes is not one it wrote."
                 ),
-            () => Assert.Equivalent(expectedRestoredNames, restoredNames, strict: true)
-        );
-
-        Assert.Equal(
-            "# notes",
-            await File.ReadAllTextAsync(restoredFile, TestContext.Current.CancellationToken)
+            () => Assert.Empty(Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories))
         );
     }
 

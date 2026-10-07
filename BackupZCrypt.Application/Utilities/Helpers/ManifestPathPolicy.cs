@@ -10,11 +10,11 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A manifest entry path is portable data, not a host path. It is always recorded with <c>/</c>
-/// separators so an archive written on Windows rebuilds the same tree on Unix, and both separators
-/// are recognized on every platform when reading — which is also what keeps traversal detection
-/// platform-independent, since a crafted <c>..\..\escape</c> must be rejected on Unix, where
-/// <c>\</c> is otherwise a legal file-name character.
+/// A manifest entry path is portable data, not a host path. It is recorded in one canonical form,
+/// with <c>/</c> separators and Unicode normalization form C, so an archive written on Windows
+/// rebuilds the same tree on Unix. A path in any other form is rejected on every platform, which is
+/// also what keeps traversal detection platform-independent: a crafted <c>..\..\escape</c> is refused
+/// on Unix, where <c>\</c> is otherwise a legal file-name character, exactly as it is on Windows.
 /// </para>
 /// <para>
 /// This is a security boundary, not a formatting convenience: it is the check that stops a hostile
@@ -26,16 +26,15 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 internal static class ManifestPathPolicy
 {
     /// <summary>
-    /// The separators recognized when splitting a manifest entry path into segments. Both are
-    /// accepted on every platform so a path written on either notation is validated the same way.
+    /// The separator between the segments of a manifest entry path.
     /// </summary>
-    private static readonly char[] ManifestPathSeparators = ['/', '\\'];
+    private const char ManifestPathSeparator = '/';
 
     /// <summary>
     /// The characters Windows refuses inside a file or folder name.
     /// </summary>
     private static readonly SearchValues<char> WindowsInvalidFileNameChars =
-        SearchValues.Create(['<', '>', ':', '"', '|', '?', '*']);
+        SearchValues.Create(['<', '>', ':', '"', '|', '?', '*', '\\']);
 
     /// <summary>
     /// Device names Windows resolves specially even when they carry an extension.
@@ -47,8 +46,8 @@ internal static class ManifestPathPolicy
     };
 
     /// <summary>
-    /// Validates the structure of a manifest entry path: it is relative and free of traversal,
-    /// current-directory, and empty segments, and holds no NUL character.
+    /// Validates the structure of a manifest entry path: it is relative, in canonical form, free of
+    /// traversal, current-directory, and empty segments, and holds no NUL character.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -64,7 +63,8 @@ internal static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The entry path to validate.</param>
     /// <exception cref="InvalidDataException">
-    /// The path is empty, rooted, contains a NUL character, or has an empty or relative segment.
+    /// The path is empty, rooted, not in canonical form, contains a NUL character, or has an empty or
+    /// relative segment.
     /// </exception>
     internal static void ValidateRelative(string relativePath)
     {
@@ -73,7 +73,7 @@ internal static class ManifestPathPolicy
             throw new InvalidDataException("Manifest entry path is empty.");
         }
 
-        if (relativePath[0] is '/' or '\\')
+        if (relativePath[0] is ManifestPathSeparator)
         {
             throw new InvalidDataException("Manifest entry path must be relative.");
         }
@@ -83,7 +83,12 @@ internal static class ManifestPathPolicy
             throw new InvalidDataException("Manifest entry path contains invalid characters.");
         }
 
-        var pathSegments = relativePath.Split(ManifestPathSeparators, StringSplitOptions.None);
+        if (relativePath.Contains('\\', StringComparison.Ordinal) || !IsComposed(relativePath))
+        {
+            throw new InvalidDataException("Manifest entry path is not in canonical form.");
+        }
+
+        var pathSegments = relativePath.Split(ManifestPathSeparator);
 
         if (
             pathSegments.Any(static segment =>
@@ -122,9 +127,7 @@ internal static class ManifestPathPolicy
     {
         ArgumentNullException.ThrowIfNull(relativePath);
 
-        return !relativePath
-            .Split(ManifestPathSeparators, StringSplitOptions.None)
-            .Any(IsInvalidWindowsSegment);
+        return !relativePath.Split(ManifestPathSeparator).Any(IsInvalidWindowsSegment);
     }
 
     /// <summary>
@@ -272,13 +275,28 @@ internal static class ManifestPathPolicy
     /// <summary>
     /// Converts a manifest entry path back into a path the running platform can resolve.
     /// </summary>
-    /// <param name="manifestPath">The entry path taken from the manifest, in either notation.</param>
+    /// <param name="manifestPath">The entry path taken from the manifest.</param>
     /// <returns>The path with every separator replaced by the platform's directory separator.</returns>
     internal static string ToPlatformPath(string manifestPath)
     {
-        return manifestPath
-            .Replace('\\', Path.DirectorySeparatorChar)
-            .Replace('/', Path.DirectorySeparatorChar);
+        return manifestPath.Replace(ManifestPathSeparator, Path.DirectorySeparatorChar);
+    }
+
+    /// <summary>
+    /// Determines whether a path is in Unicode normalization form C.
+    /// </summary>
+    /// <param name="path">The path to inspect.</param>
+    /// <returns><see langword="false"/> for a path in another form or that is not valid Unicode.</returns>
+    private static bool IsComposed(string path)
+    {
+        try
+        {
+            return path.IsNormalized(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

@@ -132,7 +132,7 @@ internal sealed partial class ChunkedBackupService(
         {
             masterSalt = GenerateSalt();
             using var keys = this.DeriveKeySet(
-                PasswordForNewBackup(request.Password),
+                NormalizePassword(request.Password),
                 masterSalt,
                 request.KeyDerivationAlgorithm
             );
@@ -159,7 +159,7 @@ internal sealed partial class ChunkedBackupService(
                     workItems,
                     chunksDir,
                     cipher,
-                    new ConcurrentDictionary<string, Lazy<Task<string>>>(StringComparer.Ordinal),
+                    new ConcurrentDictionary<string, Lazy<Task>>(StringComparer.Ordinal),
                     context,
                     tracker,
                     cancellationToken
@@ -359,10 +359,10 @@ internal sealed partial class ChunkedBackupService(
         Dictionary<string, ChunkManifestFileEntry> existingFileIndex = new(StringComparer.Ordinal);
         foreach (var entry in existingManifest.Files)
         {
-            existingFileIndex[ManifestPathPolicy.Canonicalize(entry.OriginalPath)] = entry;
+            existingFileIndex[entry.OriginalPath] = entry;
         }
 
-        var storedChunks = BuildStoredChunkNonceCache(existingManifest.Files);
+        var storedChunks = BuildStoredChunkCache(existingManifest.Files);
         this.RemoveUnavailableStoredChunks(
             storedChunks,
             existingManifest.Files,
@@ -402,15 +402,17 @@ internal sealed partial class ChunkedBackupService(
                 return Result<BackupResult>.Failure(run.FatalError);
             }
 
-            List<ChunkManifestFileEntry> entries = [.. plan.CarriedOver, .. run.Entries];
-            entries.AddRange(
-                run.FailedItems
-                    .Where(static item => item.PreviousEntry is not null)
-                    .Select(static item => item.PreviousEntry! with { OriginalPath = item.File.RelativePath })
-            );
-
-            var canonicalEntries = await CanonicalizeChunkEntriesAsync(entries, storedChunks)
-                .ConfigureAwait(false);
+            List<ChunkManifestFileEntry> entries =
+            [
+                .. plan.CarriedOver
+                    .Concat(run.Entries)
+                    .Concat(
+                        run.FailedItems
+                            .Where(static item => item.PreviousEntry is not null)
+                            .Select(static item => item.PreviousEntry!)
+                    )
+                    .OrderBy(static e => e.OriginalPath, StringComparer.Ordinal),
+            ];
 
             ChunkManifestData newManifest = new(
                 new ManifestHeader(
@@ -419,8 +421,8 @@ internal sealed partial class ChunkedBackupService(
                     existingManifest.Header.Compression
                 ),
                 existingManifest.MasterSalt,
-                canonicalEntries,
-                MergeDirectories(snapshot, existingManifest.Directories, canonicalEntries)
+                entries,
+                MergeDirectories(snapshot, existingManifest.Directories, entries)
             );
             ValidateManifestEntries(newManifest.Files);
 
@@ -446,7 +448,7 @@ internal sealed partial class ChunkedBackupService(
             _ = await this.TryPruneBackupAsync(
                     destinationPath,
                     chunksDir,
-                    canonicalEntries.SelectMany(static f => f.Chunks).Select(static c => c.Hash),
+                    entries.SelectMany(static f => f.Chunks).Select(static c => c.Hash),
                     keys.NamingKey,
                     CancellationToken.None
                 )
@@ -487,7 +489,7 @@ internal sealed partial class ChunkedBackupService(
     private UpdatePlan PlanUpdate(
         SourceSnapshot snapshot,
         Dictionary<string, ChunkManifestFileEntry> existingFileIndex,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks
     )
     {
         List<ChunkManifestFileEntry> carriedOver = [];
@@ -516,7 +518,7 @@ internal sealed partial class ChunkedBackupService(
                 && existing.Chunks.All(chunk => storedChunks.ContainsKey(chunk.Hash))
             )
             {
-                carriedOver.Add(WithMetadata(existing with { OriginalPath = file.RelativePath }, metadata));
+                carriedOver.Add(WithMetadata(existing, metadata));
                 continue;
             }
 
@@ -524,16 +526,16 @@ internal sealed partial class ChunkedBackupService(
         }
 
         var removedCount = 0;
-        foreach (var (canonicalPath, entry) in existingFileIndex)
+        foreach (var (path, entry) in existingFileIndex)
         {
-            if (seen.Contains(canonicalPath))
+            if (seen.Contains(path))
             {
                 continue;
             }
 
-            if (snapshot.IsInsideInaccessibleDirectory(canonicalPath))
+            if (snapshot.IsInsideInaccessibleDirectory(path))
             {
-                carriedOver.Add(entry with { OriginalPath = canonicalPath });
+                carriedOver.Add(entry);
                 continue;
             }
 
@@ -552,9 +554,9 @@ internal sealed partial class ChunkedBackupService(
     /// <returns><see langword="true"/> when the file can be carried over without being read.</returns>
     private static bool IsUnchanged(ChunkManifestFileEntry entry, FileMetadata metadata)
     {
-        return entry.LastWriteTimeUtc is { } recorded
-            && entry.TotalSize == metadata.Size
-            && recorded.ToUniversalTime().Ticks == metadata.LastWriteTimeUtc.ToUniversalTime().Ticks;
+        return entry.TotalSize == metadata.Size
+            && entry.LastWriteTimeUtc.ToUniversalTime().Ticks
+                == metadata.LastWriteTimeUtc.ToUniversalTime().Ticks;
     }
 
     /// <summary>
@@ -575,10 +577,9 @@ internal sealed partial class ChunkedBackupService(
 
         foreach (var directory in previousDirectories ?? [])
         {
-            var canonical = ManifestPathPolicy.Canonicalize(directory);
-            if (snapshot.IsInsideInaccessibleDirectory(canonical))
+            if (snapshot.IsInsideInaccessibleDirectory(directory))
             {
-                _ = directories.Add(canonical);
+                _ = directories.Add(directory);
             }
         }
 
@@ -609,7 +610,7 @@ internal sealed partial class ChunkedBackupService(
         IReadOnlyList<ChunkWorkItem> workItems,
         string chunksDir,
         ChunkCipherSet cipher,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         ChunkWriteContext context,
         ProgressTracker tracker,
         CancellationToken cancellationToken
@@ -644,9 +645,10 @@ internal sealed partial class ChunkedBackupService(
                         {
                             var metadata = fileOperationsService.GetFileMetadata(item.File.FullPath);
 
-                            var entry = await this.ChunkAndEncryptFileAsync(
+                            entries[index] = await this.ChunkAndEncryptFileAsync(
                                     item.File.FullPath,
                                     item.File.RelativePath,
+                                    metadata,
                                     chunksDir,
                                     cipher,
                                     storedChunks,
@@ -655,8 +657,6 @@ internal sealed partial class ChunkedBackupService(
                                     token
                                 )
                                 .ConfigureAwait(false);
-
-                            entries[index] = WithMetadata(entry, metadata);
                             tracker.CompleteFile();
                         }
                         catch (Exception ex)

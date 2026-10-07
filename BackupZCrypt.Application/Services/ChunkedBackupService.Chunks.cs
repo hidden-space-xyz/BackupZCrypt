@@ -8,6 +8,7 @@ using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.FileSystem;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -33,6 +34,7 @@ internal sealed partial class ChunkedBackupService
     /// </remarks>
     /// <param name="filePath">The absolute path of the file to read.</param>
     /// <param name="relativePath">The file's path relative to the backup root, as recorded in the manifest.</param>
+    /// <param name="metadata">The file's metadata, read before its content and recorded in the entry.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
     /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
@@ -43,9 +45,10 @@ internal sealed partial class ChunkedBackupService
     private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
         string filePath,
         string relativePath,
+        FileMetadata metadata,
         string chunksDir,
         ChunkCipherSet cipher,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         ChunkWriteContext context,
         ProgressTracker tracker,
         CancellationToken cancellationToken
@@ -105,19 +108,22 @@ internal sealed partial class ChunkedBackupService
             List<ChunkManifestChunkRef> chunkRefs = new(pending.Count);
             foreach (var chunk in pending)
             {
-                var (hashB64, nonceB64) = await chunk.Store.ConfigureAwait(false);
-                chunkRefs.Add(new ChunkManifestChunkRef(hashB64, chunk.Size, nonceB64));
+                chunkRefs.Add(new ChunkManifestChunkRef(await chunk.Store.ConfigureAwait(false), chunk.Size));
             }
 
             var fileHash = fileHasher.GetHashAndReset();
 
             try
             {
-                return new ChunkManifestFileEntry(
-                    relativePath,
-                    Convert.ToBase64String(fileHash),
-                    actualFileSize,
-                    chunkRefs
+                return WithMetadata(
+                    new ChunkManifestFileEntry(
+                        relativePath,
+                        Convert.ToBase64String(fileHash),
+                        actualFileSize,
+                        chunkRefs,
+                        metadata.LastWriteTimeUtc
+                    ),
+                    metadata
                 );
             }
             finally
@@ -147,12 +153,12 @@ internal sealed partial class ChunkedBackupService
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
     /// <param name="context">The run's chunk slots and the record of the chunk files it wrote.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The Base64-encoded content hash of the chunk and the nonce it was stored with.</returns>
-    private async Task<(string HashB64, string NonceB64)> StoreChunkAsync(
+    /// <returns>The Base64-encoded content hash of the chunk.</returns>
+    private async Task<string> StoreChunkAsync(
         ReadOnlyMemory<byte> chunkData,
         string chunksDir,
         ChunkCipherSet cipher,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         ChunkWriteContext context,
         CancellationToken cancellationToken
     )
@@ -168,7 +174,7 @@ internal sealed partial class ChunkedBackupService
             var chunkFilePath = this.ComputeChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
             var ownedHash = chunkHash;
 
-            var chunkOperation = new Lazy<Task<string>>(
+            var chunkOperation = new Lazy<Task>(
                 () =>
                     this.EncryptAndStoreChunkAsync(
                         chunkData,
@@ -185,12 +191,7 @@ internal sealed partial class ChunkedBackupService
 
             var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
 
-            var nonceB64 = await AwaitStoredChunkNonceAsync(
-                    chunkHashB64,
-                    storedChunk,
-                    chunkOperation,
-                    storedChunks
-                )
+            await AwaitStoredChunkAsync(chunkHashB64, storedChunk, chunkOperation, storedChunks)
                 .ConfigureAwait(false);
 
             if (ReferenceEquals(storedChunk, chunkOperation))
@@ -198,7 +199,7 @@ internal sealed partial class ChunkedBackupService
                 context.WrittenChunks.Add(chunkFilePath);
             }
 
-            return (chunkHashB64, nonceB64);
+            return chunkHashB64;
         }
         finally
         {
@@ -252,8 +253,8 @@ internal sealed partial class ChunkedBackupService
     /// A chunk of a file whose store has been started.
     /// </summary>
     /// <param name="Size">The plaintext length of the chunk.</param>
-    /// <param name="Store">The store operation, resolving to the chunk's hash and nonce.</param>
-    private sealed record class PendingChunk(int Size, Task<(string HashB64, string NonceB64)> Store);
+    /// <param name="Store">The store operation, resolving to the chunk's Base64-encoded hash.</param>
+    private sealed record class PendingChunk(int Size, Task<string> Store);
 
     /// <summary>
     /// Compresses a chunk when compression is enabled, encrypts it, and writes the ciphertext to its
@@ -274,8 +275,8 @@ internal sealed partial class ChunkedBackupService
     /// <param name="encryptionStrategy">The strategy used to encrypt the chunk.</param>
     /// <param name="compressionStrategy">The compression strategy, or <see langword="null"/> to store the chunk uncompressed.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The Base64-encoded nonce recorded for the chunk in the manifest.</returns>
-    private async Task<string> EncryptAndStoreChunkAsync(
+    /// <returns>A task that completes once the chunk file is on disk.</returns>
+    private async Task EncryptAndStoreChunkAsync(
         ReadOnlyMemory<byte> chunkData,
         byte[] chunkHash,
         string chunkFilePath,
@@ -293,8 +294,6 @@ internal sealed partial class ChunkedBackupService
 
         try
         {
-            var nonceB64 = Convert.ToBase64String(nonce);
-
             if (compressionStrategy is not null)
             {
                 await using var inputStream = CreateReadOnlyStream(chunkData);
@@ -362,8 +361,6 @@ internal sealed partial class ChunkedBackupService
             await fileOperationsService
                 .WriteAllBytesAtomicallyAsync(chunkFilePath, encrypted, cancellationToken)
                 .ConfigureAwait(false);
-
-            return nonceB64;
         }
         finally
         {
@@ -387,42 +384,27 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
-    /// Builds the cache that maps each chunk hash referenced by a manifest to the nonce its stored
-    /// ciphertext authenticates under.
+    /// Builds the deduplication cache of an update, holding one completed store operation for every
+    /// chunk the existing manifest references.
     /// </summary>
     /// <remarks>
-    /// A chunk's nonce is a deterministic function of the chunk-nonce sub-key and the chunk's content
-    /// hash, and that sub-key is fixed for an archive's whole lifetime because the master salt is
-    /// preserved across updates. One hash can therefore carry exactly one nonce; a manifest that
-    /// records two for the same hash is rejected rather than guessed at. The entries are shared with
-    /// the write path, which resolves its own asynchronously as chunks are stored.
+    /// The entries are shared with the write path, so a chunk the backup already holds is never
+    /// encrypted or written again. Its nonce needs no recording: it follows from the chunk-nonce
+    /// sub-key, which stays the same for the backup's whole lifetime because an update keeps the
+    /// master salt, and from the chunk hash.
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries whose chunk references are indexed.</param>
-    /// <returns>A cache keyed by Base64 chunk hash whose values resolve to the recorded Base64 nonce.</returns>
-    /// <exception cref="CryptographicException">A chunk hash carries more than one distinct nonce.</exception>
-    private static ConcurrentDictionary<string, Lazy<Task<string>>> BuildStoredChunkNonceCache(
+    /// <returns>A cache keyed by Base64 chunk hash.</returns>
+    private static ConcurrentDictionary<string, Lazy<Task>> BuildStoredChunkCache(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
-        var chunkNonceCandidates = BuildChunkNonceCandidates(manifestFiles);
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks = new(StringComparer.Ordinal);
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks = new(StringComparer.Ordinal);
+        Lazy<Task> stored = new(Task.CompletedTask);
 
-        foreach (var (chunkHashB64, nonceCandidates) in chunkNonceCandidates)
+        foreach (var chunk in manifestFiles.SelectMany(static file => file.Chunks))
         {
-            if (nonceCandidates.Length is not 1)
-            {
-                throw new CryptographicException(
-                    "A chunk hash carries more than one distinct nonce."
-                );
-            }
-
-            var nonceB64 = nonceCandidates[0];
-            var storedChunk = new Lazy<Task<string>>(
-                () => Task.FromResult(nonceB64),
-                LazyThreadSafetyMode.ExecutionAndPublication
-            );
-
-            _ = storedChunks.TryAdd(chunkHashB64, storedChunk);
+            _ = storedChunks.TryAdd(chunk.Hash, stored);
         }
 
         return storedChunks;
@@ -432,13 +414,13 @@ internal sealed partial class ChunkedBackupService
     /// Removes preloaded deduplication entries whose stored chunk is absent, linked, or has an
     /// impossible ciphertext size, so an update regenerates them from the source.
     /// </summary>
-    /// <param name="storedChunks">The preloaded hash-to-nonce cache to filter.</param>
+    /// <param name="storedChunks">The preloaded deduplication cache to filter.</param>
     /// <param name="manifestFiles">The existing manifest entries that describe stored chunks.</param>
     /// <param name="chunksDir">The archive directory that should contain the chunk files.</param>
     /// <param name="namingKey">The sub-key used to derive chunk file names.</param>
     /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
     private void RemoveUnavailableStoredChunks(
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
         string chunksDir,
         byte[] namingKey,
@@ -522,40 +504,41 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
-    /// Validates every entry path, chunk hash, and chunk nonce a manifest records, before any file is
-    /// created, read, or overwritten.
+    /// Validates every entry path, file hash, and chunk reference a manifest records, before any file
+    /// is created, read, or overwritten.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This runs as one up-front sweep so a malformed or crafted manifest is rejected before a restore
     /// creates a directory, before a verify reads a chunk, and before an update rewrites the manifest.
     /// The decoded bytes serve only as a length check and are zeroed immediately.
+    /// </para>
+    /// <para>
+    /// Paths are recorded in a single canonical form, so two entries are duplicates when their paths
+    /// are identical. Paths that only differ in letter case are distinct files on the system that wrote
+    /// them; a restore onto a system that ignores case reports the clash for the second file instead of
+    /// rejecting the whole archive.
+    /// </para>
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries to validate.</param>
-    /// <remarks>
-    /// Two entries are duplicates when their canonical paths are identical. Paths that only differ in
-    /// letter case are distinct files on the system that wrote them; a restore onto a system that
-    /// ignores case reports the clash for the second file instead of rejecting the whole archive.
-    /// </remarks>
     /// <exception cref="InvalidDataException">
-    /// An entry path is invalid or duplicated, a size is impossible, or chunk sizes do not add up
-    /// to the file size.
+    /// An entry path is invalid or duplicated, a size is impossible, one chunk hash is recorded with two
+    /// sizes, or chunk sizes do not add up to the file size.
     /// </exception>
     /// <exception cref="CryptographicException">
-    /// A file hash, chunk hash, or nonce is not canonical Base64 of the expected length.
+    /// A file hash or chunk hash is not canonical Base64 of the expected length.
     /// </exception>
     private static void ValidateManifestEntries(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
         HashSet<string> paths = new(StringComparer.Ordinal);
-
-        Dictionary<string, (int Size, string Nonce)> chunkMetadata = new(StringComparer.Ordinal);
+        Dictionary<string, int> chunkSizes = new(StringComparer.Ordinal);
 
         foreach (var file in manifestFiles)
         {
             ManifestPathPolicy.ValidateRelative(file.OriginalPath);
-            var canonicalPath = ManifestPathPolicy.Canonicalize(file.OriginalPath);
-            if (!paths.Add(canonicalPath))
+            if (!paths.Add(file.OriginalPath))
             {
                 throw new InvalidDataException("Manifest contains duplicate file paths.");
             }
@@ -565,29 +548,7 @@ internal sealed partial class ChunkedBackupService
                 throw new InvalidDataException("Manifest file size cannot be negative.");
             }
 
-            var decodedFileHash = DecodeBase64FixedLength(
-                file.FileHash,
-                SHA256.HashSizeInBytes,
-                "Invalid file hash."
-            );
-
-            try
-            {
-                if (
-                    !string.Equals(
-                        file.FileHash,
-                        Convert.ToBase64String(decodedFileHash),
-                        StringComparison.Ordinal
-                    )
-                )
-                {
-                    throw new CryptographicException("File hash is not canonical Base64.");
-                }
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(decodedFileHash);
-            }
+            EnsureCanonicalHash(file.FileHash, "Invalid file hash.");
 
             long totalChunkSize = 0;
 
@@ -607,67 +568,11 @@ internal sealed partial class ChunkedBackupService
                     throw new InvalidDataException("Manifest chunk sizes overflow the file size.", ex);
                 }
 
-                byte[]? decodedHash = null;
-                byte[]? decodedNonce = null;
+                EnsureCanonicalHash(chunk.Hash, "Invalid chunk hash.");
 
-                try
+                if (!chunkSizes.TryAdd(chunk.Hash, chunk.Size) && chunkSizes[chunk.Hash] != chunk.Size)
                 {
-                    decodedHash = DecodeBase64FixedLength(
-                        chunk.Hash,
-                        SHA256.HashSizeInBytes,
-                        "Invalid chunk hash."
-                    );
-                    decodedNonce = DecodeBase64FixedLength(
-                        chunk.Nonce,
-                        EncryptionConstants.NonceSize,
-                        "Invalid chunk nonce."
-                    );
-
-                    var canonicalHash = Convert.ToBase64String(decodedHash);
-                    var canonicalNonce = Convert.ToBase64String(decodedNonce);
-
-                    if (
-                        !string.Equals(chunk.Hash, canonicalHash, StringComparison.Ordinal)
-                        || !string.Equals(chunk.Nonce, canonicalNonce, StringComparison.Ordinal)
-                    )
-                    {
-                        throw new CryptographicException(
-                            "Chunk hash or nonce is not canonical Base64."
-                        );
-                    }
-
-                    if (chunkMetadata.TryGetValue(canonicalHash, out var metadata))
-                    {
-                        if (
-                            metadata.Size != chunk.Size
-                            || !string.Equals(
-                                metadata.Nonce,
-                                canonicalNonce,
-                                StringComparison.Ordinal
-                            )
-                        )
-                        {
-                            throw new InvalidDataException(
-                                "One chunk hash has inconsistent size or nonce metadata."
-                            );
-                        }
-                    }
-                    else
-                    {
-                        chunkMetadata.Add(canonicalHash, (chunk.Size, canonicalNonce));
-                    }
-                }
-                finally
-                {
-                    if (decodedHash is not null)
-                    {
-                        CryptographicOperations.ZeroMemory(decodedHash);
-                    }
-
-                    if (decodedNonce is not null)
-                    {
-                        CryptographicOperations.ZeroMemory(decodedNonce);
-                    }
+                    throw new InvalidDataException("One chunk hash has inconsistent size metadata.");
                 }
             }
 
@@ -681,47 +586,31 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
-    /// Groups the distinct nonces a manifest records for each chunk hash.
+    /// Confirms that a hash read from the manifest is the canonical Base64 form of a SHA-256 digest.
     /// </summary>
-    /// <remarks>
-    /// The entries are expected to have passed <see cref="ValidateManifestEntries"/> already; the
-    /// Base64 forms are what the caller keys and returns.
-    /// </remarks>
-    /// <param name="manifestFiles">The manifest entries to scan.</param>
-    /// <returns>A dictionary mapping each Base64 chunk hash to its distinct Base64 nonces.</returns>
-    private static Dictionary<string, string[]> BuildChunkNonceCandidates(
-        IReadOnlyList<ChunkManifestFileEntry> manifestFiles
-    )
+    /// <param name="hash">The Base64 hash to check.</param>
+    /// <param name="errorMessage">The message carried by the exception when the hash is invalid.</param>
+    /// <exception cref="CryptographicException">The hash is not canonical Base64 of a SHA-256 digest.</exception>
+    private static void EnsureCanonicalHash(string hash, string errorMessage)
     {
-        Dictionary<string, List<string>> chunkNonceCandidates = new(StringComparer.Ordinal);
+        var decoded = DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, errorMessage);
 
-        foreach (var file in manifestFiles)
+        try
         {
-            foreach (var chunk in file.Chunks)
+            if (!string.Equals(hash, Convert.ToBase64String(decoded), StringComparison.Ordinal))
             {
-                if (!chunkNonceCandidates.TryGetValue(chunk.Hash, out var nonceCandidates))
-                {
-                    nonceCandidates = [];
-                    chunkNonceCandidates.Add(chunk.Hash, nonceCandidates);
-                }
-
-                if (!nonceCandidates.Contains(chunk.Nonce, StringComparer.Ordinal))
-                {
-                    nonceCandidates.Add(chunk.Nonce);
-                }
+                throw new CryptographicException(errorMessage);
             }
         }
-
-        return chunkNonceCandidates.ToDictionary(
-            static pair => pair.Key,
-            static pair => pair.Value.ToArray(),
-            StringComparer.Ordinal
-        );
+        finally
+        {
+            CryptographicOperations.ZeroMemory(decoded);
+        }
     }
 
     /// <summary>
-    /// Awaits the store operation for a chunk and returns its nonce, evicting a failed operation from
-    /// the cache so a later file re-attempts it instead of reusing a permanently faulted task.
+    /// Awaits the store operation for a chunk, evicting a failed operation from the cache so a later
+    /// file re-attempts it instead of reusing a permanently faulted task.
     /// </summary>
     /// <remarks>
     /// Only the operation this caller published is evicted, identified by reference, so an entry a
@@ -731,67 +620,29 @@ internal sealed partial class ChunkedBackupService
     /// <param name="storedChunk">The operation actually held in the cache, which may belong to another caller.</param>
     /// <param name="candidateChunk">The operation this caller offered when adding the entry.</param>
     /// <param name="storedChunks">The shared cache of chunk store operations.</param>
-    /// <returns>The Base64-encoded nonce the chunk was stored with.</returns>
-    private static async Task<string> AwaitStoredChunkNonceAsync(
+    /// <returns>A task that completes once the chunk is stored.</returns>
+    private static async Task AwaitStoredChunkAsync(
         string chunkHashB64,
-        Lazy<Task<string>> storedChunk,
-        Lazy<Task<string>> candidateChunk,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks
+        Lazy<Task> storedChunk,
+        Lazy<Task> candidateChunk,
+        ConcurrentDictionary<string, Lazy<Task>> storedChunks
     )
     {
         try
         {
-            return await storedChunk.Value.ConfigureAwait(false);
+            await storedChunk.Value.ConfigureAwait(false);
         }
         catch
         {
             if (ReferenceEquals(storedChunk, candidateChunk))
             {
                 _ = storedChunks.TryRemove(
-                    new KeyValuePair<string, Lazy<Task<string>>>(chunkHashB64, candidateChunk)
+                    new KeyValuePair<string, Lazy<Task>>(chunkHashB64, candidateChunk)
                 );
             }
 
             throw;
         }
-    }
-
-    /// <summary>
-    /// Orders manifest entries by path and rewrites every chunk reference with the nonce the stored
-    /// chunk actually authenticates under.
-    /// </summary>
-    /// <remarks>
-    /// An update mixes entries carried over from the previous manifest with entries produced by this
-    /// run, so every chunk reference is re-emitted from the shared resolution cache and the entries are
-    /// ordered by path, keeping the written manifest identical for identical content.
-    /// </remarks>
-    /// <param name="entries">The entries collected for the new manifest.</param>
-    /// <param name="storedChunks">The cache resolving a chunk hash to its effective nonce.</param>
-    /// <returns>The entries ordered by path, each carrying the resolved chunk nonces.</returns>
-    private static async Task<IReadOnlyList<ChunkManifestFileEntry>> CanonicalizeChunkEntriesAsync(
-        IEnumerable<ChunkManifestFileEntry> entries,
-        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks
-    )
-    {
-        List<ChunkManifestFileEntry> canonicalEntries = [];
-
-        foreach (var entry in entries.OrderBy(static e => e.OriginalPath, StringComparer.Ordinal))
-        {
-            List<ChunkManifestChunkRef> canonicalChunks = [];
-
-            foreach (var chunk in entry.Chunks)
-            {
-                var nonce = storedChunks.TryGetValue(chunk.Hash, out var storedChunk)
-                    ? await storedChunk.Value.ConfigureAwait(false)
-                    : chunk.Nonce;
-
-                canonicalChunks.Add(new ChunkManifestChunkRef(chunk.Hash, chunk.Size, nonce));
-            }
-
-            canonicalEntries.Add(entry with { Chunks = canonicalChunks });
-        }
-
-        return canonicalEntries;
     }
 
     /// <summary>

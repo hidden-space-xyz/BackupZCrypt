@@ -63,14 +63,13 @@ internal sealed partial class ChunkedBackupService
 
             foreach (var entry in backup.Manifest.Files)
             {
-                var canonicalPath = ManifestPathPolicy.Canonicalize(entry.OriginalPath);
-                recordedFiles[canonicalPath] = entry;
+                recordedFiles[entry.OriginalPath] = entry;
 
-                if (sourceFiles.ContainsKey(canonicalPath))
+                if (sourceFiles.ContainsKey(entry.OriginalPath))
                 {
                     matchedFiles++;
                 }
-                else if (!snapshot.IsInsideInaccessibleDirectory(canonicalPath))
+                else if (!snapshot.IsInsideInaccessibleDirectory(entry.OriginalPath))
                 {
                     removedPaths.Add(entry.OriginalPath);
                 }

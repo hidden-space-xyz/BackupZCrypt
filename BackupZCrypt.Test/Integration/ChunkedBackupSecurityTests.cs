@@ -210,6 +210,16 @@ public sealed class ChunkedBackupSecurityTests
         var chunkHash = Convert.FromBase64String(chunkRef.Hash);
         var namingMac = HMACSHA256.HashData(namingKey, chunkHash);
         var nonceMac = HMACSHA256.HashData(chunkNonceKey, chunkHash);
+        var nonce = nonceMac[..EncryptionConstants.NonceSize];
+
+        var storedChunk = await File.ReadAllBytesAsync(
+            Path.Join(destination.Path, BackupConstants.ChunksDirectoryName, ChunkFileNames(destination.Path).Single()),
+            TestContext.Current.CancellationToken
+        );
+        var decryptedChunk = provider
+            .GetRequiredService<IEncryptionServiceFactory>()
+            .Create(EncryptionAlgorithm.Aes)
+            .DecryptChunk(storedChunk, chunkEncryptionKey, nonce, [.. chunkHash, .. nonce]);
 
         var distinctSubKeys = new[] { chunkEncryptionKey, chunkNonceKey, namingKey, manifestKey }
             .Select(Convert.ToHexStringLower)
@@ -220,10 +230,7 @@ public sealed class ChunkedBackupSecurityTests
                 Convert.ToHexStringLower(namingMac) + BackupConstants.AppFileExtension,
                 ChunkFileNames(destination.Path).Single()
             ),
-            () => Assert.Equal(
-                nonceMac[..EncryptionConstants.NonceSize],
-                Convert.FromBase64String(chunkRef.Nonce)
-            ),
+            () => Assert.Equal("sub-key separation probe"u8.ToArray(), decryptedChunk),
             () => Assert.NotEqual(nonceMac, namingMac),
             () => Assert.Equal(4, distinctSubKeys.Count),
             () => Assert.NotNull(manifestService.DecryptChunkManifest(preamble, manifestKey)),
@@ -413,12 +420,12 @@ public sealed class ChunkedBackupSecurityTests
                 manifest with { Files = [entry with { TotalSize = entry.TotalSize + 1 }] }
             ),
             (
-                "invalid chunk nonce",
+                "invalid chunk hash",
                 manifest with
                 {
                     Files =
                     [
-                        entry with { Chunks = [chunk with { Nonce = "not-base64" }] },
+                        entry with { Chunks = [chunk with { Hash = "not-base64" }] },
                     ],
                 }
             ),
@@ -487,68 +494,6 @@ public sealed class ChunkedBackupSecurityTests
                 "Restore accepted a chunk that decompresses past the size the manifest declares."
             ),
             () => Assert.Contains(MessageCode.UnexpectedErrorFormat, CollectCodes(result)),
-            () => Assert.Empty(FilesUnder(restored.Path))
-        );
-    }
-
-    [Fact]
-    internal async Task RestoreAsync_ManifestRecordsTwoNoncesForOneChunkHash_IsRejectedInsteadOfGuessed()
-    {
-        await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
-
-        using var source = new TempDir();
-        using var destination = new TempDir();
-        using var restored = new TempDir();
-
-        const string SharedContent = "content whose chunk nonce is derived, not chosen";
-        _ = source.WriteText("a.txt", SharedContent);
-        _ = source.WriteText("b.txt", SharedContent);
-        await CreateBackupAsync(createHandler, source.Path, destination.Path, CompressionMode.None);
-
-        var (preamble, masterKey, manifest) = await OpenManifestAsync(
-            provider,
-            destination.Path,
-            Password
-        );
-        var manifestKey = ExpandSubKey(masterKey, "manifest-encryption"u8);
-
-        _ = Assert.Single(
-            manifest.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash).Distinct(StringComparer.Ordinal)
-        );
-
-        var foreignNonce = Convert.ToBase64String(new byte[EncryptionConstants.NonceSize]);
-        Assert.NotEqual(manifest.Files[0].Chunks[0].Nonce, foreignNonce);
-
-        var second = manifest.Files[1];
-        var crafted = manifest with
-        {
-            Files =
-            [
-                manifest.Files[0],
-                second with
-                {
-                    Chunks =
-                    [
-                        .. second.Chunks.Select(c => c with { Nonce = foreignNonce }),
-                    ],
-                },
-            ],
-        };
-        await SaveManifestAsync(provider, destination.Path, preamble, manifestKey, crafted);
-
-        var result = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path),
-            TestContext.Current.CancellationToken
-        );
-
-        Assert.Multiple(
-            () => Assert.False(
-                result.IsSuccess && result.Value.Completion!.IsSuccess,
-                "A chunk nonce is a deterministic function of the chunk hash, so a manifest offering two "
-                    + "for one hash is crafted and must be rejected rather than resolved by trial decryption."
-            ),
             () => Assert.Empty(FilesUnder(restored.Path))
         );
     }
@@ -710,9 +655,9 @@ public sealed class ChunkedBackupSecurityTests
     /// </summary>
     /// <remarks>
     /// A case that reasons about sub-key separation must first anchor at least one of these keys against
-    /// a value the backup really produced — a chunk file name or a recorded nonce re-derived from the
-    /// password alone — because a sub-key that had drifted from the engine's own derivation would let
-    /// every separation assertion pass vacuously.
+    /// a value the backup really produced — a chunk file name, or a stored chunk that decrypts under a
+    /// nonce re-derived from the password alone — because a sub-key that had drifted from the engine's
+    /// own derivation would let every separation assertion pass vacuously.
     /// </remarks>
     /// <param name="masterKey">The master key derived from the password and the backup's salt.</param>
     /// <param name="context">The label identifying the sub-key's purpose.</param>

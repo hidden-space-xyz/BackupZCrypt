@@ -91,11 +91,11 @@ On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
 | **Manifest** | The file list is a separately encrypted, authenticated document. Only its 34-byte header — cipher, key derivation function and salt — is readable, and that header is bound into the ciphertext so it cannot be swapped |
 | **Restore** | Entry paths are validated and confined to the destination, decompression is bounded by the declared size, and every restored file's SHA-256 is re-checked against the manifest |
 
-Key material is wiped from memory after use, and hashes and salts are compared in constant time.
+Key material is wiped from memory after use, and file hashes are compared in constant time.
 
-Backups are portable between operating systems: the manifest records paths with `/` separators
-regardless of the platform that wrote it, and restore accepts either separator, so an archive created
-on Windows rebuilds the same directory tree on Linux and macOS. A name that is valid where the backup was
+Backups are portable between operating systems: the manifest records paths with `/` separators and
+in Unicode composed form regardless of the platform that wrote it, so an archive created on Windows
+rebuilds the same directory tree on Linux and macOS. A name that is valid where the backup was
 created but not where it is restored — a colon in a Linux file name restored on Windows, for example —
 is reported for that file while every other file is restored.
 

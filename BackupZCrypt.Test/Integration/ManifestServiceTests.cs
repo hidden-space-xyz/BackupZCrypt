@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 using BackupZCrypt.Application.Services;
@@ -110,22 +111,6 @@ public sealed class ManifestServiceTests
     }
 
     /// <summary>
-    /// Supplies the master salt encodings a manifest document must never be accepted with: absent,
-    /// whitespace only, not Base64 at all, and Base64 that decodes to the wrong number of bytes.
-    /// </summary>
-    /// <returns>One malformed master salt per case.</returns>
-    public static TheoryData<string> MalformedDocumentMasterSalts()
-    {
-        return new()
-        {
-            string.Empty,
-            "   ",
-            "not base64 !!",
-            Convert.ToBase64String(new byte[EncryptionConstants.SaltSize - 1]),
-        };
-    }
-
-    /// <summary>
     /// Builds a manifest with the requested number of entries, each carrying a distinct opaque hash so
     /// two manifests written into the same directory are trivially distinguishable once decrypted.
     /// </summary>
@@ -145,8 +130,9 @@ public sealed class ManifestServiceTests
                 new ChunkManifestFileEntry(
                     string.Create(CultureInfo.InvariantCulture, $"file{index}.txt"),
                     hash,
-                    index,
-                    [new ChunkManifestChunkRef(hash, index, Convert.ToBase64String(new byte[EncryptionConstants.NonceSize]))]
+                    index + 1,
+                    [new ChunkManifestChunkRef(hash, index + 1)],
+                    new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(index)
                 )
             );
         }
@@ -159,34 +145,21 @@ public sealed class ManifestServiceTests
     }
 
     /// <summary>
-    /// Hand-builds a manifest preamble whose encrypted document can be made to contradict the preamble
-    /// it ships with. The associated data is always derived from the preamble's own values, so the AEAD
-    /// tag verifies and decryption reaches the cross-checks that compare the document against the preamble.
+    /// Encrypts a hand-written manifest document under a valid AES plus PBKDF2 preamble, so the AEAD
+    /// tag verifies and decryption reaches the parsing and validation of the document itself.
     /// </summary>
     /// <param name="encryptionServiceFactory">The factory producing the AES strategy that encrypts the document.</param>
     /// <param name="key">The manifest encryption key.</param>
     /// <param name="preambleSalt">The 32-byte master salt recorded in the preamble and bound as associated data.</param>
-    /// <param name="documentMasterSalt">The Base64 master salt echoed inside the encrypted document.</param>
-    /// <param name="documentAlgorithm">The encryption algorithm the document declares.</param>
-    /// <param name="documentKeyDerivation">The key derivation algorithm the document declares.</param>
-    /// <returns>A preamble that always declares AES plus PBKDF2 and decrypts successfully.</returns>
-    private static ManifestPreamble BuildCraftedPreamble(
+    /// <param name="json">The document to encrypt.</param>
+    /// <returns>A preamble that declares AES plus PBKDF2 and carries the encrypted document.</returns>
+    private static ManifestPreamble EncryptDocument(
         IEncryptionServiceFactory encryptionServiceFactory,
         byte[] key,
         byte[] preambleSalt,
-        string documentMasterSalt,
-        EncryptionAlgorithm documentAlgorithm = EncryptionAlgorithm.Aes,
-        KeyDerivationAlgorithm documentKeyDerivation = KeyDerivationAlgorithm.PBKDF2
+        string json
     )
     {
-        ChunkManifestDocument document = new(
-            documentAlgorithm,
-            documentKeyDerivation,
-            CompressionMode.None,
-            documentMasterSalt,
-            []
-        );
-
         var associatedData = new byte[PreambleHeaderLength];
         associatedData[0] = (byte)EncryptionAlgorithm.Aes;
         associatedData[1] = (byte)KeyDerivationAlgorithm.PBKDF2;
@@ -195,7 +168,7 @@ public sealed class ManifestServiceTests
         var nonce = RandomNumberGenerator.GetBytes(EncryptionConstants.NonceSize);
         var ciphertext = encryptionServiceFactory
             .Create(EncryptionAlgorithm.Aes)
-            .EncryptChunk(JsonSerializer.SerializeToUtf8Bytes(document), key, nonce, associatedData);
+            .EncryptChunk(Encoding.UTF8.GetBytes(json), key, nonce, associatedData);
 
         return new ManifestPreamble(
             EncryptionAlgorithm.Aes,
@@ -204,6 +177,39 @@ public sealed class ManifestServiceTests
             nonce,
             ciphertext
         );
+    }
+
+    /// <summary>
+    /// Decrypts the manifest a backup folder holds and returns its JSON document, so a test can check
+    /// what the file records rather than what the service rebuilds from it.
+    /// </summary>
+    /// <param name="encryptionServiceFactory">The factory producing the strategy the manifest names.</param>
+    /// <param name="backupRoot">The backup folder holding the manifest.</param>
+    /// <param name="key">The manifest encryption key.</param>
+    /// <returns>The root element of the decrypted document.</returns>
+    private static async Task<JsonElement> ReadDocumentAsync(
+        IEncryptionServiceFactory encryptionServiceFactory,
+        string backupRoot,
+        byte[] key
+    )
+    {
+        var manifest = await File.ReadAllBytesAsync(
+            Path.Join(backupRoot, BackupConstants.ManifestFileName),
+            TestContext.Current.CancellationToken
+        );
+        const int PayloadStart = PreambleHeaderLength + EncryptionConstants.NonceSize;
+
+        var json = encryptionServiceFactory
+            .Create((EncryptionAlgorithm)manifest[0])
+            .DecryptChunk(
+                manifest.AsSpan(PayloadStart),
+                key,
+                manifest[PreambleHeaderLength..PayloadStart],
+                manifest[..PreambleHeaderLength]
+            );
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.Clone();
     }
 
     /// <summary>
@@ -315,23 +321,29 @@ public sealed class ManifestServiceTests
         using var backup = new TempDir();
         var key = RandomNumberGenerator.GetBytes(KeyLength);
         var masterSalt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize));
+        var modified = new DateTime(2026, 5, 17, 8, 30, 15, DateTimeKind.Utc).AddTicks(1234567);
 
         ChunkManifestData original = new(
             new ManifestHeader(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2, CompressionMode.Zstd),
             masterSalt,
             [
-                new ChunkManifestFileEntry("z.txt", "emptyfilehash", 0, []),
+                new ChunkManifestFileEntry("z.txt", "emptyfilehash", 0, [], modified),
                 new ChunkManifestFileEntry(
                     "docs/notes.md",
                     "notesfilehash",
                     9001L,
                     [
-                        new ChunkManifestChunkRef("chunkhashone", 4096, "nonceone"),
-                        new ChunkManifestChunkRef("chunkhashtwo", 4905, "noncetwo"),
-                    ]
+                        new ChunkManifestChunkRef("chunkhashone", 4096),
+                        new ChunkManifestChunkRef("chunkhashtwo", 4905),
+                    ],
+                    modified.AddDays(-3),
+                    ManifestFileAttributes.ReadOnly | ManifestFileAttributes.Hidden,
+                    420
                 ),
-                new ChunkManifestFileEntry("a.txt", "afilehash", 12, [new ChunkManifestChunkRef("chunkhashthree", 12, "noncethree")]),
-            ]
+                new ChunkManifestFileEntry("b.txt", "bfilehash", 7, [new ChunkManifestChunkRef("otherhash", 7)], modified),
+                new ChunkManifestFileEntry("a.txt", "afilehash", 12, [new ChunkManifestChunkRef("afilehash", 12)], modified),
+            ],
+            ["empty/folder"]
         );
 
         var errors = await manifestService.SaveChunkManifestAsync(
@@ -353,7 +365,7 @@ public sealed class ManifestServiceTests
 
         // The expected order is a typed local rather than an inline collection expression so both sides of
         // the comparison below are string[]: Assert.Equal then compares them element by element, in order.
-        string[] expectedPathOrder = ["a.txt", "docs/notes.md", "z.txt"];
+        string[] expectedPathOrder = ["a.txt", "b.txt", "docs/notes.md", "z.txt"];
 
         Assert.Multiple(
             () => Assert.Equal(EncryptionAlgorithm.Aes, preamble!.Algorithm),
@@ -362,6 +374,7 @@ public sealed class ManifestServiceTests
             () => Assert.Equal(EncryptionConstants.NonceSize, preamble!.Nonce.Length),
             () => Assert.Equal(original.Header, decrypted!.Header),
             () => Assert.Equal(masterSalt, decrypted!.MasterSalt),
+            () => Assert.Equal(original.Directories, decrypted!.Directories),
             () => Assert.Equal(expectedPathOrder, decrypted!.Files.Select(static file => file.OriginalPath).ToArray()),
             () =>
             {
@@ -371,8 +384,67 @@ public sealed class ManifestServiceTests
                     Assert.Equal(expected.FileHash, actual.FileHash);
                     Assert.Equal(expected.TotalSize, actual.TotalSize);
                     Assert.Equal(expected.Chunks, actual.Chunks);
+                    Assert.Equal(expected.LastWriteTimeUtc, actual.LastWriteTimeUtc);
+                    Assert.Equal(expected.Attributes, actual.Attributes);
+                    Assert.Equal(expected.UnixMode, actual.UnixMode);
                 }
             }
+        );
+    }
+
+    [Fact]
+    internal async Task SaveChunkManifestAsync_WritesNothingTheManifestAlreadyRecordsElsewhere()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var manifestService = provider.GetRequiredService<IManifestService>();
+        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+
+        using var backup = new TempDir();
+        var key = RandomNumberGenerator.GetBytes(KeyLength);
+        var modified = new DateTime(2026, 5, 17, 8, 30, 15, DateTimeKind.Utc);
+
+        ChunkManifestData manifest = new(
+            new ManifestHeader(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2, CompressionMode.None),
+            Convert.ToBase64String(RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize)),
+            [
+                new ChunkManifestFileEntry("empty.txt", "emptyhash", 0, [], modified),
+                new ChunkManifestFileEntry("small.txt", "smallhash", 12, [new ChunkManifestChunkRef("smallhash", 12)], modified),
+                new ChunkManifestFileEntry(
+                    "large.bin",
+                    "largehash",
+                    9001,
+                    [new ChunkManifestChunkRef("one", 4096), new ChunkManifestChunkRef("two", 4905)],
+                    modified
+                ),
+            ]
+        );
+
+        var errors = await manifestService.SaveChunkManifestAsync(
+            manifest,
+            backup.Path,
+            key,
+            EncryptionAlgorithm.Aes,
+            CancellationToken.None
+        );
+        Assert.Empty(errors);
+
+        var document = await ReadDocumentAsync(encryptionServiceFactory, backup.Path, key);
+        var files = document
+            .GetProperty("Files")
+            .EnumerateArray()
+            .ToDictionary(static file => file.GetProperty("OriginalPath").GetString()!, StringComparer.Ordinal);
+        string[] expectedDocumentMembers = ["Compression", "Files"];
+        string[] expectedChunkMembers = ["Hash", "Size"];
+
+        Assert.Multiple(
+            () => Assert.Equal(expectedDocumentMembers, document.EnumerateObject().Select(static m => m.Name).ToArray()),
+            () => Assert.False(files["empty.txt"].TryGetProperty("Chunks", out _)),
+            () => Assert.False(files["small.txt"].TryGetProperty("Chunks", out _)),
+            () => Assert.Equal(2, files["large.bin"].GetProperty("Chunks").GetArrayLength()),
+            () => Assert.All(
+                files["large.bin"].GetProperty("Chunks").EnumerateArray(),
+                chunk => Assert.Equal(expectedChunkMembers, chunk.EnumerateObject().Select(static m => m.Name).ToArray())
+            )
         );
     }
 
@@ -454,7 +526,7 @@ public sealed class ManifestServiceTests
     }
 
     [Fact]
-    internal async Task DecryptChunkManifest_DocumentContradictsPreamble_ReturnsNull()
+    internal async Task DecryptChunkManifest_Document_TakesTheAlgorithmsAndSaltFromThePreamble()
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
@@ -462,32 +534,53 @@ public sealed class ManifestServiceTests
 
         var key = RandomNumberGenerator.GetBytes(KeyLength);
         var preambleSalt = RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize);
-        var foreignSalt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize));
-        var matchingSalt = Convert.ToBase64String(preambleSalt);
-
-        var control = BuildCraftedPreamble(encryptionServiceFactory, key, preambleSalt, matchingSalt);
-        var saltEcho = BuildCraftedPreamble(encryptionServiceFactory, key, preambleSalt, foreignSalt);
-        var algorithmEcho = BuildCraftedPreamble(
+        var preamble = EncryptDocument(
             encryptionServiceFactory,
             key,
             preambleSalt,
-            matchingSalt,
-            documentAlgorithm: EncryptionAlgorithm.Twofish
-        );
-        var keyDerivationEcho = BuildCraftedPreamble(
-            encryptionServiceFactory,
-            key,
-            preambleSalt,
-            matchingSalt,
-            documentKeyDerivation: KeyDerivationAlgorithm.Scrypt
+            """
+            {"Compression":3,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":5,"LastWriteTimeUtc":"2026-01-01T00:00:00Z"}]}
+            """
         );
 
+        var manifest = manifestService.DecryptChunkManifest(preamble, key);
+
+        Assert.NotNull(manifest);
         Assert.Multiple(
-            () => Assert.NotNull(manifestService.DecryptChunkManifest(control, key)),
-            () => Assert.Null(manifestService.DecryptChunkManifest(saltEcho, key)),
-            () => Assert.Null(manifestService.DecryptChunkManifest(algorithmEcho, key)),
-            () => Assert.Null(manifestService.DecryptChunkManifest(keyDerivationEcho, key))
+            () => Assert.Equal(
+                new ManifestHeader(EncryptionAlgorithm.Aes, KeyDerivationAlgorithm.PBKDF2, CompressionMode.ZstdBest),
+                manifest.Header
+            ),
+            () => Assert.Equal(Convert.ToBase64String(preambleSalt), manifest.MasterSalt),
+            () => Assert.Equal([new ChunkManifestChunkRef("h", 5)], manifest.Files.Single().Chunks)
         );
+    }
+
+    [Theory]
+    [InlineData("""{"Files":[]}""")]
+    [InlineData("""{"Compression":0}""")]
+    [InlineData("""{"Compression":99,"Files":[]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":5}]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":null,"FileHash":"h","TotalSize":5,"LastWriteTimeUtc":"2026-01-01T00:00:00Z"}]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":4194305,"LastWriteTimeUtc":"2026-01-01T00:00:00Z"}]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":-1,"LastWriteTimeUtc":"2026-01-01T00:00:00Z"}]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":5,"LastWriteTimeUtc":"2026-01-01T00:00:00Z","Chunks":[null]}]}""")]
+    [InlineData("""{"Compression":0,"Files":[{"OriginalPath":"a.txt","FileHash":"h","TotalSize":5,"LastWriteTimeUtc":"2026-01-01T00:00:00Z","Chunks":[{"Hash":"h"}]}]}""")]
+    internal async Task DecryptChunkManifest_DocumentMissingWhatItMustRecord_ReturnsNull(string json)
+    {
+        await using var provider = TestHost.CreateProvider();
+        var manifestService = provider.GetRequiredService<IManifestService>();
+        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+
+        var key = RandomNumberGenerator.GetBytes(KeyLength);
+        var preamble = EncryptDocument(
+            encryptionServiceFactory,
+            key,
+            RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize),
+            json
+        );
+
+        Assert.Null(manifestService.DecryptChunkManifest(preamble, key));
     }
 
     [Theory]
@@ -675,22 +768,6 @@ public sealed class ManifestServiceTests
                 "a save whose rename never happened must not leave a manifest at the destination"
             )
         );
-    }
-
-    [Theory]
-    [MemberData(nameof(MalformedDocumentMasterSalts))]
-    internal async Task DecryptChunkManifest_DocumentMasterSaltIsNotDecodable_ReturnsNull(string documentMasterSalt)
-    {
-        await using var provider = TestHost.CreateProvider();
-        var manifestService = provider.GetRequiredService<IManifestService>();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
-
-        var key = RandomNumberGenerator.GetBytes(KeyLength);
-        var preambleSalt = RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize);
-
-        var crafted = BuildCraftedPreamble(encryptionServiceFactory, key, preambleSalt, documentMasterSalt);
-
-        Assert.Null(manifestService.DecryptChunkManifest(crafted, key));
     }
 
     [Fact]

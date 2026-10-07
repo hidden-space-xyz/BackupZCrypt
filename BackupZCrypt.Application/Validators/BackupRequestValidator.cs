@@ -334,8 +334,8 @@ internal sealed class BackupRequestValidator(
     /// </summary>
     /// <remarks>
     /// The length and spacing rules only apply when a password is chosen. Every other operation
-    /// opens a backup whose password already exists, and refusing it here would lock the user out of
-    /// a backup an earlier version allowed them to create.
+    /// opens a backup whose password already exists, so the backup itself decides whether the
+    /// password is right.
     /// </remarks>
     /// <param name="request">The backup request carrying the password.</param>
     /// <param name="errors">The list the findings are appended to.</param>

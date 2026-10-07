@@ -38,6 +38,8 @@ public sealed class ManifestPathPolicyTests
             "/absolute.txt",
             "\\absolute.txt",
             "nul\0char.txt",
+            "docs\\notes.md",
+            "café.txt",
         };
     }
 
@@ -108,7 +110,7 @@ public sealed class ManifestPathPolicyTests
 
     [Theory]
     [MemberData(nameof(RejectedPaths))]
-    internal void ValidateRelative_TraversalAndEmptyPaths_AreRejectedOnEveryPlatform(string path)
+    internal void ValidateRelative_TraversalEmptyAndNonCanonicalPaths_AreRejectedOnEveryPlatform(string path)
     {
         _ = Assert.Throws<InvalidDataException>(() => ManifestPathPolicy.ValidateRelative(path));
     }
@@ -124,8 +126,8 @@ public sealed class ManifestPathPolicyTests
     [Theory]
     [InlineData("root.txt")]
     [InlineData("docs/notes.md")]
-    [InlineData("docs\\notes.md")]
     [InlineData("docs/sub/deep.txt")]
+    [InlineData("café.txt")]
     [InlineData("a.b/c..d/e.txt")]
     internal void ValidateRelative_OrdinaryRelativePaths_AreAccepted(string path)
     {
