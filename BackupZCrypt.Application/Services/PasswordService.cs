@@ -117,6 +117,24 @@ internal sealed partial class PasswordService : IPasswordService
     private const string SimilarChars = "il1Lo0O";
 
     /// <summary>
+    /// The shortest repeat of earlier text that the repetition analysis treats as adding no new
+    /// information beyond a reference to it.
+    /// </summary>
+    private const int MinimumRepeatLength = 3;
+
+    /// <summary>
+    /// How far back the repetition analysis looks for an earlier occurrence, and the longest repeat
+    /// it measures, which keeps the analysis linear in practice for passwords of any accepted length.
+    /// </summary>
+    private const int RepeatWindow = 256;
+
+    /// <summary>
+    /// The number of characters the repetition analysis must remove before it suggests reducing
+    /// repeats, so a single short coincidence in a long random password does not trigger the tip.
+    /// </summary>
+    private const int RepeatTipMinimumSavedCharacters = 3;
+
+    /// <summary>
     /// The match timeout applied to every regex in this class.
     /// </summary>
     /// <remarks>
@@ -133,6 +151,7 @@ internal sealed partial class PasswordService : IPasswordService
     private static readonly string[] CommonSubstrings =
     [
         "password",
+        "passw",
         "qwerty",
         "admin",
         "user",
@@ -143,6 +162,19 @@ internal sealed partial class PasswordService : IPasswordService
         "abc",
         "qwe",
         "letmein",
+        "welcome",
+        "iloveyou",
+        "monkey",
+        "dragon",
+        "master",
+        "secret",
+        "summer",
+        "winter",
+        "football",
+        "princess",
+        "sunshine",
+        "contrasena",
+        "clave",
     ];
 
     /// <summary>
@@ -191,10 +223,10 @@ internal sealed partial class PasswordService : IPasswordService
 
         var trimmed = password.Trim();
         var poolSize = EstimatePoolSize(trimmed, out var compositionFlags);
-        var baseEntropy = poolSize > 1 ? trimmed.Length * Math.Log2(poolSize) : 0;
+        var effectiveLength = EffectiveLength(trimmed);
+        var baseEntropy = poolSize > 1 ? effectiveLength * Math.Log2(poolSize) : 0;
         double penaltyBits = 0;
 
-        penaltyBits += RepetitionPenalty(trimmed);
         penaltyBits += SequencePenalty(trimmed);
         penaltyBits += PatternPenalty(trimmed);
         penaltyBits += YearPenalty(trimmed);
@@ -215,7 +247,7 @@ internal sealed partial class PasswordService : IPasswordService
         }
 
         var strength = GetStrengthFromScore(score);
-        var tips = BuildTips(compositionFlags, trimmed);
+        var tips = BuildTips(compositionFlags, trimmed, effectiveLength);
 
         return new PasswordStrengthAnalysis(
             strength,
@@ -304,11 +336,27 @@ internal sealed partial class PasswordService : IPasswordService
 
                 var value = randomBytes[bufferIndex++];
 
-                if (value < maxValidByte)
+                if (value >= maxValidByte)
                 {
-                    _ = password.Append(availableChars[value % charCount]);
-                    i++;
+                    continue;
                 }
+
+                var candidate = availableChars[value % charCount];
+
+                if (
+                    charCount > 2
+                    && password.Length >= 2
+                    && (
+                        (password[^1] == candidate && password[^2] == candidate)
+                        || FormsLinearRun(password[^2], password[^1], candidate)
+                    )
+                )
+                {
+                    continue;
+                }
+
+                _ = password.Append(candidate);
+                i++;
             }
 
             return password.ToString();
@@ -367,39 +415,50 @@ internal sealed partial class PasswordService : IPasswordService
     }
 
     /// <summary>
-    /// Computes the entropy penalty for runs of three or more identical adjacent characters, charging 1.5 bits
-    /// for every character beyond the second in each run.
+    /// Counts the characters of a password that carry new information: every stretch of at least
+    /// <see cref="MinimumRepeatLength"/> characters that repeats earlier text — a run such as
+    /// <c>aaaa</c> or a cycle such as <c>Aa1!Aa1!</c> — counts as a single character, the way a
+    /// compressor would encode it as one back-reference.
     /// </summary>
+    /// <remarks>
+    /// Counting every character at the full alphabet size would rate thirty repeated letters, or one
+    /// four-character block typed five times, as strong; an attacker's tools try exactly those
+    /// patterns first. The search only looks back <see cref="RepeatWindow"/> characters and measures
+    /// repeats up to that length, which bounds the work for the longest accepted password.
+    /// </remarks>
     /// <param name="password">The password to inspect.</param>
-    /// <returns>The penalty in bits.</returns>
-    private static double RepetitionPenalty(string password)
+    /// <returns>The number of characters left once repeats are counted as one.</returns>
+    private static int EffectiveLength(string password)
     {
-        double penalty = 0;
-        var runLength = 1;
+        var tokens = 0;
+        var position = 0;
 
-        for (var i = 1; i < password.Length; i++)
+        while (position < password.Length)
         {
-            if (password[i] == password[i - 1])
+            var longest = 0;
+            var windowStart = Math.Max(0, position - RepeatWindow);
+
+            for (var start = windowStart; start < position; start++)
             {
-                runLength++;
-            }
-            else
-            {
-                if (runLength > 2)
+                var length = 0;
+
+                while (
+                    length < RepeatWindow
+                    && position + length < password.Length
+                    && password[start + length] == password[position + length]
+                )
                 {
-                    penalty += (runLength - 2) * 1.5;
+                    length++;
                 }
 
-                runLength = 1;
+                longest = Math.Max(longest, length);
             }
+
+            tokens++;
+            position += longest >= MinimumRepeatLength ? longest : 1;
         }
 
-        if (runLength > 2)
-        {
-            penalty += (runLength - 2) * 1.5;
-        }
-
-        return penalty;
+        return tokens;
     }
 
     /// <summary>
@@ -424,36 +483,43 @@ internal sealed partial class PasswordService : IPasswordService
     }
 
     /// <summary>
-    /// Charges 2 bits for every character beyond the second at each position where the password begins to track
-    /// the given sequence for at least three characters.
+    /// Charges 2 bits for every character beyond the second of each stretch of at least three
+    /// characters that follows the given sequence from any point in it, so <c>123</c> and
+    /// <c>cde</c> count as well as <c>012</c> and <c>abc</c>.
     /// </summary>
     /// <param name="passwordLower">The password lowercased for comparison.</param>
-    /// <param name="sequence">The sequence to match against, starting at its first character.</param>
+    /// <param name="sequence">The sequence to match against.</param>
     /// <returns>The penalty in bits.</returns>
     private static double SequenceScan(string passwordLower, string sequence)
     {
         double penalty = 0;
+        var i = 0;
 
-        for (var i = 0; i <= passwordLower.Length - 3; i++)
+        while (i <= passwordLower.Length - 3)
         {
-            var max = Math.Min(sequence.Length, passwordLower.Length - i);
+            var start = sequence.IndexOf(passwordLower[i], StringComparison.Ordinal);
             var len = 0;
 
-            for (var j = 0; j < max; j++)
+            if (start >= 0)
             {
-                if (passwordLower[i + j] == sequence[j])
+                while (
+                    i + len < passwordLower.Length
+                    && start + len < sequence.Length
+                    && passwordLower[i + len] == sequence[start + len]
+                )
                 {
                     len++;
-                }
-                else
-                {
-                    break;
                 }
             }
 
             if (len >= 3)
             {
                 penalty += (len - 2) * 2.0;
+                i += len;
+            }
+            else
+            {
+                i++;
             }
         }
 
@@ -544,8 +610,13 @@ internal sealed partial class PasswordService : IPasswordService
     /// </summary>
     /// <param name="flags">The character classes detected in the password.</param>
     /// <param name="password">The password the advice is about.</param>
+    /// <param name="effectiveLength">The number of characters left once repeats are counted as one.</param>
     /// <returns>The applicable tips, in the order they are shown.</returns>
-    private static List<MessageCode> BuildTips(PasswordComposition flags, string password)
+    private static List<MessageCode> BuildTips(
+        PasswordComposition flags,
+        string password,
+        int effectiveLength
+    )
     {
         List<MessageCode> tips = [];
 
@@ -579,14 +650,19 @@ internal sealed partial class PasswordService : IPasswordService
             tips.Add(MessageCode.TipMoreVariety);
         }
 
-        if (HasObviousSequence(password))
+        if (SequencePenalty(password) > 0)
         {
             tips.Add(MessageCode.TipAvoidSequences);
         }
 
-        if (HasRepeats(password))
+        if (HasRepeats(password, effectiveLength))
         {
             tips.Add(MessageCode.TipReduceRepeats);
+        }
+
+        if (PatternPenalty(password) > 0)
+        {
+            tips.Add(MessageCode.TipAvoidCommonWords);
         }
 
         if (YearRegex.IsMatch(password))
@@ -598,35 +674,59 @@ internal sealed partial class PasswordService : IPasswordService
     }
 
     /// <summary>
-    /// Determines whether the password contains the first four characters of a known linear sequence, read
-    /// either forwards or backwards.
+    /// Determines whether three characters follow one of the known linear sequences, forwards or
+    /// backwards, ignoring letter case. The generator rejects such a character so the passwords it
+    /// produces are never flagged by the analysis that judges them.
     /// </summary>
-    /// <param name="password">The password to inspect.</param>
-    /// <returns><see langword="true"/> if an obvious sequence is present; otherwise <see langword="false"/>.</returns>
-    private static bool HasObviousSequence(string password)
+    /// <param name="first">The first character.</param>
+    /// <param name="second">The second character.</param>
+    /// <param name="third">The third character.</param>
+    /// <returns><see langword="true"/> when the three characters are consecutive in a sequence.</returns>
+    private static bool FormsLinearRun(char first, char second, char third)
     {
-        var lower = password.ToLowerInvariant();
+        var a = char.ToLowerInvariant(first);
+        var b = char.ToLowerInvariant(second);
+        var c = char.ToLowerInvariant(third);
 
-        return LinearSequences.Any(seq =>
-                lower.Contains(seq[..Math.Min(seq.Length, 4)], StringComparison.Ordinal)
-            )
-            || LinearSequences.Any(seq =>
+        foreach (var sequence in LinearSequences)
+        {
+            var index = sequence.IndexOf(b, StringComparison.Ordinal);
+            if (index < 1 || index > sequence.Length - 2)
             {
-                string rev = new([.. seq.Reverse()]);
-                return lower.Contains(rev[..Math.Min(rev.Length, 4)], StringComparison.Ordinal);
-            });
+                continue;
+            }
+
+            if (
+                (sequence[index - 1] == a && sequence[index + 1] == c)
+                || (sequence[index + 1] == a && sequence[index - 1] == c)
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// Determines whether the password contains two identical adjacent characters.
+    /// Determines whether repetition weakens the password: a run of three identical characters, or
+    /// repeated stretches that together account for at least
+    /// <see cref="RepeatTipMinimumSavedCharacters"/> characters. A single doubled letter is ordinary
+    /// in words and random passwords alike and does not count.
     /// </summary>
     /// <param name="password">The password to inspect.</param>
-    /// <returns><see langword="true"/> if any character repeats immediately; otherwise <see langword="false"/>.</returns>
-    private static bool HasRepeats(string password)
+    /// <param name="effectiveLength">The number of characters left once repeats are counted as one.</param>
+    /// <returns><see langword="true"/> if the password relies on repetition.</returns>
+    private static bool HasRepeats(string password, int effectiveLength)
     {
-        for (var i = 1; i < password.Length; i++)
+        if (password.Length - effectiveLength >= RepeatTipMinimumSavedCharacters)
         {
-            if (password[i] == password[i - 1])
+            return true;
+        }
+
+        for (var i = 2; i < password.Length; i++)
+        {
+            if (password[i] == password[i - 1] && password[i] == password[i - 2])
             {
                 return true;
             }
@@ -657,17 +757,19 @@ internal sealed partial class PasswordService : IPasswordService
     private static partial Regex NumberRegex { get; }
 
     /// <summary>
-    /// Gets the source-generated regex that detects a recognized punctuation character.
+    /// Gets the source-generated regex that detects any printable ASCII character that is neither a
+    /// letter nor a digit, including the space, the backtick, and the tilde.
     /// </summary>
     /// <value>The generated regex.</value>
-    [GeneratedRegex(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]", RegexOptions.None, RegexTimeoutMilliseconds)]
+    [GeneratedRegex(@"[\x20-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex SpecialCharRegex { get; }
 
     /// <summary>
-    /// Gets the source-generated regex that matches a standalone four-digit year in the 1900-2099 range, since
-    /// birth and current years are among the most guessable substrings a password can contain.
+    /// Gets the source-generated regex that matches a four-digit year in the 1900-2099 range that is
+    /// not part of a longer number, wherever it sits — <c>Summer2024</c> included — since birth and
+    /// current years are among the most guessable substrings a password can contain.
     /// </summary>
     /// <value>The generated regex.</value>
-    [GeneratedRegex(@"\b(?:19|20)\d{2}\b", RegexOptions.None, RegexTimeoutMilliseconds)]
+    [GeneratedRegex(@"(?<![0-9])(?:19|20)[0-9]{2}(?![0-9])", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex YearRegex { get; }
 }

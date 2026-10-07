@@ -1,8 +1,11 @@
 using System.Security.Cryptography;
+using System.Text;
 
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -53,6 +56,120 @@ internal sealed partial class ChunkedBackupService
             ZeroKeyIfCreated(manifestEncryptionKey);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Opens an existing backup: reads its preamble, derives its keys, and decrypts its manifest.
+    /// </summary>
+    /// <remarks>
+    /// The password is tried in Unicode composed form first, which every new backup is created with,
+    /// then exactly as typed, then decomposed. A password typed with a different keyboard, input
+    /// method, or operating system can arrive in another normalization form while looking identical;
+    /// the extra attempts are only made when the forms differ and the first one failed.
+    /// </remarks>
+    /// <param name="backupRoot">The backup folder.</param>
+    /// <param name="password">The password as the user typed it.</param>
+    /// <param name="missingManifestCode">The message reported when the folder holds no manifest.</param>
+    /// <param name="wrongPasswordCode">The message reported when no form of the password opens it.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The opened backup, or the error explaining why it could not be opened.</returns>
+    private async Task<(OpenedBackup? Backup, LocalizableMessage? Error)> OpenBackupAsync(
+        string backupRoot,
+        string password,
+        MessageCode missingManifestCode,
+        MessageCode wrongPasswordCode,
+        CancellationToken cancellationToken
+    )
+    {
+        var preamble = await manifestService
+            .ReadChunkManifestPreambleAsync(backupRoot, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (preamble is null)
+        {
+            var kind = await manifestService
+                .InspectManifestAsync(backupRoot, cancellationToken)
+                .ConfigureAwait(false);
+
+            return (
+                null,
+                new LocalizableMessage(
+                    kind switch
+                    {
+                        ManifestKind.Missing or ManifestKind.PathNotFound or ManifestKind.NotADirectory =>
+                            missingManifestCode,
+                        ManifestKind.Unsupported => MessageCode.ManifestUnsupported,
+                        ManifestKind.Encrypted or ManifestKind.Damaged => MessageCode.ManifestDamaged,
+                        _ => MessageCode.ManifestDamaged,
+                    }
+                )
+            );
+        }
+
+        foreach (var candidate in PasswordCandidates(password))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var keys = this.DeriveKeySet(candidate, preamble.MasterSalt, preamble.KeyDerivation);
+            var manifest = manifestService.DecryptChunkManifest(preamble, keys.ManifestEncryptionKey);
+
+            if (manifest is not null)
+            {
+                return (new OpenedBackup(preamble, keys, manifest), null);
+            }
+
+            keys.Dispose();
+        }
+
+        return (null, new LocalizableMessage(wrongPasswordCode));
+    }
+
+    /// <summary>
+    /// Returns the form of the password a new backup's keys are derived from: Unicode normalization
+    /// form C, so the same characters typed in either composed or decomposed form open it.
+    /// </summary>
+    /// <param name="password">The password as the user typed it.</param>
+    /// <returns>The composed password, or the password as typed when it is not valid Unicode.</returns>
+    private static string PasswordForNewBackup(string password)
+    {
+        try
+        {
+            return password.Normalize(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            return password;
+        }
+    }
+
+    /// <summary>
+    /// Lists the distinct forms of a password to try when opening a backup, most likely first.
+    /// </summary>
+    /// <param name="password">The password as the user typed it.</param>
+    /// <returns>The composed form, the typed form, and the decomposed form, without repeats.</returns>
+    private static List<string> PasswordCandidates(string password)
+    {
+        List<string> candidates = [PasswordForNewBackup(password)];
+
+        if (!candidates.Contains(password, StringComparer.Ordinal))
+        {
+            candidates.Add(password);
+        }
+
+        try
+        {
+            var decomposed = password.Normalize(NormalizationForm.FormD);
+            if (!candidates.Contains(decomposed, StringComparer.Ordinal))
+            {
+                candidates.Add(decomposed);
+            }
+        }
+        catch (ArgumentException)
+        {
+            return candidates;
+        }
+
+        return candidates;
     }
 
     /// <summary>
@@ -235,6 +352,43 @@ internal sealed partial class ChunkedBackupService
             CryptographicOperations.ZeroMemory(ChunkNonceKey);
             CryptographicOperations.ZeroMemory(NamingKey);
             CryptographicOperations.ZeroMemory(ManifestEncryptionKey);
+        }
+    }
+
+    /// <summary>
+    /// An existing backup whose manifest has been decrypted, holding the keys that opened it until it
+    /// is disposed.
+    /// </summary>
+    /// <param name="preamble">The manifest preamble read from disk.</param>
+    /// <param name="keys">The keys derived for the backup, owned by this instance.</param>
+    /// <param name="manifest">The decrypted manifest.</param>
+    private sealed class OpenedBackup(
+        ManifestPreamble preamble,
+        DerivedKeySet keys,
+        ChunkManifestData manifest
+        ) : IDisposable
+    {
+        /// <summary>
+        /// Gets the manifest preamble read from disk.
+        /// </summary>
+        public ManifestPreamble Preamble { get; } = preamble;
+
+        /// <summary>
+        /// Gets the keys derived for the backup.
+        /// </summary>
+        public DerivedKeySet Keys { get; } = keys;
+
+        /// <summary>
+        /// Gets the decrypted manifest.
+        /// </summary>
+        public ChunkManifestData Manifest { get; } = manifest;
+
+        /// <summary>
+        /// Wipes the keys.
+        /// </summary>
+        public void Dispose()
+        {
+            this.Keys.Dispose();
         }
     }
 

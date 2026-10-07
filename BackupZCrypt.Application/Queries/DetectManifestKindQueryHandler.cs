@@ -1,5 +1,6 @@
 using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 
 namespace BackupZCrypt.Application.Queries;
@@ -22,15 +23,26 @@ internal sealed class DetectManifestKindQueryHandler(IManifestService manifestSe
     /// </summary>
     /// <param name="query">The query carrying the path to probe.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The detected kind, or <see cref="ManifestKind.Missing"/> when the probe fails.</returns>
+    /// <returns>
+    /// The detected kind; <see cref="ManifestKind.PathNotFound"/> when the path cannot be
+    /// normalized, or <see cref="ManifestKind.Missing"/> when the probe fails.
+    /// </returns>
     public async Task<ManifestKind> HandleAsync(
         DetectManifestKindQuery query,
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var backupPath = PathNormalizationHelper.TryNormalize(query.BackupPath, out var error);
+        if (error is not null || string.IsNullOrEmpty(backupPath))
+        {
+            return ManifestKind.PathNotFound;
+        }
+
         try
         {
-            return await manifestService.DetectManifestKindAsync(query.BackupPath, cancellationToken);
+            return await manifestService.DetectManifestKindAsync(backupPath, cancellationToken);
         }
         catch (Exception exception)
             when (exception is not OutOfMemoryException and not OperationCanceledException)

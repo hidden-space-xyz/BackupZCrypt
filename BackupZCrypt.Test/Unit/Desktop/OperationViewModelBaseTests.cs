@@ -114,6 +114,67 @@ public sealed class OperationViewModelBaseTests : IDisposable
         Assert.True(sut.StartCommand.CanExecute(null));
     }
 
+    [Fact]
+    internal async Task StartCommand_ResultWithWarningsAndAnUpdateSummary_ListsThemInTheResultPanel()
+    {
+        var sut = CreateSut();
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(
+                    new BackupResult(
+                        TimeSpan.FromHours(25),
+                        10,
+                        1,
+                        1,
+                        warnings: [new LocalizableMessage(MessageCode.SourceLinksSkippedFormat, 1, "linked")],
+                        unchangedFiles: 7,
+                        removedFiles: 2
+                    )
+                )
+            )
+        );
+
+        sut.SourcePath = "source";
+        sut.DestinationPath = "destination";
+
+        await sut.StartCommand.ExecuteAsync(null);
+
+        Assert.Multiple(
+            () => Assert.True(sut.ResultIsSuccess),
+            () => Assert.True(sut.ShowResultWarnings),
+            () =>
+                Assert.Equal(
+                    [MessageLocalizer.Localize(new LocalizableMessage(MessageCode.SourceLinksSkippedFormat, 1, "linked"))],
+                    sut.ResultWarnings
+                ),
+            () => Assert.True(sut.HasResultUpdateDetails),
+            () =>
+                Assert.Equal(
+                    string.Format(CultureInfo.CurrentCulture, Strings.ResultUpdateDetailsFormat, 7, 2),
+                    sut.ResultUpdateDetails
+                ),
+            () => Assert.Contains("25:00:00", sut.ResultDuration, StringComparison.Ordinal)
+        );
+    }
+
+    [Fact]
+    internal async Task StartCommand_UpdateThatFoundNothingToDo_SaysSoInsteadOfZeroOfZero()
+    {
+        var sut = CreateSut();
+        StubHandler(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0, unchangedFiles: 4))
+            )
+        );
+
+        sut.SourcePath = "source";
+        sut.DestinationPath = "destination";
+
+        await sut.StartCommand.ExecuteAsync(null);
+
+        Assert.Equal(Strings.ResultNoChanges, sut.ResultFiles);
+    }
+
     [Theory]
     [InlineData(true, 5)]
     [InlineData(false, 3)]

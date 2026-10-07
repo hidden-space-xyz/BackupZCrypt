@@ -64,7 +64,12 @@ public sealed class RestoreBackupCommandHandlerTests
     private RestoreBackupCommandHandler CreateSut()
     {
         return new(
-            new BackupOperationRunner(this.validator, this.fileOperations, this.chunkedBackupService)
+            new BackupOperationRunner(
+                this.validator,
+                this.fileOperations,
+                this.chunkedBackupService,
+                Substitute.For<ISystemStorageService>()
+            )
         );
     }
 

@@ -12,4 +12,14 @@ internal sealed record class KeyDerivationOption(
     KeyDerivationAlgorithm Id,
     string Name,
     string Description
-);
+)
+{
+    /// <summary>
+    /// Returns the display name, which is also what screen readers announce for the option.
+    /// </summary>
+    /// <returns>The display name.</returns>
+    public override string ToString()
+    {
+        return this.Name;
+    }
+}

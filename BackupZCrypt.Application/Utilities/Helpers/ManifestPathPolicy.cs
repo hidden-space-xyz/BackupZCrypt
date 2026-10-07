@@ -26,22 +26,15 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 internal static class ManifestPathPolicy
 {
     /// <summary>
-    /// The characters that may never appear anywhere in a manifest entry path.
-    /// </summary>
-    private static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
-
-    /// <summary>
     /// The separators recognized when splitting a manifest entry path into segments. Both are
     /// accepted on every platform so a path written on either notation is validated the same way.
     /// </summary>
     private static readonly char[] ManifestPathSeparators = ['/', '\\'];
 
     /// <summary>
-    /// The Windows-reserved characters that may not appear within a portable path segment. Applying
-    /// the same rule on every host prevents an archive created on Unix from becoming unrestorable or
-    /// ambiguous on Windows.
+    /// The characters Windows refuses inside a file or folder name.
     /// </summary>
-    private static readonly SearchValues<char> PortableInvalidFileNameChars =
+    private static readonly SearchValues<char> WindowsInvalidFileNameChars =
         SearchValues.Create(['<', '>', ':', '"', '|', '?', '*']);
 
     /// <summary>
@@ -54,16 +47,24 @@ internal static class ManifestPathPolicy
     };
 
     /// <summary>
-    /// Validates that a manifest entry path is relative and free of traversal segments and illegal
-    /// characters, including portable per-segment rules shared by every supported platform.
+    /// Validates the structure of a manifest entry path: it is relative and free of traversal,
+    /// current-directory, and empty segments, and holds no NUL character.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Applied to paths both on the way into and on the way out of a manifest, so neither a hostile
     /// source tree nor a crafted manifest can steer a write outside the destination.
+    /// </para>
+    /// <para>
+    /// The rule is the same on every host. Names that are legal on one system and not on another —
+    /// a colon or a trailing dot on Linux, for example — are a property of the restore target, not of
+    /// the archive, so they are checked per file by <see cref="IsValidOnThisSystem"/> when restoring
+    /// instead of rejecting the whole manifest.
+    /// </para>
     /// </remarks>
     /// <param name="relativePath">The entry path to validate.</param>
     /// <exception cref="InvalidDataException">
-    /// The path is empty, rooted, contains invalid characters, or has an ambiguous segment.
+    /// The path is empty, rooted, contains a NUL character, or has an empty or relative segment.
     /// </exception>
     internal static void ValidateRelative(string relativePath)
     {
@@ -72,12 +73,12 @@ internal static class ManifestPathPolicy
             throw new InvalidDataException("Manifest entry path is empty.");
         }
 
-        if (Path.IsPathRooted(relativePath))
+        if (relativePath[0] is '/' or '\\')
         {
             throw new InvalidDataException("Manifest entry path must be relative.");
         }
 
-        if (relativePath.IndexOfAny(InvalidPathChars) >= 0)
+        if (relativePath.Contains('\0', StringComparison.Ordinal))
         {
             throw new InvalidDataException("Manifest entry path contains invalid characters.");
         }
@@ -97,24 +98,44 @@ internal static class ManifestPathPolicy
         {
             throw new InvalidDataException("Manifest entry path contains current-directory segments.");
         }
-
-        if (pathSegments.Any(IsInvalidPortableSegment))
-        {
-            throw new InvalidDataException(
-                "Manifest entry path contains a file name that is not portable."
-            );
-        }
     }
 
     /// <summary>
-    /// Determines whether a path segment would be invalid or ambiguous on a supported host.
+    /// Determines whether every segment of a structurally valid manifest path can be created as a
+    /// file or folder name on the running system.
+    /// </summary>
+    /// <param name="relativePath">The entry path taken from the manifest.</param>
+    /// <returns><see langword="true"/> when the path can be restored here.</returns>
+    internal static bool IsValidOnThisSystem(string relativePath)
+    {
+        return !OperatingSystem.IsWindows() || IsValidWindowsPath(relativePath);
+    }
+
+    /// <summary>
+    /// Determines whether every segment of a manifest path is a name Windows accepts: free of the
+    /// reserved characters and of control characters, not ending in a dot or a space, and not a
+    /// device name such as <c>CON</c> or <c>aux.c</c>.
+    /// </summary>
+    /// <param name="relativePath">The entry path taken from the manifest.</param>
+    /// <returns><see langword="true"/> when Windows can create the path.</returns>
+    internal static bool IsValidWindowsPath(string relativePath)
+    {
+        ArgumentNullException.ThrowIfNull(relativePath);
+
+        return !relativePath
+            .Split(ManifestPathSeparators, StringSplitOptions.None)
+            .Any(IsInvalidWindowsSegment);
+    }
+
+    /// <summary>
+    /// Determines whether a path segment is a name Windows refuses or resolves to a device.
     /// </summary>
     /// <param name="segment">The individual manifest path segment.</param>
-    /// <returns><see langword="true"/> when the segment cannot be represented portably.</returns>
-    private static bool IsInvalidPortableSegment(string segment)
+    /// <returns><see langword="true"/> when Windows cannot create the segment as a regular name.</returns>
+    private static bool IsInvalidWindowsSegment(string segment)
     {
         var deviceName = segment.Split('.', 2)[0].TrimEnd(' ');
-        return segment.AsSpan().IndexOfAny(PortableInvalidFileNameChars) >= 0
+        return segment.AsSpan().IndexOfAny(WindowsInvalidFileNameChars) >= 0
             || segment.Any(static character => char.IsControl(character))
             || segment.EndsWith(' ')
             || segment.EndsWith('.')
@@ -128,7 +149,8 @@ internal static class ManifestPathPolicy
     /// <remarks>
     /// Both paths are fully resolved first and the root is compared with a trailing separator, so a
     /// sibling directory whose name merely starts with the root's name is not accepted as being
-    /// inside it.
+    /// inside it. A name the running system cannot create is rejected before it is resolved, which on
+    /// Windows also keeps a colon from being read as a drive or an alternate data stream.
     /// </remarks>
     /// <param name="destinationRoot">The directory restored files must stay within.</param>
     /// <param name="relativePath">The entry path taken from the manifest.</param>
@@ -137,6 +159,11 @@ internal static class ManifestPathPolicy
     internal static string ResolveSafeDestination(string destinationRoot, string relativePath)
     {
         ValidateRelative(relativePath);
+
+        if (!IsValidOnThisSystem(relativePath))
+        {
+            throw new InvalidDataException("Manifest entry path is not a valid name on this system.");
+        }
 
         var rootFullPath = Path.GetFullPath(destinationRoot);
         var destinationFullPath = Path.GetFullPath(

@@ -20,8 +20,9 @@ namespace BackupZCrypt.Test.Integration;
 /// Integration tests for the backup verify operation.
 /// </summary>
 /// <remarks>
-/// Verify reconstructs every file into <see cref="Stream.Null"/>, so it must neither write to any
-/// directory nor rewrite, prune, or repair a single byte of the archive it is reading.
+/// Verify reconstructs every file into <see cref="Stream.Null"/>, so it writes to no directory and never
+/// rewrites a byte of an intact archive. The one change it makes is to rename a chunk file that fails
+/// authentication, so that the next update rebuilds it instead of reusing damaged data.
 /// </remarks>
 public sealed class BackupVerifyTests
 {
@@ -116,8 +117,6 @@ public sealed class BackupVerifyTests
         bytes[0] ^= 0xFF;
         await File.WriteAllBytesAsync(chunkFile, bytes, TestContext.Current.CancellationToken);
 
-        var archiveBefore = Snapshot(destination.Path);
-
         var result = await verifyHandler.HandleAsync(
             NewVerifyQuery(destination.Path),
             TestContext.Current.CancellationToken
@@ -133,7 +132,59 @@ public sealed class BackupVerifyTests
                 result.Value.Completion!.Errors,
                 e => Assert.True(e.Code is MessageCode.IntegrityErrorFormat)
             ),
-            () => Assert.Equal(archiveBefore, Snapshot(destination.Path))
+            () =>
+                Assert.Equal(
+                    [MessageCode.DamagedChunksSetAsideFormat],
+                    result.Value.Completion!.Warnings.Select(static w => w.Code)
+                ),
+            () => Assert.False(File.Exists(chunkFile), "The damaged chunk was left in place."),
+            () => Assert.True(File.Exists(chunkFile + BackupConstants.QuarantineExtension))
+        );
+    }
+
+    [Fact]
+    internal async Task Update_AfterVerifySetADamagedChunkAside_RebuildsItFromTheSource()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
+        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
+
+        var chunkFile = ChunkFiles(destination.Path)[0];
+        var bytes = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
+        bytes[^1] ^= 0x01;
+        await File.WriteAllBytesAsync(chunkFile, bytes, TestContext.Current.CancellationToken);
+
+        _ = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path), TestContext.Current.CancellationToken);
+
+        var update = await updateHandler.HandleAsync(
+            new UpdateBackupCommand(source.Path, destination.Path, Password, ProceedOnWarnings: true)
+            {
+                Progress = new RecordingProgress<BackupStatus>(),
+            },
+            TestContext.Current.CancellationToken
+        );
+
+        var verify = await verifyHandler.HandleAsync(
+            NewVerifyQuery(destination.Path),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.True(update.IsSuccess && update.Value.Completion!.IsSuccess),
+            () => Assert.True(verify.IsSuccess && verify.Value.Completion!.IsSuccess, "The update did not repair the backup."),
+            () => Assert.Equal(SourceFileCount, ChunkFiles(destination.Path).Length),
+            () =>
+                Assert.Empty(
+                    Directory.GetFiles(
+                        Path.Join(destination.Path, BackupConstants.ChunksDirectoryName),
+                        "*" + BackupConstants.QuarantineExtension
+                    )
+                )
         );
     }
 
@@ -182,7 +233,7 @@ public sealed class BackupVerifyTests
             TestContext.Current.CancellationToken
         );
 
-        Assert.Contains(MessageCode.ManifestRequiredForDecryption, CollectCodes(result));
+        Assert.Contains(MessageCode.ManifestRequiredForVerify, CollectCodes(result));
     }
 
     [Fact]

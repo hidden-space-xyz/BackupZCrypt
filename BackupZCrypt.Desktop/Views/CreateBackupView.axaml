@@ -3,6 +3,7 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:conv="using:BackupZCrypt.Desktop.Converters"
              xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.CreateBackupView"
@@ -34,6 +35,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.SourceLabel}" />
               <TextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.SourceLabel}"
                        Text="{Binding SourcePath}"
                        PlaceholderText="{x:Static res:Strings.SourceHint}">
                 <TextBox.InnerRightContent>
@@ -52,6 +54,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
               <TextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.DestinationLabel}"
                        Text="{Binding DestinationPath}"
                        PlaceholderText="{x:Static res:Strings.DestinationHint}">
                 <TextBox.InnerRightContent>
@@ -80,7 +83,8 @@
 
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
-              <TextBox Classes="field"
+              <controls:PasswordTextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.PasswordLabel}"
                        Text="{Binding Password}"
                        PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
                        RevealPassword="{Binding RevealPassword}"
@@ -101,13 +105,18 @@
                     </Button>
                     <Button Classes="ghost"
                             Command="{Binding CopyPasswordCommand}"
-                            ToolTip.Tip="{x:Static res:Strings.CopyButton}"
-                            AutomationProperties.Name="{x:Static res:Strings.CopyButton}">
+                            ToolTip.Tip="{x:Static res:Strings.CopyPasswordTooltip}"
+                            AutomationProperties.Name="{x:Static res:Strings.CopyPasswordTooltip}">
                       <PathIcon Data="{x:Static local:Icons.Clipboard}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
-              </TextBox>
+              </controls:PasswordTextBox>
+
+              <TextBlock Classes="caption reveal"
+                         Foreground="{StaticResource DangerBrush}"
+                         IsVisible="{Binding ShowPasswordRuleHint}"
+                         Text="{Binding PasswordRuleHint}" />
 
               <StackPanel Classes="reveal"
                           Spacing="8"
@@ -130,7 +139,8 @@
 
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.ConfirmPasswordLabel}" />
-              <TextBox Classes="field"
+              <controls:PasswordTextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.ConfirmPasswordLabel}"
                        Classes.mismatch="{Binding ShowPasswordMismatch}"
                        Text="{Binding ConfirmPassword}"
                        PasswordChar="{Binding RevealPassword, Converter={x:Static conv:PasswordConverters.RevealToPasswordChar}}"
@@ -176,6 +186,7 @@
 
         <Button Grid.Column="1"
                 Classes="primary"
+                AutomationProperties.Name="{x:Static res:Strings.StartBackup}"
                 VerticalAlignment="Center"
                 IsDefault="{Binding IsActivePage}"
                 Command="{Binding StartCommand}">

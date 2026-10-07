@@ -48,6 +48,20 @@ internal sealed partial class RestoreBackupViewModel(
     }
 
     /// <summary>
+    /// Records the restored backup as the most recent backup location, leaving the remembered source
+    /// folder untouched: the restore target is neither a backup nor a folder that was backed up, and
+    /// remembering it in either role would pre-fill the other pages with the wrong folder.
+    /// </summary>
+    /// <param name="current">The currently persisted recent paths.</param>
+    /// <returns>The recent paths to save.</returns>
+    protected override RecentPathSettings BuildRecentPaths(RecentPathSettings current)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+
+        return current with { LastDestinationPath = SourcePath };
+    }
+
+    /// <summary>
     /// Builds the restore-backup command from the current inputs and dispatches it to its handler.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>

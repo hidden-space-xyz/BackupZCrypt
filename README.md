@@ -47,10 +47,10 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 ## 🚀 Usage
 
-- **🔐 Create Backup** — Select a source folder, a destination, and a password to produce an encrypted backup
-- **🔄 Update Backup** — Re-scan the source and re-encrypt only the chunks that changed since the last backup
-- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere
-- **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without writing any files
+- **🔐 Create Backup** — Select a source folder, an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete), and a password to produce an encrypted backup. Nothing in the destination is ever deleted
+- **🔄 Update Backup** — Re-scan the source: files whose size and modification time are unchanged are kept without being read, and only changed chunks are re-encrypted. Files deleted from the source are removed from the backup, and you are told which ones before anything changes
+- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere, with their modification times, read-only and hidden attributes, and empty folders
+- **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without restoring anything. Damaged chunks are set aside so the next update rebuilds them from the source
 - **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
 
 Settings are stored as plain JSON under `%LocalAppData%\BackupZCrypt` on Windows and the equivalent
@@ -95,7 +95,9 @@ Key material is wiped from memory after use, and hashes and salts are compared i
 
 Backups are portable between operating systems: the manifest records paths with `/` separators
 regardless of the platform that wrote it, and restore accepts either separator, so an archive created
-on Windows rebuilds the same directory tree on Linux and macOS.
+on Windows rebuilds the same directory tree on Linux and macOS. A name that is valid where the backup was
+created but not where it is restored — a colon in a Linux file name restored on Windows, for example —
+is reported for that file while every other file is restored.
 
 BackupZCrypt contains no networking code. There is no telemetry, no update check, and no account —
 nothing to opt out of.

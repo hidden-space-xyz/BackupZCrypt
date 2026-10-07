@@ -7,6 +7,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
@@ -202,11 +203,11 @@ public sealed class CreateBackupViewModelTests
     }
 
     [Fact]
-    internal async Task CopyPasswordCommand_IsGatedOnAPasswordAndCopiesItVerbatim()
+    internal async Task CopyPasswordCommand_IsGatedOnAPasswordAndCopiesItVerbatimAsASecret()
     {
         var sut = CreateSut();
         List<string> copied = [];
-        _ = this.clipboardService.SetTextAsync(Arg.Do<string>(copied.Add))
+        _ = this.clipboardService.SetSensitiveTextAsync(Arg.Do<string>(copied.Add))
             .Returns(Task.CompletedTask);
 
         var enabledWithoutPassword = sut.CopyPasswordCommand.CanExecute(null);
@@ -318,6 +319,64 @@ public sealed class CreateBackupViewModelTests
                     AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes),
                     sut.EncryptionName
                 )
+        );
+    }
+
+    [Theory]
+    [InlineData("short", "PasswordHintTooShort")]
+    [InlineData(" Spaced-Passw0rd!", "PasswordHintSpaces")]
+    [InlineData("Spaced-Passw0rd! ", "PasswordHintSpaces")]
+    [InlineData("Valid-Passw0rd!", "")]
+    internal void Password_BreakingALengthOrSpacingRule_ExplainsWhyStartIsDisabled(
+        string password,
+        string expectedHintKey
+    )
+    {
+        var sut = CreateSut();
+
+        sut.Password = password;
+
+        var expected = expectedHintKey.Length is 0 ? string.Empty : Strings.GetByKey(expectedHintKey);
+
+        Assert.Multiple(
+            () => Assert.Equal(expected, sut.PasswordRuleHint),
+            () => Assert.Equal(expected.Length > 0, sut.ShowPasswordRuleHint)
+        );
+    }
+
+    [Fact]
+    internal void Password_LongerThanTheMaximum_ExplainsTheLimit()
+    {
+        var sut = CreateSut();
+
+        sut.Password = new string('x', 1001);
+
+        Assert.Equal(Strings.PasswordHintTooLong, sut.PasswordRuleHint);
+    }
+
+    [Fact]
+    internal async Task OnNavigatedToAsync_StoredAlgorithmsThatDoNotExist_FallBackToTheDefaultsShown()
+    {
+        var sut = CreateSut();
+        _ = this
+            .creationDefaultsQuery.HandleAsync(
+                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                new BackupCreationSettings(
+                    (EncryptionAlgorithm)77,
+                    (KeyDerivationAlgorithm)77,
+                    (CompressionMode)77
+                )
+            );
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Multiple(
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes), sut.EncryptionName),
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(KeyDerivationAlgorithm.Argon2id), sut.KeyDerivationName),
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(CompressionMode.None), sut.CompressionName)
         );
     }
 

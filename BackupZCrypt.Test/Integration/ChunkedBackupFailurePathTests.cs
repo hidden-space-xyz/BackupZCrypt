@@ -73,7 +73,7 @@ public sealed class ChunkedBackupFailurePathTests
     private static readonly MessageCode[] AllFilesFailedCodes =
     [
         MessageCode.AllFilesFailed,
-        MessageCode.EncryptionErrorFormat,
+        MessageCode.FileBackupErrorFormat,
     ];
 
     [Fact]
@@ -110,12 +110,12 @@ public sealed class ChunkedBackupFailurePathTests
             () => Assert.False(result.Value.IsSuccess, "The result claimed success while a file had failed."),
             () => Assert.Equal(3, result.Value.TotalFiles),
             () => Assert.Equal(2, result.Value.ProcessedFiles),
-            () => Assert.Equal(totalBytes, result.Value.TotalBytes),
+            () => Assert.Equal(survivingBytes, result.Value.TotalBytes),
             () => Assert.Single(result.Value.Errors),
             () =>
                 Assert.All(
                     result.Value.Errors,
-                    static e => Assert.True(e.Code is MessageCode.EncryptionErrorFormat)
+                    static e => Assert.True(e.Code is MessageCode.FileBackupErrorFormat)
                 )
         );
 
@@ -262,16 +262,8 @@ public sealed class ChunkedBackupFailurePathTests
         );
 
         Assert.Multiple(
-            () => Assert.True(result.IsSuccess),
-            () => Assert.False(result.Value.IsSuccess, "An empty source is not a successful backup."),
-            () => Assert.Equal(0, result.Value.TotalFiles),
-            () => Assert.Equal(0, result.Value.ProcessedFiles),
-            () => Assert.Single(result.Value.Errors),
-            () =>
-                Assert.All(
-                    result.Value.Errors,
-                    static e => Assert.True(e.Code is MessageCode.NoFilesInSourceDirectory)
-                ),
+            () => Assert.False(result.IsSuccess, "An empty source is not a successful backup."),
+            () => Assert.Equal([MessageCode.NoFilesInSourceDirectory], result.Errors.Select(static e => e.Code)),
             () => Assert.Empty(Directory.GetFileSystemEntries(archive.Path))
         );
     }
@@ -553,7 +545,7 @@ public sealed class ChunkedBackupFailurePathTests
             () =>
                 Assert.All(
                     result.Value.Errors,
-                    static e => Assert.True(e.Code is MessageCode.EncryptionErrorFormat)
+                    static e => Assert.True(e.Code is MessageCode.FileBackupErrorFormat)
                 )
         );
 

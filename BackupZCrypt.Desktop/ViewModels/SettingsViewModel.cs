@@ -55,16 +55,32 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     private readonly IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>> estimateBenchmark;
 
     /// <summary>
-    /// A value indicating whether the stored settings have already been applied, so returning to the
-    /// page never discards edits the user has not saved yet.
+    /// A value indicating whether the selections are being set from the stored settings, during which
+    /// they are not user edits.
     /// </summary>
-    private bool loaded;
+    private bool applyingStoredSettings;
 
     /// <summary>
-    /// The language code that was persisted when the page loaded, used to tell whether the user changed
-    /// the language and therefore needs to restart.
+    /// The algorithm defaults as last persisted, used to tell whether the page holds unsaved changes.
+    /// </summary>
+    private BackupCreationSettings savedDefaults = BackupCreationSettings.DefaultValue;
+
+    /// <summary>
+    /// The language code as last persisted, used to tell whether the page holds unsaved changes and
+    /// whether the user changed the language and therefore needs to restart.
     /// </summary>
     private string? savedLanguageCode;
+
+    /// <summary>
+    /// The language code that was in effect when the application started, which a language change
+    /// only replaces after a restart.
+    /// </summary>
+    private string? startupLanguageCode;
+
+    /// <summary>
+    /// A value indicating whether <see cref="startupLanguageCode"/> has been captured.
+    /// </summary>
+    private bool startupLanguageCaptured;
 
     /// <summary>
     /// Gets or sets the selected default encryption algorithm.
@@ -101,6 +117,31 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// </summary>
     [ObservableProperty]
     public partial bool ShowRestartNote { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the "settings could not be saved" error is shown.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowSaveError { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selections differ from the persisted settings.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool HasUnsavedChanges { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the unsaved-changes note is shown, which gives way to
+    /// the save error when both apply.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowUnsavedNote { get; set; }
+
+    /// <summary>
+    /// Gets or sets the formatted estimate for a single large file produced by the benchmark.
+    /// </summary>
+    [ObservableProperty]
+    public partial string BenchmarkLargeFileText { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the data amount, as entered by the user, used to size the benchmark.
@@ -236,10 +277,12 @@ internal sealed partial class SettingsViewModel : ViewModelBase
             new DataSizeUnitOption("TB", 1024L * 1024L * 1024L * 1024L),
         ];
 
+        applyingStoredSettings = true;
         SelectedEncryption = EncryptionOptions[0];
         SelectedKeyDerivation = KeyDerivationOptions[0];
         SelectedCompression = CompressionOptions[0];
         SelectedLanguage = LanguageOptions[0];
+        applyingStoredSettings = false;
         BenchmarkDataAmount = "100";
         SelectedDataUnit = DataUnitOptions[1];
 
@@ -279,7 +322,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     public string SettingsFilePath { get; }
 
     /// <summary>
-    /// Loads the persisted defaults and language preference the first time the page is shown.
+    /// Loads the persisted defaults and language preference every time the page is shown, so the page
+    /// always shows the settings new backups will actually use; selections that were never saved are
+    /// discarded when the user leaves the page.
     /// </summary>
     /// <remarks>
     /// The handlers absorb a failure to read the stored settings into the defaults, which match the
@@ -288,13 +333,6 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// <returns>A task that completes once the settings have been loaded.</returns>
     public override async Task OnNavigatedToAsync()
     {
-        if (loaded)
-        {
-            return;
-        }
-
-        loaded = true;
-
         var defaults = await creationDefaultsQuery.HandleAsync(
             new GetSettingsQuery<BackupCreationSettings>(),
             CancellationToken.None
@@ -304,21 +342,43 @@ internal sealed partial class SettingsViewModel : ViewModelBase
             CancellationToken.None
         );
 
-        SelectedEncryption =
-            EncryptionOptions.FirstOrDefault(o => o.Id == defaults.EncryptionAlgorithm)
-            ?? SelectedEncryption;
-        SelectedKeyDerivation =
-            KeyDerivationOptions.FirstOrDefault(o => o.Id == defaults.KeyDerivationAlgorithm)
-            ?? SelectedKeyDerivation;
-        SelectedCompression =
-            CompressionOptions.FirstOrDefault(o => o.Id == defaults.CompressionMode)
-            ?? SelectedCompression;
+        if (!startupLanguageCaptured)
+        {
+            startupLanguageCode = language.LanguageCode;
+            startupLanguageCaptured = true;
+        }
 
-        savedLanguageCode = language.LanguageCode;
-        SelectedLanguage =
-            LanguageOptions.FirstOrDefault(o =>
-                string.Equals(o.Code, language.LanguageCode, StringComparison.OrdinalIgnoreCase)
-            ) ?? LanguageOptions[0];
+        applyingStoredSettings = true;
+
+        try
+        {
+            SelectedEncryption =
+                EncryptionOptions.FirstOrDefault(o => o.Id == defaults.EncryptionAlgorithm)
+                ?? EncryptionOptions.First(o => o.Id == BackupCreationSettings.DefaultValue.EncryptionAlgorithm);
+            SelectedKeyDerivation =
+                KeyDerivationOptions.FirstOrDefault(o => o.Id == defaults.KeyDerivationAlgorithm)
+                ?? KeyDerivationOptions.First(o =>
+                    o.Id == BackupCreationSettings.DefaultValue.KeyDerivationAlgorithm
+                );
+            SelectedCompression =
+                CompressionOptions.FirstOrDefault(o => o.Id == defaults.CompressionMode)
+                ?? CompressionOptions.First(o => o.Id == BackupCreationSettings.DefaultValue.CompressionMode);
+
+            SelectedLanguage =
+                LanguageOptions.FirstOrDefault(o =>
+                    string.Equals(o.Code, language.LanguageCode, StringComparison.OrdinalIgnoreCase)
+                ) ?? LanguageOptions[0];
+        }
+        finally
+        {
+            applyingStoredSettings = false;
+        }
+
+        savedDefaults = CurrentDefaults();
+        savedLanguageCode = SelectedLanguage.Code;
+        ShowSavedNotice = false;
+        ShowSaveError = false;
+        UpdateUnsavedChanges();
     }
 
     /// <summary>
@@ -326,48 +386,137 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// for the new language to take effect.
     /// </summary>
     /// <remarks>
-    /// A failed write only leaves the saved notice hidden; the handlers already absorb the failure
-    /// itself into the result contract.
+    /// A failed write is reported on the page; the handlers already absorb the failure itself into the
+    /// result contract.
     /// </remarks>
     /// <returns>A task that completes once the settings have been written.</returns>
     [RelayCommand]
     private async Task SaveAsync()
     {
         ShowSavedNotice = false;
+        ShowSaveError = false;
 
-        BackupCreationSettings settings = new(
-            SelectedEncryption.Id,
-            SelectedKeyDerivation.Id,
-            SelectedCompression.Id
-        );
+        var settings = CurrentDefaults();
 
-        var savedDefaults = await saveCreationDefaults.HandleAsync(
+        var defaultsResult = await saveCreationDefaults.HandleAsync(
             new SaveSettingsCommand<BackupCreationSettings>(settings),
             CancellationToken.None
         );
 
-        if (!savedDefaults.IsSuccess)
+        if (!defaultsResult.IsSuccess)
         {
+            ShowSaveError = true;
             return;
         }
 
-        var savedLanguage = await saveLanguage.HandleAsync(
+        savedDefaults = settings;
+
+        var languageResult = await saveLanguage.HandleAsync(
             new SaveSettingsCommand<LanguageSettings>(new LanguageSettings(SelectedLanguage.Code)),
             CancellationToken.None
         );
 
-        if (!savedLanguage.IsSuccess)
+        if (!languageResult.IsSuccess)
         {
+            ShowSaveError = true;
+            UpdateUnsavedChanges();
             return;
         }
 
+        savedLanguageCode = SelectedLanguage.Code;
+
         ShowRestartNote = !string.Equals(
-            savedLanguageCode,
+            startupLanguageCode,
             SelectedLanguage.Code,
             StringComparison.OrdinalIgnoreCase
         );
 
+        UpdateUnsavedChanges();
         ShowSavedNotice = true;
+    }
+
+    /// <summary>
+    /// Builds the algorithm defaults the current selections describe.
+    /// </summary>
+    /// <returns>The selected defaults.</returns>
+    private BackupCreationSettings CurrentDefaults()
+    {
+        return new BackupCreationSettings(
+            SelectedEncryption.Id,
+            SelectedKeyDerivation.Id,
+            SelectedCompression.Id
+        );
+    }
+
+    /// <summary>
+    /// Re-evaluates whether the selections differ from the persisted settings.
+    /// </summary>
+    private void UpdateUnsavedChanges()
+    {
+        HasUnsavedChanges =
+            CurrentDefaults() != savedDefaults
+            || !string.Equals(savedLanguageCode, SelectedLanguage.Code, StringComparison.OrdinalIgnoreCase);
+        ShowUnsavedNote = HasUnsavedChanges && !ShowSaveError;
+    }
+
+    /// <summary>
+    /// Hides the unsaved-changes note while the save error is shown, and shows it again afterwards.
+    /// </summary>
+    /// <param name="value">Whether the save error is shown.</param>
+    partial void OnShowSaveErrorChanged(bool value)
+    {
+        ShowUnsavedNote = HasUnsavedChanges && !value;
+    }
+
+    /// <summary>
+    /// Treats a selection made by the user as an edit: the saved notice no longer applies to it.
+    /// </summary>
+    private void OnSelectionEdited()
+    {
+        if (applyingStoredSettings)
+        {
+            return;
+        }
+
+        ShowSavedNotice = false;
+        ShowSaveError = false;
+        UpdateUnsavedChanges();
+    }
+
+    /// <summary>
+    /// Reacts to a change of the selected encryption algorithm.
+    /// </summary>
+    /// <param name="value">The newly selected option.</param>
+    partial void OnSelectedEncryptionChanged(EncryptionOption value)
+    {
+        OnSelectionEdited();
+    }
+
+    /// <summary>
+    /// Reacts to a change of the selected key-derivation algorithm.
+    /// </summary>
+    /// <param name="value">The newly selected option.</param>
+    partial void OnSelectedKeyDerivationChanged(KeyDerivationOption value)
+    {
+        OnSelectionEdited();
+    }
+
+    /// <summary>
+    /// Reacts to a change of the selected compression mode.
+    /// </summary>
+    /// <param name="value">The newly selected option.</param>
+    partial void OnSelectedCompressionChanged(CompressionOption value)
+    {
+        OnSelectionEdited();
+    }
+
+    /// <summary>
+    /// Reacts to a change of the selected language.
+    /// </summary>
+    /// <param name="value">The newly selected option.</param>
+    partial void OnSelectedLanguageChanged(LanguageOption value)
+    {
+        OnSelectionEdited();
     }
 
     /// <summary>
@@ -391,7 +540,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         HasBenchmarkError = false;
         BenchmarkError = string.Empty;
 
-        if (!TryParseDataBytes(out var dataBytes))
+        if (!TryParseDataBytes(out var dataBytes, out var amount))
         {
             BenchmarkError = Strings.BenchmarkInvalidAmount;
             HasBenchmarkError = true;
@@ -421,6 +570,10 @@ internal sealed partial class SettingsViewModel : ViewModelBase
             BenchmarkDurationText = string.Format(
                 CultureInfo.CurrentCulture,
                 Strings.BenchmarkResultDurationFormat,
+                string.Create(
+                    CultureInfo.CurrentCulture,
+                    $"{amount:0.###} {SelectedDataUnit.Name}"
+                ),
                 DurationFormatter.Format(estimate.Value.EstimatedDuration)
             );
 
@@ -429,6 +582,15 @@ internal sealed partial class SettingsViewModel : ViewModelBase
                 Strings.BenchmarkResultThroughputFormat,
                 ByteSizeFormatter.Format((long)estimate.Value.ThroughputBytesPerSecond)
             );
+
+            BenchmarkLargeFileText = estimate.Value.LargeFileEstimatedDuration is { } largeFileDuration
+                ? string.Format(
+                    CultureInfo.CurrentCulture,
+                    Strings.BenchmarkLargeFileFormat,
+                    DurationFormatter.Format(largeFileDuration),
+                    ByteSizeFormatter.Format((long)estimate.Value.LargeFileThroughputBytesPerSecond)
+                )
+                : string.Empty;
 
             ShowBenchmarkResult = true;
         }
@@ -443,18 +605,45 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// positive finite number, that amount to less than one byte, or that do not fit in a
     /// <see cref="long"/>.
     /// </summary>
+    /// <remarks>
+    /// Either a point or a comma is accepted as the decimal separator, whatever the language. A single
+    /// separator only groups thousands when it is the language's own group separator followed by
+    /// exactly three digits, as in "1,000" in English or "1.000" in Spanish; otherwise "1.5" in
+    /// Spanish would be read as fifteen and silently estimate ten times the amount the user meant.
+    /// The amount the estimate was made for is shown with the result, so any reading is visible.
+    /// </remarks>
     /// <param name="dataBytes">Receives the byte count, or zero when the entry is not usable.</param>
+    /// <param name="amount">Receives the parsed amount in the selected unit.</param>
     /// <returns><see langword="true"/> if a usable byte count was produced; otherwise <see langword="false"/>.</returns>
-    private bool TryParseDataBytes(out long dataBytes)
+    private bool TryParseDataBytes(out long dataBytes, out double amount)
     {
         dataBytes = 0;
+        amount = 0;
+
+        var entered = (BenchmarkDataAmount ?? string.Empty).Trim();
+        var separatorIndex = entered.IndexOfAny(['.', ',']);
+
+        if (separatorIndex >= 0)
+        {
+            var separator = entered[separatorIndex];
+            var groupsThousands =
+                string.Equals(
+                    separator.ToString(),
+                    CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator,
+                    StringComparison.Ordinal
+                )
+                && entered.Length - separatorIndex - 1 == 3;
+
+            entered = (groupsThousands ? entered.Remove(separatorIndex, 1) : entered).Replace(',', '.');
+        }
 
         if (
-            !double.TryParse(
-                BenchmarkDataAmount,
-                NumberStyles.Float | NumberStyles.AllowThousands,
-                CultureInfo.CurrentCulture,
-                out var amount
+            entered.Count(static c => c is '.') > 1
+            || !double.TryParse(
+                entered,
+                NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture,
+                out amount
             )
             || amount <= 0
             || double.IsNaN(amount)

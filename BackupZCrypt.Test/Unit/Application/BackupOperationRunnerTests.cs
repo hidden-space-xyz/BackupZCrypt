@@ -3,6 +3,8 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -15,17 +17,14 @@ using NSubstitute.ExceptionExtensions;
 namespace BackupZCrypt.Test.Unit.Application;
 
 /// <summary>
-/// Unit tests for the backup operation runner: the validation gate, the post-validation source and
-/// destination checks, destination preparation (including the destructive clean a create performs),
-/// operation dispatch, cancellation, and unexpected-error mapping. The validator, file system, and
-/// backup service are all substituted, so nothing here touches the real disk.
+/// Unit tests for the backup operation runner: the validation gate, the preview of an update or
+/// restore, the post-validation source and destination checks, the backup lock, operation dispatch,
+/// cancellation, and unexpected-error mapping. The validator, file system, storage, and backup service
+/// are all substituted, so nothing here touches the real disk.
 /// </summary>
 /// <remarks>
-/// A create over an existing destination cleans that directory first, which is the one irreversible act
-/// the runner performs: a request the user never accepted — one blocked by validation errors, by
-/// warnings they declined, or aimed at a path that failed to normalize — must never reach the clean and
-/// wipe a directory that already holds their data. The assertions that a clean was never received are
-/// guarding exactly that, so none of them is redundant with the positive case beside it.
+/// The runner must never delete user data. A create used to empty an existing destination before it
+/// started; the assertions that no deletion was received guard against that coming back.
 /// </remarks>
 public sealed class BackupOperationRunnerTests
 {
@@ -52,8 +51,7 @@ public sealed class BackupOperationRunnerTests
         Substitute.For<IBackupRequestValidator>();
 
     /// <summary>
-    /// The substituted file system the runner probes for the source and destination, and asks to
-    /// clean and create the destination directory.
+    /// The substituted file system the runner probes for the source and destination.
     /// </summary>
     private readonly IFileOperationsService fileOperations =
         Substitute.For<IFileOperationsService>();
@@ -65,17 +63,22 @@ public sealed class BackupOperationRunnerTests
         Substitute.For<IChunkedBackupService>();
 
     /// <summary>
+    /// The substituted storage service the preview warnings query for free space.
+    /// </summary>
+    private readonly ISystemStorageService systemStorage = Substitute.For<ISystemStorageService>();
+
+    /// <summary>
     /// The progress sink handed to the runner; assertions check it is forwarded unchanged.
     /// </summary>
     private readonly RecordingProgress<BackupStatus> progress = new();
 
     /// <summary>
-    /// Creates a runner wired to the substituted validator, file system, and backup service.
+    /// Creates a runner wired to the substituted dependencies.
     /// </summary>
     /// <returns>The system under test.</returns>
     private BackupOperationRunner CreateSut()
     {
-        return new(this.validator, this.fileOperations, this.chunkedBackupService);
+        return new(this.validator, this.fileOperations, this.chunkedBackupService, this.systemStorage);
     }
 
     /// <summary>
@@ -120,8 +123,7 @@ public sealed class BackupOperationRunnerTests
     }
 
     /// <summary>
-    /// Builds a path the running platform cannot resolve to an absolute form: one longer than
-    /// Windows can address, and one carrying an embedded null character everywhere else.
+    /// Builds a path the running platform cannot resolve to an absolute form.
     /// </summary>
     /// <returns>A raw path that fails normalization.</returns>
     private static string UnnormalizablePath()
@@ -172,11 +174,37 @@ public sealed class BackupOperationRunnerTests
     }
 
     /// <summary>
+    /// Makes the update and restore previews report a backup the source fully matches.
+    /// </summary>
+    /// <param name="removedPaths">The recorded files the update preview reports as removed.</param>
+    /// <param name="matchedFiles">The recorded files the update preview reports as still present.</param>
+    /// <param name="totalBytes">The recorded size the restore preview reports.</param>
+    private void StubPreviews(string[]? removedPaths = null, int matchedFiles = 3, long totalBytes = 10)
+    {
+        _ = this.chunkedBackupService
+            .PreviewUpdateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                Result<BackupPreview>.Success(
+                    new BackupPreview(3, totalBytes, matchedFiles, removedPaths ?? [], 0)
+                )
+            );
+        _ = this.chunkedBackupService
+            .PreviewRestoreAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Result<BackupPreview>.Success(new BackupPreview(3, totalBytes, 3, [], 0)));
+    }
+
+    /// <summary>
     /// Makes every backup service operation report success, so a test can assert on which one ran
     /// rather than on what it returned.
     /// </summary>
     private void StubOperationsSucceed()
     {
+        this.StubPreviews();
         _ = this.chunkedBackupService
             .CreateAsync(
                 Arg.Any<string>(),
@@ -206,6 +234,15 @@ public sealed class BackupOperationRunnerTests
             .Returns(SuccessResult());
     }
 
+    /// <summary>
+    /// Asserts that the runner never asked the file system to delete anything.
+    /// </summary>
+    private void AssertNothingDeleted()
+    {
+        this.fileOperations.DidNotReceive().DeleteFile(Arg.Any<string>());
+        this.fileOperations.DidNotReceive().DeleteEmptyDirectory(Arg.Any<string>());
+    }
+
     [Fact]
     internal async Task RunAsync_ValidationErrors_FailsAndNeverStartsTheBackup()
     {
@@ -229,9 +266,8 @@ public sealed class BackupOperationRunnerTests
         await this.validator.DidNotReceive()
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>());
         await this.fileOperations.DidNotReceive()
-            .CleanDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await this.fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
         await this.chunkedBackupService.DidNotReceive()
             .CreateAsync(
                 Arg.Any<string>(),
@@ -254,7 +290,7 @@ public sealed class BackupOperationRunnerTests
             .Returns(Messages());
         _ = this.validator
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Messages(MessageCode.DestinationExistingFilesFormat));
+            .Returns(Messages(MessageCode.DestinationContainsBackup));
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
         this.StubOperationsSucceed();
@@ -281,30 +317,26 @@ public sealed class BackupOperationRunnerTests
                 () => Assert.Null(result.Value.Completion),
                 () =>
                     Assert.Equal<MessageCode>(
-                        [MessageCode.DestinationExistingFilesFormat],
+                        [MessageCode.DestinationContainsBackup],
                         Codes(result.Value.PendingWarnings)
                     )
             );
         }
 
-        var expectedCalls = proceedOnWarnings ? 1 : 0;
-
-        await this.chunkedBackupService.Received(expectedCalls)
+        await this.chunkedBackupService.Received(proceedOnWarnings ? 1 : 0)
             .CreateAsync(SourceDir, DestinationDir, request, this.progress, Arg.Any<CancellationToken>());
-
-        await this.fileOperations.Received(expectedCalls)
-            .CleanDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
     }
 
     [Theory]
-    [InlineData(BackupOperation.Create, true, true)]
-    [InlineData(BackupOperation.Create, false, false)]
-    [InlineData(BackupOperation.Update, true, false)]
-    [InlineData(BackupOperation.Restore, true, false)]
-    internal async Task RunAsync_DestinationPreparation_CleansOnlyForCreateOverAnExistingDirectory(
+    [InlineData(BackupOperation.Create, true)]
+    [InlineData(BackupOperation.Create, false)]
+    [InlineData(BackupOperation.Update, true)]
+    [InlineData(BackupOperation.Restore, true)]
+    [InlineData(BackupOperation.Restore, false)]
+    internal async Task RunAsync_SuccessfulOperation_NeverDeletesAnythingAndOnlyACreatePreparesTheDestination(
         BackupOperation operation,
-        bool destinationExists,
-        bool expectClean
+        bool destinationExists
     )
     {
         this.PassValidation();
@@ -312,12 +344,264 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(destinationExists);
         this.StubOperationsSucceed();
 
+        var result = await this.CreateSut()
+            .RunAsync(Request(operation), this.progress, CancellationToken.None);
+
+        Assert.True(result.Value.Completion!.IsSuccess);
+
+        await this.fileOperations.Received(operation is BackupOperation.Create ? 1 : 0)
+            .CreateDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
+    }
+
+    [Theory]
+    [InlineData(BackupOperation.Create)]
+    [InlineData(BackupOperation.Update)]
+    internal async Task RunAsync_WritingOperation_HoldsTheBackupLockForTheWholeRun(BackupOperation operation)
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations
+            .CombinePath(DestinationDir, BackupConstants.LockFileName)
+            .Returns("lock-file");
+        var backupLock = Substitute.For<IDisposable>();
+        _ = this.fileOperations.AcquireExclusiveLock("lock-file").Returns(backupLock);
+        this.StubOperationsSucceed();
+
         _ = await this.CreateSut().RunAsync(Request(operation), this.progress, CancellationToken.None);
 
-        await this.fileOperations.Received(expectClean ? 1 : 0)
-            .CleanDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
-        await this.fileOperations.Received(1)
-            .CreateDirectoryAsync(DestinationDir, Arg.Any<CancellationToken>());
+        Received.InOrder(() =>
+        {
+            _ = this.fileOperations.AcquireExclusiveLock("lock-file");
+            backupLock.Dispose();
+        });
+    }
+
+    [Theory]
+    [InlineData(BackupOperation.Create)]
+    [InlineData(BackupOperation.Update)]
+    internal async Task RunAsync_BackupLockedByAnotherOperation_ReportsBackupInUseWithoutRunning(
+        BackupOperation operation
+    )
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations
+            .AcquireExclusiveLock(Arg.Any<string>())
+            .Throws(new IOException("in use"));
+        this.StubOperationsSucceed();
+
+        var result = await this.CreateSut().RunAsync(Request(operation), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
+        await this.chunkedBackupService.DidNotReceive()
+            .CreateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+        await this.chunkedBackupService.DidNotReceive()
+            .UpdateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    internal async Task RunAsync_RestoreWhileTheBackupIsBeingModified_ReportsBackupInUse()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.IsLockHeld(Arg.Any<string>()).Returns(true);
+        this.StubOperationsSucceed();
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Restore), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
+        await this.chunkedBackupService.DidNotReceive()
+            .RestoreAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    internal async Task RunAsync_FailedCreateIntoAFolderItCreated_RemovesTheFolderAgainWhenEmpty()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false, true);
+        _ = this.fileOperations.GetDirectoryEntryNames(DestinationDir).Returns([]);
+        this.StubPreviews();
+        _ = this.chunkedBackupService
+            .CreateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<BackupResult>.Failure(MessageCode.AllFilesFailed));
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        this.fileOperations.Received(1).DeleteEmptyDirectory(DestinationDir);
+    }
+
+    [Fact]
+    internal async Task RunAsync_FailedCreateIntoAnExistingFolder_LeavesTheFolderAlone()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations.GetDirectoryEntryNames(DestinationDir).Returns([]);
+        this.StubPreviews();
+        _ = this.chunkedBackupService
+            .CreateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<BackupResult>.Failure(MessageCode.AllFilesFailed));
+
+        _ = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Create), this.progress, CancellationToken.None);
+
+        this.AssertNothingDeleted();
+    }
+
+    [Fact]
+    internal async Task RunAsync_UpdateThatRemovesFiles_AsksForConfirmationNamingThem()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        this.StubOperationsSucceed();
+        this.StubPreviews(removedPaths: ["gone.txt"], matchedFiles: 2);
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Update), this.progress, CancellationToken.None);
+
+        Assert.Multiple(
+            () => Assert.True(result.Value.NeedsWarningConfirmation),
+            () =>
+                Assert.Equal<MessageCode>(
+                    [MessageCode.UpdateRemovesFilesFormat],
+                    Codes(result.Value.PendingWarnings)
+                ),
+            () => Assert.Equal<object>([1, "gone.txt"], result.Value.PendingWarnings[0].Args)
+        );
+        await this.chunkedBackupService.DidNotReceive()
+            .UpdateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    internal async Task RunAsync_UpdateFromASourceSharingNothingWithTheBackup_WarnsItWouldReplaceEverything()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        this.StubOperationsSucceed();
+        this.StubPreviews(removedPaths: ["a.txt", "b.txt", "c.txt"], matchedFiles: 0);
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Update), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>(
+            [MessageCode.UpdateSourceMismatchFormat],
+            Codes(result.Value.PendingWarnings)
+        );
+    }
+
+    [Fact]
+    internal async Task RunAsync_UpdateConfirmed_SkipsThePreviewAndRuns()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        this.StubOperationsSucceed();
+
+        var result = await this.CreateSut()
+            .RunAsync(
+                Request(BackupOperation.Update, proceedOnWarnings: true),
+                this.progress,
+                CancellationToken.None
+            );
+
+        Assert.True(result.Value.Completion!.IsSuccess);
+        await this.chunkedBackupService.DidNotReceive()
+            .PreviewUpdateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            );
+        await this.validator.DidNotReceive()
+            .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    internal async Task RunAsync_RestoreWithAWrongPassword_FailsBeforeCreatingTheDestination()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        this.StubOperationsSucceed();
+        _ = this.chunkedBackupService
+            .PreviewRestoreAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Result<BackupPreview>.Failure(MessageCode.InvalidPassword));
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Restore), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>([MessageCode.InvalidPassword], Codes(result.Errors));
+        await this.fileOperations.DidNotReceive()
+            .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await this.chunkedBackupService.DidNotReceive()
+            .RestoreAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    internal async Task RunAsync_RestoreLargerThanTheFreeSpace_WarnsWithTheRecordedSize()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        this.StubOperationsSucceed();
+        this.StubPreviews(totalBytes: 5_000);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("root");
+        _ = this.systemStorage.IsDriveReady("root").Returns(true);
+        _ = this.systemStorage.GetAvailableFreeSpace("root").Returns(1_000);
+
+        var result = await this.CreateSut()
+            .RunAsync(Request(BackupOperation.Restore), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>([MessageCode.LowDiskSpaceFormat], Codes(result.Value.PendingWarnings));
     }
 
     [Theory]
@@ -402,9 +686,8 @@ public sealed class BackupOperationRunnerTests
         );
 
         await this.fileOperations.DidNotReceive()
-            .CleanDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await this.fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
     }
 
     [Fact]
@@ -416,7 +699,11 @@ public sealed class BackupOperationRunnerTests
         this.StubOperationsSucceed();
 
         var result = await this.CreateSut()
-            .RunAsync(Request(BackupOperation.Update), this.progress, CancellationToken.None);
+            .RunAsync(
+                Request(BackupOperation.Update, proceedOnWarnings: true),
+                this.progress,
+                CancellationToken.None
+            );
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -582,9 +869,27 @@ public sealed class BackupOperationRunnerTests
         await this.validator.DidNotReceive()
             .AnalyzeWarningsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>());
         await this.fileOperations.DidNotReceive()
-            .CleanDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await this.fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
+    }
+
+    [Fact]
+    internal async Task RunVerifyAsync_WhileTheBackupIsBeingModified_ReportsBackupInUse()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.IsLockHeld(Arg.Any<string>()).Returns(true);
+
+        var result = await this.CreateSut()
+            .RunVerifyAsync(Request(BackupOperation.Verify), this.progress, CancellationToken.None);
+
+        Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
+        await this.chunkedBackupService.DidNotReceive()
+            .VerifyAsync(
+                Arg.Any<string>(),
+                Arg.Any<BackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -619,7 +924,7 @@ public sealed class BackupOperationRunnerTests
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_WithAnUnnormalizablePath_ReportsInvalidPathBeforeProbing()
+    internal async Task RunVerifyAsync_WithAnUnnormalizablePath_ReportsTheInvalidPathBeforeProbing()
     {
         var request = Request(
             BackupOperation.Verify,
@@ -634,7 +939,7 @@ public sealed class BackupOperationRunnerTests
             () => Assert.False(result.IsSuccess),
             () =>
                 Assert.Equal<MessageCode>(
-                    [MessageCode.InvalidPathFormat],
+                    [MessageCode.PathMustBeAbsoluteFormat],
                     Codes(result.Errors)
                 )
         );
@@ -731,8 +1036,7 @@ public sealed class BackupOperationRunnerTests
 
         _ = this.fileOperations.Received(1).DirectoryExists(request.SourcePath);
         await this.fileOperations.DidNotReceive()
-            .CleanDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await this.fileOperations.DidNotReceive()
             .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        this.AssertNothingDeleted();
     }
 }

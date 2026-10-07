@@ -30,17 +30,50 @@ public sealed class PathNormalizationHelperTests
     }
 
     [Fact]
-    internal void TryNormalize_RelativePath_ResolvesAgainstTheCurrentDirectory()
+    internal void TryNormalize_RelativePath_IsRejectedInsteadOfResolvedAgainstTheWorkingDirectory()
     {
         var result = PathNormalizationHelper.TryNormalize("some-relative-folder", out var error);
 
         Assert.Multiple(
+            () => Assert.Null(result),
+            () => Assert.Equal(MessageCode.PathMustBeAbsoluteFormat, error?.Code),
+            () => Assert.Equal<object>(["some-relative-folder"], error!.Args)
+        );
+    }
+
+    [Fact]
+    internal void TryNormalize_PathWrappedInQuotes_IsUnwrapped()
+    {
+        var folder = Path.Join(Path.GetTempPath(), "quoted folder");
+
+        var result = PathNormalizationHelper.TryNormalize($"  \"{folder}\"  ", out var error);
+
+        Assert.Multiple(
             () => Assert.Null(error),
-            () =>
-                Assert.Equal(
-                    Path.Join(Environment.CurrentDirectory, "some-relative-folder"),
-                    result
-                )
+            () => Assert.Equal(Path.GetFullPath(folder), result)
+        );
+    }
+
+    [Theory]
+    [InlineData("bad<name")]
+    [InlineData("what?")]
+    [InlineData("a|b")]
+    [InlineData("colon:inside")]
+    internal void TryNormalize_OnWindows_RejectsCharactersTheFileSystemRefuses(string segment)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses these characters in a path.");
+        }
+
+        var result = PathNormalizationHelper.TryNormalize(
+            Path.Join(Path.GetTempPath(), segment),
+            out var error
+        );
+
+        Assert.Multiple(
+            () => Assert.Null(result),
+            () => Assert.Equal(MessageCode.PathInvalidCharactersFormat, error?.Code)
         );
     }
 
@@ -70,7 +103,7 @@ public sealed class PathNormalizationHelperTests
     }
 
     [Fact]
-    internal void TryNormalize_InvalidPath_ReturnsNullAndInvalidPathFormatError()
+    internal void TryNormalize_UnresolvablePath_ReturnsNullAndAnError()
     {
         var invalid = OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
 
@@ -81,6 +114,6 @@ public sealed class PathNormalizationHelperTests
             () => Assert.NotNull(error)
         );
 
-        Assert.Equal(MessageCode.InvalidPathFormat, error!.Code);
+        Assert.Equal(MessageCode.PathMustBeAbsoluteFormat, error!.Code);
     }
 }

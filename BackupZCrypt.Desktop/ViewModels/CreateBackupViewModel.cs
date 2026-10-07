@@ -6,6 +6,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.Constants;
@@ -111,6 +112,19 @@ internal sealed partial class CreateBackupViewModel(
     public partial bool ShowPasswordMismatch { get; set; }
 
     /// <summary>
+    /// Gets or sets the rule the entered password currently breaks — too short, too long, or padded
+    /// with spaces — so the user can see why the start button is disabled.
+    /// </summary>
+    [ObservableProperty]
+    public partial string PasswordRuleHint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether <see cref="PasswordRuleHint"/> is shown.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowPasswordRuleHint { get; set; }
+
+    /// <summary>
     /// Gets the display name of the encryption algorithm the next backup will use.
     /// </summary>
     /// <remarks>
@@ -154,9 +168,13 @@ internal sealed partial class CreateBackupViewModel(
 
         encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
             ? defaults.EncryptionAlgorithm
-            : EncryptionAlgorithm.Aes;
-        keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
-        compressionMode = defaults.CompressionMode;
+            : BackupCreationSettings.DefaultValue.EncryptionAlgorithm;
+        keyDerivationAlgorithm = Enum.IsDefined(defaults.KeyDerivationAlgorithm)
+            ? defaults.KeyDerivationAlgorithm
+            : BackupCreationSettings.DefaultValue.KeyDerivationAlgorithm;
+        compressionMode = Enum.IsDefined(defaults.CompressionMode)
+            ? defaults.CompressionMode
+            : BackupCreationSettings.DefaultValue.CompressionMode;
 
         OnPropertyChanged(nameof(EncryptionName));
         OnPropertyChanged(nameof(KeyDerivationName));
@@ -284,7 +302,7 @@ internal sealed partial class CreateBackupViewModel(
     [RelayCommand(CanExecute = nameof(CanCopyPassword))]
     private async Task CopyPasswordAsync()
     {
-        await clipboardService.SetTextAsync(Password);
+        await clipboardService.SetSensitiveTextAsync(Password);
     }
 
     /// <summary>
@@ -304,6 +322,7 @@ internal sealed partial class CreateBackupViewModel(
     {
         CopyPasswordCommand.NotifyCanExecuteChanged();
         UpdatePasswordMismatch();
+        UpdatePasswordRuleHint(value);
 
         if (string.IsNullOrEmpty(value))
         {
@@ -328,6 +347,26 @@ internal sealed partial class CreateBackupViewModel(
     partial void OnConfirmPasswordChanged(string value)
     {
         UpdatePasswordMismatch();
+    }
+
+    /// <summary>
+    /// Shows which length or spacing rule the typed password breaks, mirroring the checks of
+    /// <see cref="IsPasswordValid"/>, and hides the hint once the password satisfies them.
+    /// </summary>
+    /// <param name="value">The new password.</param>
+    private void UpdatePasswordRuleHint(string value)
+    {
+        PasswordRuleHint = value switch
+        {
+            { Length: 0 } => string.Empty,
+            _ when !string.Equals(value.Trim(), value, StringComparison.Ordinal) =>
+                Strings.PasswordHintSpaces,
+            { Length: < PasswordConstants.MinLength } => Strings.PasswordHintTooShort,
+            { Length: > PasswordConstants.MaxLength } => Strings.PasswordHintTooLong,
+            _ => string.Empty,
+        };
+
+        ShowPasswordRuleHint = PasswordRuleHint.Length > 0;
     }
 
     /// <summary>

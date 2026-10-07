@@ -8,7 +8,8 @@ namespace BackupZCrypt.Infrastructure.Services.Settings;
 
 /// <summary>
 /// Persists strongly typed settings as indented JSON files under a per-user application data
-/// directory, recreating defaults when a file is missing or corrupted.
+/// directory, creating the defaults when a file is missing and falling back to them, without
+/// overwriting anything, when a file cannot be read.
 /// </summary>
 /// <param name="fileOperationsService">The service used to read and write settings files.</param>
 /// <param name="baseDirectoryPath">An optional override for the settings directory; defaults to local application data.</param>
@@ -29,13 +30,19 @@ internal sealed class SettingsService(
 
     /// <summary>
     /// The JSON options shared by reads and writes: indented output, with enums stored as names so a settings
-    /// file stays readable and survives renumbering of the enum members.
+    /// file stays readable and survives renumbering of the enum members. Numbers are refused for enums, so a
+    /// hand-edited value that names no member cannot slip through as an undefined one.
     /// </summary>
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false) },
     };
+
+    /// <summary>
+    /// The byte order mark many editors write at the start of a UTF-8 file.
+    /// </summary>
+    private static ReadOnlySpan<byte> Utf8ByteOrderMark => [0xEF, 0xBB, 0xBF];
 
     /// <summary>
     /// Gets the directory that settings files are read from and written to.
@@ -62,15 +69,17 @@ internal sealed class SettingsService(
     }
 
     /// <summary>
-    /// Loads the persisted settings, recreating and saving the defaults when the file is absent or corrupted.
+    /// Loads the persisted settings, creating the file with the defaults when it does not exist yet.
     /// </summary>
     /// <remarks>
-    /// A corrupt or version-incompatible settings file is deliberately not treated as fatal: the deserialization
-    /// failure is swallowed and the file is replaced with the defaults.
+    /// A file that cannot be read as settings is not treated as fatal, and it is not overwritten
+    /// either: the defaults are returned for this session and the file is left exactly as it was, so a
+    /// hand edit with a typo can still be fixed instead of being silently discarded. The next explicit
+    /// save replaces it. A UTF-8 byte order mark, which many editors add, is accepted.
     /// </remarks>
     /// <typeparam name="T">The settings type to load.</typeparam>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The loaded settings, or freshly created defaults.</returns>
+    /// <returns>The loaded settings, or the defaults.</returns>
     public async Task<T> GetOrCreateAsync<T>(CancellationToken cancellationToken = default)
         where T : class, ISettings<T>
     {
@@ -99,21 +108,10 @@ internal sealed class SettingsService(
             }
             catch (InvalidDataException)
             {
-                var defaults = T.DefaultValue;
-                await this.SaveAsync(defaults, cancellationToken).ConfigureAwait(false);
-                return defaults;
+                return T.DefaultValue;
             }
 
-            var settings = TryDeserialize<T>(rawSettings);
-
-            if (settings is not null)
-            {
-                return settings;
-            }
-
-            var recreated = T.DefaultValue;
-            await this.SaveAsync(recreated, cancellationToken).ConfigureAwait(false);
-            return recreated;
+            return TryDeserialize<T>(rawSettings) ?? T.DefaultValue;
         }
         finally
         {
@@ -125,8 +123,8 @@ internal sealed class SettingsService(
     }
 
     /// <summary>
-    /// Deserializes persisted settings, reporting a corrupt or version-incompatible file as a missing
-    /// value rather than as an exception.
+    /// Deserializes persisted settings, skipping a leading byte order mark and reporting a corrupt or
+    /// version-incompatible file as a missing value rather than as an exception.
     /// </summary>
     /// <typeparam name="T">The settings type to read.</typeparam>
     /// <param name="rawSettings">The raw bytes read from the settings file.</param>
@@ -134,9 +132,15 @@ internal sealed class SettingsService(
     private static T? TryDeserialize<T>(byte[] rawSettings)
         where T : class, ISettings<T>
     {
+        ReadOnlySpan<byte> json = rawSettings;
+        if (json.StartsWith(Utf8ByteOrderMark))
+        {
+            json = json[Utf8ByteOrderMark.Length..];
+        }
+
         try
         {
-            return JsonSerializer.Deserialize<T>(rawSettings, SerializerOptions);
+            return JsonSerializer.Deserialize<T>(json, SerializerOptions);
         }
         catch (JsonException)
         {

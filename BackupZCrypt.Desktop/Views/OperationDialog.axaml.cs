@@ -220,7 +220,10 @@ internal sealed partial class OperationDialog : UserControl
 
     /// <summary>
     /// Handles Escape and Enter for the panel on display: Escape backs out (cancel, dismiss, or close) and
-    /// Enter confirms (continue or close). A focused button handles Enter itself before it bubbles up here.
+    /// Enter closes the result. Enter never confirms warnings: they announce consequences such as files
+    /// leaving a backup or a backup being replaced, so continuing takes a deliberate press of the button
+    /// rather than the same key that started the operation. A focused button handles Enter itself before
+    /// it bubbles up here.
     /// </summary>
     /// <param name="e">The key event.</param>
     protected override void OnKeyDown(KeyEventArgs e)
@@ -254,8 +257,8 @@ internal sealed partial class OperationDialog : UserControl
                 Execute(
                     shownState switch
                     {
-                        DialogState.Warnings => viewModel.ContinueAnywayCommand,
                         DialogState.Result => viewModel.DismissResultCommand,
+                        DialogState.Warnings => null,
                         DialogState.Running => null,
                         DialogState.None => null,
                         _ => null,

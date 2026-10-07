@@ -35,14 +35,75 @@ public sealed class ManifestPathPolicyTests
             "docs/./file.txt",
             "docs//file.txt",
             "docs\\\\file.txt",
+            "/absolute.txt",
+            "\\absolute.txt",
+            "nul\0char.txt",
+        };
+    }
+
+    /// <summary>
+    /// Entry paths that are structurally sound but name something Windows cannot create.
+    /// </summary>
+    /// <returns>One Windows-incompatible path per case.</returns>
+    public static TheoryData<string> WindowsIncompatiblePaths()
+    {
+        return new()
+        {
             "CON",
             "CON .txt",
             "aux.txt",
+            "src/aux/x.c",
+            "COM1.log",
             "name.",
             "name ",
             "bad:name.txt",
             "bad<name>.txt",
+            "a|b",
+            "what?",
+            "star*",
+            "quote\"d",
+            "tab\tname",
+            "C:/drive-qualified.txt",
         };
+    }
+
+    [Theory]
+    [MemberData(nameof(WindowsIncompatiblePaths))]
+    internal void ValidateRelative_NamesOnlyWindowsRefuses_AreStructurallyValidOnEveryPlatform(string path)
+    {
+        Assert.Null(Record.Exception(() => ManifestPathPolicy.ValidateRelative(path)));
+    }
+
+    [Theory]
+    [MemberData(nameof(WindowsIncompatiblePaths))]
+    internal void IsValidWindowsPath_NamesWindowsRefuses_AreReportedAsIncompatible(string path)
+    {
+        Assert.False(ManifestPathPolicy.IsValidWindowsPath(path));
+    }
+
+    [Theory]
+    [InlineData("docs/notes.md")]
+    [InlineData("auxiliary.txt")]
+    [InlineData("con-artist/console.log")]
+    [InlineData(".gitignore")]
+    [InlineData("caf\u00E9.txt")]
+    internal void IsValidWindowsPath_OrdinaryNames_AreAccepted(string path)
+    {
+        Assert.True(ManifestPathPolicy.IsValidWindowsPath(path));
+    }
+
+    [Theory]
+    [MemberData(nameof(WindowsIncompatiblePaths))]
+    internal void ResolveSafeDestination_OnWindows_RefusesNamesItCannotCreate(string path)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses these names.");
+        }
+
+        _ = Assert.Throws<InvalidDataException>(
+            () => ManifestPathPolicy.ResolveSafeDestination(Path.GetTempPath(), path)
+        );
     }
 
     [Theory]
@@ -72,11 +133,13 @@ public sealed class ManifestPathPolicyTests
     }
 
     [Fact]
-    internal void ValidateRelative_RootedPath_IsRejected()
+    internal void ResolveSafeDestination_RootedPath_IsRejected()
     {
         var rooted = Path.Join(Path.GetTempPath(), "escape.txt");
 
-        _ = Assert.Throws<InvalidDataException>(() => ManifestPathPolicy.ValidateRelative(rooted));
+        _ = Assert.Throws<InvalidDataException>(
+            () => ManifestPathPolicy.ResolveSafeDestination(Path.Join(Path.GetTempPath(), "root"), rooted)
+        );
     }
 
     [Fact]

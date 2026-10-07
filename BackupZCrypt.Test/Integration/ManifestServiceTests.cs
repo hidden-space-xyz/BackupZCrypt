@@ -207,6 +207,20 @@ public sealed class ManifestServiceTests
     }
 
     /// <summary>
+    /// Builds the bytes of a file long enough to hold a manifest preamble, a nonce, and a tag, whose
+    /// preamble names the given cipher and PBKDF2, without being a decryptable manifest.
+    /// </summary>
+    /// <param name="algorithm">The cipher identifier written as the first byte.</param>
+    /// <returns>The file content.</returns>
+    private static byte[] PlausibleManifest(byte algorithm)
+    {
+        var content = new byte[PreambleHeaderLength + EncryptionConstants.NonceSize + EncryptionConstants.TagSize + 8];
+        content[0] = algorithm;
+        content[1] = (byte)KeyDerivationAlgorithm.PBKDF2;
+        return content;
+    }
+
+    /// <summary>
     /// Builds a manifest service whose manifest reads always fail, so the error handling of
     /// <c>DetectManifestKindAsync</c> can be reached without depending on platform-specific
     /// file-system permissions, which differ between the Windows dev box and the Linux CI runner.
@@ -239,12 +253,15 @@ public sealed class ManifestServiceTests
         using var backup = new TempDir();
 
         _ = truncated.WriteFile(BackupConstants.ManifestFileName, []);
-        _ = backup.WriteFile(BackupConstants.ManifestFileName, [0x01, 0x02, 0x03]);
+        _ = backup.WriteFile(BackupConstants.ManifestFileName, PlausibleManifest((byte)EncryptionAlgorithm.Aes));
+        using var unsupported = new TempDir();
+        _ = unsupported.WriteFile(BackupConstants.ManifestFileName, PlausibleManifest(0xEE));
         var sibling = backup.WriteText("readme.txt", "not the manifest");
 
         var emptyKind = await manifestService.DetectManifestKindAsync(empty.Path, CancellationToken.None);
         var truncatedKind = await manifestService.DetectManifestKindAsync(truncated.Path, CancellationToken.None);
         var backupKind = await manifestService.DetectManifestKindAsync(backup.Path, CancellationToken.None);
+        var unsupportedKind = await manifestService.DetectManifestKindAsync(unsupported.Path, CancellationToken.None);
         var siblingKind = await manifestService.DetectManifestKindAsync(sibling, CancellationToken.None);
         var absentSiblingKind = await manifestService.DetectManifestKindAsync(
             Path.Join(backup.Path, "never-created.txt"),
@@ -254,16 +271,17 @@ public sealed class ManifestServiceTests
 
         Assert.Multiple(
             () => Assert.Equal(ManifestKind.Missing, emptyKind),
-            () => Assert.Equal(ManifestKind.Missing, truncatedKind),
+            () => Assert.Equal(ManifestKind.Damaged, truncatedKind),
             () => Assert.Equal(ManifestKind.Encrypted, backupKind),
-            () => Assert.Equal(ManifestKind.Encrypted, siblingKind),
-            () => Assert.Equal(ManifestKind.Encrypted, absentSiblingKind),
-            () => Assert.Equal(ManifestKind.Missing, rootlessKind)
+            () => Assert.Equal(ManifestKind.Unsupported, unsupportedKind),
+            () => Assert.Equal(ManifestKind.NotADirectory, siblingKind),
+            () => Assert.Equal(ManifestKind.PathNotFound, absentSiblingKind),
+            () => Assert.Equal(ManifestKind.PathNotFound, rootlessKind)
         );
     }
 
     [Fact]
-    internal async Task DetectManifestKindAsync_ManifestCannotBeRead_ReportsMissingInsteadOfThrowing()
+    internal async Task DetectManifestKindAsync_ManifestCannotBeRead_ReportsDamagedInsteadOfThrowing()
     {
         var manifestService = CreateServiceWithFailingManifestRead(new UnauthorizedAccessException("injected read failure"));
 
@@ -272,7 +290,7 @@ public sealed class ManifestServiceTests
             CancellationToken.None
         );
 
-        Assert.Equal(ManifestKind.Missing, kind);
+        Assert.Equal(ManifestKind.Damaged, kind);
     }
 
     [Fact]
@@ -705,7 +723,7 @@ public sealed class ManifestServiceTests
     }
 
     [Fact]
-    internal async Task DetectManifestKindAsync_ManifestReadFailsMidStream_ReportsMissingAndStillClosesTheStream()
+    internal async Task DetectManifestKindAsync_ManifestReadFailsMidStream_ReportsDamagedAndStillClosesTheStream()
     {
         await using var stream = new FailingReadStream();
         var fileOperations = Substitute.For<IFileOperationsService>();
@@ -724,7 +742,7 @@ public sealed class ManifestServiceTests
         );
 
         Assert.Multiple(
-            () => Assert.Equal(ManifestKind.Missing, kind),
+            () => Assert.Equal(ManifestKind.Damaged, kind),
             () => Assert.True(
                 stream.WasDisposed,
                 "a manifest read that fails part way through must still release the handle it opened"

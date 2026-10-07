@@ -1,3 +1,5 @@
+using BackupZCrypt.Domain.ValueObjects.FileSystem;
+
 namespace BackupZCrypt.Domain.Services.Interfaces;
 
 /// <summary>
@@ -20,6 +22,27 @@ public interface IFileOperationsService
         string searchPattern = "*",
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Walks a source directory tree without following symbolic links or junctions, collecting the
+    /// regular files, the empty leaf folders, and every folder or link that had to be left out.
+    /// </summary>
+    /// <param name="directoryPath">The root directory to walk.</param>
+    /// <param name="cancellationToken">A token to cancel the walk.</param>
+    /// <returns>The files and folders found and the entries that were skipped.</returns>
+    /// <exception cref="UnauthorizedAccessException">The root directory itself cannot be listed.</exception>
+    /// <exception cref="IOException">The root directory cannot be opened.</exception>
+    public Task<DirectoryScan> ScanDirectoryAsync(
+        string directoryPath,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Lists the names of the files and folders directly inside a directory.
+    /// </summary>
+    /// <param name="directoryPath">The directory to list.</param>
+    /// <returns>The names of its immediate entries.</returns>
+    public IReadOnlyList<string> GetDirectoryEntryNames(string directoryPath);
 
     /// <summary>
     /// Determines whether the specified directory exists.
@@ -52,18 +75,24 @@ public interface IFileOperationsService
     public Task CreateDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes a directory only if it is empty.
+    /// </summary>
+    /// <param name="directoryPath">The directory to remove.</param>
+    /// <exception cref="IOException">The directory is not empty.</exception>
+    public void DeleteEmptyDirectory(string directoryPath);
+
+    /// <summary>
     /// Deletes the specified file.
     /// </summary>
     /// <param name="filePath">The path of the file to delete.</param>
     public void DeleteFile(string filePath);
 
     /// <summary>
-    /// Removes all files and subdirectories from a directory while keeping the directory itself.
+    /// Renames a file, replacing an existing file at the destination.
     /// </summary>
-    /// <param name="directoryPath">The directory to clean.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the directory has been emptied.</returns>
-    public Task CleanDirectoryAsync(string directoryPath, CancellationToken cancellationToken = default);
+    /// <param name="sourcePath">The file to rename.</param>
+    /// <param name="destinationPath">The new path of the file.</param>
+    public void MoveFile(string sourcePath, string destinationPath);
 
     /// <summary>
     /// Gets the size, in bytes, of the specified file.
@@ -71,6 +100,30 @@ public interface IFileOperationsService
     /// <param name="filePath">The path of the file to measure.</param>
     /// <returns>The file size in bytes.</returns>
     public long GetFileSize(string filePath);
+
+    /// <summary>
+    /// Reads the size, modification time, and attributes a backup records for a file.
+    /// </summary>
+    /// <param name="filePath">The path of the file to inspect.</param>
+    /// <returns>The file's metadata.</returns>
+    public FileMetadata GetFileMetadata(string filePath);
+
+    /// <summary>
+    /// Restores the modification time and attributes recorded for a file. Values that were not
+    /// recorded are left as the file system set them.
+    /// </summary>
+    /// <param name="filePath">The path of the restored file.</param>
+    /// <param name="lastWriteTimeUtc">The modification time to apply, or <see langword="null"/>.</param>
+    /// <param name="isReadOnly">Whether to mark the file read-only, or <see langword="null"/>.</param>
+    /// <param name="isHidden">Whether to mark the file hidden, or <see langword="null"/>.</param>
+    /// <param name="unixMode">The Unix permission bits to apply, or <see langword="null"/>.</param>
+    public void ApplyFileMetadata(
+        string filePath,
+        DateTime? lastWriteTimeUtc,
+        bool? isReadOnly,
+        bool? isHidden,
+        int? unixMode
+    );
 
     /// <summary>
     /// Computes the path of a target relative to a base path.
@@ -95,7 +148,8 @@ public interface IFileOperationsService
     public string? GetDirectoryName(string filePath);
 
     /// <summary>
-    /// Opens a file for reading.
+    /// Opens a file for reading while other programs may keep it open, including for writing, as
+    /// log files and databases usually are.
     /// </summary>
     /// <param name="filePath">The path of the file to open.</param>
     /// <param name="bufferSize">The buffer size, in bytes, to use for the stream.</param>
@@ -139,4 +193,20 @@ public interface IFileOperationsService
         int maximumBytes,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Creates or opens a lock file and holds it exclusively until the returned handle is disposed,
+    /// deleting it afterwards.
+    /// </summary>
+    /// <param name="lockFilePath">The path of the lock file.</param>
+    /// <returns>A handle that releases the lock when disposed.</returns>
+    /// <exception cref="IOException">Another process holds the lock.</exception>
+    public IDisposable AcquireExclusiveLock(string lockFilePath);
+
+    /// <summary>
+    /// Determines whether another process currently holds the lock file.
+    /// </summary>
+    /// <param name="lockFilePath">The path of the lock file.</param>
+    /// <returns><see langword="true"/> when the lock file exists and is held open exclusively.</returns>
+    public bool IsLockHeld(string lockFilePath);
 }

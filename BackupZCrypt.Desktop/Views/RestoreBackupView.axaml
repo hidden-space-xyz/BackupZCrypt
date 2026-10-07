@@ -3,6 +3,7 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
+             xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:local="using:BackupZCrypt.Desktop"
              x:Class="BackupZCrypt.Desktop.Views.RestoreBackupView"
              x:DataType="vm:RestoreBackupViewModel">
@@ -33,6 +34,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.BackupLabel}" />
               <TextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.BackupLabel}"
                        Text="{Binding SourcePath}"
                        PlaceholderText="{x:Static res:Strings.BackupHint}">
                 <TextBox.InnerRightContent>
@@ -51,6 +53,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.DestinationLabel}" />
               <TextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.DestinationLabel}"
                        Text="{Binding DestinationPath}"
                        PlaceholderText="{x:Static res:Strings.RestoreDestinationHint}">
                 <TextBox.InnerRightContent>
@@ -76,7 +79,7 @@
             <Border Classes="notice warning reveal" IsVisible="{Binding HasDetection}">
               <Grid ColumnDefinitions="Auto,*">
                 <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Warning}" />
-                <TextBlock Grid.Column="1" Text="{x:Static res:Strings.DetectMissing}" />
+                <TextBlock Grid.Column="1" Text="{Binding DetectionMessage}" />
               </Grid>
             </Border>
           </StackPanel>
@@ -92,7 +95,8 @@
             </StackPanel>
             <StackPanel Spacing="8">
               <TextBlock Classes="label" Text="{x:Static res:Strings.PasswordLabel}" />
-              <TextBox Classes="field"
+              <controls:PasswordTextBox Classes="field"
+                       AutomationProperties.Name="{x:Static res:Strings.PasswordLabel}"
                        Text="{Binding Password}"
                        PasswordChar="●"
                        PlaceholderText="{x:Static res:Strings.BackupPasswordHint}">
@@ -106,7 +110,7 @@
                     </ToggleButton>
                   </StackPanel>
                 </TextBox.InnerRightContent>
-              </TextBox>
+              </controls:PasswordTextBox>
             </StackPanel>
           </StackPanel>
         </Border>
@@ -119,6 +123,7 @@
       <Grid MaxWidth="820" ColumnDefinitions="*,Auto">
         <Button Grid.Column="1"
                 Classes="primary"
+                AutomationProperties.Name="{x:Static res:Strings.StartRestore}"
                 IsDefault="{Binding IsActivePage}"
                 Command="{Binding StartCommand}">
           <StackPanel Orientation="Horizontal" Spacing="8">

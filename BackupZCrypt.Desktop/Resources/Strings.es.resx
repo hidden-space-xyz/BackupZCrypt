@@ -172,13 +172,13 @@
     <value>Crear una copia</value>
   </data>
   <data name="HelpCreateText" xml:space="preserve">
-    <value>Elige la carpeta de origen y la carpeta de destino. Escribe una contraseña fuerte —o pulsa Generar— y confírmala. Después pulsa «Iniciar copia».</value>
+    <value>Elige la carpeta de origen y una carpeta de destino vacía (o una con una copia anterior, que solo se sustituye cuando la nueva está completa). Escribe una contraseña fuerte —o pulsa Generar— y confírmala. Después pulsa «Iniciar copia».</value>
   </data>
   <data name="HelpUpdateTitle" xml:space="preserve">
     <value>Actualizar una copia</value>
   </data>
   <data name="HelpUpdateText" xml:space="preserve">
-    <value>Selecciona la carpeta de origen actual y la copia ya existente. Solo se vuelven a cifrar los bloques que han cambiado, así que es mucho más rápido que rehacerla desde cero.</value>
+    <value>Selecciona la carpeta de origen actual y la copia existente. Los archivos cuyo tamaño y fecha no han cambiado se conservan sin volver a leerlos y solo se vuelven a cifrar los bloques modificados, así que es mucho más rápido que rehacer la copia. Los archivos borrados del origen también se eliminan de la copia; se te indica cuáles antes de cambiar nada.</value>
   </data>
   <data name="HelpRestoreTitle" xml:space="preserve">
     <value>Restaurar una copia</value>
@@ -190,7 +190,7 @@
     <value>Verificar una copia</value>
   </data>
   <data name="HelpVerifyText" xml:space="preserve">
-    <value>Elige la carpeta de la copia (la que contiene manifest.bzc) e introduce su contraseña. BackupZCrypt comprueba cada fragmento y te dice si la copia está intacta, sin restaurar nada.</value>
+    <value>Elige la carpeta de la copia (la que contiene manifest.bzc) e introduce su contraseña. BackupZCrypt comprueba cada bloque y te dice si la copia está intacta, sin restaurar nada. Los bloques dañados se apartan para que Actualizar pueda reconstruirlos desde el origen.</value>
   </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Contraseña y seguridad</value>
@@ -229,7 +229,7 @@
     <value>Destino</value>
   </data>
   <data name="DestinationHint" xml:space="preserve">
-    <value>Carpeta donde se escribirá la copia…</value>
+    <value>Carpeta vacía donde se escribirá la copia…</value>
   </data>
   <data name="BackupLabel" xml:space="preserve">
     <value>Copia de seguridad</value>
@@ -310,13 +310,13 @@
     <value>Procesando…</value>
   </data>
   <data name="ProgressFilesFormat" xml:space="preserve">
-    <value>{0} de {1} archivos</value>
+    <value>{0:N0} de {1:N0} archivos</value>
   </data>
   <data name="ElapsedFormat" xml:space="preserve">
     <value>Transcurrido: {0}</value>
   </data>
   <data name="DetectMissing" xml:space="preserve">
-    <value>No se encontró un manifiesto de copia en esta ubicación.</value>
+    <value>No se encontró ninguna copia en esta carpeta.</value>
   </data>
   <data name="DetectFound" xml:space="preserve">
     <value>Copia cifrada encontrada. Introduce su contraseña para continuar.</value>
@@ -343,13 +343,13 @@
     <value>Operación cancelada</value>
   </data>
   <data name="ResultFilesFormat" xml:space="preserve">
-    <value>{0} de {1} archivos procesados</value>
+    <value>{0:N0} de {1:N0} archivos procesados</value>
   </data>
   <data name="ResultDurationFormat" xml:space="preserve">
     <value>Duración: {0}</value>
   </data>
   <data name="ResultSizeFormat" xml:space="preserve">
-    <value>Tamaño total: {0}</value>
+    <value>Datos procesados: {0}</value>
   </data>
   <data name="LanguageLabel" xml:space="preserve">
     <value>Idioma</value>
@@ -388,7 +388,7 @@
     <value>AES-256 GCM</value>
   </data>
   <data name="AesDescription" xml:space="preserve">
-    <value>El estándar mundial de cifrado y el algoritmo más estudiado. Casi todos los procesadores actuales tienen instrucciones específicas para AES, que lo convierten, con diferencia, en la opción más rápida. Elígelo salvo que tengas un motivo concreto para usar otro.</value>
+    <value>El estándar mundial de cifrado y el algoritmo más estudiado. Casi todos los procesadores actuales tienen instrucciones específicas para AES, que lo convierten en la opción más rápida. Elígelo salvo que tengas un motivo concreto para usar otro.</value>
   </data>
   <data name="AesSummary" xml:space="preserve">
     <value>Recomendado (predeterminado). El más rápido en casi cualquier equipo.</value>
@@ -415,7 +415,7 @@
     <value>ChaCha20-Poly1305</value>
   </data>
   <data name="ChaCha20Description" xml:space="preserve">
-    <value>Un cifrado moderno diseñado para ser rápido sin ayuda del hardware, usado en TLS 1.3 y WireGuard. Es la alternativa a AES más rápida de la lista y la mejor opción en procesadores antiguos o de bajo consumo que no tienen instrucciones AES. En el resto de equipos, AES es varias veces más rápido.</value>
+    <value>Un cifrado moderno diseñado para ser rápido sin ayuda del hardware, usado en TLS 1.3 y WireGuard. Es la alternativa a AES más rápida de la lista y la mejor opción en procesadores antiguos o de bajo consumo que no tienen instrucciones AES. En el resto de equipos, AES suele ser algo más rápido.</value>
   </data>
   <data name="ChaCha20Summary" xml:space="preserve">
     <value>Moderno y rápido, incluso sin aceleración AES.</value>
@@ -484,85 +484,85 @@
     <value>Las copias más pequeñas, pero comprime mucho más despacio.</value>
   </data>
   <data name="SourcePathEmpty" xml:space="preserve">
-    <value>Seleccione una carpeta de origen para procesar.</value>
+    <value>Selecciona una carpeta de origen.</value>
   </data>
   <data name="SourcePathNotExist" xml:space="preserve">
-    <value>La ruta de origen no existe.</value>
+    <value>La carpeta de origen no existe.</value>
   </data>
   <data name="SourcePathNotExistFormat" xml:space="preserve">
-    <value>La ruta de origen seleccionada no existe: {0}</value>
+    <value>La carpeta de origen seleccionada no existe: {0}</value>
   </data>
   <data name="SourceMustBeDirectory" xml:space="preserve">
     <value>El origen debe ser una carpeta, no un único archivo. Elige una carpeta.</value>
   </data>
   <data name="SourceDirectoryEmpty" xml:space="preserve">
-    <value>El directorio seleccionado está vacío — no hay archivos para procesar.</value>
+    <value>La carpeta seleccionada no contiene archivos que copiar.</value>
   </data>
   <data name="SourceAccessDenied" xml:space="preserve">
-    <value>Acceso denegado a la ruta de origen. Verifique los permisos o ejecute como administrador.</value>
+    <value>Se denegó el acceso a la carpeta de origen. Revisa sus permisos.</value>
   </data>
   <data name="SourceAccessErrorFormat" xml:space="preserve">
-    <value>Error al acceder a la ruta de origen: {0}</value>
+    <value>No se pudo leer la carpeta de origen: {0}</value>
   </data>
   <data name="DestinationPathEmpty" xml:space="preserve">
-    <value>Seleccione una ruta de destino.</value>
+    <value>Selecciona una carpeta de destino.</value>
   </data>
   <data name="DestinationDriveNotAccessibleFormat" xml:space="preserve">
-    <value>La unidad de destino '{0}' no existe o no es accesible.</value>
+    <value>La unidad de destino «{0}» no existe o no está accesible.</value>
   </data>
   <data name="DestinationInvalidFormat" xml:space="preserve">
-    <value>Ruta de destino no válida: {0}</value>
+    <value>No se puede usar la carpeta de destino: {0}</value>
   </data>
   <data name="SourceDestinationSameDirectory" xml:space="preserve">
-    <value>Los directorios de origen y destino no pueden ser iguales. Elija un destino diferente.</value>
+    <value>Las carpetas de origen y destino no pueden ser la misma. Elige otro destino.</value>
   </data>
   <data name="DestinationInsideSource" xml:space="preserve">
-    <value>El directorio de destino no puede estar dentro del directorio de origen. Esto crearía una operación recursiva.</value>
+    <value>La carpeta de destino no puede estar dentro de la de origen, porque la copia se incluiría a sí misma.</value>
   </data>
   <data name="SourceInsideDestination" xml:space="preserve">
-    <value>El directorio de origen no puede estar dentro del directorio de destino. Elija una ruta diferente.</value>
+    <value>La carpeta de origen no puede estar dentro de la de destino. Elige otra ruta.</value>
   </data>
   <data name="InvalidPathFormat" xml:space="preserve">
     <value>Ruta no válida: {0}</value>
   </data>
   <data name="PasswordRequired" xml:space="preserve">
-    <value>Introduzca una contraseña para cifrar/descifrar.</value>
+    <value>Introduce la contraseña.</value>
   </data>
   <data name="PasswordTooShort" xml:space="preserve">
-    <value>La contraseña debe tener al menos 8 caracteres por seguridad.</value>
+    <value>La contraseña debe tener al menos 8 caracteres.</value>
   </data>
   <data name="PasswordTooLong" xml:space="preserve">
     <value>La contraseña es demasiado larga (máximo 1000 caracteres).</value>
   </data>
   <data name="PasswordLeadingTrailingSpaces" xml:space="preserve">
-    <value>La contraseña no debe comenzar ni terminar con espacios.</value>
+    <value>La contraseña no debe empezar ni terminar con un espacio.</value>
   </data>
   <data name="ConfirmPasswordRequired" xml:space="preserve">
-    <value>Confirme su contraseña.</value>
+    <value>Confirma la contraseña.</value>
   </data>
   <data name="PasswordMismatch" xml:space="preserve">
-    <value>La contraseña y la confirmación no coinciden. Verifique ambos campos.</value>
+    <value>La contraseña y su confirmación no coinciden.</value>
   </data>
   <data name="LowDiskSpaceFormat" xml:space="preserve">
-    <value>Poco espacio en disco: Disponible {0}, necesario estimado {1}</value>
+    <value>Poco espacio en disco: hay {0} disponibles y se necesitan unos {1}.</value>
   </data>
   <data name="DestinationExistingFilesFormat" xml:space="preserve">
-    <value>El destino contiene {0} archivo(s) existente(s) que pueden ser sobrescritos.</value>
+    <value>El destino ya contiene {0:N0} archivo(s). Los archivos con el mismo nombre se sobrescribirán.</value>
   </data>
   <data name="WeakPasswordWarning" xml:space="preserve">
-    <value>La fortaleza de la contraseña está por debajo del nivel recomendado. Considere usar una contraseña más fuerte.</value>
+    <value>La contraseña es más débil de lo recomendable. Plantéate usar una más larga o variada.</value>
   </data>
   <data name="NoFilesInSourceDirectory" xml:space="preserve">
-    <value>No se encontraron archivos en el directorio de origen.</value>
+    <value>No se encontraron archivos que copiar en la carpeta de origen.</value>
   </data>
-  <data name="EncryptionErrorFormat" xml:space="preserve">
-    <value>Error de cifrado para archivo: {0} - {1}</value>
+  <data name="FileBackupErrorFormat" xml:space="preserve">
+    <value>No se pudo copiar {0}: {1}</value>
   </data>
   <data name="AllFilesFailed" xml:space="preserve">
     <value>No se pudo procesar ningún archivo.</value>
   </data>
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
-    <value>No se pudo escribir o cifrar el manifiesto: {0}</value>
+    <value>No se pudo escribir el manifiesto: {0}</value>
   </data>
   <data name="ManifestInvalidMasterSalt" xml:space="preserve">
     <value>No se pudo escribir el manifiesto: la sal maestra no tiene la longitud requerida.</value>
@@ -571,22 +571,22 @@
     <value>No se pudo escribir el manifiesto: indica un algoritmo que esta versión no admite.</value>
   </data>
   <data name="DecryptionErrorFormat" xml:space="preserve">
-    <value>No se pudo restaurar el archivo: {0} - {1}</value>
+    <value>No se pudo restaurar {0}: {1}</value>
   </data>
   <data name="ManifestRequiredForUpdate" xml:space="preserve">
-    <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación del backup. No se puede actualizar sin manifiesto.</value>
+    <value>No se encontró el manifiesto de la copia (manifest.bzc) en la carpeta de la copia, así que no hay nada que actualizar.</value>
   </data>
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
-    <value>No se encontró el archivo de manifiesto (manifest.bzc) en la ubicación de origen. No se puede restaurar sin manifiesto.</value>
+    <value>No se encontró el manifiesto de la copia (manifest.bzc) en la carpeta de la copia, así que no hay nada que restaurar.</value>
   </data>
   <data name="BackupDestinationMustExist" xml:space="preserve">
-    <value>El directorio de destino del backup no existe. No se puede actualizar un backup inexistente.</value>
+    <value>La carpeta de la copia no existe.</value>
   </data>
   <data name="InvalidPassword" xml:space="preserve">
-    <value>Contraseña no válida o archivo corrupto. Verifique la contraseña y la integridad del archivo.</value>
+    <value>La contraseña es incorrecta o el manifiesto de la copia está dañado.</value>
   </data>
   <data name="UnexpectedErrorFormat" xml:space="preserve">
-    <value>Ocurrió un error inesperado: {0}</value>
+    <value>Se produjo un error inesperado: {0}</value>
   </data>
   <data name="StrengthVeryWeak" xml:space="preserve">
     <value>Muy débil</value>
@@ -613,31 +613,31 @@
     <value>¡Buen trabajo!</value>
   </data>
   <data name="TipIncreaseLength" xml:space="preserve">
-    <value>Aumente la longitud (≥12 caracteres)</value>
+    <value>Hazla más larga (12 caracteres o más)</value>
   </data>
   <data name="TipAddUppercase" xml:space="preserve">
-    <value>Añada letras mayúsculas</value>
+    <value>Añade letras mayúsculas</value>
   </data>
   <data name="TipAddLowercase" xml:space="preserve">
-    <value>Añada letras minúsculas</value>
+    <value>Añade letras minúsculas</value>
   </data>
   <data name="TipAddDigits" xml:space="preserve">
-    <value>Añada dígitos</value>
+    <value>Añade números</value>
   </data>
   <data name="TipAddSymbols" xml:space="preserve">
-    <value>Añada símbolos</value>
+    <value>Añade símbolos</value>
   </data>
   <data name="TipMoreVariety" xml:space="preserve">
-    <value>Use más variedad de caracteres</value>
+    <value>Usa más variedad de caracteres</value>
   </data>
   <data name="TipAvoidSequences" xml:space="preserve">
-    <value>Evite secuencias (ej. abc, 123, qwerty)</value>
+    <value>Evita secuencias (p. ej. abc, 123, qwerty)</value>
   </data>
   <data name="TipReduceRepeats" xml:space="preserve">
-    <value>Reduzca caracteres repetidos</value>
+    <value>Evita caracteres y patrones repetidos</value>
   </data>
   <data name="TipAvoidYears" xml:space="preserve">
-    <value>Evite años</value>
+    <value>Evita años</value>
   </data>
   <data name="BenchmarkSection" xml:space="preserve">
     <value>Prueba de rendimiento</value>
@@ -649,7 +649,7 @@
     <value>Cantidad de datos</value>
   </data>
   <data name="BenchmarkDataAmountHint" xml:space="preserve">
-    <value>p. ej. 100</value>
+    <value>p. ej. 100 o 1,5</value>
   </data>
   <data name="BenchmarkRunButton" xml:space="preserve">
     <value>Estimar</value>
@@ -658,13 +658,13 @@
     <value>Midiendo tu hardware…</value>
   </data>
   <data name="BenchmarkResultDurationFormat" xml:space="preserve">
-    <value>Tiempo estimado: ~{0}</value>
+    <value>Tiempo estimado para {0}: ~{1}</value>
   </data>
   <data name="BenchmarkResultThroughputFormat" xml:space="preserve">
     <value>Velocidad de procesamiento: ~{0}/s</value>
   </data>
   <data name="BenchmarkDisclaimer" xml:space="preserve">
-    <value>Estimación aproximada del tiempo de procesamiento en tu CPU. El tiempo real también depende de la velocidad del disco y se reduce por la deduplicación de datos repetidos.</value>
+    <value>Estimación aproximada del tiempo de procesamiento en tu CPU, para muchos archivos y para un único archivo grande. El tiempo real también depende de la velocidad del disco y se reduce por la deduplicación de datos repetidos.</value>
   </data>
   <data name="BenchmarkInvalidAmount" xml:space="preserve">
     <value>Introduce una cantidad de datos válida mayor que cero.</value>
@@ -685,7 +685,7 @@
     <value>Verificar integridad</value>
   </data>
   <data name="IntegrityErrorFormat" xml:space="preserve">
-    <value>Fallo de integridad en: {0} — {1}</value>
+    <value>Fallo de integridad en {0}: {1}</value>
   </data>
   <data name="VerifyInvalidPassword" xml:space="preserve">
     <value>No se pudo abrir la copia: la contraseña es incorrecta o el manifiesto está dañado.</value>
@@ -698,5 +698,149 @@
   </data>
   <data name="VerifyFailureTitle" xml:space="preserve">
     <value>Verificación fallida</value>
+  </data>
+  <data name="ResultUpdateDetailsFormat" xml:space="preserve">
+    <value>{0:N0} sin cambios · {1:N0} eliminados de la copia</value>
+  </data>
+  <data name="ResultNoChanges" xml:space="preserve">
+    <value>Ningún archivo había cambiado: la copia ya estaba al día.</value>
+  </data>
+  <data name="DetectPathNotFound" xml:space="preserve">
+    <value>Esta carpeta no existe.</value>
+  </data>
+  <data name="DetectNotADirectory" xml:space="preserve">
+    <value>Selecciona la carpeta de la copia, no un archivo de su interior.</value>
+  </data>
+  <data name="DetectDamaged" xml:space="preserve">
+    <value>Se encontró una copia, pero su manifiesto está dañado o incompleto.</value>
+  </data>
+  <data name="DetectUnsupported" xml:space="preserve">
+    <value>Esta copia usa un algoritmo que esta versión no admite.</value>
+  </data>
+  <data name="PasswordHintTooShort" xml:space="preserve">
+    <value>Usa al menos 8 caracteres.</value>
+  </data>
+  <data name="PasswordHintTooLong" xml:space="preserve">
+    <value>Usa como máximo 1000 caracteres.</value>
+  </data>
+  <data name="PasswordHintSpaces" xml:space="preserve">
+    <value>La contraseña no debe empezar ni terminar con un espacio.</value>
+  </data>
+  <data name="CopyPasswordTooltip" xml:space="preserve">
+    <value>Copiar (el portapapeles se vacía a los 30 segundos)</value>
+  </data>
+  <data name="SettingsSaveFailed" xml:space="preserve">
+    <value>No se pudieron guardar los ajustes. Comprueba que se puede escribir en el archivo de ajustes.</value>
+  </data>
+  <data name="SettingsUnsavedChanges" xml:space="preserve">
+    <value>Tienes cambios sin guardar.</value>
+  </data>
+  <data name="BenchmarkLargeFileFormat" xml:space="preserve">
+    <value>Como un único archivo grande: ~{0} (~{1}/s)</value>
+  </data>
+  <data name="TipAvoidCommonWords" xml:space="preserve">
+    <value>Evita palabras comunes y contraseñas conocidas</value>
+  </data>
+  <data name="DestinationNotEmpty" xml:space="preserve">
+    <value>La carpeta de destino ya contiene archivos que no forman parte de una copia. Elige una carpeta vacía o una que tenga una copia anterior para sustituirla. No se ha borrado nada.</value>
+  </data>
+  <data name="DestinationContainsBackup" xml:space="preserve">
+    <value>El destino ya contiene una copia. Se sustituirá cuando la nueva copia se haya escrito por completo; hasta entonces se conserva intacta.</value>
+  </data>
+  <data name="DestinationIsFile" xml:space="preserve">
+    <value>El destino es un archivo, no una carpeta.</value>
+  </data>
+  <data name="PathMustBeAbsoluteFormat" xml:space="preserve">
+    <value>Introduce una ruta completa, con la unidad o la carpeta raíz: {0}</value>
+  </data>
+  <data name="PathInvalidCharactersFormat" xml:space="preserve">
+    <value>La ruta contiene caracteres no permitidos: {0}</value>
+  </data>
+  <data name="ManifestDamaged" xml:space="preserve">
+    <value>El manifiesto de la copia (manifest.bzc) está dañado o incompleto.</value>
+  </data>
+  <data name="ManifestUnsupported" xml:space="preserve">
+    <value>Esta copia usa un algoritmo que esta versión de BackupZCrypt no admite.</value>
+  </data>
+  <data name="BackupInUse" xml:space="preserve">
+    <value>Otra operación está modificando la copia. Vuelve a intentarlo cuando termine.</value>
+  </data>
+  <data name="SourceLinksSkippedFormat" xml:space="preserve">
+    <value>{0:N0} enlace(s) (enlaces simbólicos o uniones) no se seguirán ni se copiarán: {1}</value>
+  </data>
+  <data name="SourceOnlyLinks" xml:space="preserve">
+    <value>La carpeta de origen solo contiene enlaces (enlaces simbólicos o uniones), que no se copian.</value>
+  </data>
+  <data name="InaccessibleFolderFormat" xml:space="preserve">
+    <value>No se pudo leer la carpeta {0}: {1}</value>
+  </data>
+  <data name="SourceInaccessibleFoldersFormat" xml:space="preserve">
+    <value>{0:N0} carpeta(s) no se pueden leer y se omitirán: {1}</value>
+  </data>
+  <data name="NameCollisionFormat" xml:space="preserve">
+    <value>Se omitió {0}: una vez normalizado el Unicode, su nombre coincide con el de {1}.</value>
+  </data>
+  <data name="SourceNameCollisionsFormat" xml:space="preserve">
+    <value>{0:N0} archivo(s) tienen el mismo nombre que otro una vez normalizado el Unicode y se omitirán: {1}</value>
+  </data>
+  <data name="UpdateRemovesFilesFormat" xml:space="preserve">
+    <value>{0:N0} archivo(s) de la copia ya no están en el origen y se eliminarán de la copia: {1}</value>
+  </data>
+  <data name="UpdateSourceMismatchFormat" xml:space="preserve">
+    <value>Ningún archivo de la copia ({0:N0}) existe en la carpeta de origen seleccionada. Comprueba que es la carpeta correcta: si continúas, se sustituirá todo el contenido de la copia.</value>
+  </data>
+  <data name="RestoreNameNotSupportedFormat" xml:space="preserve">
+    <value>{0} no se puede restaurar en este sistema porque su nombre no es válido aquí.</value>
+  </data>
+  <data name="RestoreNameConflictFormat" xml:space="preserve">
+    <value>No se restauró {0}: en este sistema tiene el mismo nombre que {1}.</value>
+  </data>
+  <data name="RestoreTargetInsideBackupFormat" xml:space="preserve">
+    <value>No se restauró {0} porque se escribiría dentro de la carpeta de la copia.</value>
+  </data>
+  <data name="DamagedChunksSetAsideFormat" xml:space="preserve">
+    <value>Se apartaron {0:N0} bloque(s) dañado(s). Ejecuta Actualizar desde la carpeta de origen original para reparar los archivos afectados.</value>
+  </data>
+  <data name="FatFileSystemWarning" xml:space="preserve">
+    <value>La unidad de destino usa FAT32, que limita cuántos archivos caben en una carpeta; una copia tan grande puede fallar a mitad. Usa una unidad NTFS o exFAT.</value>
+  </data>
+  <data name="ReasonAccessDenied" xml:space="preserve">
+    <value>acceso denegado</value>
+  </data>
+  <data name="ReasonFileInUse" xml:space="preserve">
+    <value>otro programa lo está usando</value>
+  </data>
+  <data name="ReasonFileNotFound" xml:space="preserve">
+    <value>ya no existe</value>
+  </data>
+  <data name="ReasonPathTooLong" xml:space="preserve">
+    <value>la ruta es demasiado larga</value>
+  </data>
+  <data name="ReasonDiskFull" xml:space="preserve">
+    <value>el disco está lleno</value>
+  </data>
+  <data name="ReasonDataCorrupted" xml:space="preserve">
+    <value>los datos guardados están dañados o se modificaron</value>
+  </data>
+  <data name="ReasonChunkMissing" xml:space="preserve">
+    <value>falta un bloque de la copia</value>
+  </data>
+  <data name="ReasonIoErrorFormat" xml:space="preserve">
+    <value>error de entrada/salida ({0})</value>
+  </data>
+  <data name="ManifestRequiredForVerify" xml:space="preserve">
+    <value>No se encontró el manifiesto de la copia (manifest.bzc) en esta carpeta, así que no hay nada que verificar.</value>
+  </data>
+  <data name="ReasonNameNotSupported" xml:space="preserve">
+    <value>su nombre no se puede guardar en una copia</value>
+  </data>
+  <data name="SourceUnsupportedNamesFormat" xml:space="preserve">
+    <value>{0:N0} archivo(s) tienen nombres que no se pueden guardar en una copia y se omitirán: {1}</value>
+  </data>
+  <data name="DestinationAccessDenied" xml:space="preserve">
+    <value>No se puede escribir en la carpeta de destino. Revisa sus permisos.</value>
+  </data>
+  <data name="AlgorithmNotSupported" xml:space="preserve">
+    <value>Esta versión no admite la opción de cifrado, derivación de clave o compresión seleccionada. Elige otra en Ajustes.</value>
   </data>
 </root>

@@ -132,6 +132,7 @@
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                 <TextBox Grid.Column="0"
                          Classes="field"
+                         AutomationProperties.Name="{x:Static res:Strings.BenchmarkDataAmountLabel}"
                          Text="{Binding BenchmarkDataAmount}"
                          PlaceholderText="{x:Static res:Strings.BenchmarkDataAmountHint}" />
                 <ListBox Grid.Column="1"
@@ -148,6 +149,7 @@
                 <Button Grid.Column="2"
                         Classes="secondary"
                         VerticalAlignment="Center"
+                        AutomationProperties.Name="{x:Static res:Strings.BenchmarkRunButton}"
                         Command="{Binding RunBenchmarkCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Panel Width="16" Height="16" VerticalAlignment="Center">
@@ -182,6 +184,12 @@
                            FontSize="13"
                            Foreground="{StaticResource PrimaryTextBrush}"
                            Text="{Binding BenchmarkThroughputText}" />
+                <TextBlock Classes="numeric"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           IsVisible="{Binding BenchmarkLargeFileText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Text="{Binding BenchmarkLargeFileText}" />
                 <TextBlock FontSize="12"
                            LineHeight="18"
                            Foreground="{StaticResource DimTextBrush}"
@@ -232,24 +240,52 @@
 
     <Border Grid.Row="1" Classes="actionBar">
       <Grid MaxWidth="820" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <StackPanel Grid.Column="0"
-                    Classes="reveal"
-                    Orientation="Horizontal"
-                    Spacing="8"
-                    VerticalAlignment="Center"
-                    IsVisible="{Binding ShowSavedNotice}">
-          <PathIcon Data="{x:Static local:Icons.CheckCircle}"
-                    Width="16" Height="16"
-                    Foreground="{StaticResource SuccessBrush}" />
-          <TextBlock FontSize="13"
-                     FontWeight="Medium"
-                     VerticalAlignment="Center"
-                     Foreground="{StaticResource SuccessBrush}"
-                     Text="{x:Static res:Strings.SettingsSavedNotice}" />
-        </StackPanel>
+        <Panel Grid.Column="0" VerticalAlignment="Center">
+          <StackPanel Classes="reveal"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding ShowSavedNotice}">
+            <PathIcon Data="{x:Static local:Icons.CheckCircle}"
+                      Width="16" Height="16"
+                      Foreground="{StaticResource SuccessBrush}" />
+            <TextBlock FontSize="13"
+                       FontWeight="Medium"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource SuccessBrush}"
+                       Text="{x:Static res:Strings.SettingsSavedNotice}" />
+          </StackPanel>
+          <StackPanel Classes="reveal"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding ShowSaveError}">
+            <PathIcon Data="{x:Static local:Icons.ErrorCircle}"
+                      Width="16" Height="16"
+                      Foreground="{StaticResource DangerBrush}" />
+            <TextBlock FontSize="13"
+                       FontWeight="Medium"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource DangerBrush}"
+                       Text="{x:Static res:Strings.SettingsSaveFailed}" />
+          </StackPanel>
+          <StackPanel Classes="reveal"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding ShowUnsavedNote}">
+            <PathIcon Data="{x:Static local:Icons.Info}"
+                      Width="16" Height="16"
+                      Foreground="{StaticResource WarningBrush}" />
+            <TextBlock FontSize="13"
+                       FontWeight="Medium"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource WarningBrush}"
+                       Text="{x:Static res:Strings.SettingsUnsavedChanges}" />
+          </StackPanel>
+        </Panel>
 
         <Button Grid.Column="1"
                 Classes="primary"
+                AutomationProperties.Name="{x:Static res:Strings.SaveButton}"
                 Command="{Binding SaveCommand}">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <PathIcon Data="{x:Static local:Icons.CheckCircle}" />

@@ -172,13 +172,13 @@
     <value>Create a backup</value>
   </data>
   <data name="HelpCreateText" xml:space="preserve">
-    <value>Pick the source folder and the destination folder. Type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
+    <value>Pick the source folder and an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete). Type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
   </data>
   <data name="HelpUpdateTitle" xml:space="preserve">
     <value>Update a backup</value>
   </data>
   <data name="HelpUpdateText" xml:space="preserve">
-    <value>Select the current source folder and the existing backup. Only changed chunks are re-encrypted, so it is much faster than rebuilding it from scratch.</value>
+    <value>Select the current source folder and the existing backup. Files whose size and date have not changed are kept without being read again, and only changed chunks are re-encrypted, so it is much faster than rebuilding the backup. Files deleted from the source are also removed from the backup; you are told which ones before anything changes.</value>
   </data>
   <data name="HelpRestoreTitle" xml:space="preserve">
     <value>Restore a backup</value>
@@ -190,7 +190,7 @@
     <value>Verify a backup</value>
   </data>
   <data name="HelpVerifyText" xml:space="preserve">
-    <value>Pick the backup folder (the one containing manifest.bzc) and enter its password. BackupZCrypt checks every chunk and tells you whether the backup is intact — without restoring anything.</value>
+    <value>Pick the backup folder (the one containing manifest.bzc) and enter its password. BackupZCrypt checks every chunk and tells you whether the backup is intact — without restoring anything. Damaged chunks are set aside so that Update can rebuild them from the source.</value>
   </data>
   <data name="HelpPasswordTitle" xml:space="preserve">
     <value>Password &amp; security</value>
@@ -229,7 +229,7 @@
     <value>Destination</value>
   </data>
   <data name="DestinationHint" xml:space="preserve">
-    <value>Folder where the backup will be written…</value>
+    <value>Empty folder where the backup will be written…</value>
   </data>
   <data name="BackupLabel" xml:space="preserve">
     <value>Backup</value>
@@ -310,13 +310,13 @@
     <value>Processing…</value>
   </data>
   <data name="ProgressFilesFormat" xml:space="preserve">
-    <value>{0} of {1} files</value>
+    <value>{0:N0} of {1:N0} files</value>
   </data>
   <data name="ElapsedFormat" xml:space="preserve">
     <value>Elapsed: {0}</value>
   </data>
   <data name="DetectMissing" xml:space="preserve">
-    <value>No backup manifest found at this location.</value>
+    <value>No backup was found in this folder.</value>
   </data>
   <data name="DetectFound" xml:space="preserve">
     <value>Encrypted backup found. Enter its password to continue.</value>
@@ -343,13 +343,13 @@
     <value>Operation cancelled</value>
   </data>
   <data name="ResultFilesFormat" xml:space="preserve">
-    <value>{0} of {1} files processed</value>
+    <value>{0:N0} of {1:N0} files processed</value>
   </data>
   <data name="ResultDurationFormat" xml:space="preserve">
     <value>Duration: {0}</value>
   </data>
   <data name="ResultSizeFormat" xml:space="preserve">
-    <value>Total size: {0}</value>
+    <value>Data processed: {0}</value>
   </data>
   <data name="LanguageLabel" xml:space="preserve">
     <value>Language</value>
@@ -388,7 +388,7 @@
     <value>AES-256 GCM</value>
   </data>
   <data name="AesDescription" xml:space="preserve">
-    <value>The worldwide encryption standard and the most thoroughly studied cipher. Almost every current processor has dedicated AES instructions, which make it by far the fastest option. Choose it unless you have a specific reason to use another.</value>
+    <value>The worldwide encryption standard and the most thoroughly studied cipher. Almost every current processor has dedicated AES instructions, which make it the fastest option. Choose it unless you have a specific reason to use another.</value>
   </data>
   <data name="AesSummary" xml:space="preserve">
     <value>Recommended (default). The fastest on almost any computer.</value>
@@ -415,7 +415,7 @@
     <value>ChaCha20-Poly1305</value>
   </data>
   <data name="ChaCha20Description" xml:space="preserve">
-    <value>A modern cipher designed to be fast without help from the hardware, used in TLS 1.3 and WireGuard. It is the fastest alternative to AES on this list and the best choice on older or low-power processors that lack AES instructions. On other computers, AES is several times faster.</value>
+    <value>A modern cipher designed to be fast without help from the hardware, used in TLS 1.3 and WireGuard. It is the fastest alternative to AES on this list and the best choice on older or low-power processors that lack AES instructions. On other computers, AES is usually somewhat faster.</value>
   </data>
   <data name="ChaCha20Summary" xml:space="preserve">
     <value>Modern and fast, even without AES acceleration.</value>
@@ -484,85 +484,85 @@
     <value>The smallest backups, but much slower compression.</value>
   </data>
   <data name="SourcePathEmpty" xml:space="preserve">
-    <value>Please select a source folder to process.</value>
+    <value>Select a source folder.</value>
   </data>
   <data name="SourcePathNotExist" xml:space="preserve">
-    <value>Source path does not exist.</value>
+    <value>The source folder does not exist.</value>
   </data>
   <data name="SourcePathNotExistFormat" xml:space="preserve">
-    <value>The selected source path does not exist: {0}</value>
+    <value>The selected source folder does not exist: {0}</value>
   </data>
   <data name="SourceMustBeDirectory" xml:space="preserve">
     <value>The source must be a folder, not a single file. Please choose a folder.</value>
   </data>
   <data name="SourceDirectoryEmpty" xml:space="preserve">
-    <value>The selected directory is empty - no files to process.</value>
+    <value>The selected folder contains no files to back up.</value>
   </data>
   <data name="SourceAccessDenied" xml:space="preserve">
-    <value>Access denied to the source path. Please check permissions or run as administrator.</value>
+    <value>Access to the source folder was denied. Check its permissions.</value>
   </data>
   <data name="SourceAccessErrorFormat" xml:space="preserve">
-    <value>Error accessing source path: {0}</value>
+    <value>Could not read the source folder: {0}</value>
   </data>
   <data name="DestinationPathEmpty" xml:space="preserve">
-    <value>Please select a destination path.</value>
+    <value>Select a destination folder.</value>
   </data>
   <data name="DestinationDriveNotAccessibleFormat" xml:space="preserve">
     <value>The destination drive '{0}' does not exist or is not accessible.</value>
   </data>
   <data name="DestinationInvalidFormat" xml:space="preserve">
-    <value>Invalid destination path: {0}</value>
+    <value>The destination folder cannot be used: {0}</value>
   </data>
   <data name="SourceDestinationSameDirectory" xml:space="preserve">
-    <value>Source and destination directories cannot be the same. Please choose a different destination.</value>
+    <value>The source and destination folders cannot be the same. Choose a different destination.</value>
   </data>
   <data name="DestinationInsideSource" xml:space="preserve">
-    <value>Destination directory cannot be inside the source directory. This would create a recursive operation.</value>
+    <value>The destination folder cannot be inside the source folder, or the backup would include itself.</value>
   </data>
   <data name="SourceInsideDestination" xml:space="preserve">
-    <value>Source directory cannot be inside the destination directory. Please choose a different path.</value>
+    <value>The source folder cannot be inside the destination folder. Choose a different path.</value>
   </data>
   <data name="InvalidPathFormat" xml:space="preserve">
     <value>Invalid path: {0}</value>
   </data>
   <data name="PasswordRequired" xml:space="preserve">
-    <value>Please enter a password for encryption/decryption.</value>
+    <value>Enter the password.</value>
   </data>
   <data name="PasswordTooShort" xml:space="preserve">
-    <value>Password must be at least 8 characters long for security.</value>
+    <value>The password must be at least 8 characters long.</value>
   </data>
   <data name="PasswordTooLong" xml:space="preserve">
-    <value>Password is too long (maximum 1000 characters).</value>
+    <value>The password is too long (maximum 1,000 characters).</value>
   </data>
   <data name="PasswordLeadingTrailingSpaces" xml:space="preserve">
-    <value>Password should not start or end with spaces.</value>
+    <value>The password must not start or end with a space.</value>
   </data>
   <data name="ConfirmPasswordRequired" xml:space="preserve">
-    <value>Please confirm your password.</value>
+    <value>Confirm the password.</value>
   </data>
   <data name="PasswordMismatch" xml:space="preserve">
-    <value>Password and confirmation password do not match. Please check both fields.</value>
+    <value>The password and its confirmation do not match.</value>
   </data>
   <data name="LowDiskSpaceFormat" xml:space="preserve">
-    <value>Low disk space: Available {0}, estimated need {1}</value>
+    <value>Low disk space: {0} available, about {1} needed.</value>
   </data>
   <data name="DestinationExistingFilesFormat" xml:space="preserve">
-    <value>Destination contains {0} existing file(s) that may be overwritten.</value>
+    <value>The destination already contains {0:N0} file(s). Files with the same name will be overwritten.</value>
   </data>
   <data name="WeakPasswordWarning" xml:space="preserve">
-    <value>Password strength is below recommended level. Consider using a stronger password.</value>
+    <value>The password is weaker than recommended. Consider a longer or more varied one.</value>
   </data>
   <data name="NoFilesInSourceDirectory" xml:space="preserve">
-    <value>No files found in the source directory.</value>
+    <value>No files to back up were found in the source folder.</value>
   </data>
-  <data name="EncryptionErrorFormat" xml:space="preserve">
-    <value>Encryption error for file: {0} - {1}</value>
+  <data name="FileBackupErrorFormat" xml:space="preserve">
+    <value>Could not back up {0}: {1}</value>
   </data>
   <data name="AllFilesFailed" xml:space="preserve">
-    <value>Failed to process any files.</value>
+    <value>No file could be processed.</value>
   </data>
   <data name="ManifestWriteFailedFormat" xml:space="preserve">
-    <value>Failed to write or encrypt manifest: {0}</value>
+    <value>Could not write the manifest: {0}</value>
   </data>
   <data name="ManifestInvalidMasterSalt" xml:space="preserve">
     <value>Failed to write the manifest: the master salt is not the required length.</value>
@@ -571,19 +571,19 @@
     <value>Failed to write the manifest: it names an algorithm this version does not support.</value>
   </data>
   <data name="DecryptionErrorFormat" xml:space="preserve">
-    <value>Could not restore file: {0} - {1}</value>
+    <value>Could not restore {0}: {1}</value>
   </data>
   <data name="ManifestRequiredForUpdate" xml:space="preserve">
-    <value>Manifest file (manifest.bzc) not found at backup location. Cannot update without manifest.</value>
+    <value>No backup manifest (manifest.bzc) was found in the backup folder, so there is nothing to update.</value>
   </data>
   <data name="ManifestRequiredForDecryption" xml:space="preserve">
-    <value>Manifest file (manifest.bzc) not found at source location. Cannot restore without manifest.</value>
+    <value>No backup manifest (manifest.bzc) was found in the backup folder, so there is nothing to restore.</value>
   </data>
   <data name="BackupDestinationMustExist" xml:space="preserve">
-    <value>Backup destination directory does not exist. Cannot update a non-existent backup.</value>
+    <value>The backup folder does not exist.</value>
   </data>
   <data name="InvalidPassword" xml:space="preserve">
-    <value>Invalid password or corrupted file. Please verify the password and file integrity.</value>
+    <value>The password is incorrect, or the backup manifest is damaged.</value>
   </data>
   <data name="UnexpectedErrorFormat" xml:space="preserve">
     <value>An unexpected error occurred: {0}</value>
@@ -613,7 +613,7 @@
     <value>Good job!</value>
   </data>
   <data name="TipIncreaseLength" xml:space="preserve">
-    <value>Increase length (≥12 chars)</value>
+    <value>Make it longer (12 characters or more)</value>
   </data>
   <data name="TipAddUppercase" xml:space="preserve">
     <value>Add uppercase letters</value>
@@ -634,7 +634,7 @@
     <value>Avoid sequences (e.g. abc, 123, qwerty)</value>
   </data>
   <data name="TipReduceRepeats" xml:space="preserve">
-    <value>Reduce repeated characters</value>
+    <value>Avoid repeated characters and patterns</value>
   </data>
   <data name="TipAvoidYears" xml:space="preserve">
     <value>Avoid years</value>
@@ -649,7 +649,7 @@
     <value>Amount of data</value>
   </data>
   <data name="BenchmarkDataAmountHint" xml:space="preserve">
-    <value>e.g. 100</value>
+    <value>e.g. 100 or 1.5</value>
   </data>
   <data name="BenchmarkRunButton" xml:space="preserve">
     <value>Estimate</value>
@@ -658,13 +658,13 @@
     <value>Measuring your hardware…</value>
   </data>
   <data name="BenchmarkResultDurationFormat" xml:space="preserve">
-    <value>Estimated time: ~{0}</value>
+    <value>Estimated time for {0}: ~{1}</value>
   </data>
   <data name="BenchmarkResultThroughputFormat" xml:space="preserve">
     <value>Processing speed: ~{0}/s</value>
   </data>
   <data name="BenchmarkDisclaimer" xml:space="preserve">
-    <value>Rough estimate of processing time on your CPU. Actual time also depends on disk speed and is reduced by deduplication of repeated data.</value>
+    <value>Rough estimate of processing time on your CPU, for many files and for a single large file. Actual time also depends on disk speed and is reduced by deduplication of repeated data.</value>
   </data>
   <data name="BenchmarkInvalidAmount" xml:space="preserve">
     <value>Enter a valid amount of data greater than zero.</value>
@@ -685,7 +685,7 @@
     <value>Verify integrity</value>
   </data>
   <data name="IntegrityErrorFormat" xml:space="preserve">
-    <value>Integrity check failed for: {0} — {1}</value>
+    <value>Integrity check failed for {0}: {1}</value>
   </data>
   <data name="VerifyInvalidPassword" xml:space="preserve">
     <value>Could not open the backup: the password is incorrect or the manifest is damaged.</value>
@@ -698,5 +698,149 @@
   </data>
   <data name="VerifyFailureTitle" xml:space="preserve">
     <value>Verification failed</value>
+  </data>
+  <data name="ResultUpdateDetailsFormat" xml:space="preserve">
+    <value>{0:N0} unchanged · {1:N0} removed from the backup</value>
+  </data>
+  <data name="ResultNoChanges" xml:space="preserve">
+    <value>No file had changed: the backup was already up to date.</value>
+  </data>
+  <data name="DetectPathNotFound" xml:space="preserve">
+    <value>This folder does not exist.</value>
+  </data>
+  <data name="DetectNotADirectory" xml:space="preserve">
+    <value>Select the backup folder, not a file inside it.</value>
+  </data>
+  <data name="DetectDamaged" xml:space="preserve">
+    <value>A backup was found, but its manifest is damaged or incomplete.</value>
+  </data>
+  <data name="DetectUnsupported" xml:space="preserve">
+    <value>This backup uses an algorithm this version does not support.</value>
+  </data>
+  <data name="PasswordHintTooShort" xml:space="preserve">
+    <value>Use at least 8 characters.</value>
+  </data>
+  <data name="PasswordHintTooLong" xml:space="preserve">
+    <value>Use at most 1,000 characters.</value>
+  </data>
+  <data name="PasswordHintSpaces" xml:space="preserve">
+    <value>The password must not start or end with a space.</value>
+  </data>
+  <data name="CopyPasswordTooltip" xml:space="preserve">
+    <value>Copy (the clipboard is cleared after 30 seconds)</value>
+  </data>
+  <data name="SettingsSaveFailed" xml:space="preserve">
+    <value>The settings could not be saved. Check that the settings file can be written.</value>
+  </data>
+  <data name="SettingsUnsavedChanges" xml:space="preserve">
+    <value>You have unsaved changes.</value>
+  </data>
+  <data name="BenchmarkLargeFileFormat" xml:space="preserve">
+    <value>As a single large file: ~{0} (~{1}/s)</value>
+  </data>
+  <data name="TipAvoidCommonWords" xml:space="preserve">
+    <value>Avoid common words and well-known passwords</value>
+  </data>
+  <data name="DestinationNotEmpty" xml:space="preserve">
+    <value>The destination folder already contains files that are not part of a backup. Choose an empty folder, or a folder holding a previous backup to replace it. Nothing has been deleted.</value>
+  </data>
+  <data name="DestinationContainsBackup" xml:space="preserve">
+    <value>The destination already contains a backup. It will be replaced once the new backup has been written completely; until then it stays intact.</value>
+  </data>
+  <data name="DestinationIsFile" xml:space="preserve">
+    <value>The destination is a file, not a folder.</value>
+  </data>
+  <data name="PathMustBeAbsoluteFormat" xml:space="preserve">
+    <value>Enter a full path, including the drive or root folder: {0}</value>
+  </data>
+  <data name="PathInvalidCharactersFormat" xml:space="preserve">
+    <value>The path contains characters that are not allowed: {0}</value>
+  </data>
+  <data name="ManifestDamaged" xml:space="preserve">
+    <value>The backup manifest (manifest.bzc) is damaged or incomplete.</value>
+  </data>
+  <data name="ManifestUnsupported" xml:space="preserve">
+    <value>This backup uses an algorithm this version of BackupZCrypt does not support.</value>
+  </data>
+  <data name="BackupInUse" xml:space="preserve">
+    <value>The backup is being modified by another operation. Try again when it finishes.</value>
+  </data>
+  <data name="SourceLinksSkippedFormat" xml:space="preserve">
+    <value>{0:N0} link(s) (symbolic links or junctions) will not be followed or backed up: {1}</value>
+  </data>
+  <data name="SourceOnlyLinks" xml:space="preserve">
+    <value>The source folder only contains links (symbolic links or junctions), which are not backed up.</value>
+  </data>
+  <data name="InaccessibleFolderFormat" xml:space="preserve">
+    <value>Could not read folder {0}: {1}</value>
+  </data>
+  <data name="SourceInaccessibleFoldersFormat" xml:space="preserve">
+    <value>{0:N0} folder(s) cannot be read and will be skipped: {1}</value>
+  </data>
+  <data name="NameCollisionFormat" xml:space="preserve">
+    <value>{0} was skipped: once Unicode is normalized, its name is the same as {1}.</value>
+  </data>
+  <data name="SourceNameCollisionsFormat" xml:space="preserve">
+    <value>{0:N0} file(s) have the same name as another file once Unicode is normalized and will be skipped: {1}</value>
+  </data>
+  <data name="UpdateRemovesFilesFormat" xml:space="preserve">
+    <value>{0:N0} file(s) in the backup are no longer in the source and will be removed from the backup: {1}</value>
+  </data>
+  <data name="UpdateSourceMismatchFormat" xml:space="preserve">
+    <value>None of the files in the backup ({0:N0}) exist in the selected source folder. Check that it is the right folder: continuing replaces the whole content of the backup.</value>
+  </data>
+  <data name="RestoreNameNotSupportedFormat" xml:space="preserve">
+    <value>{0} cannot be restored on this system because its name is not valid here.</value>
+  </data>
+  <data name="RestoreNameConflictFormat" xml:space="preserve">
+    <value>{0} was not restored: on this system it has the same name as {1}.</value>
+  </data>
+  <data name="RestoreTargetInsideBackupFormat" xml:space="preserve">
+    <value>{0} was not restored because it would be written inside the backup folder.</value>
+  </data>
+  <data name="DamagedChunksSetAsideFormat" xml:space="preserve">
+    <value>{0:N0} damaged chunk(s) were set aside. Run Update from the original source folder to repair the affected files.</value>
+  </data>
+  <data name="FatFileSystemWarning" xml:space="preserve">
+    <value>The destination drive uses FAT32, which limits how many files a folder can hold; a backup this large may fail part-way. Use an NTFS or exFAT drive.</value>
+  </data>
+  <data name="ReasonAccessDenied" xml:space="preserve">
+    <value>access denied</value>
+  </data>
+  <data name="ReasonFileInUse" xml:space="preserve">
+    <value>another program is using it</value>
+  </data>
+  <data name="ReasonFileNotFound" xml:space="preserve">
+    <value>it no longer exists</value>
+  </data>
+  <data name="ReasonPathTooLong" xml:space="preserve">
+    <value>the path is too long</value>
+  </data>
+  <data name="ReasonDiskFull" xml:space="preserve">
+    <value>the disk is full</value>
+  </data>
+  <data name="ReasonDataCorrupted" xml:space="preserve">
+    <value>the stored data is damaged or was modified</value>
+  </data>
+  <data name="ReasonChunkMissing" xml:space="preserve">
+    <value>a chunk of the backup is missing</value>
+  </data>
+  <data name="ReasonIoErrorFormat" xml:space="preserve">
+    <value>input/output error ({0})</value>
+  </data>
+  <data name="ManifestRequiredForVerify" xml:space="preserve">
+    <value>No backup manifest (manifest.bzc) was found in this folder, so there is nothing to verify.</value>
+  </data>
+  <data name="ReasonNameNotSupported" xml:space="preserve">
+    <value>its name cannot be stored in a backup</value>
+  </data>
+  <data name="SourceUnsupportedNamesFormat" xml:space="preserve">
+    <value>{0:N0} file(s) have names that cannot be stored in a backup and will be skipped: {1}</value>
+  </data>
+  <data name="DestinationAccessDenied" xml:space="preserve">
+    <value>The destination folder cannot be written to. Check its permissions.</value>
+  </data>
+  <data name="AlgorithmNotSupported" xml:space="preserve">
+    <value>The selected encryption, key derivation, or compression option is not supported by this version. Choose another one in Settings.</value>
   </data>
 </root>

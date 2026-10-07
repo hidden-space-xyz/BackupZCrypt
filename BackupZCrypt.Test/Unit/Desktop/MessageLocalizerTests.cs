@@ -118,6 +118,31 @@ public sealed partial class MessageLocalizerTests
         );
     }
 
+    [Fact]
+    internal void Localize_ArgumentThatIsItselfAMessage_IsLocalizedBeforeBeingInserted()
+    {
+        var text = MessageLocalizer.Localize(
+            new LocalizableMessage(
+                MessageCode.FileBackupErrorFormat,
+                "docs/a.txt",
+                new LocalizableMessage(MessageCode.ReasonIoErrorFormat, "detail")
+            )
+        );
+
+        var expected = string.Format(
+            CultureInfo.CurrentCulture,
+            Strings.GetByKey(nameof(MessageCode.FileBackupErrorFormat)),
+            "docs/a.txt",
+            string.Format(
+                CultureInfo.CurrentCulture,
+                Strings.GetByKey(nameof(MessageCode.ReasonIoErrorFormat)),
+                "detail"
+            )
+        );
+
+        Assert.Equal(expected, text);
+    }
+
     /// <summary>
     /// Gets the codes that the naming convention marks as taking format arguments.
     /// </summary>

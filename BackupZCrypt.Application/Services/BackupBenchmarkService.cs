@@ -120,8 +120,12 @@ internal sealed class BackupBenchmarkService(
                 )
                 .ConfigureAwait(false);
 
+            var chunkSlots = ComputeChunkSlotCount(Environment.ProcessorCount);
+
             var throughput = await MeasureThroughputAsync(
                     sample,
+                    ComputeWorkerCount(Environment.ProcessorCount),
+                    chunkSlots,
                     encryptionKey,
                     nonceKey,
                     encryptionStrategy,
@@ -130,17 +134,25 @@ internal sealed class BackupBenchmarkService(
                 )
                 .ConfigureAwait(false);
 
-            var estimatedDuration = ComputeEstimatedDuration(
-                keyDerivationDuration,
-                throughput,
-                request.DataBytes
-            );
+            var largeFileThroughput = await MeasureThroughputAsync(
+                    sample,
+                    1,
+                    chunkSlots,
+                    encryptionKey,
+                    nonceKey,
+                    encryptionStrategy,
+                    compressionStrategy,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             return new BenchmarkEstimate(
-                estimatedDuration,
+                ComputeEstimatedDuration(keyDerivationDuration, throughput, request.DataBytes),
                 throughput,
                 keyDerivationDuration,
-                request.DataBytes
+                request.DataBytes,
+                ComputeEstimatedDuration(keyDerivationDuration, largeFileThroughput, request.DataBytes),
+                largeFileThroughput
             );
         }
         finally
@@ -204,6 +216,17 @@ internal sealed class BackupBenchmarkService(
     }
 
     /// <summary>
+    /// Returns how many chunks the timed pass compresses and encrypts at once on a machine with the
+    /// given number of logical processors: as many as a real backup does.
+    /// </summary>
+    /// <param name="processorCount">The number of logical processors available to the process.</param>
+    /// <returns>The number of chunks processed at once.</returns>
+    internal static int ComputeChunkSlotCount(int processorCount)
+    {
+        return FileParallelismPolicy.ChunksInFlightForProcessorCount(processorCount);
+    }
+
+    /// <summary>
     /// Times a single master-key derivation with the selected algorithm and zeroes the derived key.
     /// </summary>
     /// <param name="keyDerivationStrategy">The key derivation strategy to exercise.</param>
@@ -251,9 +274,11 @@ internal sealed class BackupBenchmarkService(
                 .ConfigureAwait(false)
         )
         {
-            await ProcessChunkAsync(
+            fileHasher.AppendData(chunk.Span);
+
+            await EncryptChunkAsync(
                     chunk,
-                    fileHasher,
+                    SHA256.HashData(chunk.Span),
                     encryptionKey,
                     nonceKey,
                     encryptionStrategy,
@@ -265,10 +290,13 @@ internal sealed class BackupBenchmarkService(
     }
 
     /// <summary>
-    /// Runs the chunk pipeline on as many concurrent workers as a real backup runs file pipelines, for the
-    /// measure window, and reports the aggregate rate at which source bytes were consumed.
+    /// Runs the pipeline a real backup runs — readers that chunk and hash their file in order, sharing
+    /// a bounded pool of chunk slots in which chunks are compressed and encrypted concurrently — for
+    /// the measure window, and reports the aggregate rate at which source bytes were consumed.
     /// </summary>
-    /// <param name="sample">The synthetic sample data each worker reads from.</param>
+    /// <param name="sample">The synthetic sample data each reader reads from.</param>
+    /// <param name="readers">The number of files read at once.</param>
+    /// <param name="chunkSlots">The number of chunks compressed and encrypted at once.</param>
     /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
     /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
     /// <param name="encryptionStrategy">The encryption strategy under test.</param>
@@ -277,6 +305,8 @@ internal sealed class BackupBenchmarkService(
     /// <returns>The measured throughput in source bytes per second.</returns>
     private async Task<double> MeasureThroughputAsync(
         byte[] sample,
+        int readers,
+        int chunkSlots,
         byte[] encryptionKey,
         byte[] nonceKey,
         IEncryptionAlgorithmStrategy encryptionStrategy,
@@ -284,17 +314,18 @@ internal sealed class BackupBenchmarkService(
         CancellationToken cancellationToken
     )
     {
-        var workerCount = ComputeWorkerCount(Environment.ProcessorCount);
+        using SemaphoreSlim slots = new(chunkSlots, chunkSlots);
         var stopwatch = Stopwatch.StartNew();
-        var workers = new Task<long>[workerCount];
+        var workers = new Task<long>[readers];
 
-        for (var i = 0; i < workerCount; i++)
+        for (var i = 0; i < readers; i++)
         {
             workers[i] = Task.Run(
                 () =>
-                    MeasureWorkerAsync(
+                    MeasureReaderAsync(
                         sample,
                         stopwatch,
+                        slots,
                         encryptionKey,
                         nonceKey,
                         encryptionStrategy,
@@ -305,28 +336,30 @@ internal sealed class BackupBenchmarkService(
             );
         }
 
-        var processedPerWorker = await Task.WhenAll(workers).ConfigureAwait(false);
+        var processedPerReader = await Task.WhenAll(workers).ConfigureAwait(false);
         stopwatch.Stop();
 
-        var totalProcessed = processedPerWorker.Sum();
-        return totalProcessed / stopwatch.Elapsed.TotalSeconds;
+        return processedPerReader.Sum() / stopwatch.Elapsed.TotalSeconds;
     }
 
     /// <summary>
-    /// Replays the sample through the chunk pipeline until the shared stopwatch passes the measure window,
-    /// counting the source bytes this worker consumed.
+    /// Replays the sample through the chunker until the shared stopwatch passes the measure window,
+    /// adding every chunk to the running file hash in order and handing it to a chunk slot for hashing,
+    /// compression, and encryption, then waits for the chunks still in flight.
     /// </summary>
     /// <param name="sample">The synthetic sample data to chunk.</param>
-    /// <param name="stopwatch">The stopwatch shared by all workers that bounds the measure window.</param>
+    /// <param name="stopwatch">The stopwatch shared by all readers that bounds the measure window.</param>
+    /// <param name="slots">The chunk slots shared by all readers.</param>
     /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
     /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
     /// <param name="encryptionStrategy">The encryption strategy under test.</param>
     /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
-    /// <param name="cancellationToken">A token to cancel the worker.</param>
-    /// <returns>The number of source bytes this worker processed.</returns>
-    private async Task<long> MeasureWorkerAsync(
+    /// <param name="cancellationToken">A token to cancel the reader.</param>
+    /// <returns>The number of source bytes this reader processed.</returns>
+    private async Task<long> MeasureReaderAsync(
         byte[] sample,
         Stopwatch stopwatch,
+        SemaphoreSlim slots,
         byte[] encryptionKey,
         byte[] nonceKey,
         IEncryptionAlgorithmStrategy encryptionStrategy,
@@ -335,55 +368,83 @@ internal sealed class BackupBenchmarkService(
     )
     {
         long processed = 0;
+        List<Task> inFlight = [];
 
-        while (stopwatch.Elapsed < MeasureWindow)
+        try
         {
-            await using var stream = new MemoryStream(sample, 0, sample.Length, writable: false);
-            using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-
-            await foreach (
-                var chunk in chunkingStrategy
-                    .ChunkAsync(stream, cancellationToken)
-                    .ConfigureAwait(false)
-            )
+            while (stopwatch.Elapsed < MeasureWindow)
             {
-                await ProcessChunkAsync(
-                        chunk,
-                        fileHasher,
-                        encryptionKey,
-                        nonceKey,
-                        encryptionStrategy,
-                        compressionStrategy,
-                        cancellationToken
-                    )
-                    .ConfigureAwait(false);
+                await using var stream = new MemoryStream(sample, 0, sample.Length, writable: false);
+                using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
-                processed += chunk.Length;
+                await foreach (
+                    var chunk in chunkingStrategy
+                        .ChunkAsync(stream, cancellationToken)
+                        .ConfigureAwait(false)
+                )
+                {
+                    fileHasher.AppendData(chunk.Span);
+
+                    await slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                    inFlight.Add(
+                        Task.Run(
+                            async () =>
+                            {
+                                try
+                                {
+                                    await EncryptChunkAsync(
+                                            chunk,
+                                            SHA256.HashData(chunk.Span),
+                                            encryptionKey,
+                                            nonceKey,
+                                            encryptionStrategy,
+                                            compressionStrategy,
+                                            cancellationToken
+                                        )
+                                        .ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    _ = slots.Release();
+                                }
+                            },
+                            cancellationToken
+                        )
+                    );
+
+                    processed += chunk.Length;
+                    _ = inFlight.RemoveAll(static task => task.IsCompletedSuccessfully);
+                }
             }
+        }
+        finally
+        {
+            await Task.WhenAll(inFlight).ConfigureAwait(false);
         }
 
         return processed;
     }
 
     /// <summary>
-    /// Runs one chunk through the full production pipeline — file hashing, chunk hashing, nonce derivation,
-    /// optional compression, and authenticated encryption — then discards the ciphertext.
+    /// Runs one hashed chunk through the rest of the production pipeline — nonce derivation, optional
+    /// compression, and authenticated encryption — then discards the ciphertext.
     /// </summary>
     /// <remarks>
     /// Every intermediate buffer, including the chunk hash, nonce, associated data, and ciphertext, is zeroed
     /// in a <see langword="finally"/> block so the benchmark leaves no derived material in memory.
     /// </remarks>
     /// <param name="chunk">The chunk produced by the chunking strategy.</param>
-    /// <param name="fileHasher">The running whole-file hash the chunk is appended to.</param>
+    /// <param name="chunkHash">The chunk's SHA-256 content hash, owned by this call.</param>
     /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
     /// <param name="nonceKey">The throwaway key used to derive the per-chunk nonce.</param>
     /// <param name="encryptionStrategy">The encryption strategy under test.</param>
     /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
     /// <param name="cancellationToken">A token to cancel the compression step.</param>
     /// <returns>A task that completes when the chunk has been processed and its buffers cleared.</returns>
-    private static async Task ProcessChunkAsync(
+    private static async Task EncryptChunkAsync(
         ReadOnlyMemory<byte> chunk,
-        IncrementalHash fileHasher,
+        byte[] chunkHash,
         byte[] encryptionKey,
         byte[] nonceKey,
         IEncryptionAlgorithmStrategy encryptionStrategy,
@@ -391,9 +452,6 @@ internal sealed class BackupBenchmarkService(
         CancellationToken cancellationToken
     )
     {
-        fileHasher.AppendData(chunk.Span);
-
-        var chunkHash = SHA256.HashData(chunk.Span);
         byte[]? nonce = null;
         byte[]? associatedData = null;
         byte[]? compressed = null;

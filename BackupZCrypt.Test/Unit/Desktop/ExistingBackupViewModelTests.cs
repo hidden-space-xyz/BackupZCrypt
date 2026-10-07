@@ -131,6 +131,35 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         );
     }
 
+    [Theory]
+    [InlineData(ManifestKind.Missing)]
+    [InlineData(ManifestKind.PathNotFound)]
+    [InlineData(ManifestKind.NotADirectory)]
+    [InlineData(ManifestKind.Damaged)]
+    [InlineData(ManifestKind.Unsupported)]
+    internal void BackupPath_WhenNoUsableBackupIsFound_ExplainsWhy(ManifestKind kind)
+    {
+        StubDetection(kind);
+        var sut = CreateSut();
+
+        sut.SourcePath = "somewhere";
+
+        var expected = kind switch
+        {
+            ManifestKind.PathNotFound => Strings.DetectPathNotFound,
+            ManifestKind.NotADirectory => Strings.DetectNotADirectory,
+            ManifestKind.Damaged => Strings.DetectDamaged,
+            ManifestKind.Unsupported => Strings.DetectUnsupported,
+            _ => Strings.DetectMissing,
+        };
+
+        Assert.Multiple(
+            () => Assert.True(sut.HasDetection),
+            () => Assert.Equal(expected, sut.DetectionMessage),
+            () => Assert.False(sut.StartCommand.CanExecute(null))
+        );
+    }
+
     [Fact]
     internal void BackupPath_WhenClearedAfterADetection_ForgetsThePasswordRequirementAndTheNotice()
     {
@@ -353,7 +382,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BackupOperation.Restore, "backup-source", "backup-destination")]
+    [InlineData(BackupOperation.Restore, "remembered-source", "backup-source")]
     [InlineData(BackupOperation.Update, "backup-source", "backup-destination")]
     [InlineData(BackupOperation.Verify, "remembered-source", "backup-source")]
     internal async Task StartCommand_WhenThePageSucceeds_RemembersOnlyThePathsThatPageOwns(

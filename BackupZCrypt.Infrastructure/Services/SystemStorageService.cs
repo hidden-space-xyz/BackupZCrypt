@@ -61,4 +61,22 @@ internal sealed class SystemStorageService : ISystemStorageService
             return false;
         }
     }
+
+    /// <summary>
+    /// Returns the file system name of the drive identified by <paramref name="rootPath"/>.
+    /// </summary>
+    /// <param name="rootPath">The drive root to inspect.</param>
+    /// <returns>The file system name, or <see langword="null"/> if the drive is not ready or cannot be read.</returns>
+    public string? GetDriveFormat(string rootPath)
+    {
+        try
+        {
+            DriveInfo driveInfo = new(rootPath);
+            return driveInfo.IsReady ? driveInfo.DriveFormat : null;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            return null;
+        }
+    }
 }

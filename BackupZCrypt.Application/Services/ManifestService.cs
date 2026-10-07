@@ -32,12 +32,19 @@ internal sealed class ManifestService(
     private const int ChunkPreambleHeaderSize = 34;
 
     /// <summary>
-    /// Determines whether a readable backup manifest is present: a non-empty manifest is reported as
-    /// an encrypted backup, since encryption is the only supported format.
+    /// The shortest manifest that can hold a preamble, a nonce, and an authentication tag.
     /// </summary>
-    /// <param name="backupPath">A path to the backup directory or a file within it.</param>
+    private const int MinimumManifestSize =
+        ChunkPreambleHeaderSize + EncryptionConstants.NonceSize + EncryptionConstants.TagSize;
+
+    /// <summary>
+    /// Classifies the location a user picked as a backup: a missing path, a file instead of the backup
+    /// folder, a folder without a manifest, or a folder whose manifest is readable, damaged, or names an
+    /// algorithm this version does not support.
+    /// </summary>
+    /// <param name="backupPath">The path the user picked as the backup folder.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The detected manifest kind, or <see cref="ManifestKind.Missing"/> if none is found or readable.</returns>
+    /// <returns>The detected manifest kind.</returns>
     /// <exception cref="ArgumentException"><paramref name="backupPath"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<ManifestKind> DetectManifestKindAsync(
         string backupPath,
@@ -48,17 +55,43 @@ internal sealed class ManifestService(
 
         try
         {
-            var directory = fileOperationsService.DirectoryExists(backupPath)
-                ? backupPath
-                : fileOperationsService.GetDirectoryName(backupPath) ?? string.Empty;
-
-            if (string.IsNullOrEmpty(directory))
+            if (!fileOperationsService.DirectoryExists(backupPath))
             {
-                return ManifestKind.Missing;
+                return fileOperationsService.FileExists(backupPath)
+                    ? ManifestKind.NotADirectory
+                    : ManifestKind.PathNotFound;
             }
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            return ManifestKind.PathNotFound;
+        }
 
+        return await this.InspectManifestAsync(backupPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Inspects the manifest in a backup folder without decrypting it: its presence, its length, and
+    /// the algorithm identifiers of its preamble.
+    /// </summary>
+    /// <param name="backupRoot">The backup folder.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// <see cref="ManifestKind.Encrypted"/> for a manifest that can be opened with a password, or the
+    /// kind describing why it cannot.
+    /// </returns>
+    /// <exception cref="ArgumentException"><paramref name="backupRoot"/> is <see langword="null"/> or whitespace.</exception>
+    public async Task<ManifestKind> InspectManifestAsync(
+        string backupRoot,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(backupRoot);
+
+        try
+        {
             var manifestPath = fileOperationsService.CombinePath(
-                directory,
+                backupRoot,
                 BackupConstants.ManifestFileName
             );
 
@@ -67,18 +100,24 @@ internal sealed class ManifestService(
                 return ManifestKind.Missing;
             }
 
-            var firstByte = new byte[1];
-
             await using var stream = fileOperationsService.OpenReadStream(
                 manifestPath,
                 bufferSize: 16
             );
 
-            var read = await stream
-                .ReadAsync(firstByte.AsMemory(0, 1), cancellationToken)
-                .ConfigureAwait(false);
+            if (stream.Length < MinimumManifestSize)
+            {
+                return ManifestKind.Damaged;
+            }
 
-            return read is 0 ? ManifestKind.Missing : ManifestKind.Encrypted;
+            var identifiers = new byte[2];
+            await stream.ReadExactlyAsync(identifiers, cancellationToken).ConfigureAwait(false);
+
+            return
+                Enum.IsDefined((EncryptionAlgorithm)identifiers[0])
+                && Enum.IsDefined((KeyDerivationAlgorithm)identifiers[1])
+                ? ManifestKind.Encrypted
+                : ManifestKind.Unsupported;
         }
         catch (OperationCanceledException)
         {
@@ -86,7 +125,7 @@ internal sealed class ManifestService(
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            return ManifestKind.Missing;
+            return ManifestKind.Damaged;
         }
     }
 
@@ -115,7 +154,7 @@ internal sealed class ManifestService(
             }
 
             rawFile = await fileOperationsService
-                .ReadAllBytesBoundedAsync(manifestPath, BackupConstants.MaximumManifestSize, cancellationToken)
+                .ReadAllBytesBoundedAsync(manifestPath, Array.MaxLength, cancellationToken)
                 .ConfigureAwait(false);
 
             var algorithm = (EncryptionAlgorithm)rawFile[0];
@@ -304,9 +343,15 @@ internal sealed class ManifestService(
                             f.OriginalPath,
                             f.FileHash,
                             f.TotalSize,
-                            [.. f.Chunks]
+                            [.. f.Chunks],
+                            f.LastWriteTimeUtc,
+                            f.Attributes,
+                            f.UnixMode
                         )),
-                ]
+                ],
+                manifestData.Directories is { Count: > 0 } directories
+                    ? [.. directories.Order(StringComparer.Ordinal)]
+                    : null
             );
 
             manifestBytes = JsonSerializer.SerializeToUtf8Bytes(document);
@@ -447,9 +492,17 @@ internal sealed class ManifestService(
                 f.OriginalPath,
                 f.FileHash,
                 f.TotalSize,
-                [.. f.Chunks]
+                [.. f.Chunks],
+                f.LastWriteTimeUtc,
+                f.Attributes,
+                f.UnixMode
             ));
 
-        return new ChunkManifestData(header, document.MasterSalt, files);
+        return new ChunkManifestData(
+            header,
+            document.MasterSalt,
+            files,
+            document.Directories is { } directories ? [.. directories] : null
+        );
     }
 }

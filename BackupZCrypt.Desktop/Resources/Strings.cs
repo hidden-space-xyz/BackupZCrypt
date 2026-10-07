@@ -368,6 +368,46 @@ internal static class Strings
     public static string DetectFound => Get();
 
     /// <summary>
+    /// Gets the message shown when the selected backup folder does not exist.
+    /// </summary>
+    public static string DetectPathNotFound => Get();
+
+    /// <summary>
+    /// Gets the message shown when a file was selected instead of the backup folder.
+    /// </summary>
+    public static string DetectNotADirectory => Get();
+
+    /// <summary>
+    /// Gets the message shown when the backup's manifest is damaged or incomplete.
+    /// </summary>
+    public static string DetectDamaged => Get();
+
+    /// <summary>
+    /// Gets the message shown when the backup uses an algorithm this version does not support.
+    /// </summary>
+    public static string DetectUnsupported => Get();
+
+    /// <summary>
+    /// Gets the hint shown while the password is shorter than the minimum length.
+    /// </summary>
+    public static string PasswordHintTooShort => Get();
+
+    /// <summary>
+    /// Gets the hint shown while the password is longer than the maximum length.
+    /// </summary>
+    public static string PasswordHintTooLong => Get();
+
+    /// <summary>
+    /// Gets the hint shown while the password starts or ends with a space.
+    /// </summary>
+    public static string PasswordHintSpaces => Get();
+
+    /// <summary>
+    /// Gets the tooltip of the copy-password button, which says how long the clipboard keeps it.
+    /// </summary>
+    public static string CopyPasswordTooltip => Get();
+
+    /// <summary>
     /// Gets the warnings panel title.
     /// </summary>
     public static string WarningsTitle => Get();
@@ -416,6 +456,26 @@ internal static class Strings
     /// Gets the format string for the result size.
     /// </summary>
     public static string ResultSizeFormat => Get();
+
+    /// <summary>
+    /// Gets the format string summarizing the files an update kept and removed.
+    /// </summary>
+    public static string ResultUpdateDetailsFormat => Get();
+
+    /// <summary>
+    /// Gets the result line shown when an update found nothing to change.
+    /// </summary>
+    public static string ResultNoChanges => Get();
+
+    /// <summary>
+    /// Gets the message shown when the settings could not be written.
+    /// </summary>
+    public static string SettingsSaveFailed => Get();
+
+    /// <summary>
+    /// Gets the note shown while the settings page holds changes that have not been saved.
+    /// </summary>
+    public static string SettingsUnsavedChanges => Get();
 
     /// <summary>
     /// Gets the language field label.
@@ -676,6 +736,11 @@ internal static class Strings
     /// Gets the format string for the measured benchmark throughput.
     /// </summary>
     public static string BenchmarkResultThroughputFormat => Get();
+
+    /// <summary>
+    /// Gets the format string for the estimate of a single large file.
+    /// </summary>
+    public static string BenchmarkLargeFileFormat => Get();
 
     /// <summary>
     /// Gets the benchmark disclaimer note.

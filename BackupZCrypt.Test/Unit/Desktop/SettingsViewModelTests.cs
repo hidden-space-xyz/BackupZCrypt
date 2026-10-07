@@ -126,7 +126,7 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    internal async Task OnNavigatedToAsync_CalledAgain_KeepsTheUnsavedEditInsteadOfReloading()
+    internal async Task OnNavigatedToAsync_CalledAgain_DiscardsTheUnsavedEditAndShowsTheStoredSettings()
     {
         var sut = CreateSut();
         StubStoredSettings(
@@ -140,25 +140,59 @@ public sealed class SettingsViewModelTests
 
         await sut.OnNavigatedToAsync();
 
-        var (loadedEncryption, loadedKeyDerivation, loadedCompression, loadedLanguage) = (
+        var (loadedEncryption, loadedKeyDerivation, loadedLanguage) = (
             sut.SelectedEncryption.Id,
             sut.SelectedKeyDerivation.Id,
-            sut.SelectedCompression.Id,
             sut.SelectedLanguage.Code
         );
 
         sut.SelectedCompression = sut.CompressionOptions.First(static option =>
             option.Id is CompressionMode.None
         );
+        var unsavedWhileEdited = sut.HasUnsavedChanges;
 
         await sut.OnNavigatedToAsync();
 
         Assert.Multiple(
             () => Assert.Equal(EncryptionAlgorithm.Serpent, loadedEncryption),
             () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, loadedKeyDerivation),
-            () => Assert.Equal(CompressionMode.ZstdBest, loadedCompression),
             () => Assert.Equal("es", loadedLanguage),
-            () => Assert.Equal(CompressionMode.None, sut.SelectedCompression.Id)
+            () => Assert.True(unsavedWhileEdited),
+            () => Assert.Equal(CompressionMode.ZstdBest, sut.SelectedCompression.Id),
+            () => Assert.False(sut.HasUnsavedChanges)
+        );
+    }
+
+    [Fact]
+    internal async Task SelectionEdit_AfterASave_HidesTheSavedNoticeAndFlagsUnsavedChanges()
+    {
+        var sut = CreateSut();
+        _ = this
+            .saveCreationDefaults.HandleAsync(
+                Arg.Any<SaveSettingsCommand<BackupCreationSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result.Success());
+        _ = this
+            .saveLanguage.HandleAsync(
+                Arg.Any<SaveSettingsCommand<LanguageSettings>>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result.Success());
+
+        await sut.OnNavigatedToAsync();
+        await sut.SaveCommand.ExecuteAsync(null);
+        var savedNoticeAfterSave = sut.ShowSavedNotice;
+
+        sut.SelectedEncryption = sut.EncryptionOptions.First(static option =>
+            option.Id is EncryptionAlgorithm.Serpent
+        );
+
+        Assert.Multiple(
+            () => Assert.True(savedNoticeAfterSave),
+            () => Assert.False(sut.ShowSavedNotice),
+            () => Assert.True(sut.HasUnsavedChanges),
+            () => Assert.True(sut.ShowUnsavedNote)
         );
     }
 
@@ -211,7 +245,7 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    internal async Task SaveCommand_WhenTheWriteFails_LeavesTheSavedNoticeHiddenAndSkipsTheLanguage()
+    internal async Task SaveCommand_WhenTheWriteFails_ShowsTheErrorAndSkipsTheLanguage()
     {
         var sut = CreateSut();
         _ = this
@@ -228,7 +262,8 @@ public sealed class SettingsViewModelTests
 
         Assert.Multiple(
             () => Assert.False(sut.ShowSavedNotice),
-            () => Assert.False(sut.ShowRestartNote)
+            () => Assert.False(sut.ShowRestartNote),
+            () => Assert.True(sut.ShowSaveError)
         );
 
         await this.saveLanguage.DidNotReceive()
@@ -271,6 +306,8 @@ public sealed class SettingsViewModelTests
     [InlineData("100", 0, 104857600L)]
     [InlineData("1", 1, 1073741824L)]
     [InlineData("1.5", 1, 1610612736L)]
+    [InlineData("1,5", 1, 1610612736L)]
+    [InlineData("1,000", 0, 1048576000L)]
     [InlineData("1", 2, 1099511627776L)]
     internal async Task RunBenchmarkCommand_ConvertsTheAmountAndUnitIntoBytesForTheSelectedAlgorithms(
         string amount,
@@ -317,6 +354,31 @@ public sealed class SettingsViewModelTests
                     sut.BenchmarkThroughputText,
                     StringComparison.Ordinal
                 )
+        );
+    }
+
+    [SetCulture("es-ES")]
+    [Theory]
+    [InlineData("1.5", 1, 1610612736L)]
+    [InlineData("1,5", 1, 1610612736L)]
+    [InlineData("1.000", 0, 1048576000L)]
+    internal async Task RunBenchmarkCommand_InSpanish_ReadsAPointBeforeOneDigitAsTheDecimalSeparator(
+        string amount,
+        int unitIndex,
+        long expectedBytes
+    )
+    {
+        var sut = CreateSut();
+        var queries = StubBenchmark();
+
+        sut.BenchmarkDataAmount = amount;
+        sut.SelectedDataUnit = sut.DataUnitOptions[unitIndex];
+
+        await sut.RunBenchmarkCommand.ExecuteAsync(null);
+
+        Assert.Multiple(
+            () => Assert.Equal(expectedBytes, Assert.Single(queries).DataBytes),
+            () => Assert.Contains(sut.SelectedDataUnit.Name, sut.BenchmarkDurationText, StringComparison.Ordinal)
         );
     }
 

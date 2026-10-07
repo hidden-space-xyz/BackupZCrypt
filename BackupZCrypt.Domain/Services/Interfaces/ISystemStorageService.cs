@@ -25,4 +25,11 @@ public interface ISystemStorageService
     /// <param name="rootPath">The root (drive or volume) to check.</param>
     /// <returns><see langword="true"/> if the drive is ready; otherwise <see langword="false"/>.</returns>
     public bool IsDriveReady(string rootPath);
+
+    /// <summary>
+    /// Gets the name of the file system on the drive identified by the given root, such as NTFS or FAT32.
+    /// </summary>
+    /// <param name="rootPath">The root (drive or volume) to query.</param>
+    /// <returns>The file system name, or <see langword="null"/> if the drive cannot be queried.</returns>
+    public string? GetDriveFormat(string rootPath);
 }

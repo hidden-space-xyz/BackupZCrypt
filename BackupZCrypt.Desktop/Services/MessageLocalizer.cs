@@ -12,7 +12,9 @@ namespace BackupZCrypt.Desktop.Services;
 /// </summary>
 /// <remarks>
 /// Every <see cref="MessageCode"/> member resolves to a resource key of exactly the same name, and codes whose
-/// name ends in <c>Format</c> take the message's arguments as <c>string.Format</c> placeholders.
+/// name ends in <c>Format</c> take the message's arguments as <c>string.Format</c> placeholders. An argument
+/// that is itself a <see cref="LocalizableMessage"/>, such as the reason a file failed, is localized first, so
+/// the whole sentence follows the user's language.
 /// </remarks>
 internal static class MessageLocalizer
 {
@@ -23,10 +25,16 @@ internal static class MessageLocalizer
     /// <returns>The localized, formatted string, or the code's name when no resource matches it.</returns>
     public static string Localize(LocalizableMessage message)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         var format = Strings.GetByKey(message.Code.ToString());
 
         return message.Args.Count is 0
             ? format
-            : string.Format(CultureInfo.CurrentCulture, format, [.. message.Args]);
+            : string.Format(
+                CultureInfo.CurrentCulture,
+                format,
+                [.. message.Args.Select(static arg => arg is LocalizableMessage nested ? Localize(nested) : arg)]
+            );
     }
 }

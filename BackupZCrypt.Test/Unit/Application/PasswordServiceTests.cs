@@ -340,4 +340,84 @@ public sealed class PasswordServiceTests
 
         Assert.Equivalent(accountedFor, Enum.GetValues<PasswordGenerationOptions>(), strict: true);
     }
+
+    [Theory]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaB")]
+    [InlineData("Aa1!Aa1!Aa1!Aa1!Aa1!")]
+    [InlineData("`````````````````Ab1")]
+    internal void AnalyzePasswordStrength_LongButRepetitive_IsNotRatedGoodOrStrong(string password)
+    {
+        var analysis = this.sut.AnalyzePasswordStrength(password);
+
+        Assert.Multiple(
+            () => Assert.True(analysis.Strength < PasswordStrength.Fair, $"{password} was rated {analysis.Strength}."),
+            () => Assert.Contains(MessageCode.TipReduceRepeats, analysis.Tips)
+        );
+    }
+
+    [Fact]
+    internal void AnalyzePasswordStrength_SingleDoubledLetter_DoesNotSuggestReducingRepeats()
+    {
+        var analysis = this.sut.AnalyzePasswordStrength("Kq7#mvBzzR2!wpX9");
+
+        Assert.DoesNotContain(MessageCode.TipReduceRepeats, analysis.Tips);
+    }
+
+    [Fact]
+    internal void AnalyzePasswordStrength_CommonWordWithDigits_NamesTheWordAndTheSequence()
+    {
+        var analysis = this.sut.AnalyzePasswordStrength("Password123!");
+
+        Assert.Multiple(
+            () => Assert.Contains(MessageCode.TipAvoidCommonWords, analysis.Tips),
+            () => Assert.Contains(MessageCode.TipAvoidSequences, analysis.Tips),
+            () => Assert.True(analysis.Strength < PasswordStrength.Good)
+        );
+    }
+
+    [Theory]
+    [InlineData("Summer2024!")]
+    [InlineData("Summer 2024!")]
+    [InlineData("x1999y")]
+    internal void AnalyzePasswordStrength_YearGluedToLetters_IsStillDetected(string password)
+    {
+        Assert.Contains(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength(password).Tips);
+    }
+
+    [Fact]
+    internal void AnalyzePasswordStrength_LongerNumber_IsNotMistakenForAYear()
+    {
+        Assert.DoesNotContain(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength("Ab#120245xyQ").Tips);
+    }
+
+    [Theory]
+    [InlineData("Kq7mvBzR2wpX9`")]
+    [InlineData("Kq7mvBzR2wpX9~")]
+    [InlineData("Kq7mvB zR2wpX9")]
+    internal void AnalyzePasswordStrength_BacktickTildeOrSpace_CountAsSymbols(string password)
+    {
+        Assert.DoesNotContain(MessageCode.TipAddSymbols, this.sut.AnalyzePasswordStrength(password).Tips);
+    }
+
+    [Fact]
+    internal void GeneratePassword_ManyPasswords_NeverRepeatACharacterThreeTimesOrFollowASequence()
+    {
+        const PasswordGenerationOptions Everything =
+            PasswordGenerationOptions.IncludeUppercase
+            | PasswordGenerationOptions.IncludeLowercase
+            | PasswordGenerationOptions.IncludeNumbers
+            | PasswordGenerationOptions.IncludeSpecialCharacters;
+
+        var flagged = Enumerable
+            .Range(0, 300)
+            .Select(_ => this.sut.GeneratePassword(50, Everything))
+            .Where(password =>
+            {
+                var tips = this.sut.AnalyzePasswordStrength(password).Tips;
+                return tips.Contains(MessageCode.TipReduceRepeats) || tips.Contains(MessageCode.TipAvoidSequences);
+            })
+            .ToList();
+
+        Assert.Empty(flagged);
+    }
 }

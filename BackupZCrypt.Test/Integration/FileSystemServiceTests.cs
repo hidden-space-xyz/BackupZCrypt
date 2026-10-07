@@ -199,20 +199,143 @@ public sealed class FileSystemServiceTests
     }
 
     [Fact]
-    internal async Task CleanDirectoryAsync_EmptiesPopulatedDirectory()
+    internal async Task ScanDirectoryAsync_Tree_ReportsFilesAndOnlyTheEmptyLeafFolders()
     {
         using var dir = new TempDir();
         var service = new FileOperationsService();
 
-        _ = dir.WriteText("top.txt", "x");
-        _ = dir.WriteText(Path.Join("sub", "inner.txt"), "y");
+        var top = dir.WriteText("top.txt", "x");
+        var inner = dir.WriteText(Path.Join("sub", "inner.txt"), "y");
+        var empty = dir.Combine("sub", "empty");
+        _ = Directory.CreateDirectory(Path.Join(empty, "deeper"));
 
-        await service.CleanDirectoryAsync(dir.Path, TestContext.Current.CancellationToken);
+        var scan = await service.ScanDirectoryAsync(dir.Path, TestContext.Current.CancellationToken);
 
         Assert.Multiple(
-            () => Assert.True(Directory.Exists(dir.Path)),
-            () => Assert.Empty(Directory.GetFiles(dir.Path, "*", SearchOption.AllDirectories)),
-            () => Assert.Empty(Directory.GetDirectories(dir.Path))
+            () => Assert.Equal([inner, top], scan.Files.Order(StringComparer.Ordinal)),
+            () => Assert.Equal([Path.Join(empty, "deeper")], scan.EmptyDirectories),
+            () => Assert.Empty(scan.InaccessibleDirectories),
+            () => Assert.Empty(scan.SkippedLinks)
+        );
+    }
+
+    [Fact]
+    internal async Task ScanDirectoryAsync_DirectorySymbolicLink_IsReportedAsSkippedInsteadOfFollowed()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var root = dir.Combine("root");
+        var outside = dir.Combine("outside");
+        _ = Directory.CreateDirectory(root);
+        _ = dir.WriteText(Path.Join("outside", "secret.txt"), "s");
+        _ = dir.WriteText(Path.Join("root", "kept.txt"), "k");
+        var link = Path.Join(root, "linked");
+
+        try
+        {
+            _ = Directory.CreateSymbolicLink(link, outside);
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            Assert.Skip("This platform refuses directory symbolic links: " + ex.Message);
+        }
+
+        var scan = await service.ScanDirectoryAsync(root, TestContext.Current.CancellationToken);
+
+        Assert.Multiple(
+            () => Assert.Equal([Path.Join(root, "kept.txt")], scan.Files),
+            () => Assert.Equal([link], scan.SkippedLinks)
+        );
+    }
+
+    [Fact]
+    internal async Task OpenReadStream_FileHeldOpenForWritingByAnotherHandle_CanStillBeRead()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var path = dir.WriteText("log.txt", "first line");
+
+        await using var writer = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.ReadWrite
+        );
+
+        await using var reader = service.OpenReadStream(path, 4096);
+        using var text = new StreamReader(reader);
+
+        Assert.Equal(
+            "first line",
+            await text.ReadToEndAsync(TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    internal void AcquireExclusiveLock_HeldByOneHandle_RefusesASecondAndIsDeletedOnRelease()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var lockPath = dir.Combine("backup.lock");
+
+        using (service.AcquireExclusiveLock(lockPath))
+        {
+            Assert.Multiple(
+                () => Assert.True(service.IsLockHeld(lockPath)),
+                () => Assert.Throws<IOException>(() => service.AcquireExclusiveLock(lockPath))
+            );
+        }
+
+        Assert.Multiple(
+            () => Assert.False(service.IsLockHeld(lockPath)),
+            () => Assert.False(File.Exists(lockPath))
+        );
+    }
+
+    [Fact]
+    internal void ApplyFileMetadata_RecordedMetadata_RoundTripsThroughGetFileMetadata()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var path = dir.WriteText("dated.txt", "content");
+        var recorded = new DateTime(2001, 2, 3, 4, 5, 6, DateTimeKind.Utc);
+
+        service.ApplyFileMetadata(path, recorded, isReadOnly: true, isHidden: true, unixMode: null);
+
+        try
+        {
+            var metadata = service.GetFileMetadata(path);
+
+            Assert.Multiple(
+                () => Assert.Equal(recorded, metadata.LastWriteTimeUtc),
+                () => Assert.True(metadata.IsReadOnly),
+                () => Assert.Equal(OperatingSystem.IsWindows(), metadata.IsHidden)
+            );
+        }
+        finally
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
+    internal async Task WriteFileAtomicallyAsync_ExistingReadOnlyTarget_IsReplaced()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var path = dir.WriteText("restored.txt", "old");
+        File.SetAttributes(path, FileAttributes.ReadOnly);
+
+        await service.WriteFileAtomicallyAsync(
+            path,
+            (stream, token) => stream.WriteAsync("new"u8.ToArray(), token).AsTask(),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(
+            "new",
+            await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken)
         );
     }
 

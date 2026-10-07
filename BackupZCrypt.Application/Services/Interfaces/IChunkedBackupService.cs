@@ -1,4 +1,5 @@
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Services.Interfaces;
@@ -74,6 +75,35 @@ public interface IChunkedBackupService
         string sourcePath,
         BackupRequest request,
         IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Opens an existing backup and compares it with the source an update would read, without
+    /// writing anything, so the files the update would remove can be confirmed first.
+    /// </summary>
+    /// <param name="sourcePath">The source directory the update would read.</param>
+    /// <param name="backupPath">The directory containing the existing backup.</param>
+    /// <param name="password">The password the backup was created with.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comparison, or a failure when the backup cannot be opened.</returns>
+    public Task<Result<BackupPreview>> PreviewUpdateAsync(
+        string sourcePath,
+        string backupPath,
+        string password,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Opens an existing backup and reports what a restore would write, without writing anything.
+    /// </summary>
+    /// <param name="backupPath">The directory containing the existing backup.</param>
+    /// <param name="password">The password the backup was created with.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The backup's contents summary, or a failure when it cannot be opened.</returns>
+    public Task<Result<BackupPreview>> PreviewRestoreAsync(
+        string backupPath,
+        string password,
         CancellationToken cancellationToken
     );
 }

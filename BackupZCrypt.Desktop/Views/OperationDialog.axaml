@@ -257,6 +257,10 @@
                 <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Document}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultFiles}" />
               </Grid>
+              <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasResultUpdateDetails}">
+                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.ArrowSync}" />
+                <TextBlock Grid.Column="1" Text="{Binding ResultUpdateDetails}" />
+              </Grid>
               <Grid ColumnDefinitions="Auto,*">
                 <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Clock}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultDuration}" />
@@ -279,6 +283,27 @@
                                Margin="0,7,10,0"
                                VerticalAlignment="Top"
                                Fill="{StaticResource DangerBrush}" />
+                      <TextBlock Grid.Column="1"
+                                 Foreground="{StaticResource PrimaryTextBrush}"
+                                 Text="{Binding}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+
+          <Border Classes="notice warning" Padding="14,10" IsVisible="{Binding ShowResultWarnings}">
+            <ScrollViewer MaxHeight="160">
+              <ItemsControl Classes="messages" ItemsSource="{Binding ResultWarnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,3">
+                      <Ellipse Grid.Column="0"
+                               Width="5" Height="5"
+                               Margin="0,7,10,0"
+                               VerticalAlignment="Top"
+                               Fill="{StaticResource WarningBrush}" />
                       <TextBlock Grid.Column="1"
                                  Foreground="{StaticResource PrimaryTextBrush}"
                                  Text="{Binding}" />

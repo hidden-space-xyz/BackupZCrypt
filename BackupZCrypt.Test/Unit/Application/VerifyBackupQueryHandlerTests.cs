@@ -56,7 +56,12 @@ public sealed class VerifyBackupQueryHandlerTests
     private VerifyBackupQueryHandler CreateSut()
     {
         return new(
-            new BackupOperationRunner(this.validator, this.fileOperations, this.chunkedBackupService)
+            new BackupOperationRunner(
+                this.validator,
+                this.fileOperations,
+                this.chunkedBackupService,
+                Substitute.For<ISystemStorageService>()
+            )
         );
     }
 

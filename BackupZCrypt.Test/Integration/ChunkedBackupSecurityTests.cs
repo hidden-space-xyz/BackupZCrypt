@@ -271,7 +271,7 @@ public sealed class ChunkedBackupSecurityTests
                 1,
                 0x7F,
                 Password,
-                MessageCode.ManifestRequiredForDecryption
+                MessageCode.ManifestUnsupported
             ),
             ("master salt bit-flipped", 5, (byte)(pristine[5] ^ 0xFF), Password, MessageCode.InvalidPassword),
             ("manifest nonce bit-flipped", 40, (byte)(pristine[40] ^ 0xFF), Password, MessageCode.InvalidPassword),

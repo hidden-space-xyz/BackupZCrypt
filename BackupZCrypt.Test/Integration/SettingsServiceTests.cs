@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Domain.Enums;
@@ -22,15 +20,6 @@ namespace BackupZCrypt.Test.Integration;
 /// </remarks>
 public sealed class SettingsServiceTests
 {
-    /// <summary>
-    /// Mirrors the options the settings service writes with, so a file read back by a test is parsed
-    /// exactly the way the production reader parses it, enum names included.
-    /// </summary>
-    private static readonly JsonSerializerOptions SettingsFileOptions = new()
-    {
-        Converters = { new JsonStringEnumConverter() },
-    };
-
     [Fact]
     internal async Task GetOrCreateAsync_WhenNoFile_ReturnsDefaultsAndCreatesFile()
     {
@@ -98,7 +87,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    internal async Task GetOrCreateAsync_WhenFileExceedsSafetyLimit_ReplacesItWithDefaults()
+    internal async Task GetOrCreateAsync_WhenFileExceedsSafetyLimit_ReturnsDefaultsAndKeepsTheFile()
     {
         using var dir = new TempDir();
         var service = new SettingsService(new FileOperationsService(), dir.Path);
@@ -116,14 +105,15 @@ public sealed class SettingsServiceTests
 
         Assert.Multiple(
             () => Assert.Equal(BackupCreationSettings.DefaultValue, settings),
-            () => Assert.True(new FileInfo(filePath).Length < 1024 * 1024)
+            () => Assert.Equal((1024 * 1024) + 1, new FileInfo(filePath).Length)
         );
     }
 
     [Theory]
     [InlineData("null")]
     [InlineData("")]
-    internal async Task GetOrCreateAsync_WhenFileHoldsNoUsableSettings_SelfHealsAndRewritesTheFile(
+    [InlineData("{ \"EncryptionAlgorithm\": 7 }")]
+    internal async Task GetOrCreateAsync_WhenFileHoldsNoUsableSettings_ReturnsDefaultsWithoutOverwritingIt(
         string fileContent
     )
     {
@@ -138,15 +128,40 @@ public sealed class SettingsServiceTests
             TestContext.Current.CancellationToken
         );
 
-        Assert.Equal(BackupCreationSettings.DefaultValue, settings);
-
         var onDisk = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
+
         Assert.Multiple(
-            () => Assert.NotEqual(fileContent, onDisk),
-            () => Assert.Equal(
-                BackupCreationSettings.DefaultValue,
-                JsonSerializer.Deserialize<BackupCreationSettings>(onDisk, SettingsFileOptions)
-            )
+            () => Assert.Equal(BackupCreationSettings.DefaultValue, settings),
+            () => Assert.Equal(fileContent, onDisk)
+        );
+    }
+
+    [Fact]
+    internal async Task GetOrCreateAsync_FileWrittenWithAByteOrderMark_IsReadInsteadOfReset()
+    {
+        using var dir = new TempDir();
+        var service = new SettingsService(new FileOperationsService(), dir.Path);
+
+        var filePath = service.GetFilePath<BackupCreationSettings>();
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllTextAsync(
+            filePath,
+            "{ \"EncryptionAlgorithm\": \"Serpent\", \"KeyDerivationAlgorithm\": \"Scrypt\", \"CompressionMode\": \"Zstd\" }",
+            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true),
+            TestContext.Current.CancellationToken
+        );
+
+        var settings = await service.GetOrCreateAsync<BackupCreationSettings>(
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(
+            new BackupCreationSettings(
+                EncryptionAlgorithm.Serpent,
+                KeyDerivationAlgorithm.Scrypt,
+                CompressionMode.Zstd
+            ),
+            settings
         );
     }
 

@@ -18,14 +18,26 @@ internal sealed partial class ChunkedBackupService
     /// whole file, and returns the manifest entry that reconstructs it.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// The file is read and hashed in order, while its chunks are compressed, encrypted, and written
+    /// concurrently, each holding one of the run's chunk slots until it is on disk. A large file
+    /// therefore uses every processor instead of one, and the number of chunk buffers alive at once
+    /// stays bounded however many files are processed in parallel.
+    /// </para>
+    /// <para>
     /// Chunks are deduplicated through <paramref name="storedChunks"/>, so a chunk already being
-    /// stored for another file is awaited instead of being encrypted and written a second time.
+    /// stored for this or another file is awaited instead of being encrypted and written a second
+    /// time. The entry records the bytes actually read, so a file that grows or shrinks while it is
+    /// read is captured consistently rather than failing the run.
+    /// </para>
     /// </remarks>
     /// <param name="filePath">The absolute path of the file to read.</param>
     /// <param name="relativePath">The file's path relative to the backup root, as recorded in the manifest.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
     /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
+    /// <param name="context">The run's chunk slots and the record of the chunk files it wrote.</param>
+    /// <param name="tracker">The progress tracker that is told about every chunk read.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The manifest entry describing the file and its ordered chunk references.</returns>
     private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
@@ -34,100 +46,214 @@ internal sealed partial class ChunkedBackupService
         string chunksDir,
         ChunkCipherSet cipher,
         ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ChunkWriteContext context,
+        ProgressTracker tracker,
         CancellationToken cancellationToken
     )
     {
         ManifestPathPolicy.ValidateRelative(relativePath);
-        List<ChunkManifestChunkRef> chunkRefs = [];
+        List<PendingChunk> pending = [];
 
-        await using var fileStream = fileOperationsService.OpenReadStream(
-            filePath,
-            StreamConstants.CopyBufferSize
-        );
-
-        using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-
-        long actualFileSize = 0;
-        await foreach (
-            var chunkData in chunkingStrategy
-                .ChunkAsync(fileStream, cancellationToken)
-                .ConfigureAwait(false)
-        )
+        try
         {
-            byte[]? chunkHash = null;
+            await using var fileStream = fileOperationsService.OpenReadStream(
+                filePath,
+                StreamConstants.CopyBufferSize
+            );
 
-            try
+            using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+            long actualFileSize = 0;
+            await foreach (
+                var chunkData in chunkingStrategy
+                    .ChunkAsync(fileStream, cancellationToken)
+                    .ConfigureAwait(false)
+            )
             {
                 actualFileSize = checked(actualFileSize + chunkData.Length);
                 fileHasher.AppendData(chunkData.Span);
 
-                chunkHash = SHA256.HashData(chunkData.Span);
-                var chunkHashB64 = Convert.ToBase64String(chunkHash);
-                var chunkFilePath = this.ComputeChunkFilePath(
-                    chunksDir,
-                    cipher.NamingKey,
-                    chunkHash
-                );
+                try
+                {
+                    await context.ChunkSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    ZeroChunk(chunkData, null);
+                    throw;
+                }
 
-                var chunkOperation = new Lazy<Task<string>>(
-                    () =>
-                        EncryptAndStoreChunkAsync(
-                            chunkData,
-                            chunkHash,
-                            chunkFilePath,
-                            cipher.ChunkEncryptionKey,
-                            cipher.ChunkNonceKey,
-                            cipher.EncryptionStrategy,
-                            cipher.CompressionStrategy,
-                            cancellationToken
-                        ),
-                    LazyThreadSafetyMode.ExecutionAndPublication
-                );
-
-                var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
-
-                var nonceB64 = await AwaitStoredChunkNonceAsync(
-                        chunkHashB64,
-                        storedChunk,
-                        chunkOperation,
-                        storedChunks
+                pending.Add(
+                    new PendingChunk(
+                        chunkData.Length,
+                        Task.Run(() =>
+                            this.StoreChunkAsync(
+                                chunkData,
+                                chunksDir,
+                                cipher,
+                                storedChunks,
+                                context,
+                                cancellationToken
+                            )
+                        )
                     )
-                    .ConfigureAwait(false);
+                );
 
-                chunkRefs.Add(new ChunkManifestChunkRef(chunkHashB64, chunkData.Length, nonceB64));
+                tracker.AddBytes(chunkData.Length);
+            }
+
+            List<ChunkManifestChunkRef> chunkRefs = new(pending.Count);
+            foreach (var chunk in pending)
+            {
+                var (hashB64, nonceB64) = await chunk.Store.ConfigureAwait(false);
+                chunkRefs.Add(new ChunkManifestChunkRef(hashB64, chunk.Size, nonceB64));
+            }
+
+            var fileHash = fileHasher.GetHashAndReset();
+
+            try
+            {
+                return new ChunkManifestFileEntry(
+                    relativePath,
+                    Convert.ToBase64String(fileHash),
+                    actualFileSize,
+                    chunkRefs
+                );
             }
             finally
             {
-                if (chunkHash is not null)
-                {
-                    CryptographicOperations.ZeroMemory(chunkHash);
-                }
-
-                if (MemoryMarshal.TryGetArray(chunkData, out var chunkSegment))
-                {
-                    CryptographicOperations.ZeroMemory(
-                        chunkSegment.Array!.AsSpan(chunkSegment.Offset, chunkSegment.Count)
-                    );
-                }
+                CryptographicOperations.ZeroMemory(fileHash);
             }
         }
+        catch
+        {
+            await AwaitQuietlyAsync(pending).ConfigureAwait(false);
+            throw;
+        }
+    }
 
-        var fileHash = fileHasher.GetHashAndReset();
+    /// <summary>
+    /// Hashes one chunk and stores it, or joins the store already under way for identical content,
+    /// then releases the chunk's slot and wipes its plaintext once the chunk is on disk.
+    /// </summary>
+    /// <remarks>
+    /// The chunk hash is computed here, on a pool thread, rather than by the reader, so a large file
+    /// is read and chunked at the speed of the chunker alone while hashing, compression, and
+    /// encryption of its chunks run in parallel.
+    /// </remarks>
+    /// <param name="chunkData">The plaintext bytes of the chunk, owned by this call.</param>
+    /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
+    /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
+    /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
+    /// <param name="context">The run's chunk slots and the record of the chunk files it wrote.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The Base64-encoded content hash of the chunk and the nonce it was stored with.</returns>
+    private async Task<(string HashB64, string NonceB64)> StoreChunkAsync(
+        ReadOnlyMemory<byte> chunkData,
+        string chunksDir,
+        ChunkCipherSet cipher,
+        ConcurrentDictionary<string, Lazy<Task<string>>> storedChunks,
+        ChunkWriteContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        byte[]? chunkHash = null;
 
         try
         {
-            return new ChunkManifestFileEntry(
-                relativePath,
-                Convert.ToBase64String(fileHash),
-                actualFileSize,
-                chunkRefs
+            cancellationToken.ThrowIfCancellationRequested();
+
+            chunkHash = SHA256.HashData(chunkData.Span);
+            var chunkHashB64 = Convert.ToBase64String(chunkHash);
+            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
+            var ownedHash = chunkHash;
+
+            var chunkOperation = new Lazy<Task<string>>(
+                () =>
+                    this.EncryptAndStoreChunkAsync(
+                        chunkData,
+                        ownedHash,
+                        chunkFilePath,
+                        cipher.ChunkEncryptionKey,
+                        cipher.ChunkNonceKey,
+                        cipher.EncryptionStrategy,
+                        cipher.CompressionStrategy,
+                        cancellationToken
+                    ),
+                LazyThreadSafetyMode.ExecutionAndPublication
             );
+
+            var storedChunk = storedChunks.GetOrAdd(chunkHashB64, chunkOperation);
+
+            var nonceB64 = await AwaitStoredChunkNonceAsync(
+                    chunkHashB64,
+                    storedChunk,
+                    chunkOperation,
+                    storedChunks
+                )
+                .ConfigureAwait(false);
+
+            if (ReferenceEquals(storedChunk, chunkOperation))
+            {
+                context.WrittenChunks.Add(chunkFilePath);
+            }
+
+            return (chunkHashB64, nonceB64);
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(fileHash);
+            ZeroChunk(chunkData, chunkHash);
+            _ = context.ChunkSlots.Release();
         }
     }
+
+    /// <summary>
+    /// Waits for every chunk store a failed file had started, ignoring their outcome, so none keeps
+    /// running against the file's buffers or faults unobserved.
+    /// </summary>
+    /// <param name="pending">The chunk stores started for the file.</param>
+    /// <returns>A task that completes once every store has finished.</returns>
+    private static async Task AwaitQuietlyAsync(List<PendingChunk> pending)
+    {
+        foreach (var chunk in pending)
+        {
+            try
+            {
+                _ = await chunk.Store.ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                continue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Wipes a chunk's plaintext and, when it was computed, its content hash.
+    /// </summary>
+    /// <param name="chunkData">The chunk's plaintext.</param>
+    /// <param name="chunkHash">The chunk's content hash, or <see langword="null"/>.</param>
+    private static void ZeroChunk(ReadOnlyMemory<byte> chunkData, byte[]? chunkHash)
+    {
+        if (chunkHash is not null)
+        {
+            CryptographicOperations.ZeroMemory(chunkHash);
+        }
+
+        if (MemoryMarshal.TryGetArray(chunkData, out var chunkSegment))
+        {
+            CryptographicOperations.ZeroMemory(
+                chunkSegment.Array!.AsSpan(chunkSegment.Offset, chunkSegment.Count)
+            );
+        }
+    }
+
+    /// <summary>
+    /// A chunk of a file whose store has been started.
+    /// </summary>
+    /// <param name="Size">The plaintext length of the chunk.</param>
+    /// <param name="Store">The store operation, resolving to the chunk's hash and nonce.</param>
+    private sealed record class PendingChunk(int Size, Task<(string HashB64, string NonceB64)> Store);
 
     /// <summary>
     /// Compresses a chunk when compression is enabled, encrypts it, and writes the ciphertext to its
@@ -405,6 +531,11 @@ internal sealed partial class ChunkedBackupService
     /// The decoded bytes serve only as a length check and are zeroed immediately.
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries to validate.</param>
+    /// <remarks>
+    /// Two entries are duplicates when their canonical paths are identical. Paths that only differ in
+    /// letter case are distinct files on the system that wrote them; a restore onto a system that
+    /// ignores case reports the clash for the second file instead of rejecting the whole archive.
+    /// </remarks>
     /// <exception cref="InvalidDataException">
     /// An entry path is invalid or duplicated, a size is impossible, or chunk sizes do not add up
     /// to the file size.
@@ -416,7 +547,7 @@ internal sealed partial class ChunkedBackupService
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
-        HashSet<string> paths = new(StringComparer.FromComparison(PathComparer));
+        HashSet<string> paths = new(StringComparer.Ordinal);
 
         Dictionary<string, (int Size, string Nonce)> chunkMetadata = new(StringComparer.Ordinal);
 
@@ -657,38 +788,35 @@ internal sealed partial class ChunkedBackupService
                 canonicalChunks.Add(new ChunkManifestChunkRef(chunk.Hash, chunk.Size, nonce));
             }
 
-            canonicalEntries.Add(
-                new ChunkManifestFileEntry(
-                    entry.OriginalPath,
-                    entry.FileHash,
-                    entry.TotalSize,
-                    canonicalChunks
-                )
-            );
+            canonicalEntries.Add(entry with { Chunks = canonicalChunks });
         }
 
         return canonicalEntries;
     }
 
     /// <summary>
-    /// Deletes the chunk files in the chunks directory that the newly saved manifest no longer
-    /// references.
+    /// Deletes what a published backup no longer needs: chunk files the new manifest does not
+    /// reference — including every chunk of a backup a create has just replaced — chunk files set
+    /// aside by verification, and temporary files a crashed run left behind.
     /// </summary>
     /// <remarks>
-    /// Pruning is best-effort cleanup that runs only after the manifest has been written, so nothing
-    /// it does can lose data: a chunk that cannot be removed because it is locked or access is denied
-    /// is left behind as a harmless orphan, and any other failure is reported rather than failing an
-    /// update that has already completed.
+    /// Pruning is best-effort cleanup that runs only after the manifest has been written, under the
+    /// backup's exclusive lock, so nothing it does can lose data: a file that cannot be removed is
+    /// left behind as a harmless orphan rather than failing an operation that has already completed.
+    /// Only names this program produces are touched, so files a user placed in the backup folder are
+    /// never deleted.
     /// </remarks>
+    /// <param name="backupRoot">The backup folder holding the manifest.</param>
     /// <param name="chunksDir">The directory holding the stored chunk files.</param>
-    /// <param name="referencedChunkHashes">The Base64 chunk hashes the new manifest still references.</param>
+    /// <param name="referencedChunkHashes">The Base64 chunk hashes the new manifest references.</param>
     /// <param name="namingKey">The sub-key each chunk's on-disk file name is derived from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>
-    /// <see langword="true"/> if every unreferenced chunk file was removed; <see langword="false"/> if
-    /// one or more orphans were left behind.
+    /// <see langword="true"/> if every unneeded file was removed; <see langword="false"/> if one or
+    /// more were left behind.
     /// </returns>
-    private async Task<bool> TryDeleteOrphanedChunksAsync(
+    private async Task<bool> TryPruneBackupAsync(
+        string backupRoot,
         string chunksDir,
         IEnumerable<string> referencedChunkHashes,
         byte[] namingKey,
@@ -712,21 +840,36 @@ internal sealed partial class ChunkedBackupService
                 }
             }
 
+            var pruned = true;
+
+            foreach (var name in fileOperationsService.GetDirectoryEntryNames(backupRoot))
+            {
+                if (BackupLayout.IsTemporaryFileName(name))
+                {
+                    pruned &= fileOperationsService.TryDeleteFile(
+                        fileOperationsService.CombinePath(backupRoot, name)
+                    );
+                }
+            }
+
             if (!fileOperationsService.DirectoryExists(chunksDir))
             {
-                return true;
+                return pruned;
             }
 
             var existingFiles = await fileOperationsService
-                .GetFilesAsync(chunksDir, "*" + BackupConstants.AppFileExtension, cancellationToken)
+                .GetFilesAsync(chunksDir, "*", cancellationToken)
                 .ConfigureAwait(false);
-
-            var pruned = true;
 
             foreach (var file in existingFiles)
             {
                 var fileName = Path.GetFileName(file);
-                if (!expectedFileNames.Contains(fileName))
+                var unneeded =
+                    (BackupLayout.IsChunkFileName(fileName) && !expectedFileNames.Contains(fileName))
+                    || BackupLayout.IsQuarantinedChunkFileName(fileName)
+                    || BackupLayout.IsTemporaryFileName(fileName);
+
+                if (unneeded)
                 {
                     pruned &= fileOperationsService.TryDeleteFile(file);
                 }

@@ -129,10 +129,10 @@ public enum MessageCode
     NoFilesInSourceDirectory = 26,
 
     /// <summary>
-    /// A single file could not be processed because of a file-level I/O or access error; the run
-    /// continues with the remaining files. Formatted with the file path and the error detail.
+    /// A single file could not be backed up because of a file-level I/O or access error; the run
+    /// continues with the remaining files. Formatted with the relative file path and the reason.
     /// </summary>
-    EncryptionErrorFormat = 27,
+    FileBackupErrorFormat = 27,
 
     /// <summary>
     /// Every file in the operation failed to process.
@@ -248,4 +248,193 @@ public enum MessageCode
     /// not recognize, so the manifest was not written.
     /// </summary>
     ManifestUnsupportedAlgorithm = 58,
+
+    /// <summary>
+    /// A create was pointed at a folder that holds files which do not belong to a backup.
+    /// </summary>
+    DestinationNotEmpty = 59,
+
+    /// <summary>
+    /// A create was pointed at a folder that already holds a backup, which is replaced only once the
+    /// new backup has been written completely.
+    /// </summary>
+    DestinationContainsBackup = 60,
+
+    /// <summary>
+    /// The destination path names an existing file rather than a folder.
+    /// </summary>
+    DestinationIsFile = 61,
+
+    /// <summary>
+    /// A path was entered without a drive or root, so it would be resolved against an arbitrary
+    /// working directory; formatted with the path.
+    /// </summary>
+    PathMustBeAbsoluteFormat = 62,
+
+    /// <summary>
+    /// A path contains characters the file system does not accept; formatted with the path.
+    /// </summary>
+    PathInvalidCharactersFormat = 63,
+
+    /// <summary>
+    /// The manifest exists but is truncated or malformed.
+    /// </summary>
+    ManifestDamaged = 66,
+
+    /// <summary>
+    /// The manifest names an algorithm this version cannot open.
+    /// </summary>
+    ManifestUnsupported = 67,
+
+    /// <summary>
+    /// Another create or update currently holds the backup.
+    /// </summary>
+    BackupInUse = 68,
+
+    /// <summary>
+    /// The source contains symbolic links or junctions, which are not followed; formatted with the
+    /// count and a sample of their paths.
+    /// </summary>
+    SourceLinksSkippedFormat = 69,
+
+    /// <summary>
+    /// The source holds nothing but symbolic links or junctions, which are not followed.
+    /// </summary>
+    SourceOnlyLinks = 70,
+
+    /// <summary>
+    /// A folder below the source could not be read and its contents were not backed up; formatted
+    /// with the relative folder path and the reason.
+    /// </summary>
+    InaccessibleFolderFormat = 71,
+
+    /// <summary>
+    /// Folders below the source cannot be read and will be skipped; formatted with the count and a
+    /// sample of their paths.
+    /// </summary>
+    SourceInaccessibleFoldersFormat = 72,
+
+    /// <summary>
+    /// A file was skipped because its name only differs from another file's in its Unicode form;
+    /// formatted with both relative paths.
+    /// </summary>
+    NameCollisionFormat = 73,
+
+    /// <summary>
+    /// Files whose names only differ from another file's in their Unicode form will be skipped;
+    /// formatted with the count and a sample of their paths.
+    /// </summary>
+    SourceNameCollisionsFormat = 74,
+
+    /// <summary>
+    /// An update will remove files from the backup because they are no longer in the source;
+    /// formatted with the count and a sample of their paths.
+    /// </summary>
+    UpdateRemovesFilesFormat = 75,
+
+    /// <summary>
+    /// None of the files recorded in the backup exist in the selected source, which usually means
+    /// the wrong source folder was chosen; formatted with the number of files in the backup.
+    /// </summary>
+    UpdateSourceMismatchFormat = 76,
+
+    /// <summary>
+    /// A file could not be restored because its name is not valid on this system; formatted with the
+    /// relative path.
+    /// </summary>
+    RestoreNameNotSupportedFormat = 77,
+
+    /// <summary>
+    /// A file could not be restored because another restored file takes the same name on this
+    /// system; formatted with both relative paths.
+    /// </summary>
+    RestoreNameConflictFormat = 78,
+
+    /// <summary>
+    /// A file was not restored because its target lies inside the backup folder being read;
+    /// formatted with the relative path.
+    /// </summary>
+    RestoreTargetInsideBackupFormat = 79,
+
+    /// <summary>
+    /// Verification set damaged chunk files aside so the next update regenerates them; formatted with
+    /// the number of chunk files.
+    /// </summary>
+    DamagedChunksSetAsideFormat = 80,
+
+    /// <summary>
+    /// The destination uses FAT32, whose per-folder entry limit a large backup can exceed.
+    /// </summary>
+    FatFileSystemWarning = 81,
+
+    /// <summary>
+    /// Reason detail: access to the file or folder was denied.
+    /// </summary>
+    ReasonAccessDenied = 82,
+
+    /// <summary>
+    /// Reason detail: another program has the file open in a way that prevents reading it.
+    /// </summary>
+    ReasonFileInUse = 83,
+
+    /// <summary>
+    /// Reason detail: the file or folder no longer exists.
+    /// </summary>
+    ReasonFileNotFound = 84,
+
+    /// <summary>
+    /// Reason detail: the path is longer than the system accepts.
+    /// </summary>
+    ReasonPathTooLong = 85,
+
+    /// <summary>
+    /// Reason detail: the destination drive is full.
+    /// </summary>
+    ReasonDiskFull = 86,
+
+    /// <summary>
+    /// Reason detail: the stored data failed authentication or does not match the manifest.
+    /// </summary>
+    ReasonDataCorrupted = 87,
+
+    /// <summary>
+    /// Reason detail: a chunk file the manifest references is missing.
+    /// </summary>
+    ReasonChunkMissing = 88,
+
+    /// <summary>
+    /// Reason detail: any other input/output error; formatted with the system's description.
+    /// </summary>
+    ReasonIoErrorFormat = 89,
+
+    /// <summary>
+    /// Tip suggesting common words and well-known passwords be avoided.
+    /// </summary>
+    TipAvoidCommonWords = 90,
+
+    /// <summary>
+    /// No manifest was found where verification expected the backup.
+    /// </summary>
+    ManifestRequiredForVerify = 91,
+
+    /// <summary>
+    /// Reason detail: the file name cannot be recorded portably in a manifest.
+    /// </summary>
+    ReasonNameNotSupported = 92,
+
+    /// <summary>
+    /// Files whose names cannot be recorded in a manifest will be skipped; formatted with the count
+    /// and a sample of their paths.
+    /// </summary>
+    SourceUnsupportedNamesFormat = 93,
+
+    /// <summary>
+    /// The destination folder cannot be written to.
+    /// </summary>
+    DestinationAccessDenied = 94,
+
+    /// <summary>
+    /// A create names an encryption, key derivation, or compression option this version does not have.
+    /// </summary>
+    AlgorithmNotSupported = 95,
 }

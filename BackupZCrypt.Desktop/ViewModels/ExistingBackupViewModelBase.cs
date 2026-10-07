@@ -5,6 +5,7 @@ using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -43,6 +44,12 @@ internal abstract partial class ExistingBackupViewModelBase(
     /// </summary>
     [ObservableProperty]
     public partial bool HasDetection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the warning explaining why no usable backup was found at the backup path.
+    /// </summary>
+    [ObservableProperty]
+    public partial string DetectionMessage { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the path that points at the existing backup (the source for a restore, the destination for an update).
@@ -100,7 +107,27 @@ internal abstract partial class ExistingBackupViewModelBase(
 
         IsBackupDetected = kind is ManifestKind.Encrypted;
         HasDetection = !IsBackupDetected;
+        DetectionMessage = DescribeDetection(kind);
 
         NotifyStartCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Returns the warning that explains a detection result other than a usable backup.
+    /// </summary>
+    /// <param name="kind">The detected manifest kind.</param>
+    /// <returns>The localized warning, or an empty string for a usable backup.</returns>
+    private static string DescribeDetection(ManifestKind kind)
+    {
+        return kind switch
+        {
+            ManifestKind.Encrypted => string.Empty,
+            ManifestKind.PathNotFound => Strings.DetectPathNotFound,
+            ManifestKind.NotADirectory => Strings.DetectNotADirectory,
+            ManifestKind.Damaged => Strings.DetectDamaged,
+            ManifestKind.Unsupported => Strings.DetectUnsupported,
+            ManifestKind.Missing => Strings.DetectMissing,
+            _ => Strings.DetectMissing,
+        };
     }
 }

@@ -18,17 +18,12 @@ public static class ByteSizeFormatter
     /// </summary>
     /// <param name="bytes">The number of bytes to format; the magnitude is used for negative values.</param>
     /// <returns>
-    /// A formatted size string with one decimal place and a unit suffix, or <c>"0 B"</c> when
-    /// <paramref name="bytes"/> is zero.
+    /// A formatted size string with a unit suffix: whole bytes below one kilobyte, and one decimal
+    /// place for every larger unit.
     /// </returns>
     public static string Format(long bytes)
     {
-        if (bytes == 0)
-        {
-            return "0 B";
-        }
-
-        double size = Math.Abs(bytes);
+        double size = Math.Abs((double)bytes);
         var suffixIndex = 0;
         while (size >= 1024 && suffixIndex < Suffixes.Length - 1)
         {
@@ -36,6 +31,8 @@ public static class ByteSizeFormatter
             suffixIndex++;
         }
 
-        return string.Create(CultureInfo.CurrentCulture, $"{size:F1} {Suffixes[suffixIndex]}");
+        return suffixIndex is 0
+            ? string.Create(CultureInfo.CurrentCulture, $"{size:F0} {Suffixes[0]}")
+            : string.Create(CultureInfo.CurrentCulture, $"{size:F1} {Suffixes[suffixIndex]}");
     }
 }

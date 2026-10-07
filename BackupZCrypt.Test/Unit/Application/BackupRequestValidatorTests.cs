@@ -4,6 +4,7 @@ using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using NSubstitute;
@@ -56,7 +57,7 @@ public sealed class BackupRequestValidatorTests
     /// The array lives in a field rather than inline in the case list because a constant array written
     /// straight into an argument is what CA1861 asks to be hoisted.
     /// </remarks>
-    private static readonly object[] SourceIoFailureArgs = [SourceIoFailureMessage];
+    private static readonly object[] SourceIoFailureArgs = ["ReasonIoErrorFormat(" + SourceIoFailureMessage + ")"];
 
     /// <summary>
     /// The only containment error a destination nested inside the source may produce, hoisted out of
@@ -139,12 +140,55 @@ public sealed class BackupRequestValidatorTests
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BackupRequestValidatorTests"/> class, making the
+    /// substituted file system compute relative paths and list folders the way the real one does.
+    /// </summary>
+    public BackupRequestValidatorTests()
+    {
+        _ = this.fileOperations
+            .GetRelativePath(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(call => Path.GetRelativePath(call.ArgAt<string>(0), call.ArgAt<string>(1)));
+        _ = this.fileOperations
+            .CombinePath(Arg.Any<string[]>())
+            .Returns(call => Path.Join(call.Arg<string[]>()));
+        _ = this.fileOperations.GetDirectoryEntryNames(Arg.Any<string>()).Returns([]);
+    }
+
+    /// <summary>
     /// Creates a validator wired to the substituted file, storage, and password services.
     /// </summary>
     /// <returns>The system under test.</returns>
     private BackupRequestValidator CreateSut()
     {
         return new(this.fileOperations, this.systemStorage, this.passwordService);
+    }
+
+    /// <summary>
+    /// Renders message arguments for comparison, writing a nested reason as its code followed by its
+    /// own arguments in parentheses.
+    /// </summary>
+    /// <param name="args">The arguments of a message.</param>
+    /// <returns>One rendered value per argument.</returns>
+    private static object[] Render(IReadOnlyList<object> args)
+    {
+        return
+        [
+            .. args.Select(static arg =>
+                arg is LocalizableMessage nested
+                    ? $"{nested.Code}({string.Join(",", nested.Args)})"
+                    : arg
+            ),
+        ];
+    }
+
+    /// <summary>
+    /// Builds the walk of a source folder holding exactly the given files and nothing else.
+    /// </summary>
+    /// <param name="files">The full paths of the files the walk finds.</param>
+    /// <returns>The walk result.</returns>
+    private static DirectoryScan Scan(params string[] files)
+    {
+        return new DirectoryScan(files, [], [], []);
     }
 
     /// <summary>
@@ -226,8 +270,8 @@ public sealed class BackupRequestValidatorTests
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: string.Empty);
@@ -243,8 +287,8 @@ public sealed class BackupRequestValidatorTests
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, DestinationDir, password: "Ab1!xyz");
@@ -260,8 +304,8 @@ public sealed class BackupRequestValidatorTests
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = new BackupRequest(
@@ -286,8 +330,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var request = ValidRequest(SourceDir, SourceDir);
@@ -305,8 +349,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
 
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns("C:\\");
         _ = this.systemStorage.IsDriveReady("C:\\").Returns(true);
@@ -393,8 +437,8 @@ public sealed class BackupRequestValidatorTests
 
         var sourceFile = Path.Join(SourceDir, "big.bin");
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([sourceFile]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(sourceFile));
         _ = this.fileOperations.GetFileSize(sourceFile).Returns(1_000_000L);
 
         _ = this.systemStorage.GetPathRoot(DestinationDir).Returns("C:\\");
@@ -414,10 +458,10 @@ public sealed class BackupRequestValidatorTests
     }
 
     [Theory]
-    [InlineData(BackupOperation.Create, true)]
+    [InlineData(BackupOperation.Create, false)]
     [InlineData(BackupOperation.Restore, true)]
     [InlineData(BackupOperation.Update, false)]
-    internal async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForCreateAndRestoreOnly(
+    internal async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForRestoreOnly(
         BackupOperation operation,
         bool expectedWarning
     )
@@ -451,8 +495,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
     }
 
     [Fact]
@@ -473,7 +517,7 @@ public sealed class BackupRequestValidatorTests
         );
 
         await this.fileOperations.DidNotReceive()
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>());
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -482,8 +526,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan());
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -507,7 +551,7 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
             .ThrowsAsync(thrown);
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
@@ -520,7 +564,7 @@ public sealed class BackupRequestValidatorTests
         MessageCode[] expectedCodes = [expectedCode];
         Assert.Multiple(
             () => Assert.Equal(expectedCodes, Codes(errors)),
-            () => Assert.Equal(expectedArgs, errors[0].Args)
+            () => Assert.Equal(expectedArgs, Render(errors[0].Args))
         );
     }
 
@@ -602,7 +646,7 @@ public sealed class BackupRequestValidatorTests
         MessageCode[] expectedCodes = [MessageCode.DestinationInvalidFormat];
         Assert.Multiple(
             () => Assert.Equal(expectedCodes, Codes(errors)),
-            () => Assert.Equal(new object[] { lookupFailure.Message }, errors[0].Args)
+            () => Assert.Equal(["ReasonIoErrorFormat(" + lookupFailure.Message + ")"], Render(errors[0].Args))
         );
     }
 
@@ -610,7 +654,7 @@ public sealed class BackupRequestValidatorTests
     [InlineData(true, false, 1)]
     [InlineData(false, true, 1)]
     [InlineData(true, true, 2)]
-    internal async Task AnalyzeErrors_UnnormalizablePath_ReportsOneInvalidPathFormatPerBadPath(
+    internal async Task AnalyzeErrors_UnnormalizablePath_ReportsOnePathErrorPerBadPath(
         bool sourceInvalid,
         bool destinationInvalid,
         int expectedCount
@@ -634,7 +678,7 @@ public sealed class BackupRequestValidatorTests
             () =>
                 Assert.All(
                     Codes(errors),
-                    code => Assert.Equal(MessageCode.InvalidPathFormat, code)
+                    code => Assert.Equal(MessageCode.PathMustBeAbsoluteFormat, code)
                 ),
             () => Assert.Single(errors[0].Args)
         );
@@ -739,8 +783,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(source).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(source, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(source, "a.txt")]);
+            .ScanDirectoryAsync(source, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(source, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -768,8 +812,8 @@ public sealed class BackupRequestValidatorTests
             .DirectoryExists(SourceDir)
             .Returns(_ => true, _ => throw new IOException("probe failed"));
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -787,8 +831,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.FileExists(Arg.Any<string>()).Returns(false);
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([Path.Join(SourceDir, "a.txt")]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
         var errors = await this.CreateSut()
@@ -809,7 +853,7 @@ public sealed class BackupRequestValidatorTests
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
             .ThrowsAsync(new IOException("gone"));
 
         var warnings = await this.CreateSut()
@@ -838,8 +882,8 @@ public sealed class BackupRequestValidatorTests
 
         var sourceFile = Path.Join(SourceDir, "big.bin");
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([sourceFile]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(sourceFile));
         _ = this.fileOperations.GetFileSize(sourceFile).Returns(1_000_000L);
 
         _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(driveRoot);
@@ -901,8 +945,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([readable, unreadable]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(readable, unreadable));
         _ = this.fileOperations.GetFileSize(readable).Returns(1_000_000L);
         _ = this.fileOperations
             .GetFileSize(unreadable)
@@ -946,8 +990,8 @@ public sealed class BackupRequestValidatorTests
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         _ = this.fileOperations
-            .GetFilesAsync(SourceDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([sourceFile]);
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(sourceFile));
 
         _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(driveRoot);
         _ = this.systemStorage.IsDriveReady(Arg.Any<string>()).Returns(false);
@@ -967,5 +1011,165 @@ public sealed class BackupRequestValidatorTests
 
         MessageCode[] expectedCodes = [MessageCode.WeakPasswordWarning];
         Assert.Equal(expectedCodes, Codes(warnings));
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_CreateIntoAFolderHoldingOtherFiles_IsRefusedInsteadOfWarned()
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations.GetDirectoryEntryNames(DestinationDir).Returns(["thesis.docx"]);
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.DestinationNotEmpty], Codes(errors));
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_CreateIntoAFolderHoldingABackup_IsAllowedAndWarnsItWillBeReplaced()
+    {
+        var chunks = Path.Join(DestinationDir, "chunks");
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(chunks).Returns(true);
+        _ = this.fileOperations.FileExists(Path.Join(DestinationDir, "manifest.bzc")).Returns(true);
+        _ = this.fileOperations.GetDirectoryEntryNames(DestinationDir).Returns(["manifest.bzc", "chunks"]);
+        _ = this.fileOperations
+            .GetDirectoryEntryNames(chunks)
+            .Returns([new string('a', 64) + ".bzc"]);
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
+
+        var request = ValidRequest(SourceDir, DestinationDir);
+        var sut = this.CreateSut();
+
+        var errors = await sut.AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
+        var warnings = await sut.AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Multiple(
+            () => Assert.Empty(errors),
+            () => Assert.Equal([MessageCode.DestinationContainsBackup], Codes(warnings))
+        );
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_DestinationIsAFile_ReportsDestinationIsFile()
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.fileOperations.FileExists(DestinationDir).Returns(true);
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.DestinationIsFile], Codes(errors));
+    }
+
+    [Theory]
+    [InlineData(BackupOperation.Restore)]
+    [InlineData(BackupOperation.Update)]
+    internal async Task AnalyzeErrors_OpeningAnExistingBackup_AcceptsAPasswordTheCreateRulesWouldRefuse(
+        BackupOperation operation
+    )
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(
+                ValidRequest(SourceDir, DestinationDir, password: " short", operation: operation),
+                TestContext.Current.CancellationToken
+            );
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_RestoreIntoAFolderThatContainsTheBackup_IsAllowed()
+    {
+        var backup = Path.Join(DestinationDir, "backups", "laptop");
+        _ = this.fileOperations.DirectoryExists(backup).Returns(true);
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(
+                ValidRequest(backup, DestinationDir, operation: BackupOperation.Restore),
+                TestContext.Current.CancellationToken
+            );
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_SourceHoldingOnlyLinks_ExplainsThatLinksAreNotBackedUp()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(new DirectoryScan([], [], [], [Path.Join(SourceDir, "linked")]));
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.SourceOnlyLinks], Codes(errors));
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_SkippedLinksAndUnreadableFolders_AreAnnouncedBeforeTheBackup()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(
+                new DirectoryScan(
+                    [Path.Join(SourceDir, "a.txt")],
+                    [],
+                    [new InaccessibleDirectory(Path.Join(SourceDir, "secret"), new UnauthorizedAccessException())],
+                    [Path.Join(SourceDir, "linked")]
+                )
+            );
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Multiple(
+            () =>
+                Assert.Equal(
+                    [MessageCode.SourceLinksSkippedFormat, MessageCode.SourceInaccessibleFoldersFormat],
+                    Codes(warnings)
+                ),
+            () => Assert.Equal<object>([1, "linked"], warnings[0].Args),
+            () => Assert.Equal<object>([1, "secret"], warnings[1].Args)
+        );
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_CreateWithAnUnknownAlgorithm_IsRefusedBeforeAnyKeyIsDerived()
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+
+        var request = new BackupRequest(
+            SourceDir,
+            DestinationDir,
+            "Str0ng-Passw0rd!",
+            "Str0ng-Passw0rd!",
+            EncryptionAlgorithm.Aes,
+            (KeyDerivationAlgorithm)7,
+            BackupOperation.Create,
+            (CompressionMode)9
+        );
+
+        var errors = await this.CreateSut().AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.AlgorithmNotSupported], Codes(errors));
     }
 }

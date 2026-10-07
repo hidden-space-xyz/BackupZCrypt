@@ -10,13 +10,24 @@ namespace BackupZCrypt.Application.Services.Interfaces;
 public interface IManifestService
 {
     /// <summary>
-    /// Determines the on-disk format of the manifest associated with a backup path.
+    /// Classifies the location a user picked as a backup folder.
     /// </summary>
-    /// <param name="backupPath">A path to the backup directory or a file within it.</param>
+    /// <param name="backupPath">The path the user picked as the backup folder.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The detected manifest kind, or <see cref="ManifestKind.Missing"/> if none is found.</returns>
+    /// <returns>The detected manifest kind.</returns>
     public Task<ManifestKind> DetectManifestKindAsync(
         string backupPath,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Inspects the manifest of an existing backup folder without decrypting it.
+    /// </summary>
+    /// <param name="backupRoot">The backup folder.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Whether the manifest is missing, damaged, unsupported, or ready to be opened.</returns>
+    public Task<ManifestKind> InspectManifestAsync(
+        string backupRoot,
         CancellationToken cancellationToken = default
     );
 

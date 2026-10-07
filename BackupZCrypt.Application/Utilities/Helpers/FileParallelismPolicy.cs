@@ -25,4 +25,22 @@ internal static class FileParallelismPolicy
     {
         return Math.Clamp(processorCount, 1, MaximumDegreeOfParallelism);
     }
+
+    /// <summary>
+    /// The most chunks compressed, encrypted, and written at once across every file of a run. Each
+    /// holds up to three four-megabyte buffers, so the cap bounds memory to a few dozen megabytes.
+    /// </summary>
+    internal const int MaximumChunksInFlight = 8;
+
+    /// <summary>
+    /// Returns how many chunks a run processes at once on a machine with the given number of logical
+    /// processors: one per processor, between two and <see cref="MaximumChunksInFlight"/>, so even a
+    /// backup of a single large file keeps the processors busy.
+    /// </summary>
+    /// <param name="processorCount">The number of logical processors available to the process.</param>
+    /// <returns>The number of chunks processed at once.</returns>
+    internal static int ChunksInFlightForProcessorCount(int processorCount)
+    {
+        return Math.Clamp(processorCount, 2, MaximumChunksInFlight);
+    }
 }

@@ -8,11 +8,18 @@ using NSubstitute.ExceptionExtensions;
 namespace BackupZCrypt.Test.Unit.Application;
 
 /// <summary>
-/// Unit tests for the detect-manifest-kind query handler: delegation to the manifest service and the
-/// absorption of probe failures into the missing kind.
+/// Unit tests for the detect-manifest-kind query handler: path normalization, delegation to the
+/// manifest service, and the absorption of probe failures into the missing kind.
 /// </summary>
 public sealed class DetectManifestKindQueryHandlerTests
 {
+    /// <summary>
+    /// An absolute backup path, so normalization leaves it unchanged.
+    /// </summary>
+    private static readonly string BackupPath = Path.GetFullPath(
+        Path.Join(Path.GetTempPath(), "bzc-detect-backup")
+    );
+
     /// <summary>
     /// The substituted manifest service the handler delegates to.
     /// </summary>
@@ -30,16 +37,41 @@ public sealed class DetectManifestKindQueryHandlerTests
     [Theory]
     [InlineData(ManifestKind.Missing)]
     [InlineData(ManifestKind.Encrypted)]
+    [InlineData(ManifestKind.Damaged)]
     internal async Task HandleAsync_ProbeSucceeds_ReturnsTheDetectedKind(ManifestKind kind)
     {
         _ = this.manifestService
-            .DetectManifestKindAsync("some-backup", Arg.Any<CancellationToken>())
+            .DetectManifestKindAsync(BackupPath, Arg.Any<CancellationToken>())
             .Returns(kind);
 
         var result = await this.CreateSut()
-            .HandleAsync(new DetectManifestKindQuery("some-backup"), CancellationToken.None);
+            .HandleAsync(new DetectManifestKindQuery(BackupPath), TestContext.Current.CancellationToken);
 
         Assert.Equal(kind, result);
+    }
+
+    [Fact]
+    internal async Task HandleAsync_PathPastedWithQuotes_IsProbedWithoutThem()
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(BackupPath, Arg.Any<CancellationToken>())
+            .Returns(ManifestKind.Encrypted);
+
+        var result = await this.CreateSut()
+            .HandleAsync(new DetectManifestKindQuery($"\"{BackupPath}\""), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ManifestKind.Encrypted, result);
+    }
+
+    [Fact]
+    internal async Task HandleAsync_RelativePath_IsReportedAsNotFoundWithoutProbing()
+    {
+        var result = await this.CreateSut()
+            .HandleAsync(new DetectManifestKindQuery("some-backup"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ManifestKind.PathNotFound, result);
+        _ = await this.manifestService.DidNotReceive()
+            .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -50,7 +82,7 @@ public sealed class DetectManifestKindQueryHandlerTests
             .ThrowsAsync(new UnauthorizedAccessException("locked"));
 
         var result = await this.CreateSut()
-            .HandleAsync(new DetectManifestKindQuery("locked-backup"), CancellationToken.None);
+            .HandleAsync(new DetectManifestKindQuery(BackupPath), TestContext.Current.CancellationToken);
 
         Assert.Equal(ManifestKind.Missing, result);
     }
@@ -64,7 +96,7 @@ public sealed class DetectManifestKindQueryHandlerTests
 
         _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut()
-                .HandleAsync(new DetectManifestKindQuery("some-backup"), CancellationToken.None)
+                .HandleAsync(new DetectManifestKindQuery(BackupPath), TestContext.Current.CancellationToken)
         );
     }
 }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using BackupZCrypt.Domain.Enums;
 
 namespace BackupZCrypt.Application.ValueObjects.Manifest;
@@ -13,10 +15,15 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// compared in constant time after decryption to detect tampering.
 /// </param>
 /// <param name="Files">The serialized file entries contained in the backup.</param>
+/// <param name="Directories">
+/// The relative paths of the empty folders a restore recreates. Omitted when there are none, so
+/// readers that predate it are unaffected.
+/// </param>
 internal sealed record class ChunkManifestDocument(
     EncryptionAlgorithm EncryptionAlgorithm,
     KeyDerivationAlgorithm KeyDerivationAlgorithm,
     CompressionMode Compression,
     string MasterSalt,
-    List<ChunkManifestFileEntrySerialized> Files
+    List<ChunkManifestFileEntrySerialized> Files,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] List<string>? Directories = null
 );

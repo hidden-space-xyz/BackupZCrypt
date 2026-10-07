@@ -5,4 +5,14 @@ namespace BackupZCrypt.Desktop.Models;
 /// </summary>
 /// <param name="Name">The unit symbol shown to the user (for example, <c>MB</c>, <c>GB</c>, <c>TB</c>).</param>
 /// <param name="BytesPerUnit">The number of bytes in one unit, using binary (1024-based) multiples.</param>
-internal sealed record class DataSizeUnitOption(string Name, long BytesPerUnit);
+internal sealed record class DataSizeUnitOption(string Name, long BytesPerUnit)
+{
+    /// <summary>
+    /// Returns the display name, which is also what screen readers announce for the option.
+    /// </summary>
+    /// <returns>The display name.</returns>
+    public override string ToString()
+    {
+        return this.Name;
+    }
+}

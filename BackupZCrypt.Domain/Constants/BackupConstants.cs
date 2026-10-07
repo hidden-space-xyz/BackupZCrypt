@@ -13,12 +13,6 @@ public static class BackupConstants
     public const int MaximumChunkSize = 4 * 1024 * 1024;
 
     /// <summary>
-    /// The largest encrypted manifest accepted in memory (256 MiB). This operational resource limit
-    /// supports very large archives while rejecting files designed to exhaust process memory.
-    /// </summary>
-    public const int MaximumManifestSize = 256 * 1024 * 1024;
-
-    /// <summary>
     /// The file extension used for backup artifacts produced by this tool.
     /// </summary>
     public const string AppFileExtension = ".bzc";
@@ -32,4 +26,22 @@ public static class BackupConstants
     /// The name of the directory that holds the encrypted chunk files.
     /// </summary>
     public const string ChunksDirectoryName = "chunks";
+
+    /// <summary>
+    /// The name of the lock file a create or update holds open in the backup folder, so a second
+    /// operation on the same backup is refused instead of interleaving its writes.
+    /// </summary>
+    public const string LockFileName = "backup.lock";
+
+    /// <summary>
+    /// The extension of the randomly named temporary files written next to their final path and
+    /// renamed into place once complete.
+    /// </summary>
+    public const string TemporaryFileExtension = ".tmp";
+
+    /// <summary>
+    /// The extension appended to a chunk file that failed authentication during verification, which
+    /// sets it aside so the next update regenerates the chunk from the source.
+    /// </summary>
+    public const string QuarantineExtension = ".corrupt";
 }

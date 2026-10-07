@@ -35,9 +35,25 @@ internal abstract partial class OperationViewModelBase(
 ) : ViewModelBase
 {
     /// <summary>
+    /// How often the elapsed time is refreshed while an operation runs, independently of progress
+    /// reports, so the clock keeps moving through a long file.
+    /// </summary>
+    private static readonly TimeSpan ElapsedRefreshInterval = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// The cancellation source of the operation currently in flight, or <see langword="null"/> when idle.
     /// </summary>
     private CancellationTokenSource? operationCts;
+
+    /// <summary>
+    /// The timer of the operation currently in flight.
+    /// </summary>
+    private readonly System.Diagnostics.Stopwatch operationStopwatch = new();
+
+    /// <summary>
+    /// The longest elapsed time an engine report has carried during the current run.
+    /// </summary>
+    private TimeSpan reportedElapsed;
 
     /// <summary>
     /// A value indicating whether the remembered paths have already been applied, so returning to the
@@ -139,10 +155,34 @@ internal abstract partial class OperationViewModelBase(
     public partial string ResultSize { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the summary of the files an update kept and removed, shown in the result panel.
+    /// </summary>
+    [ObservableProperty]
+    public partial string ResultUpdateDetails { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the update summary row is shown.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool HasResultUpdateDetails { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the result detail rows are shown.
     /// </summary>
     [ObservableProperty]
     public partial bool HasResultDetails { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the completed operation's warnings are listed in the
+    /// result panel.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowResultWarnings { get; set; }
+
+    /// <summary>
+    /// Gets the localized warnings the completed operation reported, such as links it did not follow.
+    /// </summary>
+    public ObservableCollection<string> ResultWarnings { get; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the warnings confirmation panel is shown.
@@ -373,7 +413,11 @@ internal abstract partial class OperationViewModelBase(
         IsRunning = true;
 
         using CancellationTokenSource cts = new();
+        using CancellationTokenSource elapsedCts = new();
         operationCts = cts;
+        operationStopwatch.Restart();
+        UpdateElapsedText();
+        var elapsedTask = RefreshElapsedAsync(elapsedCts.Token);
 
         try
         {
@@ -407,9 +451,65 @@ internal abstract partial class OperationViewModelBase(
         }
         finally
         {
+            await elapsedCts.CancelAsync();
+            await elapsedTask;
+            operationStopwatch.Stop();
             IsRunning = false;
             operationCts = null;
         }
+    }
+
+    /// <summary>
+    /// Refreshes the elapsed time once a second until the operation ends, so the clock moves even while
+    /// no progress report arrives.
+    /// </summary>
+    /// <param name="cancellationToken">A token cancelled when the operation ends.</param>
+    /// <returns>A task that completes once the operation has ended.</returns>
+    private async Task RefreshElapsedAsync(CancellationToken cancellationToken)
+    {
+        using PeriodicTimer timer = new(ElapsedRefreshInterval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                UpdateElapsedText();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Shows the longer of the time measured here and the time the engine last reported.
+    /// </summary>
+    private void UpdateElapsedText()
+    {
+        var elapsed = operationStopwatch.Elapsed > reportedElapsed
+            ? operationStopwatch.Elapsed
+            : reportedElapsed;
+
+        ElapsedText = string.Format(
+            CultureInfo.CurrentCulture,
+            Strings.ElapsedFormat,
+            FormatDuration(elapsed)
+        );
+    }
+
+    /// <summary>
+    /// Formats a duration as hours, minutes, and seconds, counting hours past a day instead of
+    /// wrapping them.
+    /// </summary>
+    /// <param name="duration">The duration to format.</param>
+    /// <returns>The duration as <c>hh:mm:ss</c>, with as many hour digits as needed.</returns>
+    protected static string FormatDuration(TimeSpan duration)
+    {
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{(long)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}"
+        );
     }
 
     /// <summary>
@@ -430,11 +530,12 @@ internal abstract partial class OperationViewModelBase(
             status.TotalFiles
         );
 
-        ElapsedText = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ElapsedFormat,
-            status.Elapsed.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
-        );
+        if (status.Elapsed > reportedElapsed)
+        {
+            reportedElapsed = status.Elapsed;
+        }
+
+        UpdateElapsedText();
     }
 
     /// <summary>
@@ -481,17 +582,32 @@ internal abstract partial class OperationViewModelBase(
         ResultIsSuccess = operation.IsSuccess;
         ResultTitle = operation.IsSuccess ? SuccessResultTitle : PartialResultTitle;
 
-        ResultFiles = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ResultFilesFormat,
-            operation.ProcessedFiles,
-            operation.TotalFiles
-        );
+        var isUpdate = operation.UnchangedFiles > 0 || operation.RemovedFiles > 0;
+
+        ResultFiles =
+            isUpdate && operation.TotalFiles is 0 && operation.RemovedFiles is 0
+                ? Strings.ResultNoChanges
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    Strings.ResultFilesFormat,
+                    operation.ProcessedFiles,
+                    operation.TotalFiles
+                );
+
+        HasResultUpdateDetails = isUpdate;
+        ResultUpdateDetails = isUpdate
+            ? string.Format(
+                CultureInfo.CurrentCulture,
+                Strings.ResultUpdateDetailsFormat,
+                operation.UnchangedFiles,
+                operation.RemovedFiles
+            )
+            : string.Empty;
 
         ResultDuration = string.Format(
             CultureInfo.CurrentCulture,
             Strings.ResultDurationFormat,
-            operation.ElapsedTime.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
+            FormatDuration(operation.ElapsedTime)
         );
 
         ResultSize = string.Format(
@@ -507,7 +623,13 @@ internal abstract partial class OperationViewModelBase(
             Errors.Add(MessageLocalizer.Localize(error));
         }
 
+        foreach (var warning in operation.Warnings)
+        {
+            ResultWarnings.Add(MessageLocalizer.Localize(warning));
+        }
+
         ShowErrors = Errors.Count > 0;
+        ShowResultWarnings = ResultWarnings.Count > 0;
 
         if (operation.IsSuccess)
         {
@@ -564,19 +686,24 @@ internal abstract partial class OperationViewModelBase(
     {
         Errors.Clear();
         Warnings.Clear();
+        ResultWarnings.Clear();
         ShowErrors = false;
         ShowWarnings = false;
+        ShowResultWarnings = false;
         HasResult = false;
         HasResultDetails = false;
+        HasResultUpdateDetails = false;
         ResultIsSuccess = false;
         ResultTitle = string.Empty;
         ResultFiles = string.Empty;
+        ResultUpdateDetails = string.Empty;
         ResultDuration = string.Empty;
         ResultSize = string.Empty;
         ProgressValue = 0;
         IsProgressIndeterminate = false;
         ProgressText = string.Empty;
         ElapsedText = string.Empty;
+        reportedElapsed = TimeSpan.Zero;
     }
 
     /// <summary>

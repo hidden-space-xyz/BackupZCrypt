@@ -1,8 +1,10 @@
 using BackupZCrypt.Application.Services.Interfaces;
+using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -12,17 +14,24 @@ namespace BackupZCrypt.Application.Orchestrators;
 
 /// <summary>
 /// Runs the shared pipeline behind the backup command and query handlers: it validates the request,
-/// normalizes paths, prepares the destination directory, and dispatches to the chunk-based backup
-/// service. Verification is read-only and takes a dedicated path that skips both request validation
-/// and destination preparation.
+/// previews what an update or restore will do so its consequences can be confirmed, normalizes paths,
+/// takes the backup's lock, and dispatches to the chunk-based backup service. Verification is
+/// read-only and takes a dedicated path that skips request validation.
 /// </summary>
+/// <remarks>
+/// Nothing in this pipeline deletes user data. A create into a folder that holds anything other than
+/// a backup is refused during validation, and a backup it replaces is only pruned by the engine after
+/// the new one has been published.
+/// </remarks>
 /// <param name="backupRequestValidator">The validator producing blocking errors and advisory warnings.</param>
 /// <param name="fileOperationsService">The service used to inspect and prepare the file system.</param>
 /// <param name="chunkedBackupService">The service that performs the chunk-based backup, update, restore, and verify operations.</param>
+/// <param name="systemStorage">The service used to query free space for the preview warnings.</param>
 internal sealed class BackupOperationRunner(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
-    IChunkedBackupService chunkedBackupService
+    IChunkedBackupService chunkedBackupService,
+    ISystemStorageService systemStorage
 )
 {
     /// <summary>
@@ -42,11 +51,16 @@ internal sealed class BackupOperationRunner(
         CancellationToken cancellationToken
     )
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var validationResult = await ValidateRequestAsync(request, cancellationToken);
         if (validationResult is not null)
         {
             return validationResult;
         }
+
+        string? createdDestination = null;
+        var succeeded = false;
 
         try
         {
@@ -66,17 +80,17 @@ internal sealed class BackupOperationRunner(
                 return Result<BackupOutcome>.Failure(MessageCode.BackupDestinationMustExist);
             }
 
-            if (
-                request.Operation is BackupOperation.Create
-                && fileOperationsService.DirectoryExists(destinationPath)
-            )
+            if (request.Operation is BackupOperation.Create)
             {
-                await fileOperationsService.CleanDirectoryAsync(destinationPath, cancellationToken);
+                if (!fileOperationsService.DirectoryExists(destinationPath))
+                {
+                    createdDestination = destinationPath;
+                }
+
+                await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
             }
 
-            await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
-
-            var engineResult = await RunBackupAsync(
+            var engineResult = await RunUnderLockAsync(
                 sourcePath,
                 destinationPath,
                 request,
@@ -84,29 +98,41 @@ internal sealed class BackupOperationRunner(
                 cancellationToken
             );
 
+            succeeded = engineResult.IsSuccess;
             return ToOutcome(engineResult);
         }
         catch (OperationCanceledException)
         {
             throw;
         }
+        catch (UnauthorizedAccessException) when (request.Operation is not BackupOperation.Verify)
+        {
+            return Result<BackupOutcome>.Failure(MessageCode.DestinationAccessDenied);
+        }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
+        }
+        finally
+        {
+            if (!succeeded && createdDestination is not null)
+            {
+                TryRemoveEmptyDirectory(createdDestination);
+            }
         }
     }
 
     /// <summary>
     /// Runs the read-only verify path, which requires a password and an existing source directory but
-    /// never cleans, creates, or writes to a destination.
+    /// never creates or writes to a destination.
     /// </summary>
     /// <param name="request">The backup request identifying the archive to verify.</param>
     /// <param name="progress">A sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>
     /// A successful result carrying the completed verification outcome, or a failure result when the
-    /// password is missing, the source path cannot be normalized, the source directory is absent, or
-    /// an unexpected error occurs.
+    /// password is missing, the source path cannot be normalized, the source directory is absent, the
+    /// backup is being modified, or an unexpected error occurs.
     /// </returns>
     public async Task<Result<BackupOutcome>> RunVerifyAsync(
         BackupRequest request,
@@ -114,6 +140,8 @@ internal sealed class BackupOperationRunner(
         CancellationToken cancellationToken
     )
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         if (string.IsNullOrWhiteSpace(request.Password))
         {
             return Result<BackupOutcome>.Failure(MessageCode.PasswordRequired);
@@ -136,6 +164,11 @@ internal sealed class BackupOperationRunner(
                 return Result<BackupOutcome>.Failure(sourceError.Value);
             }
 
+            if (IsBackupLocked(sourcePath))
+            {
+                return Result<BackupOutcome>.Failure(MessageCode.BackupInUse);
+            }
+
             var engineResult = await chunkedBackupService.VerifyAsync(
                 sourcePath,
                 request,
@@ -152,6 +185,49 @@ internal sealed class BackupOperationRunner(
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Takes the backup's lock for the operation and dispatches it. A create or update holds the
+    /// lock exclusively for its whole run; a restore only checks that no create or update holds it.
+    /// </summary>
+    /// <param name="sourcePath">The normalized absolute source path.</param>
+    /// <param name="destinationPath">The normalized absolute destination path.</param>
+    /// <param name="request">The backup request describing the operation, paths, and options.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome reported by the engine, or a failure when the backup is in use.</returns>
+    private async Task<Result<BackupResult>> RunUnderLockAsync(
+        string sourcePath,
+        string destinationPath,
+        BackupRequest request,
+        IProgress<BackupStatus> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        if (request.Operation is BackupOperation.Restore)
+        {
+            return IsBackupLocked(sourcePath)
+                ? Result<BackupResult>.Failure(MessageCode.BackupInUse)
+                : await RunBackupAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+        }
+
+        IDisposable backupLock;
+        try
+        {
+            backupLock = fileOperationsService.AcquireExclusiveLock(
+                fileOperationsService.CombinePath(destinationPath, BackupConstants.LockFileName)
+            );
+        }
+        catch (IOException)
+        {
+            return Result<BackupResult>.Failure(MessageCode.BackupInUse);
+        }
+
+        using (backupLock)
+        {
+            return await RunBackupAsync(sourcePath, destinationPath, request, progress, cancellationToken);
         }
     }
 
@@ -206,6 +282,40 @@ internal sealed class BackupOperationRunner(
     }
 
     /// <summary>
+    /// Determines whether a create or update currently holds the backup in a folder.
+    /// </summary>
+    /// <param name="backupPath">The backup folder.</param>
+    /// <returns><see langword="true"/> when the backup is being modified.</returns>
+    private bool IsBackupLocked(string backupPath)
+    {
+        return fileOperationsService.IsLockHeld(
+            fileOperationsService.CombinePath(backupPath, BackupConstants.LockFileName)
+        );
+    }
+
+    /// <summary>
+    /// Removes a destination folder this run created when the run left it empty.
+    /// </summary>
+    /// <param name="directoryPath">The folder the run created.</param>
+    private void TryRemoveEmptyDirectory(string directoryPath)
+    {
+        try
+        {
+            if (
+                fileOperationsService.DirectoryExists(directoryPath)
+                && fileOperationsService.GetDirectoryEntryNames(directoryPath).Count is 0
+            )
+            {
+                fileOperationsService.DeleteEmptyDirectory(directoryPath);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+    }
+
+    /// <summary>
     /// Checks that the source path is an existing directory, distinguishing a path that is a file
     /// from one that does not exist at all.
     /// </summary>
@@ -250,8 +360,9 @@ internal sealed class BackupOperationRunner(
     }
 
     /// <summary>
-    /// Runs the request validator and turns blocking errors into a failure, and warnings the user has
-    /// not agreed to proceed past into an outcome awaiting their confirmation.
+    /// Runs the request validator and, unless the user already agreed to proceed, the preview of an
+    /// update or restore. Blocking errors become a failure, and warnings the user has not agreed to
+    /// proceed past become an outcome awaiting their confirmation.
     /// </summary>
     /// <param name="request">The backup request to validate.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -270,14 +381,132 @@ internal sealed class BackupOperationRunner(
             return Result<BackupOutcome>.Failure([.. errors]);
         }
 
-        var warnings = await backupRequestValidator.AnalyzeWarningsAsync(
-            request,
-            cancellationToken
-        );
+        if (request.ProceedOnWarnings)
+        {
+            return null;
+        }
 
-        return warnings.Count > 0 && !request.ProceedOnWarnings
+        List<LocalizableMessage> warnings =
+        [
+            .. await backupRequestValidator.AnalyzeWarningsAsync(request, cancellationToken),
+        ];
+
+        var preview = await PreviewAsync(request, cancellationToken);
+        if (preview is { IsSuccess: false })
+        {
+            return Result<BackupOutcome>.Failure([.. preview.Errors]);
+        }
+
+        if (preview is { IsSuccess: true })
+        {
+            warnings.AddRange(BuildPreviewWarnings(request, preview.Value));
+        }
+
+        return warnings.Count > 0
             ? Result<BackupOutcome>.Success(BackupOutcome.AwaitingConfirmation(warnings))
             : null;
+    }
+
+    /// <summary>
+    /// Opens the backup an update or restore will use and compares it with what the operation is
+    /// about to do. A wrong password or a missing manifest is reported here, before anything is
+    /// created or written.
+    /// </summary>
+    /// <param name="request">The request to preview.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The preview, or <see langword="null"/> for an operation that has none or when it could not run.</returns>
+    private async Task<Result<BackupPreview>?> PreviewAsync(
+        BackupRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var (sourcePath, destinationPath) = NormalizePaths(request);
+
+        try
+        {
+            return request.Operation switch
+            {
+                BackupOperation.Update => await chunkedBackupService.PreviewUpdateAsync(
+                    sourcePath,
+                    destinationPath,
+                    request.Password,
+                    cancellationToken
+                ),
+                BackupOperation.Restore => await chunkedBackupService.PreviewRestoreAsync(
+                    sourcePath,
+                    request.Password,
+                    cancellationToken
+                ),
+                BackupOperation.Create or BackupOperation.Verify => null,
+                _ => null,
+            };
+        }
+        catch (Exception exception)
+            when (exception is not OperationCanceledException and not OutOfMemoryException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Turns a preview into the warnings the user confirms: the files an update removes from the
+    /// backup, a source that shares nothing with the backup, and too little free space for the data
+    /// the operation will write.
+    /// </summary>
+    /// <param name="request">The previewed request.</param>
+    /// <param name="preview">The preview of the operation.</param>
+    /// <returns>The warnings to confirm.</returns>
+    private List<LocalizableMessage> BuildPreviewWarnings(BackupRequest request, BackupPreview preview)
+    {
+        List<LocalizableMessage> warnings = [];
+        var (_, destinationPath) = NormalizePaths(request);
+        long requiredSpace;
+
+        if (request.Operation is BackupOperation.Update)
+        {
+            if (preview.FileCount > 0 && preview.MatchedFiles is 0)
+            {
+                warnings.Add(
+                    new LocalizableMessage(MessageCode.UpdateSourceMismatchFormat, preview.FileCount)
+                );
+            }
+            else if (preview.RemovedPaths.Count > 0)
+            {
+                warnings.Add(
+                    new LocalizableMessage(
+                        MessageCode.UpdateRemovesFilesFormat,
+                        preview.RemovedPaths.Count,
+                        PathSample.Join(preview.RemovedPaths)
+                    )
+                );
+            }
+
+            requiredSpace = (long)(preview.BytesToProcess * 1.2);
+        }
+        else
+        {
+            requiredSpace = preview.TotalBytes;
+        }
+
+        var drive = systemStorage.GetPathRoot(destinationPath);
+        if (string.IsNullOrEmpty(drive) || !systemStorage.IsDriveReady(drive))
+        {
+            return warnings;
+        }
+
+        var available = systemStorage.GetAvailableFreeSpace(drive);
+        if (available >= 0 && available < requiredSpace)
+        {
+            warnings.Add(
+                new LocalizableMessage(
+                    MessageCode.LowDiskSpaceFormat,
+                    ByteSizeFormatter.Format(available),
+                    ByteSizeFormatter.Format(requiredSpace)
+                )
+            );
+        }
+
+        return warnings;
     }
 
     /// <summary>

@@ -64,7 +64,12 @@ public sealed class UpdateBackupCommandHandlerTests
     private UpdateBackupCommandHandler CreateSut()
     {
         return new(
-            new BackupOperationRunner(this.validator, this.fileOperations, this.chunkedBackupService)
+            new BackupOperationRunner(
+                this.validator,
+                this.fileOperations,
+                this.chunkedBackupService,
+                Substitute.For<ISystemStorageService>()
+            )
         );
     }
 
