@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:local="using:BackupZCrypt.Desktop"
@@ -129,9 +130,8 @@
   </UserControl.Styles>
 
   <Panel>
-    <Border x:Name="Scrim"
-            Background="{StaticResource ScrimBrush}"
-            PointerPressed="OnScrimPressed" />
+    <controls:WindowDragArea x:Name="Scrim"
+                             Background="{StaticResource ScrimBrush}" />
 
     <Border x:Name="Card"
             Width="460"

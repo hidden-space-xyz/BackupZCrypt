@@ -6,8 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 
+using BackupZCrypt.Desktop.Behaviors;
 using BackupZCrypt.Desktop.ViewModels;
 
 namespace BackupZCrypt.Desktop.Views;
@@ -22,7 +22,10 @@ namespace BackupZCrypt.Desktop.Views;
 /// application behind it, its size snapped whenever the content switched from progress to result, and its
 /// appearance competed with the platform's own window animations. Drawn in the same surface as the rest of
 /// the application, the card stays centered while its content changes, and every bit of motion is under the
-/// application's control.
+/// application's control. Keeping input inside the overlay, guarding the window against closing mid-run, and
+/// moving the window by the scrim are the jobs of <see cref="ModalInputScope"/>,
+/// <see cref="WindowCloseGuard"/>, and the scrim's <see cref="Controls.WindowDragArea"/>; the panel each
+/// state shows and the keys' commands come from <see cref="OperationDialogPanels"/>.
 /// </remarks>
 internal sealed partial class OperationDialog : UserControl
 {
@@ -46,27 +49,20 @@ internal sealed partial class OperationDialog : UserControl
     private OperationViewModelBase? viewModel;
 
     /// <summary>
-    /// The top level hosting the overlay while it is attached, used to intercept input aimed at the page
-    /// underneath.
+    /// The scope keeping keyboard input inside the overlay while it is attached.
     /// </summary>
-    private TopLevel? topLevel;
+    private ModalInputScope? inputScope;
 
     /// <summary>
-    /// The window hosting the overlay while it is attached, used to move it by the scrim and to guard its
-    /// closing.
+    /// The guard keeping the hosting window open while the operation runs, while the overlay is attached.
     /// </summary>
-    private Window? window;
-
-    /// <summary>
-    /// The element that had keyboard focus before the overlay opened, restored when the overlay goes away.
-    /// </summary>
-    private IInputElement? previousFocus;
+    private WindowCloseGuard? closeGuard;
 
     /// <summary>
     /// The panel currently on display. It deliberately survives the operation going idle, so the card keeps its
     /// content while it animates out instead of collapsing to an empty frame.
     /// </summary>
-    private DialogState shownState;
+    private OperationDialogPanel shownPanel;
 
     /// <summary>
     /// A value indicating whether a state refresh is already queued on the dispatcher.
@@ -74,7 +70,7 @@ internal sealed partial class OperationDialog : UserControl
     private bool syncQueued;
 
     /// <summary>
-    /// A value indicating whether the exit motion has started, after which the displayed state is frozen.
+    /// A value indicating whether the exit motion has started, after which the displayed panel is frozen.
     /// </summary>
     private bool closing;
 
@@ -84,32 +80,6 @@ internal sealed partial class OperationDialog : UserControl
     public OperationDialog()
     {
         InitializeComponent();
-    }
-
-    /// <summary>
-    /// The panels the card can show, one per phase of an operation.
-    /// </summary>
-    private enum DialogState
-    {
-        /// <summary>
-        /// Nothing to show: the operation is idle.
-        /// </summary>
-        None,
-
-        /// <summary>
-        /// The operation is running and reports its progress.
-        /// </summary>
-        Running,
-
-        /// <summary>
-        /// The operation stopped at warnings the user has to confirm or dismiss.
-        /// </summary>
-        Warnings,
-
-        /// <summary>
-        /// The operation finished and its outcome is shown.
-        /// </summary>
-        Result,
     }
 
     /// <summary>
@@ -148,8 +118,8 @@ internal sealed partial class OperationDialog : UserControl
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Starts observing the operation and intercepting input, remembers the focused element, and guards the
-    /// window against being closed while the operation runs.
+    /// Starts observing the operation, keeps keyboard input inside the overlay, and guards the window against
+    /// being closed while the operation runs.
     /// </remarks>
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -157,16 +127,8 @@ internal sealed partial class OperationDialog : UserControl
 
         viewModel?.PropertyChanged += OnViewModelPropertyChanged;
 
-        topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is not null)
-        {
-            previousFocus = topLevel.FocusManager?.GetFocusedElement();
-            topLevel.AddHandler(KeyDownEvent, OnTopLevelKeyDown, RoutingStrategies.Tunnel);
-            topLevel.AddHandler(TextInputEvent, OnTopLevelTextInput, RoutingStrategies.Tunnel);
-        }
-
-        window = topLevel as Window;
-        window?.Closing += OnWindowClosing;
+        inputScope = ModalInputScope.Open(this, FocusCard);
+        closeGuard = WindowCloseGuard.Open(this, () => viewModel is { IsRunning: true });
 
         Sync();
     }
@@ -198,32 +160,18 @@ internal sealed partial class OperationDialog : UserControl
 
         viewModel?.PropertyChanged -= OnViewModelPropertyChanged;
 
-        topLevel?.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
-        topLevel?.RemoveHandler(TextInputEvent, OnTopLevelTextInput);
-        topLevel = null;
+        inputScope?.Dispose();
+        inputScope = null;
 
-        window?.Closing -= OnWindowClosing;
-        window = null;
+        closeGuard?.Dispose();
+        closeGuard = null;
 
-        if (
-            previousFocus is Visual previous
-            && TopLevel.GetTopLevel(previous) is not null
-            && previousFocus.Focusable
-        )
-        {
-            _ = previousFocus.Focus();
-        }
-
-        previousFocus = null;
         _ = completion.TrySetResult();
     }
 
     /// <summary>
-    /// Handles Escape and Enter for the panel on display: Escape backs out (cancel, dismiss, or close) and
-    /// Enter closes the result. Enter never confirms warnings: they announce consequences such as files
-    /// leaving a backup or a backup being replaced, so continuing takes a deliberate press of the button
-    /// rather than the same key that started the operation. A focused button handles Enter itself before
-    /// it bubbles up here.
+    /// Runs the command <see cref="OperationDialogPanels"/> assigns to Escape or Enter on the panel on display.
+    /// A focused button handles Enter itself before it bubbles up here.
     /// </summary>
     /// <param name="e">The key event.</param>
     protected override void OnKeyDown(KeyEventArgs e)
@@ -232,44 +180,17 @@ internal sealed partial class OperationDialog : UserControl
 
         base.OnKeyDown(e);
 
-        if (e.Handled || viewModel is null || closing)
+        if (e.Handled || viewModel is null || closing || e.Key is not (Key.Escape or Key.Enter))
         {
             return;
         }
 
-        switch (e.Key)
-        {
-            case Key.Escape:
-                Execute(
-                    shownState switch
-                    {
-                        DialogState.Running => viewModel.CancelOperationCommand,
-                        DialogState.Warnings => viewModel.DismissWarningsCommand,
-                        DialogState.Result => viewModel.DismissResultCommand,
-                        DialogState.None => null,
-                        _ => null,
-                    }
-                );
-                e.Handled = true;
-                break;
-
-            case Key.Enter:
-                Execute(
-                    shownState switch
-                    {
-                        DialogState.Result => viewModel.DismissResultCommand,
-                        DialogState.Warnings => null,
-                        DialogState.Running => null,
-                        DialogState.None => null,
-                        _ => null,
-                    }
-                );
-                e.Handled = true;
-                break;
-
-            default:
-                break;
-        }
+        Execute(
+            e.Key is Key.Escape
+                ? OperationDialogPanels.EscapeCommand(shownPanel, viewModel)
+                : OperationDialogPanels.EnterCommand(shownPanel, viewModel)
+        );
+        e.Handled = true;
     }
 
     /// <summary>
@@ -327,17 +248,11 @@ internal sealed partial class OperationDialog : UserControl
             return;
         }
 
-        var state = viewModel switch
-        {
-            { IsRunning: true } => DialogState.Running,
-            { ShowWarnings: true } => DialogState.Warnings,
-            { HasResult: true } => DialogState.Result,
-            _ => DialogState.None,
-        };
+        var panel = OperationDialogPanels.For(viewModel);
 
-        if (state is DialogState.None)
+        if (panel is OperationDialogPanel.None)
         {
-            if (topLevel is not null)
+            if (TopLevel.GetTopLevel(this) is not null)
             {
                 _ = CloseAsync();
             }
@@ -345,16 +260,16 @@ internal sealed partial class OperationDialog : UserControl
             return;
         }
 
-        if (state == shownState)
+        if (panel == shownPanel)
         {
             return;
         }
 
-        shownState = state;
+        shownPanel = panel;
 
-        SetPanelVisible("RunningPanel", state is DialogState.Running);
-        SetPanelVisible("WarningsPanel", state is DialogState.Warnings);
-        SetPanelVisible("ResultPanel", state is DialogState.Result);
+        SetPanelVisible("RunningPanel", panel is OperationDialogPanel.Running);
+        SetPanelVisible("WarningsPanel", panel is OperationDialogPanel.Warnings);
+        SetPanelVisible("ResultPanel", panel is OperationDialogPanel.Result);
 
         if (IsLoaded)
         {
@@ -402,80 +317,5 @@ internal sealed partial class OperationDialog : UserControl
     private void FocusCard()
     {
         _ = this.FindControl<Border>("Card")?.Focus();
-    }
-
-    /// <summary>
-    /// Returns whether an input event originated from the overlay itself or one of its descendants.
-    /// </summary>
-    /// <param name="source">The event source.</param>
-    /// <returns><see langword="true"/> if the source belongs to the overlay; otherwise <see langword="false"/>.</returns>
-    private bool IsFromOverlay(object? source)
-    {
-        return source is Visual visual
-            && (ReferenceEquals(visual, this) || this.IsVisualAncestorOf(visual));
-    }
-
-    /// <summary>
-    /// Swallows key presses aimed at anything outside the overlay and pulls focus back into the card, so
-    /// neither shortcuts nor default buttons of the page underneath can react while the overlay is open.
-    /// </summary>
-    /// <param name="sender">The top level.</param>
-    /// <param name="e">The key event, seen during its tunnelling phase.</param>
-    private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (IsFromOverlay(e.Source))
-        {
-            return;
-        }
-
-        e.Handled = true;
-        FocusCard();
-    }
-
-    /// <summary>
-    /// Swallows text typed into anything outside the overlay, such as a text box of the page underneath that
-    /// still held focus.
-    /// </summary>
-    /// <param name="sender">The top level.</param>
-    /// <param name="e">The text input event, seen during its tunnelling phase.</param>
-    private void OnTopLevelTextInput(object? sender, TextInputEventArgs e)
-    {
-        if (!IsFromOverlay(e.Source))
-        {
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>
-    /// Keeps the window open while the operation runs, which a modal dialog window used to guarantee by
-    /// disabling its owner. Closing the application mid-run would abandon the operation halfway; the user can
-    /// cancel it from the overlay first. Programmatic closes and system shutdown are never blocked.
-    /// </summary>
-    /// <param name="sender">The window being closed.</param>
-    /// <param name="e">The closing event, which can be cancelled.</param>
-    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
-    {
-        if (
-            viewModel is { IsRunning: true }
-            && e.CloseReason is WindowCloseReason.WindowClosing
-            && !e.IsProgrammatic
-        )
-        {
-            e.Cancel = true;
-        }
-    }
-
-    /// <summary>
-    /// Lets the user move the window by dragging the dimmed area around the card, since the overlay covers the
-    /// title bar.
-    /// </summary>
-    /// <param name="sender">The scrim that raised the event.</param>
-    /// <param name="e">The pointer event carrying the button state.</param>
-    private void OnScrimPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (window is not null && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            window.BeginMoveDrag(e);
-        }
     }
 }
