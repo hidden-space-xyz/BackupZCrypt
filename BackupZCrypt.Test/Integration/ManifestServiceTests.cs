@@ -6,6 +6,7 @@ using System.Text.Json;
 using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -521,7 +522,10 @@ public sealed class ManifestServiceTests
             () => Assert.Null(manifestService.DecryptChunkManifest(preamble, wrongKey)),
             () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { Algorithm = EncryptionAlgorithm.Twofish }, key)),
             () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { KeyDerivation = KeyDerivationAlgorithm.Scrypt }, key)),
-            () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { MasterSalt = alteredSalt }, key))
+            () => Assert.Null(manifestService.DecryptChunkManifest(preamble with { MasterSalt = alteredSalt }, key)),
+            () => Assert.Null(
+                manifestService.DecryptChunkManifest(preamble with { Algorithm = (EncryptionAlgorithm)99 }, key)
+            )
         );
     }
 

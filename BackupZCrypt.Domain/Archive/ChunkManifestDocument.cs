@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 using BackupZCrypt.Domain.Enums;
 
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The JSON-serializable on-disk shape of a chunked backup manifest before encryption.

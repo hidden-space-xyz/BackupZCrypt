@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// A single backed-up file within a chunked manifest, including the chunks that reconstruct it.

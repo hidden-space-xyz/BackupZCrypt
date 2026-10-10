@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The JSON-serializable on-disk shape of a single backed-up file entry.

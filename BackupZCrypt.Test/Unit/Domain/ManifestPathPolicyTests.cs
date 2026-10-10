@@ -1,16 +1,15 @@
-using BackupZCrypt.Application.Utilities.Helpers;
-using BackupZCrypt.Test.Common;
-using BackupZCrypt.Infrastructure.Services;
+using BackupZCrypt.Domain.Archive;
 
-namespace BackupZCrypt.Test.Unit.Application;
+namespace BackupZCrypt.Test.Unit.Domain;
 
 /// <summary>
 /// Unit tests for <see cref="ManifestPathPolicy"/>, the rule that decides whether a manifest entry
-/// path may be written and where a restore is allowed to put it.
+/// path may be written into an archive and read back out of one.
 /// </summary>
 /// <remarks>
-/// This is the check that keeps a crafted manifest from steering a restore outside the destination
-/// directory. It used to be a set of private statics inside a 2000-line service, reachable only
+/// This is the check that keeps a crafted manifest from carrying a path that could steer a restore
+/// outside the destination directory; <see cref="BackupZCrypt.Test.Unit.Application.RestorePathGuardTests"/> covers the
+/// host-side half. It used to be a set of private statics inside a 2000-line service, reachable only
 /// through a full backup round trip; testing it directly is the point of having extracted it.
 /// </remarks>
 public sealed class ManifestPathPolicyTests
@@ -95,20 +94,6 @@ public sealed class ManifestPathPolicyTests
     }
 
     [Theory]
-    [MemberData(nameof(WindowsIncompatiblePaths))]
-    internal void ResolveSafeDestination_OnWindows_RefusesNamesItCannotCreate(string path)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            Assert.Skip("Only Windows refuses these names.");
-        }
-
-        _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ResolveSafeDestination(Path.GetTempPath(), path)
-        );
-    }
-
-    [Theory]
     [MemberData(nameof(RejectedPaths))]
     internal void ValidateRelative_TraversalEmptyAndNonCanonicalPaths_AreRejectedOnEveryPlatform(string path)
     {
@@ -133,71 +118,6 @@ public sealed class ManifestPathPolicyTests
     {
         Assert.Null(Record.Exception(() => ManifestPathPolicy.ValidateRelative(path)));
     }
-
-    [Fact]
-    internal void ResolveSafeDestination_RootedPath_IsRejected()
-    {
-        var rooted = Path.Join(Path.GetTempPath(), "escape.txt");
-
-        _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ResolveSafeDestination(Path.Join(Path.GetTempPath(), "root"), rooted)
-        );
-    }
-
-    [Fact]
-    internal void ResolveSafeDestination_OrdinaryEntry_LandsInsideTheRoot()
-    {
-        var root = Path.Join(Path.GetTempPath(), "bzc-policy-root");
-
-        var resolved = ManifestPathPolicy.ResolveSafeDestination(root, "docs/sub/deep.txt");
-
-        Assert.StartsWith(
-            Path.GetFullPath(root) + Path.DirectorySeparatorChar,
-            resolved,
-            StringComparison.Ordinal
-        );
-    }
-
-    [Fact]
-    internal void ResolveSafeDestination_SiblingWhoseNameSharesThePrefix_IsNotTreatedAsInside()
-    {
-        var root = Path.Join(Path.GetTempPath(), "bzc-root");
-
-        _ = Assert.Throws<InvalidDataException>(
-            () => ManifestPathPolicy.ResolveSafeDestination(root, "../bzc-root-evil/escape.txt")
-        );
-    }
-    [Fact]
-    internal void EnsureNoReparsePointDescendants_LinkBelowRoot_IsRejected()
-    {
-        using var dir = new TempDir();
-        var service = new FileOperationsService();
-        var root = dir.Combine("root");
-        var outside = dir.Combine("outside");
-        _ = Directory.CreateDirectory(root);
-        _ = Directory.CreateDirectory(outside);
-        var link = Path.Join(root, "linked");
-
-        try
-        {
-            _ = Directory.CreateSymbolicLink(link, outside);
-        }
-        catch (Exception ex)
-            when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
-        {
-            Assert.Skip("This platform refuses directory symbolic links: " + ex.Message);
-        }
-
-        _ = Assert.Throws<InvalidDataException>(
-            () =>
-                ManifestPathPolicy.EnsureNoReparsePointDescendants(
-                    service,
-                    root,
-                    Path.Join(link, "nested")
-                )
-        );
-    }
-
 
     [Fact]
     internal void ToManifestPath_NormalizesWindowsSeparatorsAndRejectsAmbiguousUnixBackslashes()

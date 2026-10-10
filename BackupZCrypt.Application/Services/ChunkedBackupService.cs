@@ -7,7 +7,7 @@ using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -50,11 +50,6 @@ internal sealed partial class ChunkedBackupService(
     IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies
 ) : IChunkedBackupService
 {
-    /// <summary>
-    /// The length in bytes of a 256-bit key.
-    /// </summary>
-    private const int KeySizeBytes = EncryptionConstants.KeySize / 8;
-
     /// <summary>
     /// The largest encrypted chunk file the reader accepts. Zstandard's bounded overhead is well
     /// below 64 KiB for a 4 MiB input; the margin rejects unbounded allocations without constraining
@@ -135,11 +130,11 @@ internal sealed partial class ChunkedBackupService(
 
         try
         {
-            masterSalt = GenerateSalt();
-            using var keys = this.DeriveKeySet(
-                NormalizePassword(request.Password),
+            masterSalt = ArchiveKeys.GenerateMasterSalt();
+            using var keys = ArchiveKeys.Derive(
+                request.Password,
                 masterSalt,
-                request.KeyDerivationAlgorithm
+                keyDerivationStrategies.Resolve(request.KeyDerivationAlgorithm)
             );
 
             ChunkCipherSet cipher = new(
@@ -732,7 +727,7 @@ internal sealed partial class ChunkedBackupService(
             BackupConstants.ChunksDirectoryName
         );
 
-        ManifestPathPolicy.EnsureNoReparsePointDescendants(
+        RestorePathGuard.EnsureNoReparsePointDescendants(
             fileOperationsService,
             destinationPath,
             chunksDir
@@ -740,7 +735,7 @@ internal sealed partial class ChunkedBackupService(
         await fileOperationsService
             .CreateDirectoryAsync(chunksDir, cancellationToken)
             .ConfigureAwait(false);
-        ManifestPathPolicy.EnsureNoReparsePointDescendants(
+        RestorePathGuard.EnsureNoReparsePointDescendants(
             fileOperationsService,
             destinationPath,
             chunksDir

@@ -1,6 +1,6 @@
 using BackupZCrypt.Domain.Enums;
 
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The algorithm and compression metadata shared by every entry in a backup manifest.

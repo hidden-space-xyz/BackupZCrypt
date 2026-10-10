@@ -1,4 +1,6 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Enums;
+
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// A chunked manifest file parsed into its parts: the unencrypted 34-byte header (algorithm, key
@@ -10,8 +12,8 @@ namespace BackupZCrypt.Application.ValueObjects.Manifest;
 /// <param name="Nonce">The nonce used to encrypt the manifest payload.</param>
 /// <param name="EncryptedPayload">The AEAD-encrypted manifest document with its tag appended.</param>
 public sealed record class ManifestPreamble(
-    Domain.Enums.EncryptionAlgorithm Algorithm,
-    Domain.Enums.KeyDerivationAlgorithm KeyDerivation,
+    EncryptionAlgorithm Algorithm,
+    KeyDerivationAlgorithm KeyDerivation,
     byte[] MasterSalt,
     byte[] Nonce,
     byte[] EncryptedPayload

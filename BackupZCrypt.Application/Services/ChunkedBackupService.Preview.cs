@@ -1,6 +1,7 @@
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -57,7 +58,7 @@ internal sealed partial class ChunkedBackupService
 
             List<string> removedPaths = [];
             var matchedFiles = 0;
-            Dictionary<string, ValueObjects.Manifest.ChunkManifestFileEntry> recordedFiles = new(
+            Dictionary<string, ChunkManifestFileEntry> recordedFiles = new(
                 StringComparer.Ordinal
             );
 
@@ -152,7 +153,7 @@ internal sealed partial class ChunkedBackupService
     /// </summary>
     /// <param name="files">The manifest entries.</param>
     /// <returns>The total recorded size in bytes.</returns>
-    private static long SumRecordedBytes(IEnumerable<ValueObjects.Manifest.ChunkManifestFileEntry> files)
+    private static long SumRecordedBytes(IEnumerable<ChunkManifestFileEntry> files)
     {
         long total = 0;
 

@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The decrypted contents of a chunked backup manifest.

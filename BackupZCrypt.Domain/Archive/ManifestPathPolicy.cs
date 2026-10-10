@@ -1,9 +1,7 @@
 using System.Buffers;
 using System.Text;
 
-using BackupZCrypt.Domain.Services.Interfaces;
-
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The rules governing how a file path is written into a manifest and read back out of one.
@@ -18,12 +16,14 @@ namespace BackupZCrypt.Application.Utilities.Helpers;
 /// </para>
 /// <para>
 /// This is a security boundary, not a formatting convenience: it is the check that stops a hostile
-/// source tree or a crafted manifest from steering a restore write outside the destination
-/// directory. It lives in one named, directly testable type rather than as private statics inside
-/// the backup engine so that the rule can be read, and tested, on its own.
+/// source tree or a crafted manifest from carrying a path that could steer a restore write outside
+/// the destination directory. The restore then resolves every accepted path against the destination
+/// and refuses one that still escapes it, which is the host-side half of the same boundary. Both live
+/// in named, directly testable types rather than as private statics inside the backup engine so that
+/// the rules can be read, and tested, on their own.
 /// </para>
 /// </remarks>
-internal static class ManifestPathPolicy
+public static class ManifestPathPolicy
 {
     /// <summary>
     /// The separator between the segments of a manifest entry path.
@@ -66,7 +66,7 @@ internal static class ManifestPathPolicy
     /// The path is empty, rooted, not in canonical form, contains a NUL character, or has an empty or
     /// relative segment.
     /// </exception>
-    internal static void ValidateRelative(string relativePath)
+    public static void ValidateRelative(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
         {
@@ -111,7 +111,7 @@ internal static class ManifestPathPolicy
     /// </summary>
     /// <param name="relativePath">The entry path taken from the manifest.</param>
     /// <returns><see langword="true"/> when the path can be restored here.</returns>
-    internal static bool IsValidOnThisSystem(string relativePath)
+    public static bool IsValidOnThisSystem(string relativePath)
     {
         return !OperatingSystem.IsWindows() || IsValidWindowsPath(relativePath);
     }
@@ -123,7 +123,7 @@ internal static class ManifestPathPolicy
     /// </summary>
     /// <param name="relativePath">The entry path taken from the manifest.</param>
     /// <returns><see langword="true"/> when Windows can create the path.</returns>
-    internal static bool IsValidWindowsPath(string relativePath)
+    public static bool IsValidWindowsPath(string relativePath)
     {
         ArgumentNullException.ThrowIfNull(relativePath);
 
@@ -146,100 +146,6 @@ internal static class ManifestPathPolicy
     }
 
     /// <summary>
-    /// Resolves a manifest entry path against the restore root and confirms the result stays inside
-    /// that root.
-    /// </summary>
-    /// <remarks>
-    /// Both paths are fully resolved first and the root is compared with a trailing separator, so a
-    /// sibling directory whose name merely starts with the root's name is not accepted as being
-    /// inside it. A name the running system cannot create is rejected before it is resolved, which on
-    /// Windows also keeps a colon from being read as a drive or an alternate data stream.
-    /// </remarks>
-    /// <param name="destinationRoot">The directory restored files must stay within.</param>
-    /// <param name="relativePath">The entry path taken from the manifest.</param>
-    /// <returns>The absolute path the restored file may be written to.</returns>
-    /// <exception cref="InvalidDataException">The path is invalid or resolves outside the destination root.</exception>
-    internal static string ResolveSafeDestination(string destinationRoot, string relativePath)
-    {
-        ValidateRelative(relativePath);
-
-        if (!IsValidOnThisSystem(relativePath))
-        {
-            throw new InvalidDataException("Manifest entry path is not a valid name on this system.");
-        }
-
-        var rootFullPath = Path.GetFullPath(destinationRoot);
-        var destinationFullPath = Path.GetFullPath(
-            Path.Join(rootFullPath, ToPlatformPath(relativePath))
-        );
-        var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
-
-        return !destinationFullPath.StartsWith(
-            rootWithSeparator,
-            PathNormalizationHelper.PathComparer
-        )
-            ? throw new InvalidDataException("Manifest entry path escapes the restore directory.")
-            : destinationFullPath;
-    }
-
-    /// <summary>
-    /// Rejects an existing descendant directory reached through a symbolic link or junction.
-    /// </summary>
-    /// <remarks>
-    /// Lexical containment alone cannot stop a path below the restore or archive root from resolving
-    /// elsewhere through a link. Callers check before and after creating missing directories. The
-    /// root itself is intentionally excluded because a user may explicitly choose a linked root.
-    /// </remarks>
-    /// <param name="fileOperationsService">The port used to inspect existing file-system entries.</param>
-    /// <param name="rootPath">The trusted logical root.</param>
-    /// <param name="descendantDirectory">The directory at or below the root to inspect.</param>
-    /// <exception cref="InvalidDataException">
-    /// The directory is outside the root or an existing descendant component is a reparse point.
-    /// </exception>
-    internal static void EnsureNoReparsePointDescendants(
-        IFileOperationsService fileOperationsService,
-        string rootPath,
-        string descendantDirectory
-    )
-    {
-        ArgumentNullException.ThrowIfNull(fileOperationsService);
-
-        var rootFullPath = Path.GetFullPath(rootPath);
-        var descendantFullPath = Path.GetFullPath(descendantDirectory);
-
-        if (string.Equals(rootFullPath, descendantFullPath, PathNormalizationHelper.PathComparer))
-        {
-            return;
-        }
-
-        var rootWithSeparator = EnsureTrailingDirectorySeparator(rootFullPath);
-        if (!descendantFullPath.StartsWith(rootWithSeparator, PathNormalizationHelper.PathComparer))
-        {
-            throw new InvalidDataException("Directory is outside the trusted root.");
-        }
-
-        var relative = Path.GetRelativePath(rootFullPath, descendantFullPath);
-        var current = rootFullPath;
-
-        foreach (
-            var segment in relative.Split(
-                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                StringSplitOptions.RemoveEmptyEntries
-            )
-        )
-        {
-            current = Path.Join(current, segment);
-            if (
-                fileOperationsService.DirectoryExists(current)
-                && fileOperationsService.IsReparsePoint(current)
-            )
-            {
-                throw new InvalidDataException("Path traverses a symbolic link or junction.");
-            }
-        }
-    }
-
-    /// <summary>
     /// Converts a host-relative path into the manifest's canonical, platform-independent form.
     /// </summary>
     /// <remarks>
@@ -249,7 +155,7 @@ internal static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
     /// <returns>The path with canonical separators and Unicode composition.</returns>
-    internal static string ToManifestPath(string relativePath)
+    public static string ToManifestPath(string relativePath)
     {
         if (Path.DirectorySeparatorChar is not '\\' && relativePath.Contains('\\'))
         {
@@ -267,7 +173,7 @@ internal static class ManifestPathPolicy
     /// </summary>
     /// <param name="manifestPath">The manifest path to canonicalize.</param>
     /// <returns>The path with forward slashes and Unicode normalization form C.</returns>
-    internal static string Canonicalize(string manifestPath)
+    public static string Canonicalize(string manifestPath)
     {
         return manifestPath.Replace('\\', '/').Normalize(NormalizationForm.FormC);
     }
@@ -277,7 +183,7 @@ internal static class ManifestPathPolicy
     /// </summary>
     /// <param name="manifestPath">The entry path taken from the manifest.</param>
     /// <returns>The path with every separator replaced by the platform's directory separator.</returns>
-    internal static string ToPlatformPath(string manifestPath)
+    public static string ToPlatformPath(string manifestPath)
     {
         return manifestPath.Replace(ManifestPathSeparator, Path.DirectorySeparatorChar);
     }
@@ -297,19 +203,5 @@ internal static class ManifestPathPolicy
         {
             return false;
         }
-    }
-
-    /// <summary>
-    /// Appends a directory separator to a path unless it already ends with one.
-    /// </summary>
-    /// <param name="path">The path to normalize.</param>
-    /// <returns>The path terminated by a directory separator.</returns>
-    private static string EnsureTrailingDirectorySeparator(string path)
-    {
-        return
-            path.EndsWith(Path.DirectorySeparatorChar)
-            || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
     }
 }

@@ -5,9 +5,9 @@ using BackupZCrypt.Application.Commands;
 using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Queries;
 using BackupZCrypt.Application.Queries.Interfaces;
-using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -201,19 +201,15 @@ public sealed class OnDiskFormatTests
     {
         using var provider = TestHost.CreateProvider();
 
-        var masterKey = provider
-            .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
-            .Resolve(algorithm)
-            .DeriveKey(Password, OnDiskFormatFixtures.GoldenSalt, EncryptionConstants.KeySize);
+        using var keys = ArchiveKeys.Derive(
+            Password,
+            OnDiskFormatFixtures.GoldenSalt,
+            provider
+                .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
+                .Resolve(algorithm)
+        );
 
-        try
-        {
-            Assert.Equal(expectedHex, Convert.ToHexStringLower(masterKey));
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(masterKey);
-        }
+        Assert.Equal(expectedHex, Convert.ToHexStringLower(keys.MasterKey));
     }
 
     [Theory]
@@ -231,27 +227,20 @@ public sealed class OnDiskFormatTests
     {
         Assert.Contains(label, OnDiskFormatFixtures.SubKeyLabels);
 
-        var masterKey = Convert.FromHexString(
-            "bba95f7a23ed99c9039c8d56e52a481b8c7420c6ba4a9b15252c5bd3feeb1f79"
+        using var keys = ArchiveKeys.FromMasterKey(
+            Convert.FromHexString("bba95f7a23ed99c9039c8d56e52a481b8c7420c6ba4a9b15252c5bd3feeb1f79")
         );
-        var subKey = new byte[EncryptionConstants.KeySize / 8];
 
-        try
+        var subKey = label switch
         {
-            HKDF.Expand(
-                HashAlgorithmName.SHA256,
-                masterKey,
-                subKey,
-                Encoding.UTF8.GetBytes(label)
-            );
+            "chunk-encryption" => keys.ChunkEncryptionKey,
+            "chunk-nonce" => keys.ChunkNonceKey,
+            "chunk-naming" => keys.NamingKey,
+            "manifest-encryption" => keys.ManifestEncryptionKey,
+            _ => throw new ArgumentOutOfRangeException(nameof(label)),
+        };
 
-            Assert.Equal(expectedHex, Convert.ToHexStringLower(subKey));
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(masterKey);
-            CryptographicOperations.ZeroMemory(subKey);
-        }
+        Assert.Equal(expectedHex, Convert.ToHexStringLower(subKey));
     }
 
     [Fact]
@@ -260,7 +249,7 @@ public sealed class OnDiskFormatTests
         var nonceKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNonceKeyHex);
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
 
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
+        var nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
 
         Assert.Multiple(
             () => Assert.Equal(EncryptionConstants.NonceSize, nonce.Length),
@@ -272,12 +261,12 @@ public sealed class OnDiskFormatTests
     internal void BuildChunkAssociatedData_PinsTheChunkHashThenNonceLayout()
     {
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(
+        var nonce = ChunkCrypto.ComputeChunkNonce(
             Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNonceKeyHex),
             chunkHash
         );
 
-        var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+        var associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
 
         Assert.Equal(
             Convert.ToHexStringLower(chunkHash) + Convert.ToHexStringLower(nonce),
@@ -291,9 +280,12 @@ public sealed class OnDiskFormatTests
         var namingKey = Convert.FromHexString(OnDiskFormatFixtures.GoldenChunkNamingKeyHex);
         var chunkHash = SHA256.HashData(OnDiskFormatFixtures.GoldenChunkContent);
 
-        var fileName = Convert.ToHexStringLower(HMACSHA256.HashData(namingKey, chunkHash));
+        var fileName = ChunkCrypto.ComputeChunkFileName(namingKey, chunkHash);
 
-        Assert.Equal("d35f87764839b54b3ef3105e52b2fd06516625c71677e5f120e4a417654fdb5d", fileName);
+        Assert.Equal(
+            "d35f87764839b54b3ef3105e52b2fd06516625c71677e5f120e4a417654fdb5d" + BackupConstants.AppFileExtension,
+            fileName
+        );
     }
 
     [Fact]

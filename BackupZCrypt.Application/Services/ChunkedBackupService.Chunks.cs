@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Helpers;
-using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -287,7 +287,7 @@ internal sealed partial class ChunkedBackupService
         CancellationToken cancellationToken
     )
     {
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
+        var nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
         byte[]? dataToEncrypt = null;
         byte[]? encrypted = null;
         byte[]? associatedData = null;
@@ -343,7 +343,7 @@ internal sealed partial class ChunkedBackupService
                 throw new InvalidDataException("Compressed chunk exceeds the supported size.");
             }
 
-            associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+            associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
             encrypted = dataToEncrypt is not null
                 ? encryptionStrategy.EncryptChunk(
                     dataToEncrypt,
@@ -682,7 +682,7 @@ internal sealed partial class ChunkedBackupService
                 var hashBytes = DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, "Invalid chunk hash.");
                 try
                 {
-                    var fileName = ComputeChunkFileNameWithExtension(namingKey, hashBytes);
+                    var fileName = ChunkCrypto.ComputeChunkFileName(namingKey, hashBytes);
                     _ = expectedFileNames.Add(fileName);
                 }
                 finally

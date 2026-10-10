@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// References a stored chunk within a manifest file entry.

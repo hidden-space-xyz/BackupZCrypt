@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.ValueObjects.Manifest;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// The portable file attributes a manifest records for an entry, stored as a bit field.

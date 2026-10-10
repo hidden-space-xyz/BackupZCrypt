@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -329,7 +329,7 @@ internal sealed partial class ChunkedBackupService
             string targetPath;
             try
             {
-                targetPath = ManifestPathPolicy.ResolveSafeDestination(destinationPath, entry.OriginalPath);
+                targetPath = RestorePathGuard.ResolveSafeDestination(destinationPath, entry.OriginalPath);
             }
             catch (InvalidDataException exception)
             {
@@ -395,7 +395,7 @@ internal sealed partial class ChunkedBackupService
 
             try
             {
-                var targetPath = ManifestPathPolicy.ResolveSafeDestination(destinationPath, directory);
+                var targetPath = RestorePathGuard.ResolveSafeDestination(destinationPath, directory);
 
                 if (targetPath.StartsWith(backupPrefix, PathComparer))
                 {
@@ -405,11 +405,11 @@ internal sealed partial class ChunkedBackupService
                     continue;
                 }
 
-                ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, targetPath);
+                RestorePathGuard.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, targetPath);
                 await fileOperationsService
                     .CreateDirectoryAsync(targetPath, cancellationToken)
                     .ConfigureAwait(false);
-                ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, targetPath);
+                RestorePathGuard.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, targetPath);
             }
             catch (Exception exception)
                 when (exception is not OperationCanceledException && IsFileLevelError(exception))
@@ -520,11 +520,11 @@ internal sealed partial class ChunkedBackupService
 
         if (!string.IsNullOrEmpty(destDir))
         {
-            ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
+            RestorePathGuard.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
             await fileOperationsService
                 .CreateDirectoryAsync(destDir, cancellationToken)
                 .ConfigureAwait(false);
-            ManifestPathPolicy.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
+            RestorePathGuard.EnsureNoReparsePointDescendants(fileOperationsService, destinationPath, destDir);
         }
 
         await fileOperationsService
@@ -617,7 +617,7 @@ internal sealed partial class ChunkedBackupService
                     SHA256.HashSizeInBytes,
                     "Invalid chunk hash."
                 );
-                nonce = ChunkCryptoHelper.ComputeChunkNonce(reader.NonceKey, chunkHash);
+                nonce = ChunkCrypto.ComputeChunkNonce(reader.NonceKey, chunkHash);
                 chunkFilePath = ComputeChunkFilePath(reader.ChunksDirectory, reader.NamingKey, chunkHash);
 
                 if (!fileOperationsService.FileExists(chunkFilePath))
@@ -643,7 +643,7 @@ internal sealed partial class ChunkedBackupService
                     .ReadAllBytesBoundedAsync(chunkFilePath, maximumStoredSize, cancellationToken)
                     .ConfigureAwait(false);
 
-                associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+                associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
                 decryptedData = reader.EncryptionStrategy.DecryptChunk(
                     encryptedData,
                     reader.EncryptionKey,

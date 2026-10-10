@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Utilities.Helpers;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 
-namespace BackupZCrypt.Test.Unit.Application;
+namespace BackupZCrypt.Test.Unit.Domain;
 
 /// <summary>
 /// Unit tests for the per-chunk nonce and associated-data derivation that binds a chunk's ciphertext
@@ -13,7 +13,7 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// <see cref="EncryptionConstants.NonceSize"/> bytes long, while the associated-data layout is what
 /// every previously written archive was authenticated under.
 /// </summary>
-public sealed class ChunkCryptoHelperTests
+public sealed class ChunkCryptoTests
 {
     [Fact]
     internal void ComputeChunkNonce_SameKeyAndChunkHash_ReturnsIdenticalNonceOfExactlyNonceSize()
@@ -21,8 +21,8 @@ public sealed class ChunkCryptoHelperTests
         var nonceKey = SHA256.HashData("chunk-nonce-sub-key"u8);
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
 
-        var first = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
-        var second = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
+        var first = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
+        var second = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
 
         Assert.Multiple(
             () => Assert.Equal(EncryptionConstants.NonceSize, first.Length),
@@ -38,8 +38,8 @@ public sealed class ChunkCryptoHelperTests
         var neighbouringKey = SHA256.HashData("chunk-nonce-sub-key"u8);
         neighbouringKey[0] ^= 0x01;
 
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
-        var neighbouringNonce = ChunkCryptoHelper.ComputeChunkNonce(neighbouringKey, chunkHash);
+        var nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
+        var neighbouringNonce = ChunkCrypto.ComputeChunkNonce(neighbouringKey, chunkHash);
 
         Assert.NotEqual(nonce, neighbouringNonce);
     }
@@ -52,8 +52,8 @@ public sealed class ChunkCryptoHelperTests
         var neighbouringHash = SHA256.HashData("chunk plaintext"u8);
         neighbouringHash[0] ^= 0x01;
 
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
-        var neighbouringNonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, neighbouringHash);
+        var nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
+        var neighbouringNonce = ChunkCrypto.ComputeChunkNonce(nonceKey, neighbouringHash);
 
         Assert.NotEqual(nonce, neighbouringNonce);
     }
@@ -62,17 +62,32 @@ public sealed class ChunkCryptoHelperTests
     internal void BuildChunkAssociatedData_ChunkHashAndNonce_ConcatenatesHashBeforeNonce()
     {
         var chunkHash = SHA256.HashData("chunk plaintext"u8);
-        var nonce = ChunkCryptoHelper.ComputeChunkNonce(
+        var nonce = ChunkCrypto.ComputeChunkNonce(
             SHA256.HashData("chunk-nonce-sub-key"u8),
             chunkHash
         );
 
-        var associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+        var associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
 
         Assert.Multiple(
             () => Assert.Equal(chunkHash.Length + nonce.Length, associatedData.Length),
             () => Assert.Equal(chunkHash, associatedData[..chunkHash.Length]),
             () => Assert.Equal(nonce, associatedData[chunkHash.Length..])
+        );
+    }
+
+    [Fact]
+    internal void ComputeChunkFileName_IsAKeyedNameTheLayoutRecognizesAsAChunk()
+    {
+        var chunkHash = SHA256.HashData("chunk plaintext"u8);
+
+        var fileName = ChunkCrypto.ComputeChunkFileName(SHA256.HashData("naming-key-a"u8), chunkHash);
+        var otherKeyName = ChunkCrypto.ComputeChunkFileName(SHA256.HashData("naming-key-b"u8), chunkHash);
+
+        Assert.Multiple(
+            () => Assert.True(BackupLayout.IsChunkFileName(fileName)),
+            () => Assert.NotEqual(fileName, otherKeyName),
+            () => Assert.DoesNotContain(Convert.ToHexStringLower(chunkHash), fileName, StringComparison.Ordinal)
         );
     }
 }

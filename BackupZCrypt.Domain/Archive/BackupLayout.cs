@@ -1,13 +1,13 @@
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
 
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
 /// Recognizes the files and folders this program writes into a backup folder, so cleanup only ever
 /// touches its own files and a create can tell a folder holding a backup from one holding user data.
 /// </summary>
-internal static class BackupLayout
+public static class BackupLayout
 {
     /// <summary>
     /// The number of hexadecimal characters in a chunk file name: the HMAC-SHA256 of the chunk hash.
@@ -24,7 +24,7 @@ internal static class BackupLayout
     /// </summary>
     /// <param name="fileName">The file name to test.</param>
     /// <returns><see langword="true"/> for a chunk file name.</returns>
-    internal static bool IsChunkFileName(string fileName)
+    public static bool IsChunkFileName(string fileName)
     {
         ArgumentNullException.ThrowIfNull(fileName);
 
@@ -38,7 +38,7 @@ internal static class BackupLayout
     /// </summary>
     /// <param name="fileName">The file name to test.</param>
     /// <returns><see langword="true"/> for a quarantined chunk file name.</returns>
-    internal static bool IsQuarantinedChunkFileName(string fileName)
+    public static bool IsQuarantinedChunkFileName(string fileName)
     {
         ArgumentNullException.ThrowIfNull(fileName);
 
@@ -51,7 +51,7 @@ internal static class BackupLayout
     /// </summary>
     /// <param name="fileName">The file name to test.</param>
     /// <returns><see langword="true"/> for a temporary file name.</returns>
-    internal static bool IsTemporaryFileName(string fileName)
+    public static bool IsTemporaryFileName(string fileName)
     {
         ArgumentNullException.ThrowIfNull(fileName);
 
@@ -69,7 +69,7 @@ internal static class BackupLayout
     /// <param name="directoryPath">The folder to inspect.</param>
     /// <param name="containsManifest">Receives whether the folder holds a manifest.</param>
     /// <returns><see langword="true"/> when every entry belongs to a backup.</returns>
-    internal static bool ContainsOnlyBackupFiles(
+    public static bool ContainsOnlyBackupFiles(
         IFileOperationsService fileOperationsService,
         string directoryPath,
         out bool containsManifest

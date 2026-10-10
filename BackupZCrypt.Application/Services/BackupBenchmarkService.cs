@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -458,7 +459,7 @@ internal sealed class BackupBenchmarkService(
 
         try
         {
-            nonce = ChunkCryptoHelper.ComputeChunkNonce(nonceKey, chunkHash);
+            nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
 
             if (compressionStrategy is not null)
             {
@@ -466,7 +467,7 @@ internal sealed class BackupBenchmarkService(
                     .ConfigureAwait(false);
             }
 
-            associatedData = ChunkCryptoHelper.BuildChunkAssociatedData(chunkHash, nonce);
+            associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
             encrypted = compressed is not null
                 ? encryptionStrategy.EncryptChunk(compressed, encryptionKey, nonce, associatedData)
                 : encryptionStrategy.EncryptChunk(
