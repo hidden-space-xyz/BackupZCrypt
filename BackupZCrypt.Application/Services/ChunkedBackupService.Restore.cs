@@ -459,7 +459,7 @@ internal sealed partial class ChunkedBackupService
     private ChunkReader CreateChunkReader(OpenedBackup backup, string backupRoot)
     {
         return new ChunkReader(
-            fileOperationsService.CombinePath(backupRoot, BackupConstants.ChunksDirectoryName),
+            Path.Join(backupRoot, BackupConstants.ChunksDirectoryName),
             backup.Keys.ChunkEncryptionKey,
             backup.Keys.ChunkNonceKey,
             backup.Keys.NamingKey,
@@ -515,7 +515,7 @@ internal sealed partial class ChunkedBackupService
         CancellationToken cancellationToken
     )
     {
-        var destDir = fileOperationsService.GetDirectoryName(destFilePath);
+        var destDir = Path.GetDirectoryName(destFilePath);
 
         if (!string.IsNullOrEmpty(destDir))
         {
@@ -548,7 +548,7 @@ internal sealed partial class ChunkedBackupService
     {
         try
         {
-            fileOperationsService.ApplyFileMetadata(
+            fileMetadataService.ApplyFileMetadata(
                 filePath,
                 fileEntry.LastWriteTimeUtc,
                 fileEntry.Attributes?.HasFlag(ManifestFileAttributes.ReadOnly),
@@ -617,7 +617,7 @@ internal sealed partial class ChunkedBackupService
                     "Invalid chunk hash."
                 );
                 nonce = ChunkCryptoHelper.ComputeChunkNonce(reader.NonceKey, chunkHash);
-                chunkFilePath = this.ComputeChunkFilePath(reader.ChunksDirectory, reader.NamingKey, chunkHash);
+                chunkFilePath = ComputeChunkFilePath(reader.ChunksDirectory, reader.NamingKey, chunkHash);
 
                 if (!fileOperationsService.FileExists(chunkFilePath))
                 {

@@ -59,6 +59,7 @@ public sealed class VerifyBackupQueryHandlerTests
             new BackupOperationRunner(
                 this.validator,
                 this.fileOperations,
+                Substitute.For<IFileLockService>(),
                 this.chunkedBackupService,
                 Substitute.For<ISystemStorageService>()
             )

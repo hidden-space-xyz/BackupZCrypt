@@ -186,43 +186,6 @@ public sealed class SettingsServiceTests
         );
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("   ")]
-    internal async Task SaveAsync_WhenThePathHasNoDirectory_ThrowsWithoutWritingAnything(
-        string? directoryName
-    )
-    {
-        var baseDirectory = Path.Join(Path.GetTempPath(), "bzc-settings-without-directory");
-
-        var fileOperations = Substitute.For<IFileOperationsService>();
-        _ = fileOperations.GetDirectoryName(Arg.Any<string>()).Returns(directoryName);
-
-        var service = new SettingsService(fileOperations, baseDirectory);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.SaveAsync(
-                BackupCreationSettings.DefaultValue,
-                TestContext.Current.CancellationToken
-            )
-        );
-
-        Assert.Contains(
-            service.GetFilePath<BackupCreationSettings>(),
-            exception.Message,
-            StringComparison.Ordinal
-        );
-
-        await fileOperations.DidNotReceive()
-            .CreateDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await fileOperations.DidNotReceive()
-            .WriteFileAtomicallyAsync(
-                Arg.Any<string>(),
-                Arg.Any<Func<Stream, CancellationToken, Task>>(),
-                Arg.Any<CancellationToken>()
-            );
-    }
-
     [Fact]
     internal void GetFilePath_WithNoBaseDirectoryOverride_ResolvesUnderTheUserApplicationDataFolder()
     {

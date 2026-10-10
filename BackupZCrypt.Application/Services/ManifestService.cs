@@ -101,7 +101,7 @@ internal sealed class ManifestService(
 
         try
         {
-            var manifestPath = fileOperationsService.CombinePath(
+            var manifestPath = Path.Join(
                 backupRoot,
                 BackupConstants.ManifestFileName
             );
@@ -158,7 +158,7 @@ internal sealed class ManifestService(
 
         try
         {
-            var manifestPath = fileOperationsService.CombinePath(sourceRoot, BackupConstants.ManifestFileName);
+            var manifestPath = Path.Join(sourceRoot, BackupConstants.ManifestFileName);
             if (!fileOperationsService.FileExists(manifestPath))
             {
                 return null;
@@ -364,7 +364,7 @@ internal sealed class ManifestService(
             nonce.CopyTo(payload, ChunkPreambleHeaderSize);
             encryptedBytes.CopyTo(payload, ChunkPreambleHeaderSize + EncryptionConstants.NonceSize);
 
-            var manifestPath = fileOperationsService.CombinePath(destinationRoot, BackupConstants.ManifestFileName);
+            var manifestPath = Path.Join(destinationRoot, BackupConstants.ManifestFileName);
             await fileOperationsService
                 .WriteAllBytesAtomicallyAsync(manifestPath, payload, cancellationToken)
                 .ConfigureAwait(false);

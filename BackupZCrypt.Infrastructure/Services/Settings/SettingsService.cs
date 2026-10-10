@@ -157,21 +157,14 @@ internal sealed class SettingsService(
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the settings have been written.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="settings"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The resolved settings path has no directory component.</exception>
     public async Task SaveAsync<T>(T settings, CancellationToken cancellationToken = default)
         where T : class, ISettings<T>
     {
         ArgumentNullException.ThrowIfNull(settings);
 
         var filePath = this.GetFilePath<T>();
-        var directoryPath = fileOperationsService.GetDirectoryName(filePath);
 
-        if (string.IsNullOrWhiteSpace(directoryPath))
-        {
-            throw new InvalidOperationException($"Settings path '{filePath}' is invalid.");
-        }
-
-        await fileOperationsService.CreateDirectoryAsync(directoryPath, cancellationToken);
+        await fileOperationsService.CreateDirectoryAsync(Path.GetDirectoryName(filePath)!, cancellationToken);
 
         var rawSettings = JsonSerializer.SerializeToUtf8Bytes(settings, SerializerOptions);
 

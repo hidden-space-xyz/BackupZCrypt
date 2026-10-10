@@ -314,9 +314,9 @@ public sealed class BackupSafetyTests
 
         AssertCompleted(await CreateAsync(provider, source.Path, destination.Path));
 
-        var fileOperations = provider.GetRequiredService<IFileOperationsService>();
+        var fileLock = provider.GetRequiredService<IFileLockService>();
         Result<BackupOutcome> update;
-        using (fileOperations.AcquireExclusiveLock(Path.Join(destination.Path, BackupConstants.LockFileName)))
+        using (fileLock.AcquireExclusiveLock(Path.Join(destination.Path, BackupConstants.LockFileName)))
         {
             update = await UpdateAsync(provider, source.Path, destination.Path);
         }

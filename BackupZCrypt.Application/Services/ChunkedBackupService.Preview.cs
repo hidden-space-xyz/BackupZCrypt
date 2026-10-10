@@ -41,7 +41,7 @@ internal sealed partial class ChunkedBackupService
         using (backup)
         {
             var snapshot = await SourceScanner
-                .ScanAsync(fileOperationsService, sourcePath, cancellationToken)
+                .ScanAsync(directoryScanService, sourcePath, cancellationToken)
                 .ConfigureAwait(false);
 
             if (snapshot is null)
@@ -173,7 +173,7 @@ internal sealed partial class ChunkedBackupService
     {
         try
         {
-            return fileOperationsService.GetFileMetadata(filePath);
+            return fileMetadataService.GetFileMetadata(filePath);
         }
         catch (Exception exception) when (IsFileLevelError(exception))
         {

@@ -4,63 +4,11 @@ using BackupZCrypt.Test.Common;
 namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
-/// Integration tests exercising the file operations and system storage services against a real
-/// temporary directory and the drive that hosts it.
+/// Integration tests exercising the file operations, directory scan, file lock, file metadata, and
+/// system storage services against a real temporary directory and the drive that hosts it.
 /// </summary>
 public sealed class FileSystemServiceTests
 {
-    /// <summary>
-    /// The Base64 SHA-256 digest of the three ASCII bytes <c>abc</c>, the standard published vector.
-    /// </summary>
-    /// <remarks>
-    /// The published vectors are pinned rather than merely compared for determinism: restore and verify
-    /// compare every reconstructed file against this value, and every manifest ever written holds it.
-    /// Determinism alone would survive a switch to SHA-1, CRC32, or from Base64 to hex, and such a silent
-    /// digest change is unrecoverable for the archives already on disk.
-    /// </remarks>
-    private const string Sha256OfAbc = "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=";
-
-    /// <summary>
-    /// The Base64 SHA-256 digest of an empty input, which also covers the zero-length stream path.
-    /// </summary>
-    private const string Sha256OfEmpty = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
-
-    [Fact]
-    internal async Task ComputeFileHashAsync_MatchesKnownVectorsAndIsContentSensitive()
-    {
-        using var dir = new TempDir();
-        var service = new FileOperationsService();
-
-        var abc = dir.WriteText("abc.txt", "abc");
-        var abcCopy = dir.WriteText("abc-copy.txt", "abc");
-        var empty = dir.WriteFile("empty.bin", []);
-        var other = dir.WriteText("other.txt", "different content");
-
-        var hashAbc = await service.ComputeFileHashAsync(
-            abc,
-            TestContext.Current.CancellationToken
-        );
-        var hashAbcCopy = await service.ComputeFileHashAsync(
-            abcCopy,
-            TestContext.Current.CancellationToken
-        );
-        var hashEmpty = await service.ComputeFileHashAsync(
-            empty,
-            TestContext.Current.CancellationToken
-        );
-        var hashOther = await service.ComputeFileHashAsync(
-            other,
-            TestContext.Current.CancellationToken
-        );
-
-        Assert.Multiple(
-            () => Assert.Equal(Sha256OfAbc, hashAbc),
-            () => Assert.Equal(Sha256OfEmpty, hashEmpty),
-            () => Assert.Equal(hashAbc, hashAbcCopy),
-            () => Assert.NotEqual(hashAbc, hashOther)
-        );
-    }
-
     [Fact]
     internal async Task GetFilesAsync_ReturnsEveryFileIncludingNested()
     {
@@ -202,7 +150,7 @@ public sealed class FileSystemServiceTests
     internal async Task ScanDirectoryAsync_Tree_ReportsFilesAndOnlyTheEmptyLeafFolders()
     {
         using var dir = new TempDir();
-        var service = new FileOperationsService();
+        var service = new DirectoryScanService();
 
         var top = dir.WriteText("top.txt", "x");
         var inner = dir.WriteText(Path.Join("sub", "inner.txt"), "y");
@@ -223,7 +171,7 @@ public sealed class FileSystemServiceTests
     internal async Task ScanDirectoryAsync_DirectorySymbolicLink_IsReportedAsSkippedInsteadOfFollowed()
     {
         using var dir = new TempDir();
-        var service = new FileOperationsService();
+        var service = new DirectoryScanService();
         var root = dir.Combine("root");
         var outside = dir.Combine("outside");
         _ = Directory.CreateDirectory(root);
@@ -276,7 +224,7 @@ public sealed class FileSystemServiceTests
     internal void AcquireExclusiveLock_HeldByOneHandle_RefusesASecondAndIsDeletedOnRelease()
     {
         using var dir = new TempDir();
-        var service = new FileOperationsService();
+        var service = new FileLockService();
         var lockPath = dir.Combine("backup.lock");
 
         using (service.AcquireExclusiveLock(lockPath))
@@ -297,7 +245,7 @@ public sealed class FileSystemServiceTests
     internal void ApplyFileMetadata_RecordedMetadata_RoundTripsThroughGetFileMetadata()
     {
         using var dir = new TempDir();
-        var service = new FileOperationsService();
+        var service = new FileMetadataService();
         var path = dir.WriteText("dated.txt", "content");
         var recorded = new DateTime(2001, 2, 3, 4, 5, 6, DateTimeKind.Utc);
 

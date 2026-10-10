@@ -15,23 +15,23 @@ internal static class SourceScanner
     /// <summary>
     /// Walks the source folder and classifies everything below it.
     /// </summary>
-    /// <param name="fileOperationsService">The service used to walk the folder.</param>
+    /// <param name="directoryScanService">The service used to walk the folder.</param>
     /// <param name="sourcePath">The normalized source folder.</param>
     /// <param name="cancellationToken">A token to cancel the walk.</param>
     /// <returns>The snapshot, or <see langword="null"/> when the folder does not exist.</returns>
     /// <exception cref="UnauthorizedAccessException">The source folder itself cannot be listed.</exception>
     internal static async Task<SourceSnapshot?> ScanAsync(
-        IFileOperationsService fileOperationsService,
+        IDirectoryScanService directoryScanService,
         string sourcePath,
         CancellationToken cancellationToken
     )
     {
-        ArgumentNullException.ThrowIfNull(fileOperationsService);
+        ArgumentNullException.ThrowIfNull(directoryScanService);
 
         DirectoryScan scan;
         try
         {
-            scan = await fileOperationsService
+            scan = await directoryScanService
                 .ScanDirectoryAsync(sourcePath, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -45,7 +45,7 @@ internal static class SourceScanner
         List<string> inaccessibleDirectories = [];
         foreach (var directory in scan.InaccessibleDirectories.OrderBy(static d => d.Path, StringComparer.Ordinal))
         {
-            var relative = DisplayPath(fileOperationsService, sourcePath, directory.Path);
+            var relative = DisplayPath(sourcePath, directory.Path);
             inaccessibleDirectories.Add(relative);
             errors.Add(
                 new LocalizableMessage(
@@ -61,9 +61,9 @@ internal static class SourceScanner
 
         foreach (var file in scan.Files)
         {
-            var display = DisplayPath(fileOperationsService, sourcePath, file);
+            var display = DisplayPath(sourcePath, file);
 
-            if (TryGetManifestPath(fileOperationsService, sourcePath, file, out var manifestPath))
+            if (TryGetManifestPath(sourcePath, file, out var manifestPath))
             {
                 candidates.Add(new SourceFile(file, manifestPath, display));
             }
@@ -119,7 +119,7 @@ internal static class SourceScanner
         List<string> emptyDirectories = [];
         foreach (var directory in scan.EmptyDirectories)
         {
-            if (TryGetManifestPath(fileOperationsService, sourcePath, directory, out var manifestPath))
+            if (TryGetManifestPath(sourcePath, directory, out var manifestPath))
             {
                 emptyDirectories.Add(manifestPath);
             }
@@ -130,7 +130,7 @@ internal static class SourceScanner
         List<string> skippedLinks =
         [
             .. scan
-                .SkippedLinks.Select(link => DisplayPath(fileOperationsService, sourcePath, link))
+                .SkippedLinks.Select(link => DisplayPath(sourcePath, link))
                 .Order(StringComparer.Ordinal),
         ];
 
@@ -148,13 +148,11 @@ internal static class SourceScanner
     /// <summary>
     /// Converts a path under the source into its canonical manifest form and checks its structure.
     /// </summary>
-    /// <param name="fileOperationsService">The service used to compute the relative path.</param>
     /// <param name="sourcePath">The source folder.</param>
     /// <param name="fullPath">The entry below the source folder.</param>
     /// <param name="manifestPath">The canonical manifest path when the name can be recorded.</param>
     /// <returns><see langword="true"/> when the entry can be recorded in a manifest.</returns>
     private static bool TryGetManifestPath(
-        IFileOperationsService fileOperationsService,
         string sourcePath,
         string fullPath,
         out string manifestPath
@@ -163,7 +161,7 @@ internal static class SourceScanner
         try
         {
             manifestPath = ManifestPathPolicy.ToManifestPath(
-                fileOperationsService.GetRelativePath(sourcePath, fullPath)
+                Path.GetRelativePath(sourcePath, fullPath)
             );
             ManifestPathPolicy.ValidateRelative(manifestPath);
             return true;
@@ -178,19 +176,17 @@ internal static class SourceScanner
     /// <summary>
     /// Expresses an entry below the source relative to it, as the user reads it in messages.
     /// </summary>
-    /// <param name="fileOperationsService">The service used to compute the relative path.</param>
     /// <param name="sourcePath">The source folder.</param>
     /// <param name="fullPath">The entry below the source folder.</param>
     /// <returns>The relative path, or the full path when it cannot be made relative.</returns>
     private static string DisplayPath(
-        IFileOperationsService fileOperationsService,
         string sourcePath,
         string fullPath
     )
     {
         try
         {
-            return fileOperationsService.GetRelativePath(sourcePath, fullPath);
+            return Path.GetRelativePath(sourcePath, fullPath);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException)
         {

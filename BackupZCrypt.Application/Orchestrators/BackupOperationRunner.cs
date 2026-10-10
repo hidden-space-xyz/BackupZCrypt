@@ -25,11 +25,13 @@ namespace BackupZCrypt.Application.Orchestrators;
 /// </remarks>
 /// <param name="backupRequestValidator">The validator producing blocking errors and advisory warnings.</param>
 /// <param name="fileOperationsService">The service used to inspect and prepare the file system.</param>
+/// <param name="fileLockService">The service that holds and probes the backup's lock file.</param>
 /// <param name="chunkedBackupService">The service that performs the chunk-based backup, update, restore, and verify operations.</param>
 /// <param name="systemStorage">The service used to query free space for the preview warnings.</param>
 internal sealed class BackupOperationRunner(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
+    IFileLockService fileLockService,
     IChunkedBackupService chunkedBackupService,
     ISystemStorageService systemStorage
 )
@@ -216,8 +218,8 @@ internal sealed class BackupOperationRunner(
         IDisposable backupLock;
         try
         {
-            backupLock = fileOperationsService.AcquireExclusiveLock(
-                fileOperationsService.CombinePath(destinationPath, BackupConstants.LockFileName)
+            backupLock = fileLockService.AcquireExclusiveLock(
+                Path.Join(destinationPath, BackupConstants.LockFileName)
             );
         }
         catch (IOException)
@@ -288,8 +290,8 @@ internal sealed class BackupOperationRunner(
     /// <returns><see langword="true"/> when the backup is being modified.</returns>
     private bool IsBackupLocked(string backupPath)
     {
-        return fileOperationsService.IsLockHeld(
-            fileOperationsService.CombinePath(backupPath, BackupConstants.LockFileName)
+        return fileLockService.IsLockHeld(
+            Path.Join(backupPath, BackupConstants.LockFileName)
         );
     }
 

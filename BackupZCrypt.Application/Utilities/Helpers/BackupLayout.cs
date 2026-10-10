@@ -81,7 +81,7 @@ internal static class BackupLayout
 
         foreach (var name in fileOperationsService.GetDirectoryEntryNames(directoryPath))
         {
-            var fullPath = fileOperationsService.CombinePath(directoryPath, name);
+            var fullPath = Path.Join(directoryPath, name);
 
             if (string.Equals(name, BackupConstants.ManifestFileName, StringComparison.OrdinalIgnoreCase)
                 && fileOperationsService.FileExists(fullPath))

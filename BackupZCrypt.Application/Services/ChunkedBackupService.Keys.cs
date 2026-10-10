@@ -219,9 +219,9 @@ internal sealed partial class ChunkedBackupService
     /// <param name="namingKey">The chunk-naming sub-key.</param>
     /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
     /// <returns>The absolute path of the chunk file.</returns>
-    private string ComputeChunkFilePath(string chunksDir, byte[] namingKey, byte[] chunkHash)
+    private static string ComputeChunkFilePath(string chunksDir, byte[] namingKey, byte[] chunkHash)
     {
-        return fileOperationsService.CombinePath(
+        return Path.Join(
             chunksDir,
             ComputeChunkFileNameWithExtension(namingKey, chunkHash)
         );

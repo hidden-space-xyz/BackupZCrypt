@@ -238,14 +238,14 @@ public sealed class ManifestServiceTests
         var fileOperations = Substitute.For<IFileOperationsService>();
         _ = fileOperations.DirectoryExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
-        _ = fileOperations
-            .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Join(call.Arg<string[]>() ?? []));
         fileOperations
             .When(operations => operations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()))
             .Do(_ => throw readFailure);
 
-        return new ManifestService(fileOperations, Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>());
+        return new ManifestService(
+            fileOperations,
+            Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>()
+        );
     }
 
     [Fact]
@@ -806,12 +806,12 @@ public sealed class ManifestServiceTests
         var fileOperations = Substitute.For<IFileOperationsService>();
         _ = fileOperations.DirectoryExists(Arg.Any<string>()).Returns(true);
         _ = fileOperations.FileExists(Arg.Any<string>()).Returns(true);
-        _ = fileOperations
-            .CombinePath(Arg.Any<string[]>())
-            .Returns(call => Path.Join(call.Arg<string[]>() ?? []));
         _ = fileOperations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()).Returns(stream);
 
-        var manifestService = new ManifestService(fileOperations, Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>());
+        var manifestService = new ManifestService(
+            fileOperations,
+            Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>()
+        );
 
         var kind = await manifestService.DetectManifestKindAsync(
             Path.Join(Path.GetTempPath(), "bzc-midread"),

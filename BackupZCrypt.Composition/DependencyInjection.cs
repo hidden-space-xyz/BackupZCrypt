@@ -88,6 +88,9 @@ public static class DependencyInjection
         _ = services.AddSingleton<IChunkingStrategy, FastCdcChunkingStrategy>();
 
         _ = services.AddSingleton<IFileOperationsService, FileOperationsService>();
+        _ = services.AddSingleton<IDirectoryScanService, DirectoryScanService>();
+        _ = services.AddSingleton<IFileMetadataService, FileMetadataService>();
+        _ = services.AddSingleton<IFileLockService, FileLockService>();
         _ = services.AddSingleton<ISystemStorageService, SystemStorageService>();
         _ = services.AddSingleton<ISettingsService, SettingsService>();
 

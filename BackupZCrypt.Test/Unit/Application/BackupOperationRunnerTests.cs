@@ -57,6 +57,11 @@ public sealed class BackupOperationRunnerTests
         Substitute.For<IFileOperationsService>();
 
     /// <summary>
+    /// The substituted lock service the runner takes and probes the backup's lock through.
+    /// </summary>
+    private readonly IFileLockService fileLock = Substitute.For<IFileLockService>();
+
+    /// <summary>
     /// The substituted backup engine the runner dispatches each operation to.
     /// </summary>
     private readonly IChunkedBackupService chunkedBackupService =
@@ -78,7 +83,13 @@ public sealed class BackupOperationRunnerTests
     /// <returns>The system under test.</returns>
     private BackupOperationRunner CreateSut()
     {
-        return new(this.validator, this.fileOperations, this.chunkedBackupService, this.systemStorage);
+        return new(
+            this.validator,
+            this.fileOperations,
+            this.fileLock,
+            this.chunkedBackupService,
+            this.systemStorage
+        );
     }
 
     /// <summary>
@@ -362,18 +373,16 @@ public sealed class BackupOperationRunnerTests
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
-        _ = this.fileOperations
-            .CombinePath(DestinationDir, BackupConstants.LockFileName)
-            .Returns("lock-file");
+        var lockFile = Path.Join(DestinationDir, BackupConstants.LockFileName);
         var backupLock = Substitute.For<IDisposable>();
-        _ = this.fileOperations.AcquireExclusiveLock("lock-file").Returns(backupLock);
+        _ = this.fileLock.AcquireExclusiveLock(lockFile).Returns(backupLock);
         this.StubOperationsSucceed();
 
         _ = await this.CreateSut().RunAsync(Request(operation), this.progress, CancellationToken.None);
 
         Received.InOrder(() =>
         {
-            _ = this.fileOperations.AcquireExclusiveLock("lock-file");
+            _ = this.fileLock.AcquireExclusiveLock(lockFile);
             backupLock.Dispose();
         });
     }
@@ -388,7 +397,7 @@ public sealed class BackupOperationRunnerTests
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
-        _ = this.fileOperations
+        _ = this.fileLock
             .AcquireExclusiveLock(Arg.Any<string>())
             .Throws(new IOException("in use"));
         this.StubOperationsSucceed();
@@ -419,7 +428,7 @@ public sealed class BackupOperationRunnerTests
     {
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        _ = this.fileOperations.IsLockHeld(Arg.Any<string>()).Returns(true);
+        _ = this.fileLock.IsLockHeld(Arg.Any<string>()).Returns(true);
         this.StubOperationsSucceed();
 
         var result = await this.CreateSut()
@@ -877,7 +886,7 @@ public sealed class BackupOperationRunnerTests
     internal async Task RunVerifyAsync_WhileTheBackupIsBeingModified_ReportsBackupInUse()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        _ = this.fileOperations.IsLockHeld(Arg.Any<string>()).Returns(true);
+        _ = this.fileLock.IsLockHeld(Arg.Any<string>()).Returns(true);
 
         var result = await this.CreateSut()
             .RunVerifyAsync(Request(BackupOperation.Verify), this.progress, CancellationToken.None);

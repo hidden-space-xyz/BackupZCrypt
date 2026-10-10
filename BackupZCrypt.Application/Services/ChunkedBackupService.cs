@@ -33,6 +33,8 @@ namespace BackupZCrypt.Application.Services;
 /// <param name="compressionStrategies">The registered compression strategies, looked up by mode.</param>
 /// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
 /// <param name="fileOperationsService">The service used to read, write, and enumerate files.</param>
+/// <param name="directoryScanService">The service used to walk the source tree.</param>
+/// <param name="fileMetadataService">The service used to read and restore file metadata.</param>
 /// <param name="manifestService">The service used to read and write the encrypted backup manifest.</param>
 /// <param name="chunkingStrategy">The strategy used to split file streams into content-defined chunks.</param>
 /// <param name="keyDerivationStrategies">The registered key derivation strategies, looked up by algorithm.</param>
@@ -40,6 +42,8 @@ internal sealed partial class ChunkedBackupService(
     IStrategyRegistry<CompressionMode, ICompressionStrategy> compressionStrategies,
     IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
     IFileOperationsService fileOperationsService,
+    IDirectoryScanService directoryScanService,
+    IFileMetadataService fileMetadataService,
     IManifestService manifestService,
     IChunkingStrategy chunkingStrategy,
     IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies
@@ -106,7 +110,7 @@ internal sealed partial class ChunkedBackupService(
         var stopwatch = Stopwatch.StartNew();
 
         var snapshot = await SourceScanner
-            .ScanAsync(fileOperationsService, sourcePath, cancellationToken)
+            .ScanAsync(directoryScanService, sourcePath, cancellationToken)
             .ConfigureAwait(false);
 
         if (snapshot is null)
@@ -331,7 +335,7 @@ internal sealed partial class ChunkedBackupService(
     )
     {
         var snapshot = await SourceScanner
-            .ScanAsync(fileOperationsService, sourcePath, cancellationToken)
+            .ScanAsync(directoryScanService, sourcePath, cancellationToken)
             .ConfigureAwait(false);
 
         if (snapshot is null)
@@ -504,7 +508,7 @@ internal sealed partial class ChunkedBackupService(
             FileMetadata? metadata = null;
             try
             {
-                metadata = fileOperationsService.GetFileMetadata(file.FullPath);
+                metadata = fileMetadataService.GetFileMetadata(file.FullPath);
             }
             catch (Exception exception) when (IsFileLevelError(exception))
             {
@@ -643,7 +647,7 @@ internal sealed partial class ChunkedBackupService(
 
                         try
                         {
-                            var metadata = fileOperationsService.GetFileMetadata(item.File.FullPath);
+                            var metadata = fileMetadataService.GetFileMetadata(item.File.FullPath);
 
                             entries[index] = await this.ChunkAndEncryptFileAsync(
                                     item.File.FullPath,
@@ -722,7 +726,7 @@ internal sealed partial class ChunkedBackupService(
             .CreateDirectoryAsync(destinationPath, cancellationToken)
             .ConfigureAwait(false);
 
-        var chunksDir = fileOperationsService.CombinePath(
+        var chunksDir = Path.Join(
             destinationPath,
             BackupConstants.ChunksDirectoryName
         );

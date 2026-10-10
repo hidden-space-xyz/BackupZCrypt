@@ -171,7 +171,7 @@ internal sealed partial class ChunkedBackupService
 
             chunkHash = SHA256.HashData(chunkData.Span);
             var chunkHashB64 = Convert.ToBase64String(chunkHash);
-            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
+            var chunkFilePath = ComputeChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
             var ownedHash = chunkHash;
 
             var chunkOperation = new Lazy<Task>(
@@ -471,7 +471,7 @@ internal sealed partial class ChunkedBackupService
                 SHA256.HashSizeInBytes,
                 "Invalid chunk hash."
             );
-            var chunkFilePath = this.ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
+            var chunkFilePath = ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
 
             if (
                 !fileOperationsService.FileExists(chunkFilePath)
@@ -698,7 +698,7 @@ internal sealed partial class ChunkedBackupService
                 if (BackupLayout.IsTemporaryFileName(name))
                 {
                     pruned &= fileOperationsService.TryDeleteFile(
-                        fileOperationsService.CombinePath(backupRoot, name)
+                        Path.Join(backupRoot, name)
                     );
                 }
             }

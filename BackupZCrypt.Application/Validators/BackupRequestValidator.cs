@@ -20,10 +20,12 @@ namespace BackupZCrypt.Application.Validators;
 /// will be replaced, files a restore may overwrite).
 /// </summary>
 /// <param name="fileOperations">The service used to inspect files and directories.</param>
+/// <param name="directoryScanService">The service used to walk the source tree.</param>
 /// <param name="systemStorage">The service used to query drive readiness, format, and free space.</param>
 /// <param name="passwordService">The service used to assess password strength for warnings.</param>
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
+    IDirectoryScanService directoryScanService,
     ISystemStorageService systemStorage,
     IPasswordService passwordService
 ) : IBackupRequestValidator
@@ -702,7 +704,7 @@ internal sealed class BackupRequestValidator(
         }
 
         var snapshot =
-            await SourceScanner.ScanAsync(fileOperations, sourcePath, cancellationToken)
+            await SourceScanner.ScanAsync(directoryScanService, sourcePath, cancellationToken)
             ?? throw new DirectoryNotFoundException(sourcePath);
 
         long totalBytes = 0;
