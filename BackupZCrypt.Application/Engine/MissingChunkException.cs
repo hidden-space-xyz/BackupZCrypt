@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// Raised when a chunk file the manifest references does not exist in the backup.

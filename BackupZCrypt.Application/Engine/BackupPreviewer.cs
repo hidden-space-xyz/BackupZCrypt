@@ -1,4 +1,3 @@
-using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Archive;

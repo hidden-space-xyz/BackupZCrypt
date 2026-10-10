@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace BackupZCrypt.Application.Utilities.Formatters;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// Formats raw byte counts into human-readable strings using binary (1024-based) units.

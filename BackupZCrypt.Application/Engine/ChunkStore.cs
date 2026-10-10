@@ -2,8 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Utilities.Extensions;
-using BackupZCrypt.Application.Utilities.Helpers;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;

@@ -1,4 +1,4 @@
-using BackupZCrypt.Application.Utilities.Formatters;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Unit.Application;

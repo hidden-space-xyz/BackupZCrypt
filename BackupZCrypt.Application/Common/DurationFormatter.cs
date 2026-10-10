@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace BackupZCrypt.Application.Utilities.Formatters;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// Formats a <see cref="TimeSpan"/> into a compact, human-readable string using language-neutral

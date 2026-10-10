@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// Translates the exception behind a per-file or per-folder failure into a language-neutral reason,

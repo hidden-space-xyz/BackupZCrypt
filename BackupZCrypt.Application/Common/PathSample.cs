@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// Builds the short list of example paths a warning shows when it is about many files at once.

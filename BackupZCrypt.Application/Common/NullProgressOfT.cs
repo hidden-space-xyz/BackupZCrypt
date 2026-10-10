@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// A progress sink that discards every report, substituted when a caller supplies no sink so the

@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;

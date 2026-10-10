@@ -1,7 +1,8 @@
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Services.Interfaces;
 
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// Keeps a restore inside the folder the user chose: it resolves each manifest entry path against

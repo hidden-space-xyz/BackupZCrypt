@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;

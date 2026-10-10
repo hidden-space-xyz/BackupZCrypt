@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Models;

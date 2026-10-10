@@ -1,9 +1,10 @@
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// Walks a source folder once and turns what it finds into the manifest-ready view a create or

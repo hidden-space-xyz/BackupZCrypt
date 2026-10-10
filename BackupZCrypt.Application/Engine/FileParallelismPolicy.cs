@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// Decides how many files a chunked backup, update, restore, or verification processes at once.

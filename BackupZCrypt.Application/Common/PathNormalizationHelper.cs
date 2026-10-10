@@ -2,7 +2,7 @@ using System.Buffers;
 
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Utilities.Helpers;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// Normalizes user-supplied paths by expanding environment variables and resolving them to absolute form.
