@@ -9,7 +9,6 @@ using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using NSubstitute;
@@ -26,6 +25,27 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 /// </summary>
 public sealed class ExistingBackupViewModelTests : IDisposable
 {
+    /// <summary>
+    /// Identifies the page under test in theories that run against every existing-backup page.
+    /// </summary>
+    internal enum ExistingBackupPage
+    {
+        /// <summary>
+        /// The page that restores an archive.
+        /// </summary>
+        Restore,
+
+        /// <summary>
+        /// The page that updates an archive.
+        /// </summary>
+        Update,
+
+        /// <summary>
+        /// The page that verifies an archive.
+        /// </summary>
+        Verify,
+    }
+
     /// <summary>
     /// The substituted handler the restore page dispatches its runs to.
     /// </summary>
@@ -361,11 +381,11 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BackupOperation.Restore, "remembered-destination", "")]
-    [InlineData(BackupOperation.Update, "remembered-source", "remembered-destination")]
-    [InlineData(BackupOperation.Verify, "remembered-destination", "")]
+    [InlineData(ExistingBackupPage.Restore, "remembered-destination", "")]
+    [InlineData(ExistingBackupPage.Update, "remembered-source", "remembered-destination")]
+    [InlineData(ExistingBackupPage.Verify, "remembered-destination", "")]
     internal async Task OnNavigatedToAsync_OnEachExistingBackupPage_SeedsThePathsItActuallyOperatesOn(
-        BackupOperation operation,
+        ExistingBackupPage operation,
         string expectedSource,
         string expectedDestination
     )
@@ -382,11 +402,11 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BackupOperation.Restore, "remembered-source", "backup-source")]
-    [InlineData(BackupOperation.Update, "backup-source", "backup-destination")]
-    [InlineData(BackupOperation.Verify, "remembered-source", "backup-source")]
+    [InlineData(ExistingBackupPage.Restore, "remembered-source", "backup-source")]
+    [InlineData(ExistingBackupPage.Update, "backup-source", "backup-destination")]
+    [InlineData(ExistingBackupPage.Verify, "remembered-source", "backup-source")]
     internal async Task StartCommand_WhenThePageSucceeds_RemembersOnlyThePathsThatPageOwns(
-        BackupOperation operation,
+        ExistingBackupPage operation,
         string expectedLastSource,
         string expectedLastDestination
     )
@@ -415,11 +435,11 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BackupOperation.Restore, false)]
-    [InlineData(BackupOperation.Update, false)]
-    [InlineData(BackupOperation.Verify, true)]
+    [InlineData(ExistingBackupPage.Restore, false)]
+    [InlineData(ExistingBackupPage.Update, false)]
+    [InlineData(ExistingBackupPage.Verify, true)]
     internal void StartCommand_WithoutADestination_IsEnabledOnlyOnThePageThatWritesNothing(
-        BackupOperation operation,
+        ExistingBackupPage operation,
         bool expected
     )
     {
@@ -540,34 +560,33 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     /// <param name="operation">The operation identifying the page to build.</param>
     /// <returns>The page under test.</returns>
     /// <exception cref="ArgumentOutOfRangeException">No existing-backup page performs the operation.</exception>
-    private ExistingBackupViewModelBase CreatePage(BackupOperation operation)
+    private ExistingBackupViewModelBase CreatePage(ExistingBackupPage operation)
     {
         StubRememberedPaths();
 
         return operation switch
         {
-            BackupOperation.Restore => new RestoreBackupViewModel(
+            ExistingBackupPage.Restore => new RestoreBackupViewModel(
                 this.restoreBackup,
                 this.recentPathsQuery,
                 this.saveRecentPaths,
                 this.filePicker,
                 this.detectManifestKind
             ),
-            BackupOperation.Update => new UpdateBackupViewModel(
+            ExistingBackupPage.Update => new UpdateBackupViewModel(
                 this.updateBackup,
                 this.recentPathsQuery,
                 this.saveRecentPaths,
                 this.filePicker,
                 this.detectManifestKind
             ),
-            BackupOperation.Verify => new VerifyBackupViewModel(
+            ExistingBackupPage.Verify => new VerifyBackupViewModel(
                 this.verifyBackup,
                 this.recentPathsQuery,
                 this.saveRecentPaths,
                 this.filePicker,
                 this.detectManifestKind
             ),
-            BackupOperation.Create => throw new ArgumentOutOfRangeException(nameof(operation)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation)),
         };
     }

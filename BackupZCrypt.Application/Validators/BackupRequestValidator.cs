@@ -5,10 +5,10 @@ using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Validators;
@@ -105,7 +105,7 @@ internal sealed class BackupRequestValidator(
 
         try
         {
-            this.ValidatePathOverlap(request.Operation, sourcePath, destinationPath, errors);
+            this.ValidatePathOverlap(request, sourcePath, destinationPath, errors);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -145,9 +145,9 @@ internal sealed class BackupRequestValidator(
 
         try
         {
-            switch (request.Operation)
+            switch (request)
             {
-                case BackupOperation.Create:
+                case CreateBackupRequest create:
                     var scan = await this.TryGetScanAsync(request, sourcePath, cancellationToken);
                     this.CheckReplacedBackup(destinationPath, warnings);
 
@@ -158,10 +158,10 @@ internal sealed class BackupRequestValidator(
                         this.CheckFatDestination(scan, destinationPath, warnings);
                     }
 
-                    this.CheckPasswordStrength(request, warnings);
+                    this.CheckPasswordStrength(create, warnings);
                     break;
 
-                case BackupOperation.Update:
+                case UpdateBackupRequest:
                     if (await this.TryGetScanAsync(request, sourcePath, cancellationToken) is { } updateScan)
                     {
                         AddSourceWarnings(updateScan, warnings);
@@ -169,16 +169,12 @@ internal sealed class BackupRequestValidator(
 
                     break;
 
-                case BackupOperation.Restore:
+                case RestoreBackupRequest:
                     await this.CheckExistingDestinationFilesAsync(
                         destinationPath,
                         warnings,
                         cancellationToken
                     );
-                    break;
-
-                case BackupOperation.Verify:
-                default:
                     break;
             }
         }
@@ -227,7 +223,7 @@ internal sealed class BackupRequestValidator(
 
         try
         {
-            if (request.Operation is not (BackupOperation.Create or BackupOperation.Update))
+            if (request is not (CreateBackupRequest or UpdateBackupRequest))
             {
                 _ = fileOperations.GetDirectoryEntryNames(sourcePath);
                 return;
@@ -305,7 +301,7 @@ internal sealed class BackupRequestValidator(
             return;
         }
 
-        if (request.Operation is not BackupOperation.Create)
+        if (request is not CreateBackupRequest)
         {
             return;
         }
@@ -349,7 +345,7 @@ internal sealed class BackupRequestValidator(
             return;
         }
 
-        if (request.Operation is not BackupOperation.Create)
+        if (request is not CreateBackupRequest)
         {
             return;
         }
@@ -380,18 +376,16 @@ internal sealed class BackupRequestValidator(
         List<LocalizableMessage> errors
     )
     {
-        if (request.Operation is not BackupOperation.Create)
+        if (request is not CreateBackupRequest create)
         {
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        if (string.IsNullOrWhiteSpace(create.ConfirmPassword))
         {
             errors.Add(new LocalizableMessage(MessageCode.ConfirmPasswordRequired));
         }
-        else if (
-            !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)
-        )
+        else if (!string.Equals(create.Password, create.ConfirmPassword, StringComparison.Ordinal))
         {
             errors.Add(new LocalizableMessage(MessageCode.PasswordMismatch));
         }
@@ -406,11 +400,11 @@ internal sealed class BackupRequestValidator(
     private static void ValidateAlgorithms(BackupRequest request, List<LocalizableMessage> errors)
     {
         if (
-            request.Operation is BackupOperation.Create
+            request is CreateBackupRequest create
             && (
-                !Enum.IsDefined(request.EncryptionAlgorithm)
-                || !Enum.IsDefined(request.KeyDerivationAlgorithm)
-                || !Enum.IsDefined(request.Compression)
+                !Enum.IsDefined(create.EncryptionAlgorithm)
+                || !Enum.IsDefined(create.KeyDerivationAlgorithm)
+                || !Enum.IsDefined(create.Compression)
             )
         )
         {
@@ -426,12 +420,12 @@ internal sealed class BackupRequestValidator(
     /// backup lives on: the restore itself refuses any file whose target falls inside the backup
     /// folder. The probe is best-effort and the caller owns its failure handling.
     /// </remarks>
-    /// <param name="operation">The operation being validated.</param>
+    /// <param name="request">The request whose operation decides whether a source inside the destination is allowed.</param>
     /// <param name="sourcePath">The normalized source path.</param>
     /// <param name="destinationPath">The normalized destination path.</param>
     /// <param name="errors">The list the findings are appended to.</param>
     private void ValidatePathOverlap(
-        BackupOperation operation,
+        BackupRequest request,
         string sourcePath,
         string destinationPath,
         List<LocalizableMessage> errors
@@ -456,7 +450,7 @@ internal sealed class BackupRequestValidator(
             errors.Add(new LocalizableMessage(MessageCode.DestinationInsideSource));
         }
         else if (
-            operation is not BackupOperation.Restore
+            request is not RestoreBackupRequest
             && sourcePath.StartsWith(ContainmentPrefixOf(destinationPath), PathComparer)
         )
         {
@@ -639,15 +633,10 @@ internal sealed class BackupRequestValidator(
     /// Only a create is checked: every other operation is opening an archive whose password was
     /// already chosen, so warning about it would be advice the user can no longer act on.
     /// </remarks>
-    /// <param name="request">The backup request carrying the password.</param>
+    /// <param name="request">The create request carrying the chosen password.</param>
     /// <param name="warnings">The list the findings are appended to.</param>
-    private void CheckPasswordStrength(BackupRequest request, List<LocalizableMessage> warnings)
+    private void CheckPasswordStrength(CreateBackupRequest request, List<LocalizableMessage> warnings)
     {
-        if (request.Operation is not BackupOperation.Create)
-        {
-            return;
-        }
-
         var analysis = passwordService.AnalyzePasswordStrength(request.Password);
         if (analysis.Strength < PasswordStrength.Good)
         {

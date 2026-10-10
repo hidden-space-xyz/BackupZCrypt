@@ -22,7 +22,7 @@ public interface IChunkedBackupService
     public Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        CreateBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -39,7 +39,7 @@ public interface IChunkedBackupService
     public Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        UpdateBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -56,7 +56,7 @@ public interface IChunkedBackupService
     public Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        RestoreBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -73,7 +73,7 @@ public interface IChunkedBackupService
     /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
     public Task<Result<BackupResult>> VerifyAsync(
         string sourcePath,
-        BackupRequest request,
+        VerifyBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -35,7 +36,7 @@ internal sealed partial class ChunkedBackupService
     public async Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        RestoreBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -195,7 +196,7 @@ internal sealed partial class ChunkedBackupService
     /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
     public async Task<Result<BackupResult>> VerifyAsync(
         string sourcePath,
-        BackupRequest request,
+        VerifyBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )

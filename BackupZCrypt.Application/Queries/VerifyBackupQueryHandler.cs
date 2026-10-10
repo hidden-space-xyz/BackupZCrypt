@@ -2,7 +2,6 @@ using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.Queries.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Queries;
 
@@ -25,7 +24,7 @@ internal sealed class VerifyBackupQueryHandler(BackupOperationRunner runner)
         CancellationToken cancellationToken = default
     )
     {
-        var request = BackupRequest.ForVerify(query.BackupPath, query.Password, proceedOnWarnings: false);
+        var request = new VerifyBackupRequest(query.BackupPath, query.Password);
 
         return runner.RunVerifyAsync(request, query.Progress, cancellationToken);
     }

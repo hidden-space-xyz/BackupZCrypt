@@ -3,7 +3,7 @@ using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -95,12 +95,12 @@ public sealed class RestoreBackupCommandHandlerTests
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(BackupDir).Returns(true);
 
-        BackupRequest? captured = null;
+        RestoreBackupRequest? captured = null;
         _ = this.chunkedBackupService
             .RestoreAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Do<BackupRequest>(request => captured = request),
+                Arg.Do<RestoreBackupRequest>(request => captured = request),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -124,8 +124,6 @@ public sealed class RestoreBackupCommandHandlerTests
             () => Assert.Equal(BackupDir, captured!.SourcePath),
             () => Assert.Equal(DestinationDir, captured!.DestinationPath),
             () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.Password),
-            () => Assert.Equal(captured!.Password, captured.ConfirmPassword),
-            () => Assert.Equal(BackupOperation.Restore, captured!.Operation),
             () => Assert.True(captured!.ProceedOnWarnings)
         );
 
@@ -133,7 +131,7 @@ public sealed class RestoreBackupCommandHandlerTests
             .RestoreAsync(
                 BackupDir,
                 DestinationDir,
-                Arg.Any<BackupRequest>(),
+                Arg.Any<RestoreBackupRequest>(),
                 this.progress,
                 Arg.Any<CancellationToken>()
             );

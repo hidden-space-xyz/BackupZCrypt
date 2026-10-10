@@ -138,14 +138,13 @@ public sealed class CreateBackupViewModelTests
             sut.ConfirmPassword = confirm;
 
             var errors = await validator.AnalyzeErrorsAsync(
-                new BackupRequest(
+                new CreateBackupRequest(
                     source,
                     destination,
                     password,
                     confirm,
                     EncryptionAlgorithm.Aes,
-                    KeyDerivationAlgorithm.PBKDF2,
-                    BackupOperation.Create
+                    KeyDerivationAlgorithm.PBKDF2
                 ),
                 TestContext.Current.CancellationToken
             );

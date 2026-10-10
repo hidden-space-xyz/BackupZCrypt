@@ -1,4 +1,4 @@
-using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Validators.Interfaces;

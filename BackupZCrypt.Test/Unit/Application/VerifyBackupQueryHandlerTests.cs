@@ -3,7 +3,7 @@ using BackupZCrypt.Application.Queries;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
@@ -71,11 +71,11 @@ public sealed class VerifyBackupQueryHandlerTests
     {
         _ = this.fileOperations.DirectoryExists(BackupDir).Returns(true);
 
-        BackupRequest? captured = null;
+        VerifyBackupRequest? captured = null;
         _ = this.chunkedBackupService
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Do<BackupRequest>(request => captured = request),
+                Arg.Do<VerifyBackupRequest>(request => captured = request),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -91,16 +91,14 @@ public sealed class VerifyBackupQueryHandlerTests
         Assert.Multiple(
             () => Assert.True(result.IsSuccess),
             () => Assert.True(result.Value.Completion!.IsSuccess),
-            () => Assert.Equal(BackupDir, captured!.SourcePath),
-            () => Assert.Empty(captured!.DestinationPath),
-            () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.Password),
-            () => Assert.Equal(BackupOperation.Verify, captured!.Operation)
+            () => Assert.Equal(BackupDir, captured!.BackupPath),
+            () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.Password)
         );
 
         await this.chunkedBackupService.Received(1)
             .VerifyAsync(
                 BackupDir,
-                Arg.Any<BackupRequest>(),
+                Arg.Any<VerifyBackupRequest>(),
                 this.progress,
                 Arg.Any<CancellationToken>()
             );

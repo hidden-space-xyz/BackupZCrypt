@@ -2,7 +2,6 @@ using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Commands;
 
@@ -25,7 +24,7 @@ internal sealed class RestoreBackupCommandHandler(BackupOperationRunner runner)
         CancellationToken cancellationToken = default
     )
     {
-        var request = BackupRequest.ForRestore(
+        var request = new RestoreBackupRequest(
             command.BackupPath,
             command.DestinationPath,
             command.Password,

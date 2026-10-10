@@ -5,7 +5,6 @@ using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -75,14 +74,14 @@ internal sealed class BackupOperationRunner(
             }
 
             if (
-                request.Operation is BackupOperation.Update
+                request is UpdateBackupRequest
                 && !fileOperationsService.DirectoryExists(destinationPath)
             )
             {
                 return Result<BackupOutcome>.Failure(MessageCode.BackupDestinationMustExist);
             }
 
-            if (request.Operation is BackupOperation.Create)
+            if (request is CreateBackupRequest)
             {
                 if (!fileOperationsService.DirectoryExists(destinationPath))
                 {
@@ -107,7 +106,7 @@ internal sealed class BackupOperationRunner(
         {
             throw;
         }
-        catch (UnauthorizedAccessException) when (request.Operation is not BackupOperation.Verify)
+        catch (UnauthorizedAccessException)
         {
             return Result<BackupOutcome>.Failure(MessageCode.DestinationAccessDenied);
         }
@@ -128,7 +127,7 @@ internal sealed class BackupOperationRunner(
     /// Runs the read-only verify path, which requires a password and an existing source directory but
     /// never creates or writes to a destination.
     /// </summary>
-    /// <param name="request">The backup request identifying the archive to verify.</param>
+    /// <param name="request">The request identifying the archive to verify and its password.</param>
     /// <param name="progress">A sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>
@@ -137,7 +136,7 @@ internal sealed class BackupOperationRunner(
     /// backup is being modified, or an unexpected error occurs.
     /// </returns>
     public async Task<Result<BackupOutcome>> RunVerifyAsync(
-        BackupRequest request,
+        VerifyBackupRequest request,
         IProgress<BackupStatus>? progress,
         CancellationToken cancellationToken
     )
@@ -152,8 +151,8 @@ internal sealed class BackupOperationRunner(
         try
         {
             var sourcePath =
-                PathNormalizationHelper.TryNormalize(request.SourcePath, out var normalizeError)
-                ?? request.SourcePath;
+                PathNormalizationHelper.TryNormalize(request.BackupPath, out var normalizeError)
+                ?? request.BackupPath;
 
             if (normalizeError is not null)
             {
@@ -208,7 +207,7 @@ internal sealed class BackupOperationRunner(
         CancellationToken cancellationToken
     )
     {
-        if (request.Operation is BackupOperation.Restore)
+        if (request is RestoreBackupRequest)
         {
             return IsBackupLocked(sourcePath)
                 ? Result<BackupResult>.Failure(MessageCode.BackupInUse)
@@ -244,8 +243,7 @@ internal sealed class BackupOperationRunner(
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The outcome reported by the selected backup service operation.</returns>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="request"/> carries an operation this method does not dispatch, such as
-    /// <see cref="BackupOperation.Verify"/>, which is handled on its own read-only path.
+    /// <paramref name="request"/> is of a request type this method does not know.
     /// </exception>
     private Task<Result<BackupResult>> RunBackupAsync(
         string sourcePath,
@@ -255,30 +253,29 @@ internal sealed class BackupOperationRunner(
         CancellationToken cancellationToken
     )
     {
-        return request.Operation switch
+        return request switch
         {
-            BackupOperation.Create => chunkedBackupService.CreateAsync(
+            CreateBackupRequest create => chunkedBackupService.CreateAsync(
                 sourcePath,
                 destinationPath,
-                request,
+                create,
                 progress,
                 cancellationToken
             ),
-            BackupOperation.Update => chunkedBackupService.UpdateAsync(
+            UpdateBackupRequest update => chunkedBackupService.UpdateAsync(
                 sourcePath,
                 destinationPath,
-                request,
+                update,
                 progress,
                 cancellationToken
             ),
-            BackupOperation.Restore => chunkedBackupService.RestoreAsync(
+            RestoreBackupRequest restore => chunkedBackupService.RestoreAsync(
                 sourcePath,
                 destinationPath,
-                request,
+                restore,
                 progress,
                 cancellationToken
             ),
-            BackupOperation.Verify => throw new ArgumentOutOfRangeException(nameof(request)),
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
     }
@@ -426,20 +423,19 @@ internal sealed class BackupOperationRunner(
 
         try
         {
-            return request.Operation switch
+            return request switch
             {
-                BackupOperation.Update => await chunkedBackupService.PreviewUpdateAsync(
+                UpdateBackupRequest => await chunkedBackupService.PreviewUpdateAsync(
                     sourcePath,
                     destinationPath,
                     request.Password,
                     cancellationToken
                 ),
-                BackupOperation.Restore => await chunkedBackupService.PreviewRestoreAsync(
+                RestoreBackupRequest => await chunkedBackupService.PreviewRestoreAsync(
                     sourcePath,
                     request.Password,
                     cancellationToken
                 ),
-                BackupOperation.Create or BackupOperation.Verify => null,
                 _ => null,
             };
         }
@@ -464,7 +460,7 @@ internal sealed class BackupOperationRunner(
         var (_, destinationPath) = NormalizePaths(request);
         long requiredSpace;
 
-        if (request.Operation is BackupOperation.Update)
+        if (request is UpdateBackupRequest)
         {
             if (preview.FileCount > 0 && preview.MatchedFiles is 0)
             {

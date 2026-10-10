@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -55,6 +56,27 @@ namespace BackupZCrypt.Test.Integration;
 public sealed class ChunkedBackupFailurePathTests
 {
     /// <summary>
+    /// Identifies an operation that opens an existing archive, for theories that run against each.
+    /// </summary>
+    internal enum ExistingBackupOperation
+    {
+        /// <summary>
+        /// Updates the archive from its source.
+        /// </summary>
+        Update,
+
+        /// <summary>
+        /// Restores the archive into a folder.
+        /// </summary>
+        Restore,
+
+        /// <summary>
+        /// Verifies the archive without writing anything.
+        /// </summary>
+        Verify,
+    }
+
+    /// <summary>
     /// The password every backup in this fixture is created, updated, restored, and verified with;
     /// long and varied enough to clear the validator's strength warnings.
     /// </summary>
@@ -100,7 +122,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.CreateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            NewCreateRequest(source.Path, archive.Path),
             new HookedProgress(recorded, () => File.Delete(doomed)),
             CancellationToken.None
         );
@@ -140,7 +162,7 @@ public sealed class ChunkedBackupFailurePathTests
         var restoreResult = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -201,7 +223,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.CreateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            NewCreateRequest(source.Path, archive.Path),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -233,7 +255,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.CreateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            NewCreateRequest(source.Path, archive.Path),
             new HookedProgress(new RecordingProgress<BackupStatus>(), () => File.Delete(doomed)),
             CancellationToken.None
         );
@@ -256,7 +278,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.CreateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            NewCreateRequest(source.Path, archive.Path),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -284,7 +306,7 @@ public sealed class ChunkedBackupFailurePathTests
         var createResult = await service.CreateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Create),
+            NewCreateRequest(source.Path, archive.Path),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -304,7 +326,7 @@ public sealed class ChunkedBackupFailurePathTests
         var restoreResult = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -340,7 +362,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -387,7 +409,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -434,7 +456,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -474,7 +496,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -531,7 +553,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.UpdateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Update),
+            new UpdateBackupRequest(source.Path, archive.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>(), () => File.Delete(doomed)),
             CancellationToken.None
         );
@@ -552,7 +574,7 @@ public sealed class ChunkedBackupFailurePathTests
         var restoreResult = await service.RestoreAsync(
             archive.Path,
             restored.Path,
-            NewRequest(archive.Path, restored.Path, BackupOperation.Restore),
+            new RestoreBackupRequest(archive.Path, restored.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -601,7 +623,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.UpdateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Update),
+            new UpdateBackupRequest(source.Path, archive.Path, Password),
             new HookedProgress(
                 new RecordingProgress<BackupStatus>(),
                 () => Directory.Delete(chunksDir, recursive: true)
@@ -642,7 +664,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.UpdateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Update),
+            new UpdateBackupRequest(source.Path, archive.Path, Password),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -683,7 +705,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.UpdateAsync(
             source.Path,
             archive.Path,
-            NewRequest(source.Path, archive.Path, BackupOperation.Update, OtherPassword),
+            new UpdateBackupRequest(source.Path, archive.Path, OtherPassword),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );
@@ -709,7 +731,7 @@ public sealed class ChunkedBackupFailurePathTests
         _ = source.WriteText(Path.Join("dir", "b.txt"), "bravo payload");
 
         using var cts = new CancellationTokenSource();
-        var request = NewRequest(source.Path, archive.Path, BackupOperation.Create);
+        var request = NewCreateRequest(source.Path, archive.Path);
         var progress = new HookedProgress(new RecordingProgress<BackupStatus>(), cts.Cancel);
 
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
@@ -720,11 +742,11 @@ public sealed class ChunkedBackupFailurePathTests
     }
 
     [Theory]
-    [InlineData(BackupOperation.Update)]
-    [InlineData(BackupOperation.Restore)]
-    [InlineData(BackupOperation.Verify)]
+    [InlineData(ExistingBackupOperation.Update)]
+    [InlineData(ExistingBackupOperation.Restore)]
+    [InlineData(ExistingBackupOperation.Verify)]
     internal async Task ExistingBackup_CancelledBeforeAnyFileIsProcessed_StopsAndLeavesTheArchiveIntact(
-        BackupOperation operation
+        ExistingBackupOperation operation
     )
     {
         await using var provider = TestHost.CreateProvider();
@@ -741,40 +763,33 @@ public sealed class ChunkedBackupFailurePathTests
         _ = source.WriteText("a.txt", "alpha payload, revised so the update has work to do");
         var archiveBefore = Snapshot(archive.Path);
 
-        var (operationSource, operationDestination) = operation switch
-        {
-            BackupOperation.Update => (source.Path, archive.Path),
-            BackupOperation.Restore => (archive.Path, restored.Path),
-            BackupOperation.Verify => (archive.Path, string.Empty),
-            BackupOperation.Create => (archive.Path, string.Empty),
-            _ => (archive.Path, string.Empty),
-        };
-
         using var cts = new CancellationTokenSource();
-        var request = NewRequest(operationSource, operationDestination, operation);
         var progress = new HookedProgress(new RecordingProgress<BackupStatus>(), cts.Cancel);
 
         Task RunOperationAsync()
         {
             return operation switch
             {
-                BackupOperation.Update => service.UpdateAsync(
-                    operationSource,
-                    operationDestination,
-                    request,
+                ExistingBackupOperation.Update => service.UpdateAsync(
+                    source.Path,
+                    archive.Path,
+                    new UpdateBackupRequest(source.Path, archive.Path, Password),
                     progress,
                     cts.Token
                 ),
-                BackupOperation.Restore => service.RestoreAsync(
-                    operationSource,
-                    operationDestination,
-                    request,
+                ExistingBackupOperation.Restore => service.RestoreAsync(
+                    archive.Path,
+                    restored.Path,
+                    new RestoreBackupRequest(archive.Path, restored.Path, Password),
                     progress,
                     cts.Token
                 ),
-                BackupOperation.Verify => service.VerifyAsync(operationSource, request, progress, cts.Token),
-                BackupOperation.Create => service.VerifyAsync(operationSource, request, progress, cts.Token),
-                _ => service.VerifyAsync(operationSource, request, progress, cts.Token),
+                _ => service.VerifyAsync(
+                    archive.Path,
+                    new VerifyBackupRequest(archive.Path, Password),
+                    progress,
+                    cts.Token
+                ),
             };
         }
 
@@ -787,29 +802,22 @@ public sealed class ChunkedBackupFailurePathTests
     }
 
     /// <summary>
-    /// Builds an AES plus PBKDF2 request without compression that proceeds past advisory warnings.
-    /// PBKDF2 is the cheapest key derivation the app offers, which keeps these fixtures affordable.
+    /// Builds an AES plus PBKDF2 create request without compression that proceeds past advisory
+    /// warnings. PBKDF2 is the cheapest key derivation the app offers, which keeps these fixtures
+    /// affordable.
     /// </summary>
-    /// <param name="sourcePath">The tree to back up, or the archive to read from.</param>
-    /// <param name="destinationPath">The directory the archive or the restored files are written to.</param>
-    /// <param name="operation">The operation the request describes.</param>
-    /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
+    /// <param name="sourcePath">The tree to back up.</param>
+    /// <param name="destinationPath">The directory the archive is written to.</param>
     /// <returns>The assembled request.</returns>
-    private static BackupRequest NewRequest(
-        string sourcePath,
-        string destinationPath,
-        BackupOperation operation,
-        string password = Password
-    )
+    private static CreateBackupRequest NewCreateRequest(string sourcePath, string destinationPath)
     {
-        return new BackupRequest(
+        return new CreateBackupRequest(
             sourcePath,
             destinationPath,
-            password,
-            password,
+            Password,
+            Password,
             EncryptionAlgorithm.Aes,
             KeyDerivationAlgorithm.PBKDF2,
-            operation,
             CompressionMode.None,
             ProceedOnWarnings: true
         );
@@ -832,7 +840,7 @@ public sealed class ChunkedBackupFailurePathTests
         var result = await service.CreateAsync(
             sourcePath,
             archivePath,
-            NewRequest(sourcePath, archivePath, BackupOperation.Create),
+            NewCreateRequest(sourcePath, archivePath),
             new HookedProgress(new RecordingProgress<BackupStatus>()),
             CancellationToken.None
         );

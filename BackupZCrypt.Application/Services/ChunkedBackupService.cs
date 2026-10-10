@@ -6,6 +6,7 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -102,7 +103,7 @@ internal sealed partial class ChunkedBackupService(
     public async Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        CreateBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -258,9 +259,9 @@ internal sealed partial class ChunkedBackupService(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// An update reuses the algorithms the archive was written with, never the ones
-    /// <paramref name="request"/> carries: a different key derivation function produces a different
-    /// master key and the archive stops opening.
+    /// An update reuses the algorithms the archive was written with, which is why
+    /// <paramref name="request"/> carries none: a different key derivation function produces a
+    /// different master key and the archive stops opening.
     /// </para>
     /// <para>
     /// A file whose size and modification time match the manifest, and whose chunks are all present,
@@ -280,7 +281,7 @@ internal sealed partial class ChunkedBackupService(
     public async Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
-        BackupRequest request,
+        UpdateBackupRequest request,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )

@@ -3,6 +3,7 @@ using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -95,12 +96,12 @@ public sealed class CreateBackupCommandHandlerTests
         this.PassValidation();
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
 
-        BackupRequest? captured = null;
+        CreateBackupRequest? captured = null;
         _ = this.chunkedBackupService
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Do<BackupRequest>(request => captured = request),
+                Arg.Do<CreateBackupRequest>(request => captured = request),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -131,7 +132,6 @@ public sealed class CreateBackupCommandHandlerTests
             () => Assert.Equal("Correct-Horse-Battery-Staple-42", captured!.ConfirmPassword),
             () => Assert.Equal(EncryptionAlgorithm.Twofish, captured!.EncryptionAlgorithm),
             () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, captured!.KeyDerivationAlgorithm),
-            () => Assert.Equal(BackupOperation.Create, captured!.Operation),
             () => Assert.Equal(CompressionMode.ZstdBest, captured!.Compression),
             () => Assert.True(captured!.ProceedOnWarnings)
         );
@@ -140,7 +140,7 @@ public sealed class CreateBackupCommandHandlerTests
             .CreateAsync(
                 SourceDir,
                 DestinationDir,
-                Arg.Any<BackupRequest>(),
+                Arg.Any<CreateBackupRequest>(),
                 this.progress,
                 Arg.Any<CancellationToken>()
             );

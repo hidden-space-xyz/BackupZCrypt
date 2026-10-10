@@ -2,8 +2,6 @@ using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Commands;
 
@@ -26,14 +24,13 @@ internal sealed class CreateBackupCommandHandler(BackupOperationRunner runner)
         CancellationToken cancellationToken = default
     )
     {
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             command.SourcePath,
             command.DestinationPath,
             command.Password,
             command.ConfirmPassword,
             command.EncryptionAlgorithm,
             command.KeyDerivationAlgorithm,
-            BackupOperation.Create,
             command.Compression,
             command.ProceedOnWarnings
         );

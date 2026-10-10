@@ -1,9 +1,9 @@
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators;
+using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
@@ -26,6 +26,27 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// </remarks>
 public sealed class BackupRequestValidatorTests
 {
+    /// <summary>
+    /// Identifies the validated operation a request asks for, for theories that run against each.
+    /// </summary>
+    internal enum ValidatedOperation
+    {
+        /// <summary>
+        /// Creates a new archive.
+        /// </summary>
+        Create,
+
+        /// <summary>
+        /// Updates an existing archive.
+        /// </summary>
+        Update,
+
+        /// <summary>
+        /// Restores an existing archive.
+        /// </summary>
+        Restore,
+    }
+
     /// <summary>
     /// The message the simulated I/O failure carries while the source is listed. It is a single
     /// constant because the validator has to pass it through untouched as the error's only format
@@ -198,23 +219,27 @@ public sealed class BackupRequestValidatorTests
     /// <param name="destination">The destination path to validate.</param>
     /// <param name="password">The password, also used as the confirmation so the two always match.</param>
     /// <param name="operation">The operation the request asks for.</param>
-    /// <returns>An AES plus Argon2id request built from the supplied values.</returns>
+    /// <returns>A request of the operation's type, AES plus Argon2id for a create.</returns>
     private static BackupRequest ValidRequest(
         string source,
         string destination,
         string password = "Str0ng-Passw0rd!",
-        BackupOperation operation = BackupOperation.Create
+        ValidatedOperation operation = ValidatedOperation.Create
     )
     {
-        return new(
-            source,
-            destination,
-            password,
-            password,
-            EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            operation
-        );
+        return operation switch
+        {
+            ValidatedOperation.Create => new CreateBackupRequest(
+                source,
+                destination,
+                password,
+                password,
+                EncryptionAlgorithm.Aes,
+                KeyDerivationAlgorithm.Argon2id
+            ),
+            ValidatedOperation.Update => new UpdateBackupRequest(source, destination, password),
+            _ => new RestoreBackupRequest(source, destination, password),
+        };
     }
 
     /// <summary>
@@ -307,14 +332,13 @@ public sealed class BackupRequestValidatorTests
             .Returns(Scan(Path.Join(SourceDir, "a.txt")));
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             SourceDir,
             DestinationDir,
             "Str0ng-Passw0rd!",
             "Different-Passw0rd!",
             EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Create
+            KeyDerivationAlgorithm.Argon2id
         );
 
         var errors = await this.CreateSut()
@@ -457,11 +481,11 @@ public sealed class BackupRequestValidatorTests
     }
 
     [Theory]
-    [InlineData(BackupOperation.Create, false)]
-    [InlineData(BackupOperation.Restore, true)]
-    [InlineData(BackupOperation.Update, false)]
+    [InlineData(ValidatedOperation.Create, false)]
+    [InlineData(ValidatedOperation.Restore, true)]
+    [InlineData(ValidatedOperation.Update, false)]
     internal async Task AnalyzeWarnings_ExistingDestinationFiles_WarnsForRestoreOnly(
-        BackupOperation operation,
+        ValidatedOperation operation,
         bool expectedWarning
     )
     {
@@ -659,14 +683,13 @@ public sealed class BackupRequestValidatorTests
         int expectedCount
     )
     {
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             sourceInvalid ? UnnormalizablePath() : SourceDir,
             destinationInvalid ? UnnormalizablePath() : DestinationDir,
             string.Empty,
             string.Empty,
             EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Create
+            KeyDerivationAlgorithm.Argon2id
         );
 
         var errors = await this.CreateSut()
@@ -741,34 +764,29 @@ public sealed class BackupRequestValidatorTests
     }
 
     [Theory]
-    [InlineData(BackupOperation.Create, "", MessageCode.ConfirmPasswordRequired, true)]
-    [InlineData(BackupOperation.Create, "Different-Passw0rd!", MessageCode.PasswordMismatch, true)]
-    [InlineData(BackupOperation.Restore, "", MessageCode.ConfirmPasswordRequired, false)]
-    [InlineData(BackupOperation.Update, "Different-Passw0rd!", MessageCode.PasswordMismatch, false)]
-    internal async Task AnalyzeErrors_ConfirmPassword_IsEnforcedOnCreateOnly(
-        BackupOperation operation,
+    [InlineData("", MessageCode.ConfirmPasswordRequired)]
+    [InlineData("Different-Passw0rd!", MessageCode.PasswordMismatch)]
+    internal async Task AnalyzeErrors_CreateConfirmPassword_IsEnforced(
         string confirmPassword,
-        MessageCode expectedCode,
-        bool expectReported
+        MessageCode expectedCode
     )
     {
         this.StubReadableSource();
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             SourceDir,
             DestinationDir,
             "Str0ng-Passw0rd!",
             confirmPassword,
             EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            operation
+            KeyDerivationAlgorithm.Argon2id
         );
 
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.Equal(expectReported, Codes(errors).Contains(expectedCode));
+        Assert.Contains(expectedCode, Codes(errors));
     }
 
     [Theory]
@@ -914,14 +932,13 @@ public sealed class BackupRequestValidatorTests
             .AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 10, []));
 
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             sourceInvalid ? UnnormalizablePath() : SourceDir,
             destinationInvalid ? UnnormalizablePath() : DestinationDir,
             "weak",
             "weak",
             EncryptionAlgorithm.Aes,
-            KeyDerivationAlgorithm.Argon2id,
-            BackupOperation.Create
+            KeyDerivationAlgorithm.Argon2id
         );
 
         var warnings = await this.CreateSut()
@@ -1069,10 +1086,10 @@ public sealed class BackupRequestValidatorTests
     }
 
     [Theory]
-    [InlineData(BackupOperation.Restore)]
-    [InlineData(BackupOperation.Update)]
+    [InlineData(ValidatedOperation.Restore)]
+    [InlineData(ValidatedOperation.Update)]
     internal async Task AnalyzeErrors_OpeningAnExistingBackup_AcceptsAPasswordTheCreateRulesWouldRefuse(
-        BackupOperation operation
+        ValidatedOperation operation
     )
     {
         this.StubReadableSource();
@@ -1096,7 +1113,7 @@ public sealed class BackupRequestValidatorTests
 
         var errors = await this.CreateSut()
             .AnalyzeErrorsAsync(
-                ValidRequest(backup, DestinationDir, operation: BackupOperation.Restore),
+                ValidRequest(backup, DestinationDir, operation: ValidatedOperation.Restore),
                 TestContext.Current.CancellationToken
             );
 
@@ -1156,14 +1173,13 @@ public sealed class BackupRequestValidatorTests
         this.StubReadableSource();
         _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
 
-        var request = new BackupRequest(
+        var request = new CreateBackupRequest(
             SourceDir,
             DestinationDir,
             "Str0ng-Passw0rd!",
             "Str0ng-Passw0rd!",
             EncryptionAlgorithm.Aes,
             (KeyDerivationAlgorithm)7,
-            BackupOperation.Create,
             (CompressionMode)9
         );
 
