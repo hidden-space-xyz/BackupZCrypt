@@ -8,8 +8,8 @@ using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
@@ -148,13 +148,13 @@ public sealed class ManifestServiceTests
     /// Encrypts a hand-written manifest document under a valid AES plus PBKDF2 preamble, so the AEAD
     /// tag verifies and decryption reaches the parsing and validation of the document itself.
     /// </summary>
-    /// <param name="encryptionServiceFactory">The factory producing the AES strategy that encrypts the document.</param>
+    /// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
     /// <param name="key">The manifest encryption key.</param>
     /// <param name="preambleSalt">The 32-byte master salt recorded in the preamble and bound as associated data.</param>
     /// <param name="json">The document to encrypt.</param>
     /// <returns>A preamble that declares AES plus PBKDF2 and carries the encrypted document.</returns>
     private static ManifestPreamble EncryptDocument(
-        IEncryptionServiceFactory encryptionServiceFactory,
+        IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
         byte[] key,
         byte[] preambleSalt,
         string json
@@ -166,8 +166,8 @@ public sealed class ManifestServiceTests
         preambleSalt.CopyTo(associatedData, 2);
 
         var nonce = RandomNumberGenerator.GetBytes(EncryptionConstants.NonceSize);
-        var ciphertext = encryptionServiceFactory
-            .Create(EncryptionAlgorithm.Aes)
+        var ciphertext = encryptionStrategies
+            .Resolve(EncryptionAlgorithm.Aes)
             .EncryptChunk(Encoding.UTF8.GetBytes(json), key, nonce, associatedData);
 
         return new ManifestPreamble(
@@ -183,12 +183,12 @@ public sealed class ManifestServiceTests
     /// Decrypts the manifest a backup folder holds and returns its JSON document, so a test can check
     /// what the file records rather than what the service rebuilds from it.
     /// </summary>
-    /// <param name="encryptionServiceFactory">The factory producing the strategy the manifest names.</param>
+    /// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
     /// <param name="backupRoot">The backup folder holding the manifest.</param>
     /// <param name="key">The manifest encryption key.</param>
     /// <returns>The root element of the decrypted document.</returns>
     private static async Task<JsonElement> ReadDocumentAsync(
-        IEncryptionServiceFactory encryptionServiceFactory,
+        IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
         string backupRoot,
         byte[] key
     )
@@ -199,8 +199,8 @@ public sealed class ManifestServiceTests
         );
         const int PayloadStart = PreambleHeaderLength + EncryptionConstants.NonceSize;
 
-        var json = encryptionServiceFactory
-            .Create((EncryptionAlgorithm)manifest[0])
+        var json = encryptionStrategies
+            .Resolve((EncryptionAlgorithm)manifest[0])
             .DecryptChunk(
                 manifest.AsSpan(PayloadStart),
                 key,
@@ -245,7 +245,7 @@ public sealed class ManifestServiceTests
             .When(operations => operations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()))
             .Do(_ => throw readFailure);
 
-        return new ManifestService(fileOperations, Substitute.For<IEncryptionServiceFactory>());
+        return new ManifestService(fileOperations, Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>());
     }
 
     [Fact]
@@ -397,7 +397,7 @@ public sealed class ManifestServiceTests
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+        var encryptionStrategies = provider.GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>();
 
         using var backup = new TempDir();
         var key = RandomNumberGenerator.GetBytes(KeyLength);
@@ -428,7 +428,7 @@ public sealed class ManifestServiceTests
         );
         Assert.Empty(errors);
 
-        var document = await ReadDocumentAsync(encryptionServiceFactory, backup.Path, key);
+        var document = await ReadDocumentAsync(encryptionStrategies, backup.Path, key);
         var files = document
             .GetProperty("Files")
             .EnumerateArray()
@@ -530,12 +530,12 @@ public sealed class ManifestServiceTests
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+        var encryptionStrategies = provider.GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>();
 
         var key = RandomNumberGenerator.GetBytes(KeyLength);
         var preambleSalt = RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize);
         var preamble = EncryptDocument(
-            encryptionServiceFactory,
+            encryptionStrategies,
             key,
             preambleSalt,
             """
@@ -570,11 +570,11 @@ public sealed class ManifestServiceTests
     {
         await using var provider = TestHost.CreateProvider();
         var manifestService = provider.GetRequiredService<IManifestService>();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+        var encryptionStrategies = provider.GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>();
 
         var key = RandomNumberGenerator.GetBytes(KeyLength);
         var preamble = EncryptDocument(
-            encryptionServiceFactory,
+            encryptionStrategies,
             key,
             RandomNumberGenerator.GetBytes(EncryptionConstants.SaltSize),
             json
@@ -676,8 +676,8 @@ public sealed class ManifestServiceTests
     {
         await using var provider = TestHost.CreateProvider();
         var realFileOperations = provider.GetRequiredService<IFileOperationsService>();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
-        var manifestService = new ManifestService(realFileOperations, encryptionServiceFactory);
+        var encryptionStrategies = provider.GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>();
+        var manifestService = new ManifestService(realFileOperations, encryptionStrategies);
 
         using var backup = new TempDir();
         var key = RandomNumberGenerator.GetBytes(KeyLength);
@@ -702,7 +702,7 @@ public sealed class ManifestServiceTests
             )
             .Returns(Task.FromException(new IOException("injected atomic write failure")));
 
-        var failingService = new ManifestService(failingFileOperations, encryptionServiceFactory);
+        var failingService = new ManifestService(failingFileOperations, encryptionStrategies);
 
         var errors = await failingService.SaveChunkManifestAsync(
             NewManifest(5),
@@ -736,7 +736,7 @@ public sealed class ManifestServiceTests
     internal async Task SaveChunkManifestAsync_AtomicWriteFails_DoesNotCreateManifest()
     {
         await using var provider = TestHost.CreateProvider();
-        var encryptionServiceFactory = provider.GetRequiredService<IEncryptionServiceFactory>();
+        var encryptionStrategies = provider.GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>();
 
         using var backup = new TempDir();
 
@@ -749,7 +749,7 @@ public sealed class ManifestServiceTests
             )
             .Returns(Task.FromException(new IOException("injected atomic write failure")));
 
-        var failingService = new ManifestService(failingFileOperations, encryptionServiceFactory);
+        var failingService = new ManifestService(failingFileOperations, encryptionStrategies);
 
         var errors = await failingService.SaveChunkManifestAsync(
             NewManifest(2),
@@ -811,7 +811,7 @@ public sealed class ManifestServiceTests
             .Returns(call => Path.Join(call.Arg<string[]>() ?? []));
         _ = fileOperations.OpenReadStream(Arg.Any<string>(), Arg.Any<int>()).Returns(stream);
 
-        var manifestService = new ManifestService(fileOperations, Substitute.For<IEncryptionServiceFactory>());
+        var manifestService = new ManifestService(fileOperations, Substitute.For<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>());
 
         var kind = await manifestService.DetectManifestKindAsync(
             Path.Join(Path.GetTempPath(), "bzc-midread"),

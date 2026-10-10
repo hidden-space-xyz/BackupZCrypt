@@ -5,13 +5,8 @@ namespace BackupZCrypt.Domain.Strategies.Interfaces;
 /// <summary>
 /// Compresses and decompresses streams for a specific compression mode.
 /// </summary>
-public interface ICompressionStrategy
+public interface ICompressionStrategy : IAlgorithmStrategy<CompressionMode>
 {
-    /// <summary>
-    /// Gets the compression mode this strategy implements, used to select it by enum value.
-    /// </summary>
-    public CompressionMode Id { get; }
-
     /// <summary>
     /// Compresses the input stream.
     /// </summary>

@@ -7,7 +7,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
 
@@ -69,7 +69,9 @@ public sealed class OnDiskFormatFixtureGenerator
         var salt = OnDiskFormatFixtures.GoldenSalt;
 
         using var provider = TestHost.CreateProvider();
-        var factory = provider.GetRequiredService<IKeyDerivationServiceFactory>();
+        var keyDerivationStrategies = provider.GetRequiredService<
+            IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>
+        >();
 
         var algorithms = Enum.GetValues<KeyDerivationAlgorithm>();
 
@@ -77,7 +79,7 @@ public sealed class OnDiskFormatFixtureGenerator
 
         foreach (var kdf in algorithms)
         {
-            var masterKey = factory.Create(kdf).DeriveKey(Password, salt, EncryptionConstants.KeySize);
+            var masterKey = keyDerivationStrategies.Resolve(kdf).DeriveKey(Password, salt, EncryptionConstants.KeySize);
             Assert.Equal(EncryptionConstants.KeySize / 8, masterKey.Length);
             TestContext.Current.TestOutputHelper?.WriteLine(
                 $"{kdf} master key: {Convert.ToHexStringLower(masterKey)}"

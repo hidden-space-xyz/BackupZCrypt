@@ -8,7 +8,7 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -30,19 +30,19 @@ namespace BackupZCrypt.Application.Services;
 /// manifest-entry plumbing both paths share, and <c>.Keys</c> the key derivation, salt, and
 /// chunk-naming primitives. The split is purely a file boundary: it moves no member between types.
 /// </remarks>
-/// <param name="compressionServiceFactory">The factory producing compression strategies for a compression mode.</param>
-/// <param name="encryptionServiceFactory">The factory producing encryption strategies for an algorithm.</param>
+/// <param name="compressionStrategies">The registered compression strategies, looked up by mode.</param>
+/// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
 /// <param name="fileOperationsService">The service used to read, write, and enumerate files.</param>
 /// <param name="manifestService">The service used to read and write the encrypted backup manifest.</param>
 /// <param name="chunkingStrategy">The strategy used to split file streams into content-defined chunks.</param>
-/// <param name="keyDerivationServiceFactory">The factory producing key derivation services for an algorithm.</param>
+/// <param name="keyDerivationStrategies">The registered key derivation strategies, looked up by algorithm.</param>
 internal sealed partial class ChunkedBackupService(
-    ICompressionServiceFactory compressionServiceFactory,
-    IEncryptionServiceFactory encryptionServiceFactory,
+    IStrategyRegistry<CompressionMode, ICompressionStrategy> compressionStrategies,
+    IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
     IFileOperationsService fileOperationsService,
     IManifestService manifestService,
     IChunkingStrategy chunkingStrategy,
-    IKeyDerivationServiceFactory keyDerivationServiceFactory
+    IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies
 ) : IChunkedBackupService
 {
     /// <summary>
@@ -141,7 +141,7 @@ internal sealed partial class ChunkedBackupService(
                 keys.ChunkEncryptionKey,
                 keys.ChunkNonceKey,
                 keys.NamingKey,
-                encryptionServiceFactory.Create(request.EncryptionAlgorithm),
+                encryptionStrategies.Resolve(request.EncryptionAlgorithm),
                 this.CreateCompressionStrategy(request.Compression)
             );
 
@@ -347,7 +347,7 @@ internal sealed partial class ChunkedBackupService(
             keys.ChunkEncryptionKey,
             keys.ChunkNonceKey,
             keys.NamingKey,
-            encryptionServiceFactory.Create(backup.Preamble.Algorithm),
+            encryptionStrategies.Resolve(backup.Preamble.Algorithm),
             compressionStrategy
         );
 

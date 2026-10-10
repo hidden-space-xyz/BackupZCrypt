@@ -5,13 +5,8 @@ namespace BackupZCrypt.Domain.Strategies.Interfaces;
 /// <summary>
 /// Encrypts and decrypts individual chunks using a specific AEAD cipher.
 /// </summary>
-public interface IEncryptionAlgorithmStrategy
+public interface IEncryptionAlgorithmStrategy : IAlgorithmStrategy<EncryptionAlgorithm>
 {
-    /// <summary>
-    /// Gets the algorithm this strategy implements, used to select it by enum value.
-    /// </summary>
-    public EncryptionAlgorithm Id { get; }
-
     /// <summary>
     /// Encrypts a chunk and appends the authentication tag to the ciphertext.
     /// </summary>

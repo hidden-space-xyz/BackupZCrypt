@@ -24,7 +24,7 @@ internal sealed partial class ChunkedBackupService
     /// <returns>The derived key set; disposing it wipes every key it holds.</returns>
     private DerivedKeySet DeriveKeySet(string password, byte[] salt, KeyDerivationAlgorithm kdf)
     {
-        var strategy = keyDerivationServiceFactory.Create(kdf);
+        var strategy = keyDerivationStrategies.Resolve(kdf);
         var masterKey = strategy.DeriveKey(password, salt, EncryptionConstants.KeySize);
 
         byte[]? chunkEncryptionKey = null;

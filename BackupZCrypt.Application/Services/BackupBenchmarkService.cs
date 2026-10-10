@@ -7,7 +7,6 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Application.Services;
@@ -19,15 +18,15 @@ namespace BackupZCrypt.Application.Services;
 /// never written to disk and all key material is zeroed after use; deduplication is deliberately not
 /// applied so the measured throughput reflects unique (worst-case) data.
 /// </summary>
-/// <param name="encryptionServiceFactory">The factory producing encryption strategies for an algorithm.</param>
-/// <param name="compressionServiceFactory">The factory producing compression strategies for a compression mode.</param>
+/// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
+/// <param name="compressionStrategies">The registered compression strategies, looked up by mode.</param>
 /// <param name="chunkingStrategy">The strategy used to split the synthetic stream into content-defined chunks.</param>
-/// <param name="keyDerivationServiceFactory">The factory producing key derivation services for an algorithm.</param>
+/// <param name="keyDerivationStrategies">The registered key derivation strategies, looked up by algorithm.</param>
 internal sealed class BackupBenchmarkService(
-    IEncryptionServiceFactory encryptionServiceFactory,
-    ICompressionServiceFactory compressionServiceFactory,
+    IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
+    IStrategyRegistry<CompressionMode, ICompressionStrategy> compressionStrategies,
     IChunkingStrategy chunkingStrategy,
-    IKeyDerivationServiceFactory keyDerivationServiceFactory
+    IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies
 ) : IBackupBenchmarkService
 {
     /// <summary>
@@ -88,12 +87,12 @@ internal sealed class BackupBenchmarkService(
             );
         }
 
-        var encryptionStrategy = encryptionServiceFactory.Create(request.EncryptionAlgorithm);
+        var encryptionStrategy = encryptionStrategies.Resolve(request.EncryptionAlgorithm);
         var compressionStrategy =
             request.Compression is CompressionMode.None
                 ? null
-                : compressionServiceFactory.Create(request.Compression);
-        var keyDerivationStrategy = keyDerivationServiceFactory.Create(
+                : compressionStrategies.Resolve(request.Compression);
+        var keyDerivationStrategy = keyDerivationStrategies.Resolve(
             request.KeyDerivationAlgorithm
         );
 

@@ -8,7 +8,7 @@ using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
@@ -326,14 +326,14 @@ public sealed class CrossPlatformManifestTests
     /// Derives the manifest encryption sub-key the same way the backup service does, so a test can
     /// read or rewrite a real manifest without reaching into the service's private key handling.
     /// </summary>
-    /// <param name="provider">The provider holding the real key derivation factory.</param>
+    /// <param name="provider">The provider holding the real key derivation strategies.</param>
     /// <param name="preamble">The preamble carrying the master salt and key derivation algorithm.</param>
     /// <returns>The manifest encryption key; the caller wipes it.</returns>
     private static byte[] DeriveManifestKey(ServiceProvider provider, ManifestPreamble preamble)
     {
         var masterKey = provider
-            .GetRequiredService<IKeyDerivationServiceFactory>()
-            .Create(preamble.KeyDerivation)
+            .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
+            .Resolve(preamble.KeyDerivation)
             .DeriveKey(Password, preamble.MasterSalt, EncryptionConstants.KeySize);
 
         try

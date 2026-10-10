@@ -13,9 +13,8 @@ using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Application.ValueObjects.Settings;
-using BackupZCrypt.Domain.Factories;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Services;
 using BackupZCrypt.Infrastructure.Services.Settings;
@@ -34,7 +33,7 @@ namespace BackupZCrypt.Composition;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers every service the application is built from: the algorithm factories, the
+    /// Registers every service the application is built from: the strategy registry, the
     /// encryption / key-derivation / compression / chunking strategies, the file-system and settings
     /// adapters, and the use-case command and query handlers with the services and validators behind
     /// them.
@@ -48,8 +47,9 @@ public static class DependencyInjection
     /// One honestly named method is simpler than two that misdescribe themselves.
     /// </para>
     /// <para>
-    /// Every strategy is registered as a singleton against its shared interface, so consumers can
-    /// resolve the whole <see cref="IEnumerable{T}"/> and index it by the strategy's enum <c>Id</c>.
+    /// Every strategy is registered as a singleton against its shared interface, so the open generic
+    /// <see cref="IStrategyRegistry{TId, TStrategy}"/> can resolve the whole <see cref="IEnumerable{T}"/>
+    /// of a family and index it by the strategy's enum <c>Id</c>.
     /// The Desktop-only platform services and the ViewModels are registered in
     /// <c>App.ConfigureServices</c> instead: this project must not reference Avalonia, since that
     /// would point a dependency arrow outward.
@@ -69,9 +69,7 @@ public static class DependencyInjection
     /// <returns>The same <paramref name="services"/> instance, to allow call chaining.</returns>
     public static IServiceCollection AddBackupZCryptServices(this IServiceCollection services)
     {
-        _ = services.AddSingleton<IKeyDerivationServiceFactory, KeyDerivationServiceFactory>();
-        _ = services.AddSingleton<ICompressionServiceFactory, CompressionServiceFactory>();
-        _ = services.AddSingleton<IEncryptionServiceFactory, EncryptionServiceFactory>();
+        _ = services.AddSingleton(typeof(IStrategyRegistry<,>), typeof(StrategyRegistry<,>));
 
         _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Argon2IdKeyDerivationStrategy>();
         _ = services.AddSingleton<IKeyDerivationAlgorithmStrategy, Pbkdf2KeyDerivationStrategy>();

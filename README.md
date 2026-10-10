@@ -140,7 +140,7 @@ specific locale, and every temporary file lives in a directory the test owns and
 
 | Project | Purpose |
 |---|---|
-| `BackupZCrypt.Domain` | Core contracts: enums, constants, strategy and service interfaces, value objects, and the algorithm factories |
+| `BackupZCrypt.Domain` | Core contracts: enums, constants, strategy and service interfaces, value objects, and the strategy registry |
 | `BackupZCrypt.Application` | Business logic: backup orchestration, chunked backup engine, manifest and settings services |
 | `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; file system access |
 | `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |

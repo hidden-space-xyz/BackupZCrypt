@@ -744,7 +744,7 @@ internal sealed partial class ChunkedBackupService
     {
         return compressionMode is CompressionMode.None
             ? null
-            : compressionServiceFactory.Create(compressionMode);
+            : compressionStrategies.Resolve(compressionMode);
     }
 
     /// <summary>

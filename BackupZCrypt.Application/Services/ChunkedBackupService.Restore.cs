@@ -463,7 +463,7 @@ internal sealed partial class ChunkedBackupService
             backup.Keys.ChunkEncryptionKey,
             backup.Keys.ChunkNonceKey,
             backup.Keys.NamingKey,
-            encryptionServiceFactory.Create(backup.Manifest.Header.EncryptionAlgorithm),
+            encryptionStrategies.Resolve(backup.Manifest.Header.EncryptionAlgorithm),
             this.CreateCompressionStrategy(backup.Manifest.Header.Compression)
         );
     }

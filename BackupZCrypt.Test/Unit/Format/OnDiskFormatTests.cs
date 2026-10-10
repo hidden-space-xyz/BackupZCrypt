@@ -10,7 +10,7 @@ using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
 using BackupZCrypt.Test.Tools;
@@ -202,8 +202,8 @@ public sealed class OnDiskFormatTests
         using var provider = TestHost.CreateProvider();
 
         var masterKey = provider
-            .GetRequiredService<IKeyDerivationServiceFactory>()
-            .Create(algorithm)
+            .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
+            .Resolve(algorithm)
             .DeriveKey(Password, OnDiskFormatFixtures.GoldenSalt, EncryptionConstants.KeySize);
 
         try

@@ -5,13 +5,8 @@ namespace BackupZCrypt.Domain.Strategies.Interfaces;
 /// <summary>
 /// Derives a symmetric key from a password and salt using a specific key derivation function.
 /// </summary>
-public interface IKeyDerivationAlgorithmStrategy
+public interface IKeyDerivationAlgorithmStrategy : IAlgorithmStrategy<KeyDerivationAlgorithm>
 {
-    /// <summary>
-    /// Gets the algorithm this strategy implements, used to select it by enum value.
-    /// </summary>
-    public KeyDerivationAlgorithm Id { get; }
-
     /// <summary>
     /// Derives a key of the requested size from the given password and salt.
     /// </summary>

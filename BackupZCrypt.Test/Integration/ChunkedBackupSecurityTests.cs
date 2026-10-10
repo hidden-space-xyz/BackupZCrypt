@@ -9,7 +9,7 @@ using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
@@ -217,8 +217,8 @@ public sealed class ChunkedBackupSecurityTests
             TestContext.Current.CancellationToken
         );
         var decryptedChunk = provider
-            .GetRequiredService<IEncryptionServiceFactory>()
-            .Create(EncryptionAlgorithm.Aes)
+            .GetRequiredService<IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>>()
+            .Resolve(EncryptionAlgorithm.Aes)
             .DecryptChunk(storedChunk, chunkEncryptionKey, nonce, [.. chunkHash, .. nonce]);
 
         var distinctSubKeys = new[] { chunkEncryptionKey, chunkNonceKey, namingKey, manifestKey }
@@ -586,7 +586,7 @@ public sealed class ChunkedBackupSecurityTests
     /// Returning the master key lets a caller expand any of the four purpose-bound sub-keys without
     /// paying for a second key derivation, which dominates the cost of these tests.
     /// </remarks>
-    /// <param name="provider">The provider holding the real manifest service and key derivation factory.</param>
+    /// <param name="provider">The provider holding the real manifest service and key derivation strategies.</param>
     /// <param name="backupRoot">The backup root directory holding the manifest.</param>
     /// <param name="password">The password the backup was created with.</param>
     /// <returns>The parsed preamble, the derived master key, and the decrypted manifest.</returns>
@@ -604,8 +604,8 @@ public sealed class ChunkedBackupSecurityTests
             ?? throw new InvalidOperationException("The backup under test has no readable manifest preamble.");
 
         var masterKey = provider
-            .GetRequiredService<IKeyDerivationServiceFactory>()
-            .Create(preamble.KeyDerivation)
+            .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
+            .Resolve(preamble.KeyDerivation)
             .DeriveKey(password, preamble.MasterSalt, EncryptionConstants.KeySize);
 
         var manifest =

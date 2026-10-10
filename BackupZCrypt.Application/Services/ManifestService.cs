@@ -6,8 +6,8 @@ using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
@@ -19,10 +19,10 @@ namespace BackupZCrypt.Application.Services;
 /// AEAD-encrypted document, and are written atomically via a temp file and rename.
 /// </summary>
 /// <param name="fileOperationsService">The service used to read and write manifest files.</param>
-/// <param name="encryptionServiceFactory">The factory producing encryption strategies for an algorithm.</param>
+/// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
 internal sealed class ManifestService(
     IFileOperationsService fileOperationsService,
-    IEncryptionServiceFactory encryptionServiceFactory
+    IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies
 ) : IManifestService
 {
     /// <summary>
@@ -231,7 +231,7 @@ internal sealed class ManifestService(
                 return null;
             }
 
-            var encryptionStrategy = encryptionServiceFactory.Create(preamble.Algorithm);
+            var encryptionStrategy = encryptionStrategies.Resolve(preamble.Algorithm);
             var associatedData = BuildChunkPreambleHeader(
                 preamble.Algorithm,
                 preamble.KeyDerivation,
@@ -349,7 +349,7 @@ internal sealed class ManifestService(
                 masterSalt
             );
 
-            var encryptionStrategy = encryptionServiceFactory.Create(algorithm);
+            var encryptionStrategy = encryptionStrategies.Resolve(algorithm);
             encryptedBytes = encryptionStrategy.EncryptChunk(
                 manifestBytes,
                 encryptionKey,

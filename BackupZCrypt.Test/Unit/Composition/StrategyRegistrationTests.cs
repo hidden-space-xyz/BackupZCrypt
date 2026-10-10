@@ -1,12 +1,8 @@
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Factories;
-using BackupZCrypt.Domain.Factories.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
-
-using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Composition;
 
@@ -19,7 +15,7 @@ namespace BackupZCrypt.Test.Unit.Composition;
 /// until it is wired up.
 /// </summary>
 /// <remarks>
-/// The negative cases pin the other half of that contract: a factory asked for an identifier it has no
+/// The negative cases pin the other half of that contract: a registry asked for an identifier it has no
 /// strategy for must throw rather than silently fall back to whichever strategy happens to be
 /// registered. Encrypting with an algorithm the manifest does not name would make the archive
 /// undecryptable.
@@ -47,11 +43,11 @@ public sealed class StrategyRegistrationTests
     /// <summary>
     /// Supplies every compression mode that is expected to resolve to a strategy.
     /// <see cref="CompressionMode.None"/> is excluded on purpose: it is deliberately unregistered
-    /// and is covered by <see cref="Create_CompressionModeNone_IsDeliberatelyUnregistered"/>.
+    /// and is covered by <see cref="Resolve_CompressionModeNone_IsDeliberatelyUnregistered"/>.
     /// </summary>
     /// <remarks>
     /// <c>ChunkedBackupService</c> and <c>BackupBenchmarkService</c> map <see cref="CompressionMode.None"/>
-    /// to a null strategy before ever reaching the factory, so registering a pass-through strategy for it
+    /// to a null strategy before ever reaching the registry, so registering a pass-through strategy for it
     /// would silently change the on-disk chunk layout. Leaving it unregistered keeps that mapping the
     /// callers' job.
     /// </remarks>
@@ -65,51 +61,59 @@ public sealed class StrategyRegistrationTests
 
     [Theory]
     [MemberData(nameof(EncryptionAlgorithms))]
-    internal void Create_EveryEncryptionAlgorithm_ResolvesStrategyWithMatchingId(
+    internal void Resolve_EveryEncryptionAlgorithm_ResolvesStrategyWithMatchingId(
         EncryptionAlgorithm algorithm
     )
     {
         using var provider = TestHost.CreateProvider();
-        var factory = provider.GetRequiredService<IEncryptionServiceFactory>();
+        var registry = provider.GetRequiredService<
+            IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy>
+        >();
 
-        var strategy = factory.Create(algorithm);
+        var strategy = registry.Resolve(algorithm);
 
         Assert.Equal(algorithm, strategy.Id);
     }
 
     [Theory]
     [MemberData(nameof(KeyDerivationAlgorithms))]
-    internal void Create_EveryKeyDerivationAlgorithm_ResolvesStrategyWithMatchingId(
+    internal void Resolve_EveryKeyDerivationAlgorithm_ResolvesStrategyWithMatchingId(
         KeyDerivationAlgorithm algorithm
     )
     {
         using var provider = TestHost.CreateProvider();
-        var factory = provider.GetRequiredService<IKeyDerivationServiceFactory>();
+        var registry = provider.GetRequiredService<
+            IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>
+        >();
 
-        var strategy = factory.Create(algorithm);
+        var strategy = registry.Resolve(algorithm);
 
         Assert.Equal(algorithm, strategy.Id);
     }
 
     [Theory]
     [MemberData(nameof(CompressionModes))]
-    internal void Create_EveryCompressionMode_ResolvesStrategyWithMatchingId(CompressionMode mode)
+    internal void Resolve_EveryCompressionMode_ResolvesStrategyWithMatchingId(CompressionMode mode)
     {
         using var provider = TestHost.CreateProvider();
-        var factory = provider.GetRequiredService<ICompressionServiceFactory>();
+        var registry = provider.GetRequiredService<
+            IStrategyRegistry<CompressionMode, ICompressionStrategy>
+        >();
 
-        var strategy = factory.Create(mode);
+        var strategy = registry.Resolve(mode);
 
         Assert.Equal(mode, strategy.Id);
     }
 
     [Fact]
-    internal void Create_CompressionModeNone_IsDeliberatelyUnregistered()
+    internal void Resolve_CompressionModeNone_IsDeliberatelyUnregistered()
     {
         using var provider = TestHost.CreateProvider();
-        var factory = provider.GetRequiredService<ICompressionServiceFactory>();
+        var registry = provider.GetRequiredService<
+            IStrategyRegistry<CompressionMode, ICompressionStrategy>
+        >();
 
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => factory.Create(CompressionMode.None));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => registry.Resolve(CompressionMode.None));
     }
 
     [Fact]
@@ -118,17 +122,5 @@ public sealed class StrategyRegistrationTests
         using var provider = TestHost.CreateProvider();
 
         _ = Assert.Single(provider.GetServices<IChunkingStrategy>().ToList());
-    }
-
-    [Fact]
-    internal void Create_UnregisteredEncryptionAlgorithm_ThrowsInsteadOfSubstitutingAnotherCipher()
-    {
-        var registered = Substitute.For<IEncryptionAlgorithmStrategy>();
-        _ = registered.Id.Returns(EncryptionAlgorithm.Aes);
-        var factory = new EncryptionServiceFactory([registered]);
-
-        _ = Assert.Throws<ArgumentOutOfRangeException>(
-            () => factory.Create(EncryptionAlgorithm.Serpent)
-        );
     }
 }
