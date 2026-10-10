@@ -5,7 +5,7 @@ using BackupZCrypt.Test.Tools;
 namespace BackupZCrypt.Test.Unit.Architecture;
 
 /// <summary>
-/// Enforces the dependency rules CLAUDE.md calls non-negotiable, so a violation fails the build
+/// Enforces the project-reference rules documented in AGENTS.md, so a violation fails the test suite
 /// rather than surviving until someone re-reads the documentation.
 /// </summary>
 /// <remarks>
@@ -16,9 +16,8 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// start failing once someone used it — which is exactly when it is too late to be useful.
 /// </para>
 /// <para>
-/// The sibling rules that already had enforcement stay where they are:
-/// <c>LocalizationParityTests</c> covers the message catalogue and <c>StrategyRegistrationTests</c>
-/// covers the composition root.
+/// Related architecture checks live elsewhere: <c>LocalizationParityTests</c> covers the message
+/// catalogue and <c>StrategyRegistrationTests</c> covers the composition root.
 /// </para>
 /// </remarks>
 public sealed class LayerDependencyTests
@@ -29,7 +28,7 @@ public sealed class LayerDependencyTests
     private static readonly char[] ProjectPathSeparators = ['\\', '/'];
 
     /// <summary>
-    /// The project references each project is allowed to declare, straight from the CLAUDE.md table.
+    /// The project references each project is allowed to declare, matching the rules in AGENTS.md.
     /// </summary>
     private static readonly Dictionary<string, string[]> AllowedProjectReferences = new(
         StringComparer.Ordinal
@@ -58,7 +57,7 @@ public sealed class LayerDependencyTests
 
     [Theory]
     [MemberData(nameof(Projects))]
-    internal void ProjectReferences_MatchTheDocumentedLayerTable(string project)
+    internal void ProjectReferences_MatchTheDocumentedLayerRules(string project)
     {
         var declared = ReadProject(project)
             .Descendants("ProjectReference")
