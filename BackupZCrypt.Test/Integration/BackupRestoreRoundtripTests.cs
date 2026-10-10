@@ -1,5 +1,4 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
@@ -80,8 +79,7 @@ public sealed class BackupRestoreRoundtripTests
     )
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -90,17 +88,17 @@ public sealed class BackupRestoreRoundtripTests
         var expected = BuildSourceTree(source);
 
         var createProgress = new RecordingProgress<BackupStatus>();
-        var createCommand = NewCreateCommand(
+        var createRequest = NewCreateRequest(
             source.Path,
             destination.Path,
             encryption,
             compression,
-            keyDerivation,
-            createProgress
+            keyDerivation
         );
 
-        var createResult = await createHandler.HandleAsync(
-            createCommand,
+        var createResult = await operations.CreateAsync(
+            createRequest,
+            createProgress,
             TestContext.Current.CancellationToken
         );
 
@@ -127,10 +125,11 @@ public sealed class BackupRestoreRoundtripTests
         );
 
         var restoreProgress = new RecordingProgress<BackupStatus>();
-        var restoreCommand = NewRestoreCommand(destination.Path, restored.Path, restoreProgress);
+        var restoreRequest = NewRestoreRequest(destination.Path, restored.Path);
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            restoreCommand,
+        var restoreResult = await operations.RestoreAsync(
+            restoreRequest,
+            restoreProgress,
             TestContext.Current.CancellationToken
         );
 
@@ -151,8 +150,7 @@ public sealed class BackupRestoreRoundtripTests
     internal async Task CreateThenRestore_FileLongerThanTheMaximumChunk_ReassemblesItsChunksInOrder()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -161,16 +159,15 @@ public sealed class BackupRestoreRoundtripTests
         var content = DeterministicBytes(MultiChunkFileSize, seed: 7);
         _ = source.WriteFile("split.bin", content);
 
-        var createResult = await createHandler.HandleAsync(
-            NewCreateCommand(
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(
                 source.Path,
                 destination.Path,
                 EncryptionAlgorithm.Aes,
                 CompressionMode.None,
-                KeyDerivationAlgorithm.PBKDF2,
-                new RecordingProgress<BackupStatus>()
+                KeyDerivationAlgorithm.PBKDF2
             ),
-            TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -183,9 +180,9 @@ public sealed class BackupRestoreRoundtripTests
                 )
         );
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path, new RecordingProgress<BackupStatus>()),
-            TestContext.Current.CancellationToken
+        var restoreResult = await operations.RestoreAsync(
+            NewRestoreRequest(destination.Path, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -206,8 +203,7 @@ public sealed class BackupRestoreRoundtripTests
     internal async Task Restore_WithWrongPassword_FailsAndDoesNotReproduceOriginals()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -215,32 +211,28 @@ public sealed class BackupRestoreRoundtripTests
 
         var expected = BuildSourceTree(source);
 
-        var createResult = await createHandler.HandleAsync(
-            NewCreateCommand(
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(
                 source.Path,
                 destination.Path,
                 EncryptionAlgorithm.Aes,
                 CompressionMode.None,
-                KeyDerivationAlgorithm.PBKDF2,
-                new RecordingProgress<BackupStatus>()
+                KeyDerivationAlgorithm.PBKDF2
             ),
-            TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess);
 
-        var wrongPasswordCommand = new RestoreBackupCommand(
+        var wrongPasswordRequest = new RestoreBackupRequest(
             destination.Path,
             restored.Path,
             "totally-different-password",
             ProceedOnWarnings: true
-        )
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        );
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            wrongPasswordCommand,
-            TestContext.Current.CancellationToken
+        var restoreResult = await operations.RestoreAsync(
+            wrongPasswordRequest,
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         var failed = (!restoreResult.IsSuccess) || (!restoreResult.Value.Completion!.IsSuccess);
@@ -266,16 +258,16 @@ public sealed class BackupRestoreRoundtripTests
     internal async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
     {
         await using var provider = TestHost.CreateProvider();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var backup = new TempDir();
         using var restored = new TempDir();
 
         _ = backup.WriteText("stray.txt", "not a manifest");
 
-        var result = await restoreHandler.HandleAsync(
-            NewRestoreCommand(backup.Path, restored.Path, new RecordingProgress<BackupStatus>()),
-            TestContext.Current.CancellationToken
+        var result = await operations.RestoreAsync(
+            NewRestoreRequest(backup.Path, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -289,25 +281,23 @@ public sealed class BackupRestoreRoundtripTests
     }
 
     /// <summary>
-    /// Builds a create command that uses the fixture password and proceeds past advisory warnings.
+    /// Builds a create request that uses the fixture password and proceeds past advisory warnings.
     /// </summary>
     /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <param name="encryption">The AEAD cipher to protect chunks and the manifest with.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
     /// <param name="keyDerivation">The key derivation function used to derive the master key.</param>
-    /// <param name="progress">The sink receiving progress reports.</param>
-    /// <returns>The assembled command.</returns>
-    private static CreateBackupCommand NewCreateCommand(
+    /// <returns>The assembled request.</returns>
+    private static CreateBackupRequest NewCreateRequest(
         string sourcePath,
         string destinationPath,
         EncryptionAlgorithm encryption,
         CompressionMode compression,
-        KeyDerivationAlgorithm keyDerivation,
-        IProgress<BackupStatus>? progress
+        KeyDerivationAlgorithm keyDerivation
     )
     {
-        return new CreateBackupCommand(
+        return new CreateBackupRequest(
             sourcePath,
             destinationPath,
             Password,
@@ -316,29 +306,21 @@ public sealed class BackupRestoreRoundtripTests
             keyDerivation,
             compression,
             ProceedOnWarnings: true
-        )
-        {
-            Progress = progress,
-        };
+        );
     }
 
     /// <summary>
-    /// Builds a restore command that uses the fixture password and proceeds past advisory warnings.
+    /// Builds a restore request that uses the fixture password and proceeds past advisory warnings.
     /// </summary>
     /// <param name="backupPath">The backup directory to read from.</param>
     /// <param name="destinationPath">The directory the restored files are written to.</param>
-    /// <param name="progress">The sink receiving progress reports.</param>
-    /// <returns>The assembled command.</returns>
-    private static RestoreBackupCommand NewRestoreCommand(
+    /// <returns>The assembled request.</returns>
+    private static RestoreBackupRequest NewRestoreRequest(
         string backupPath,
-        string destinationPath,
-        IProgress<BackupStatus>? progress
+        string destinationPath
     )
     {
-        return new RestoreBackupCommand(backupPath, destinationPath, Password, ProceedOnWarnings: true)
-        {
-            Progress = progress,
-        };
+        return new RestoreBackupRequest(backupPath, destinationPath, Password, ProceedOnWarnings: true);
     }
 
     /// <summary>
@@ -426,11 +408,11 @@ public sealed class BackupRestoreRoundtripTests
     }
 
     /// <summary>
-    /// Gathers the handler's own error codes together with the per-file codes of the completed run,
+    /// Gathers the operation's own error codes together with the per-file codes of the completed run,
     /// which is only read when the outer result succeeded because
     /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
     /// </summary>
-    /// <param name="result">The handler outcome to inspect.</param>
+    /// <param name="result">The operation outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>
     private static HashSet<MessageCode> CollectCodes(Result<BackupOutcome> result)
     {

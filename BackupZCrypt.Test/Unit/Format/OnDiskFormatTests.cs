@@ -1,11 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
@@ -83,12 +79,10 @@ public sealed class OnDiskFormatTests
         using var restored = new TempDir();
 
         var result = await provider
-            .GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new RestoreBackupCommand(archive, restored.Path, Password, ProceedOnWarnings: true)
-                {
-                    Progress = new RecordingProgress<BackupStatus>(),
-                },
+            .GetRequiredService<IBackupOperations>()
+            .RestoreAsync(
+                new RestoreBackupRequest(archive, restored.Path, Password, ProceedOnWarnings: true),
+                new RecordingProgress<BackupStatus>(),
                 CancellationToken.None
             );
 
@@ -146,12 +140,10 @@ public sealed class OnDiskFormatTests
         await using var provider = TestHost.CreateProvider();
 
         var result = await provider
-            .GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new VerifyBackupQuery(archive, Password)
-                {
-                    Progress = new RecordingProgress<BackupStatus>(),
-                },
+            .GetRequiredService<IBackupOperations>()
+            .VerifyAsync(
+                new VerifyBackupRequest(archive, Password),
+                new RecordingProgress<BackupStatus>(),
                 CancellationToken.None
             );
 

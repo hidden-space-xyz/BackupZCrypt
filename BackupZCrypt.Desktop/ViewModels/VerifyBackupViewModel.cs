@@ -1,10 +1,6 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
@@ -19,18 +15,14 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// decrypting and re-hashing every chunk, without writing any files. Only the backup location and
 /// its password are required.
 /// </summary>
-/// <param name="verifyBackup">The handler that answers the verify-backup query.</param>
-/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+/// <param name="operations">The backup operations the page runs.</param>
+/// <param name="settingsStore">The store that loads and saves the recently used paths.</param>
 /// <param name="filePicker">The folder picker service.</param>
-/// <param name="detectManifestKind">The handler that detects the kind of manifest at the backup path.</param>
 internal sealed partial class VerifyBackupViewModel(
-    IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>> verifyBackup,
-    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
-    IFilePickerService filePicker,
-    IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind
-) : ExistingBackupViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker, detectManifestKind)
+    IBackupOperations operations,
+    ISettingsStore settingsStore,
+    IFilePickerService filePicker
+) : ExistingBackupViewModelBase(operations, settingsStore, filePicker)
 {
     /// <summary>
     /// Gets the backup location, which for a verification is the source path.
@@ -82,7 +74,7 @@ internal sealed partial class VerifyBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the verify-backup query from the current inputs and dispatches it to its handler.
+    /// Builds the verify-backup request from the current inputs and runs it.
     /// Verification skips validation and never raises advisory warnings, so the proceed flag carries
     /// no information for it and is deliberately ignored.
     /// </summary>
@@ -96,12 +88,11 @@ internal sealed partial class VerifyBackupViewModel(
         CancellationToken cancellationToken
     )
     {
-        var query = new VerifyBackupQuery(SourcePath, Password)
-        {
-            Progress = progress,
-        };
-
-        return verifyBackup.HandleAsync(query, cancellationToken);
+        return Operations.VerifyAsync(
+            new VerifyBackupRequest(SourcePath, Password),
+            progress,
+            cancellationToken
+        );
     }
 
     /// <summary>

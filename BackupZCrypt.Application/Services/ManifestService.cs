@@ -197,7 +197,7 @@ internal sealed class ManifestService(
     /// <remarks>
     /// The master salt is decoded with <see cref="Convert.TryFromBase64String"/> rather than parsed,
     /// so a malformed value becomes a reported rejection carrying its own message code. Parsing would
-    /// raise a <see cref="FormatException"/> that the surrounding handler could only surface as an
+    /// raise a <see cref="FormatException"/> that the backup operations could only surface as an
     /// untranslated .NET string spliced into a localized sentence.
     /// </remarks>
     /// <param name="manifestData">The manifest contents to serialize and encrypt.</param>

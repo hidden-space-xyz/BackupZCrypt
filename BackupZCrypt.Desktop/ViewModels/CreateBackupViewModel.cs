@@ -1,10 +1,6 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Password;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
@@ -22,24 +18,18 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the create-backup page: collects the source and destination, manages the password
 /// (entry, reveal, generation, copy, and strength feedback), and reflects the algorithm defaults from settings.
 /// </summary>
-/// <param name="createBackup">The handler that executes the create-backup command.</param>
-/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
-/// <param name="creationDefaultsQuery">The handler that loads the saved algorithm defaults.</param>
+/// <param name="operations">The backup operations the page runs.</param>
+/// <param name="settingsStore">The store that loads and saves the recently used paths and the saved algorithm defaults.</param>
 /// <param name="filePicker">The folder picker service.</param>
 /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
-/// <param name="generatePassword">The handler that generates a random password.</param>
-/// <param name="analyzePasswordStrength">The handler that analyzes password strength.</param>
+/// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
 internal sealed partial class CreateBackupViewModel(
-    ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup,
-    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
-    IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings> creationDefaultsQuery,
+    IBackupOperations operations,
+    ISettingsStore settingsStore,
     IFilePickerService filePicker,
     IClipboardService clipboardService,
-    ISyncQueryHandler<GeneratePasswordQuery, string> generatePassword,
-    ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis> analyzePasswordStrength
-) : OperationViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker)
+    IPasswordService passwordService
+) : OperationViewModelBase(settingsStore, filePicker)
 {
     /// <summary>
     /// The character count of a generated password, set far above the guessable range because a
@@ -148,8 +138,8 @@ internal sealed partial class CreateBackupViewModel(
     /// currently in flight.
     /// </summary>
     /// <remarks>
-    /// The handler absorbs a failure to read the stored defaults into the built-in defaults, so the
-    /// page always offers a usable configuration.
+    /// The settings store absorbs a failure to read the stored defaults into the built-in defaults, so
+    /// the page always offers a usable configuration.
     /// </remarks>
     /// <returns>A task that completes once the encryption state has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
@@ -161,10 +151,7 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
-        var defaults = await creationDefaultsQuery.HandleAsync(
-            new GetSettingsQuery<BackupCreationSettings>(),
-            CancellationToken.None
-        );
+        var defaults = await SettingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None);
 
         encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
             ? defaults.EncryptionAlgorithm
@@ -194,8 +181,8 @@ internal sealed partial class CreateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the create-backup command from the current source, destination, password, and configured
-    /// algorithms, and dispatches it to its handler.
+    /// Builds the create-backup request from the current source, destination, password, and configured
+    /// algorithms, and runs it.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <param name="progress">The sink that receives incremental status updates.</param>
@@ -207,7 +194,7 @@ internal sealed partial class CreateBackupViewModel(
         CancellationToken cancellationToken
     )
     {
-        var command = new CreateBackupCommand(
+        var request = new CreateBackupRequest(
             SourcePath,
             DestinationPath,
             Password,
@@ -216,12 +203,9 @@ internal sealed partial class CreateBackupViewModel(
             keyDerivationAlgorithm,
             compressionMode,
             proceedOnWarnings
-        )
-        {
-            Progress = progress,
-        };
+        );
 
-        return createBackup.HandleAsync(command, cancellationToken);
+        return operations.CreateAsync(request, progress, cancellationToken);
     }
 
     /// <summary>
@@ -280,9 +264,7 @@ internal sealed partial class CreateBackupViewModel(
             | PasswordGenerationOptions.IncludeNumbers
             | PasswordGenerationOptions.IncludeSpecialCharacters;
 
-        var generated = generatePassword.Handle(
-            new GeneratePasswordQuery(GeneratedPasswordLength, Options)
-        );
+        var generated = passwordService.GeneratePassword(GeneratedPasswordLength, Options);
 
         Password = generated;
         ConfirmPassword = generated;
@@ -332,7 +314,7 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
-        var analysis = analyzePasswordStrength.Handle(new AnalyzePasswordStrengthQuery(value));
+        var analysis = passwordService.AnalyzePasswordStrength(value);
 
         HasStrength = true;
         StrengthScore = analysis.Score;

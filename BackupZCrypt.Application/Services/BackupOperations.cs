@@ -4,18 +4,19 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Orchestrators;
+namespace BackupZCrypt.Application.Services;
 
 /// <summary>
-/// Runs the shared pipeline behind the backup command and query handlers: it validates the request,
-/// previews what an update or restore will do so its consequences can be confirmed, normalizes paths,
-/// takes the backup's lock, and dispatches to the chunk-based backup service. Verification is
-/// read-only and takes a dedicated path that skips request validation.
+/// Runs the backup use cases through one shared pipeline: it validates the request, previews what an
+/// update or restore will do so its consequences can be confirmed, normalizes paths, takes the
+/// backup's lock, and dispatches to the chunk-based backup service. Verification is read-only and
+/// takes a dedicated path that skips request validation.
 /// </summary>
 /// <remarks>
 /// Nothing in this pipeline deletes user data. A create into a folder that holds anything other than
@@ -27,100 +28,77 @@ namespace BackupZCrypt.Application.Orchestrators;
 /// <param name="fileLockService">The service that holds and probes the backup's lock file.</param>
 /// <param name="chunkedBackupService">The service that performs the chunk-based backup, update, restore, and verify operations.</param>
 /// <param name="systemStorage">The service used to query free space for the preview warnings.</param>
-internal sealed class BackupOperationRunner(
+/// <param name="manifestService">The service that classifies the manifest in a folder the user picked.</param>
+internal sealed class BackupOperations(
     IBackupRequestValidator backupRequestValidator,
     IFileOperationsService fileOperationsService,
     IFileLockService fileLockService,
     IChunkedBackupService chunkedBackupService,
-    ISystemStorageService systemStorage
-)
+    ISystemStorageService systemStorage,
+    IManifestService manifestService
+) : IBackupOperations
 {
     /// <summary>
-    /// Validates the request and, if it passes, runs the create, update, or restore operation it
-    /// describes.
+    /// Runs one already-validated operation on the chunk-based backup service.
     /// </summary>
-    /// <param name="request">The backup request describing the operation, paths, and options.</param>
-    /// <param name="progress">A sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
+    /// <param name="sourcePath">The normalized absolute source path.</param>
+    /// <param name="destinationPath">The normalized absolute destination path.</param>
+    /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>
-    /// A successful result carrying the completed engine outcome or the warnings awaiting the user's
-    /// confirmation, or a failure result carrying validation or fatal errors.
-    /// </returns>
-    public async Task<Result<BackupOutcome>> RunAsync(
-        BackupRequest request,
-        IProgress<BackupStatus>? progress,
+    /// <returns>The outcome reported by the backup service.</returns>
+    private delegate Task<Result<BackupResult>> EngineRun(
+        string sourcePath,
+        string destinationPath,
+        IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
+    );
+
+    /// <inheritdoc/>
+    public Task<Result<BackupOutcome>> CreateAsync(
+        CreateBackupRequest request,
+        IProgress<BackupStatus>? progress = null,
+        CancellationToken cancellationToken = default
     )
     {
-        ArgumentNullException.ThrowIfNull(request);
+        return RunAsync(
+            request,
+            (sourcePath, destinationPath, sink, token) =>
+                chunkedBackupService.CreateAsync(sourcePath, destinationPath, request, sink, token),
+            progress,
+            cancellationToken
+        );
+    }
 
-        var validationResult = await ValidateRequestAsync(request, cancellationToken);
-        if (validationResult is not null)
-        {
-            return validationResult;
-        }
+    /// <inheritdoc/>
+    public Task<Result<BackupOutcome>> UpdateAsync(
+        UpdateBackupRequest request,
+        IProgress<BackupStatus>? progress = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return RunAsync(
+            request,
+            (sourcePath, destinationPath, sink, token) =>
+                chunkedBackupService.UpdateAsync(sourcePath, destinationPath, request, sink, token),
+            progress,
+            cancellationToken
+        );
+    }
 
-        string? createdDestination = null;
-        var succeeded = false;
-
-        try
-        {
-            var (sourcePath, destinationPath) = NormalizePaths(request);
-
-            var sourceError = CheckSourceDirectory(sourcePath);
-            if (sourceError is not null)
-            {
-                return Result<BackupOutcome>.Failure(sourceError.Value);
-            }
-
-            if (
-                request is UpdateBackupRequest
-                && !fileOperationsService.DirectoryExists(destinationPath)
-            )
-            {
-                return Result<BackupOutcome>.Failure(MessageCode.BackupDestinationMustExist);
-            }
-
-            if (request is CreateBackupRequest)
-            {
-                if (!fileOperationsService.DirectoryExists(destinationPath))
-                {
-                    createdDestination = destinationPath;
-                }
-
-                await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
-            }
-
-            var engineResult = await RunUnderLockAsync(
-                sourcePath,
-                destinationPath,
-                request,
-                progress ?? NullProgress<BackupStatus>.Instance,
-                cancellationToken
-            );
-
-            succeeded = engineResult.IsSuccess;
-            return ToOutcome(engineResult);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Result<BackupOutcome>.Failure(MessageCode.DestinationAccessDenied);
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
-        }
-        finally
-        {
-            if (!succeeded && createdDestination is not null)
-            {
-                TryRemoveEmptyDirectory(createdDestination);
-            }
-        }
+    /// <inheritdoc/>
+    public Task<Result<BackupOutcome>> RestoreAsync(
+        RestoreBackupRequest request,
+        IProgress<BackupStatus>? progress = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return RunAsync(
+            request,
+            (sourcePath, destinationPath, sink, token) =>
+                chunkedBackupService.RestoreAsync(sourcePath, destinationPath, request, sink, token),
+            progress,
+            cancellationToken
+        );
     }
 
     /// <summary>
@@ -135,10 +113,10 @@ internal sealed class BackupOperationRunner(
     /// password is missing, the source path cannot be normalized, the source directory is absent, the
     /// backup is being modified, or an unexpected error occurs.
     /// </returns>
-    public async Task<Result<BackupOutcome>> RunVerifyAsync(
+    public async Task<Result<BackupOutcome>> VerifyAsync(
         VerifyBackupRequest request,
-        IProgress<BackupStatus>? progress,
-        CancellationToken cancellationToken
+        IProgress<BackupStatus>? progress = null,
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -190,12 +168,140 @@ internal sealed class BackupOperationRunner(
     }
 
     /// <summary>
+    /// Classifies the folder a user picked as an archive by probing it through the manifest service.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ManifestKind.Missing"/> already means "no readable manifest was found there", so a
+    /// probe that throws — an unreadable directory, a permission error — is reported as exactly that
+    /// rather than surfacing an exception the caller would map to the same answer anyway.
+    /// </remarks>
+    /// <param name="backupPath">The path the user picked, as typed.</param>
+    /// <param name="cancellationToken">A token to cancel the inspection.</param>
+    /// <returns>
+    /// The detected kind; <see cref="ManifestKind.PathNotFound"/> when the path cannot be
+    /// normalized, or <see cref="ManifestKind.Missing"/> when the probe fails.
+    /// </returns>
+    public async Task<ManifestKind> DetectManifestKindAsync(
+        string backupPath,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var normalizedPath = PathNormalizationHelper.TryNormalize(backupPath, out var error);
+        if (error is not null || string.IsNullOrEmpty(normalizedPath))
+        {
+            return ManifestKind.PathNotFound;
+        }
+
+        try
+        {
+            return await manifestService.DetectManifestKindAsync(normalizedPath, cancellationToken);
+        }
+        catch (Exception exception)
+            when (exception is not OutOfMemoryException and not OperationCanceledException)
+        {
+            return ManifestKind.Missing;
+        }
+    }
+
+    /// <summary>
+    /// Validates the request and, if it passes, runs the create, update, or restore operation it
+    /// describes.
+    /// </summary>
+    /// <param name="request">The backup request describing the operation, paths, and options.</param>
+    /// <param name="engineRun">The backup service operation that carries out the request.</param>
+    /// <param name="progress">A sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// A successful result carrying the completed engine outcome or the warnings awaiting the user's
+    /// confirmation, or a failure result carrying validation or fatal errors.
+    /// </returns>
+    private async Task<Result<BackupOutcome>> RunAsync(
+        BackupRequest request,
+        EngineRun engineRun,
+        IProgress<BackupStatus>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var validationResult = await ValidateRequestAsync(request, cancellationToken);
+        if (validationResult is not null)
+        {
+            return validationResult;
+        }
+
+        string? createdDestination = null;
+        var succeeded = false;
+
+        try
+        {
+            var (sourcePath, destinationPath) = NormalizePaths(request);
+
+            var sourceError = CheckSourceDirectory(sourcePath);
+            if (sourceError is not null)
+            {
+                return Result<BackupOutcome>.Failure(sourceError.Value);
+            }
+
+            if (
+                request is UpdateBackupRequest
+                && !fileOperationsService.DirectoryExists(destinationPath)
+            )
+            {
+                return Result<BackupOutcome>.Failure(MessageCode.BackupDestinationMustExist);
+            }
+
+            if (request is CreateBackupRequest)
+            {
+                if (!fileOperationsService.DirectoryExists(destinationPath))
+                {
+                    createdDestination = destinationPath;
+                }
+
+                await fileOperationsService.CreateDirectoryAsync(destinationPath, cancellationToken);
+            }
+
+            var engineResult = await RunUnderLockAsync(
+                sourcePath,
+                destinationPath,
+                request,
+                engineRun,
+                progress ?? NullProgress<BackupStatus>.Instance,
+                cancellationToken
+            );
+
+            succeeded = engineResult.IsSuccess;
+            return ToOutcome(engineResult);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Result<BackupOutcome>.Failure(MessageCode.DestinationAccessDenied);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return Result<BackupOutcome>.Failure(MessageCode.UnexpectedErrorFormat, ex.Message);
+        }
+        finally
+        {
+            if (!succeeded && createdDestination is not null)
+            {
+                TryRemoveEmptyDirectory(createdDestination);
+            }
+        }
+    }
+
+    /// <summary>
     /// Takes the backup's lock for the operation and dispatches it. A create or update holds the
     /// lock exclusively for its whole run; a restore only checks that no create or update holds it.
     /// </summary>
     /// <param name="sourcePath">The normalized absolute source path.</param>
     /// <param name="destinationPath">The normalized absolute destination path.</param>
     /// <param name="request">The backup request describing the operation, paths, and options.</param>
+    /// <param name="engineRun">The backup service operation that carries out the request.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The outcome reported by the engine, or a failure when the backup is in use.</returns>
@@ -203,6 +309,7 @@ internal sealed class BackupOperationRunner(
         string sourcePath,
         string destinationPath,
         BackupRequest request,
+        EngineRun engineRun,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -211,7 +318,7 @@ internal sealed class BackupOperationRunner(
         {
             return IsBackupLocked(sourcePath)
                 ? Result<BackupResult>.Failure(MessageCode.BackupInUse)
-                : await RunBackupAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+                : await engineRun(sourcePath, destinationPath, progress, cancellationToken);
         }
 
         IDisposable backupLock;
@@ -228,56 +335,8 @@ internal sealed class BackupOperationRunner(
 
         using (backupLock)
         {
-            return await RunBackupAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+            return await engineRun(sourcePath, destinationPath, progress, cancellationToken);
         }
-    }
-
-    /// <summary>
-    /// Dispatches an already-validated request to the create, update, or restore path of the
-    /// chunk-based backup service.
-    /// </summary>
-    /// <param name="sourcePath">The normalized absolute source path.</param>
-    /// <param name="destinationPath">The normalized absolute destination path.</param>
-    /// <param name="request">The backup request describing the operation, paths, and options.</param>
-    /// <param name="progress">A sink that receives incremental status updates.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The outcome reported by the selected backup service operation.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="request"/> is of a request type this method does not know.
-    /// </exception>
-    private Task<Result<BackupResult>> RunBackupAsync(
-        string sourcePath,
-        string destinationPath,
-        BackupRequest request,
-        IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken
-    )
-    {
-        return request switch
-        {
-            CreateBackupRequest create => chunkedBackupService.CreateAsync(
-                sourcePath,
-                destinationPath,
-                create,
-                progress,
-                cancellationToken
-            ),
-            UpdateBackupRequest update => chunkedBackupService.UpdateAsync(
-                sourcePath,
-                destinationPath,
-                update,
-                progress,
-                cancellationToken
-            ),
-            RestoreBackupRequest restore => chunkedBackupService.RestoreAsync(
-                sourcePath,
-                destinationPath,
-                restore,
-                progress,
-                cancellationToken
-            ),
-            _ => throw new ArgumentOutOfRangeException(nameof(request)),
-        };
     }
 
     /// <summary>
@@ -508,7 +567,7 @@ internal sealed class BackupOperationRunner(
     }
 
     /// <summary>
-    /// Maps the engine's result onto the handler contract, preserving the failure channel and wrapping
+    /// Maps the engine's result onto the operation contract, preserving the failure channel and wrapping
     /// a completed run — fully or partially successful — as a completed outcome.
     /// </summary>
     /// <param name="engineResult">The result reported by the chunk-based backup service.</param>

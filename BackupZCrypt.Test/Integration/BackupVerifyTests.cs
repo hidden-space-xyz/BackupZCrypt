@@ -1,9 +1,6 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
@@ -47,19 +44,18 @@ public sealed class BackupVerifyTests
     )
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var scratch = new TempDir();
-        await CreateBackupAsync(createHandler, source, destination, compression);
+        await CreateBackupAsync(operations, source, destination, compression);
 
         var archiveBefore = Snapshot(destination.Path);
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(destination.Path),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -77,16 +73,15 @@ public sealed class BackupVerifyTests
     internal async Task Verify_WrongPassword_FailsWithInvalidPasswordAndReportsNoVerifiedFiles()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
+        await CreateBackupAsync(operations, source, destination, CompressionMode.None);
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(destination.Path, password: "a-different-password-1"),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(destination.Path, password: "a-different-password-1"),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -105,21 +100,20 @@ public sealed class BackupVerifyTests
     internal async Task Verify_CorruptedChunk_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
+        await CreateBackupAsync(operations, source, destination, CompressionMode.None);
 
         var chunkFile = ChunkFiles(destination.Path)[0];
         var bytes = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
         bytes[0] ^= 0xFF;
         await File.WriteAllBytesAsync(chunkFile, bytes, TestContext.Current.CancellationToken);
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(destination.Path),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -146,32 +140,28 @@ public sealed class BackupVerifyTests
     internal async Task Update_AfterVerifySetADamagedChunkAside_RebuildsItFromTheSource()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
+        await CreateBackupAsync(operations, source, destination, CompressionMode.None);
 
         var chunkFile = ChunkFiles(destination.Path)[0];
         var bytes = await File.ReadAllBytesAsync(chunkFile, TestContext.Current.CancellationToken);
         bytes[^1] ^= 0x01;
         await File.WriteAllBytesAsync(chunkFile, bytes, TestContext.Current.CancellationToken);
 
-        _ = await verifyHandler.HandleAsync(NewVerifyQuery(destination.Path), TestContext.Current.CancellationToken);
+        _ = await operations.VerifyAsync(NewVerifyRequest(destination.Path), cancellationToken: TestContext.Current.CancellationToken);
 
-        var update = await updateHandler.HandleAsync(
-            new UpdateBackupCommand(source.Path, destination.Path, Password, ProceedOnWarnings: true)
-            {
-                Progress = new RecordingProgress<BackupStatus>(),
-            },
+        var update = await operations.UpdateAsync(
+            new UpdateBackupRequest(source.Path, destination.Path, Password, ProceedOnWarnings: true),
+            new RecordingProgress<BackupStatus>(),
             TestContext.Current.CancellationToken
         );
 
-        var verify = await verifyHandler.HandleAsync(
-            NewVerifyQuery(destination.Path),
-            TestContext.Current.CancellationToken
+        var verify = await operations.VerifyAsync(
+            NewVerifyRequest(destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -192,18 +182,17 @@ public sealed class BackupVerifyTests
     internal async Task Verify_ChunkFileMissing_ReportsIntegrityErrorForAffectedFile()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        await CreateBackupAsync(createHandler, source, destination, CompressionMode.None);
+        await CreateBackupAsync(operations, source, destination, CompressionMode.None);
 
         File.Delete(ChunkFiles(destination.Path)[0]);
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(destination.Path),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -223,14 +212,14 @@ public sealed class BackupVerifyTests
     internal async Task Verify_MissingManifest_FailsWithManifestRequired()
     {
         await using var provider = TestHost.CreateProvider();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var backup = new TempDir();
         _ = backup.WriteText("stray.txt", "not a manifest");
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(backup.Path),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(backup.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Contains(MessageCode.ManifestRequiredForVerify, CollectCodes(result));
@@ -240,13 +229,13 @@ public sealed class BackupVerifyTests
     internal async Task Verify_MissingSource_FailsWithSourcePathNotExist()
     {
         await using var provider = TestHost.CreateProvider();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         var missing = Path.Join(Path.GetTempPath(), "bzc-missing", Guid.NewGuid().ToString("N"));
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(missing),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(missing),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Contains(MessageCode.SourcePathNotExist, CollectCodes(result));
@@ -256,13 +245,13 @@ public sealed class BackupVerifyTests
     internal async Task Verify_EmptyPassword_ReportsPasswordRequired()
     {
         await using var provider = TestHost.CreateProvider();
-        var verifyHandler = provider.GetRequiredService<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var backup = new TempDir();
 
-        var result = await verifyHandler.HandleAsync(
-            NewVerifyQuery(backup.Path, password: string.Empty),
-            TestContext.Current.CancellationToken
+        var result = await operations.VerifyAsync(
+            NewVerifyRequest(backup.Path, password: string.Empty),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Contains(MessageCode.PasswordRequired, CollectCodes(result));
@@ -273,13 +262,13 @@ public sealed class BackupVerifyTests
     /// so the verify tests have an intact backup to work against. Fails the test if creation does not
     /// succeed.
     /// </summary>
-    /// <param name="createHandler">The handler that executes the create command.</param>
+    /// <param name="operations">The backup operations to run it with.</param>
     /// <param name="source">The directory the sample files are written to.</param>
     /// <param name="destination">The directory the backup is written to.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
     /// <returns>A task that completes once the backup exists.</returns>
     private static async Task CreateBackupAsync(
-        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createHandler,
+        IBackupOperations operations,
         TempDir source,
         TempDir destination,
         CompressionMode compression
@@ -289,7 +278,7 @@ public sealed class BackupVerifyTests
         _ = source.WriteText("b.txt", new string('b', 8192));
         _ = source.WriteText(Path.Join("sub", "c.txt"), "hello world");
 
-        var result = await createHandler.HandleAsync(NewCreateCommand(source.Path, destination.Path, compression));
+        var result = await operations.CreateAsync(NewCreateRequest(source.Path, destination.Path, compression));
 
         Assert.Multiple(
             () => Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Backup creation failed."),
@@ -298,16 +287,15 @@ public sealed class BackupVerifyTests
     }
 
     /// <summary>
-    /// Builds an AES plus PBKDF2 create command that proceeds past advisory warnings and reports
-    /// progress to a throwaway sink.
+    /// Builds an AES plus PBKDF2 create request that proceeds past advisory warnings.
     /// </summary>
     /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <param name="compression">The compression mode applied to chunks before encryption.</param>
-    /// <returns>The assembled command.</returns>
-    private static CreateBackupCommand NewCreateCommand(string sourcePath, string destinationPath, CompressionMode compression)
+    /// <returns>The assembled request.</returns>
+    private static CreateBackupRequest NewCreateRequest(string sourcePath, string destinationPath, CompressionMode compression)
     {
-        return new CreateBackupCommand(
+        return new CreateBackupRequest(
             sourcePath,
             destinationPath,
             Password,
@@ -316,24 +304,18 @@ public sealed class BackupVerifyTests
             KeyDerivationAlgorithm.PBKDF2,
             compression,
             ProceedOnWarnings: true
-        )
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        );
     }
 
     /// <summary>
-    /// Builds a verify query that reports progress to a throwaway sink.
+    /// Builds a verify request, by default with the fixture password.
     /// </summary>
     /// <param name="backupPath">The backup directory to verify.</param>
     /// <param name="password">The password to derive keys from; defaults to the fixture password.</param>
-    /// <returns>The assembled query.</returns>
-    private static VerifyBackupQuery NewVerifyQuery(string backupPath, string password = Password)
+    /// <returns>The assembled request.</returns>
+    private static VerifyBackupRequest NewVerifyRequest(string backupPath, string password = Password)
     {
-        return new VerifyBackupQuery(backupPath, password)
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        return new VerifyBackupRequest(backupPath, password);
     }
 
     /// <summary>
@@ -377,11 +359,11 @@ public sealed class BackupVerifyTests
     }
 
     /// <summary>
-    /// Gathers the handler's own error codes together with the per-file codes of the completed engine
+    /// Gathers the operation's own error codes together with the per-file codes of the completed engine
     /// result, which is only read when the outer result succeeded with a completion because
     /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
     /// </summary>
-    /// <param name="result">The handler outcome to inspect.</param>
+    /// <param name="result">The operation outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>
     private static HashSet<MessageCode> CollectCodes(Result<BackupOutcome> result)
     {

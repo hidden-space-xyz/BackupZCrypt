@@ -4,11 +4,13 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
+using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Services;
 
@@ -63,17 +65,19 @@ internal sealed class BackupBenchmarkService(
 
     /// <summary>
     /// Runs the benchmark for the requested options and extrapolates the result to the requested
-    /// amount of data.
+    /// amount of data, reporting a benchmark that fails as a failed result.
     /// </summary>
     /// <param name="request">The cryptographic options to exercise and the amount of data to estimate for.</param>
     /// <param name="cancellationToken">A token to cancel the benchmark.</param>
-    /// <returns>An estimate of the total processing time and the measurements it was derived from.</returns>
+    /// <returns>
+    /// The estimate, or a failure carrying the reason the benchmark could not run, such as an
+    /// algorithm that is not registered.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <see cref="BenchmarkRequest.DataBytes"/> is not greater than zero, or the requested encryption
-    /// algorithm is not registered.
+    /// <see cref="BenchmarkRequest.DataBytes"/> is not greater than zero.
     /// </exception>
-    public async Task<BenchmarkEstimate> EstimateAsync(
+    public async Task<Result<BenchmarkEstimate>> EstimateAsync(
         BenchmarkRequest request,
         CancellationToken cancellationToken = default
     )
@@ -88,6 +92,33 @@ internal sealed class BackupBenchmarkService(
             );
         }
 
+        try
+        {
+            return await MeasureAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+            when (exception is not OutOfMemoryException and not OperationCanceledException)
+        {
+            return Result<BenchmarkEstimate>.Failure(
+                MessageCode.UnexpectedErrorFormat,
+                exception.Message
+            );
+        }
+    }
+
+    /// <summary>
+    /// Measures the requested options on synthetic data and extrapolates the result to the requested
+    /// amount of data.
+    /// </summary>
+    /// <param name="request">The validated options to exercise and the amount of data to estimate for.</param>
+    /// <param name="cancellationToken">A token to cancel the benchmark.</param>
+    /// <returns>An estimate of the total processing time and the measurements it was derived from.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">An algorithm the request names is not registered.</exception>
+    private async Task<BenchmarkEstimate> MeasureAsync(
+        BenchmarkRequest request,
+        CancellationToken cancellationToken
+    )
+    {
         var encryptionStrategy = encryptionStrategies.Resolve(request.EncryptionAlgorithm);
         var compressionStrategy =
             request.Compression is CompressionMode.None

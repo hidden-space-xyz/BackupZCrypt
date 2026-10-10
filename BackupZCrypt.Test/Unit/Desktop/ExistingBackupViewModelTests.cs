@@ -1,7 +1,4 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Application.ValueObjects.Manifest;
@@ -17,11 +14,11 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 
 /// <summary>
 /// Unit tests for the pages that work on an existing backup: the manifest detection that decides
-/// whether the page asks for a password, the start gate layered on top of it, and the message the
+/// whether the page asks for a password, the start gate layered on top of it, and the request the
 /// restore, update, and verify pages each build from the same inputs. The three pages are nearly
 /// identical, so every page-specific assertion here exists to catch a copy-paste between them.
-/// The absorption of probe failures into the missing kind lives in the detection handler and is
-/// pinned by its own tests.
+/// The absorption of probe failures into the missing kind lives in the backup operations and is
+/// pinned by their own tests.
 /// </summary>
 public sealed class ExistingBackupViewModelTests : IDisposable
 {
@@ -47,45 +44,19 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// The substituted handler the restore page dispatches its runs to.
+    /// The substituted backup operations every page runs and detects its backup through.
     /// </summary>
-    private readonly ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>> restoreBackup =
-        Substitute.For<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+    private readonly IBackupOperations operations = Substitute.For<IBackupOperations>();
 
     /// <summary>
-    /// The substituted handler the update page dispatches its runs to.
+    /// The substituted store the pages read and persist the recent paths through.
     /// </summary>
-    private readonly ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>> updateBackup =
-        Substitute.For<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
-
-    /// <summary>
-    /// The substituted handler the verify page dispatches its runs to.
-    /// </summary>
-    private readonly IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>> verifyBackup =
-        Substitute.For<IQueryHandler<VerifyBackupQuery, Result<BackupOutcome>>>();
-
-    /// <summary>
-    /// The substituted handler the pages read the recent paths through.
-    /// </summary>
-    private readonly IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery =
-        Substitute.For<IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings>>();
-
-    /// <summary>
-    /// The substituted handler the pages persist the recent paths through.
-    /// </summary>
-    private readonly ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPaths =
-        Substitute.For<ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result>>();
+    private readonly ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
 
     /// <summary>
     /// The substituted folder picker the browse commands go through.
     /// </summary>
     private readonly IFilePickerService filePicker = Substitute.For<IFilePickerService>();
-
-    /// <summary>
-    /// The substituted handler backing backup detection.
-    /// </summary>
-    private readonly IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind =
-        Substitute.For<IQueryHandler<DetectManifestKindQuery, ManifestKind>>();
 
     /// <summary>
     /// The synchronization context that was installed before the test, restored afterwards.
@@ -207,14 +178,14 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         TaskCompletionSource<ManifestKind> slowProbe = new();
 
         _ = this
-            .detectManifestKind.HandleAsync(
-                new DetectManifestKindQuery("slow-backup"),
+            .operations.DetectManifestKindAsync(
+                "slow-backup",
                 Arg.Any<CancellationToken>()
             )
             .Returns(slowProbe.Task);
         _ = this
-            .detectManifestKind.HandleAsync(
-                new DetectManifestKindQuery("not-a-backup"),
+            .operations.DetectManifestKindAsync(
+                "not-a-backup",
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(ManifestKind.Missing));
@@ -243,8 +214,8 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         TaskCompletionSource<ManifestKind> probe = new();
 
         _ = this
-            .detectManifestKind.HandleAsync(
-                Arg.Any<DetectManifestKindQuery>(),
+            .operations.DetectManifestKindAsync(
+                Arg.Any<string>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(probe.Task);
@@ -270,19 +241,14 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     [Fact]
-    internal async Task StartCommand_OnTheRestorePage_SendsTheRestoreMessageAndItsSuccessTitle()
+    internal async Task StartCommand_OnTheRestorePage_SendsTheRestoreRequestAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
-        var commands = StubRestoreCapturingCommands();
+        List<IProgress<BackupStatus>?> progresses = [];
+        var requests = StubRestoreCapturingRequests(progresses);
         StubRememberedPaths();
 
-        RestoreBackupViewModel sut = new(
-            this.restoreBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        )
+        RestoreBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker)
         {
             SourcePath = "backup-source",
             DestinationPath = "backup-destination",
@@ -292,37 +258,33 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => _ = Assert.Single(commands),
-            () => Assert.Equal("backup-source", commands[0].BackupPath),
-            () => Assert.Equal("backup-destination", commands[0].DestinationPath),
-            () => Assert.Equal("backup-password", commands[0].Password),
-            () => Assert.False(commands[0].ProceedOnWarnings),
-            () => Assert.NotNull(commands[0].Progress),
+            () => _ = Assert.Single(requests),
+            () => Assert.Equal("backup-source", requests[0].SourcePath),
+            () => Assert.Equal("backup-destination", requests[0].DestinationPath),
+            () => Assert.Equal("backup-password", requests[0].Password),
+            () => Assert.False(requests[0].ProceedOnWarnings),
+            () => Assert.NotNull(Assert.Single(progresses)),
             () => Assert.True(sut.ResultIsSuccess),
             () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
         );
     }
 
     [Fact]
-    internal async Task StartCommand_OnTheUpdatePage_SendsTheUpdateMessageAndItsSuccessTitle()
+    internal async Task StartCommand_OnTheUpdatePage_SendsTheUpdateRequestAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
-        List<UpdateBackupCommand> commands = [];
+        List<UpdateBackupRequest> requests = [];
+        List<IProgress<BackupStatus>?> progresses = [];
         _ = this
-            .updateBackup.HandleAsync(
-                Arg.Do<UpdateBackupCommand>(commands.Add),
+            .operations.UpdateAsync(
+                Arg.Do<UpdateBackupRequest>(requests.Add),
+                Arg.Do<IProgress<BackupStatus>?>(progresses.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(SuccessOutcome()));
         StubRememberedPaths();
 
-        UpdateBackupViewModel sut = new(
-            this.updateBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        )
+        UpdateBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker)
         {
             SourcePath = "backup-source",
             DestinationPath = "backup-destination",
@@ -332,37 +294,33 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => _ = Assert.Single(commands),
-            () => Assert.Equal("backup-source", commands[0].SourcePath),
-            () => Assert.Equal("backup-destination", commands[0].BackupPath),
-            () => Assert.Equal("backup-password", commands[0].Password),
-            () => Assert.False(commands[0].ProceedOnWarnings),
-            () => Assert.NotNull(commands[0].Progress),
+            () => _ = Assert.Single(requests),
+            () => Assert.Equal("backup-source", requests[0].SourcePath),
+            () => Assert.Equal("backup-destination", requests[0].DestinationPath),
+            () => Assert.Equal("backup-password", requests[0].Password),
+            () => Assert.False(requests[0].ProceedOnWarnings),
+            () => Assert.NotNull(Assert.Single(progresses)),
             () => Assert.True(sut.ResultIsSuccess),
             () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
         );
     }
 
     [Fact]
-    internal async Task StartCommand_OnTheVerifyPage_SendsTheVerifyMessageAndItsSuccessTitle()
+    internal async Task StartCommand_OnTheVerifyPage_SendsTheVerifyRequestAndItsSuccessTitle()
     {
         StubDetection(ManifestKind.Encrypted);
-        List<VerifyBackupQuery> queries = [];
+        List<VerifyBackupRequest> requests = [];
+        List<IProgress<BackupStatus>?> progresses = [];
         _ = this
-            .verifyBackup.HandleAsync(
-                Arg.Do<VerifyBackupQuery>(queries.Add),
+            .operations.VerifyAsync(
+                Arg.Do<VerifyBackupRequest>(requests.Add),
+                Arg.Do<IProgress<BackupStatus>?>(progresses.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(SuccessOutcome()));
         StubRememberedPaths();
 
-        VerifyBackupViewModel sut = new(
-            this.verifyBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        )
+        VerifyBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker)
         {
             SourcePath = "backup-source",
             Password = "backup-password",
@@ -371,10 +329,10 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => _ = Assert.Single(queries),
-            () => Assert.Equal("backup-source", queries[0].BackupPath),
-            () => Assert.Equal("backup-password", queries[0].Password),
-            () => Assert.NotNull(queries[0].Progress),
+            () => _ = Assert.Single(requests),
+            () => Assert.Equal("backup-source", requests[0].BackupPath),
+            () => Assert.Equal("backup-password", requests[0].Password),
+            () => Assert.NotNull(Assert.Single(progresses)),
             () => Assert.True(sut.ResultIsSuccess),
             () => Assert.Equal(Strings.VerifySuccessTitle, sut.ResultTitle)
         );
@@ -416,8 +374,8 @@ public sealed class ExistingBackupViewModelTests : IDisposable
 
         List<RecentPathSettings> saved = [];
         _ = this
-            .saveRecentPaths.HandleAsync(
-                Arg.Do<SaveSettingsCommand<RecentPathSettings>>(command => saved.Add(command.Settings)),
+            .settingsStore.SaveAsync(
+                Arg.Do<RecentPathSettings>(saved.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Result.Success());
@@ -459,13 +417,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         StubPickedFolders("picked-backup", "picked-recovery");
         StubRememberedPaths();
 
-        RestoreBackupViewModel sut = new(
-            this.restoreBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        );
+        RestoreBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker);
 
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
         await sut.PickDestinationFolderCommand.ExecuteAsync(null);
@@ -483,13 +435,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         StubPickedFolders("picked-scan", "picked-backup");
         StubRememberedPaths();
 
-        UpdateBackupViewModel sut = new(
-            this.updateBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        );
+        UpdateBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker);
 
         await sut.PickSourceFolderCommand.ExecuteAsync(null);
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
@@ -507,13 +453,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         StubPickedFolders("picked-backup", null);
         StubRememberedPaths();
 
-        VerifyBackupViewModel sut = new(
-            this.verifyBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        );
+        VerifyBackupViewModel sut = new(this.operations, this.settingsStore, this.filePicker);
 
         await sut.PickBackupFolderCommand.ExecuteAsync(null);
         var pathAfterPicking = sut.SourcePath;
@@ -528,7 +468,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// Builds the successful outcome the substituted handlers report.
+    /// Builds the successful outcome the substituted operations report.
     /// </summary>
     /// <returns>A successful result carrying a completed successful <see cref="BackupResult"/>.</returns>
     private static Result<BackupOutcome> SuccessOutcome()
@@ -546,12 +486,7 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     {
         StubRememberedPaths();
 
-        return new TestExistingBackupViewModel(
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker,
-            this.detectManifestKind
-        );
+        return new TestExistingBackupViewModel(this.operations, this.settingsStore, this.filePicker);
     }
 
     /// <summary>
@@ -566,27 +501,9 @@ public sealed class ExistingBackupViewModelTests : IDisposable
 
         return operation switch
         {
-            ExistingBackupPage.Restore => new RestoreBackupViewModel(
-                this.restoreBackup,
-                this.recentPathsQuery,
-                this.saveRecentPaths,
-                this.filePicker,
-                this.detectManifestKind
-            ),
-            ExistingBackupPage.Update => new UpdateBackupViewModel(
-                this.updateBackup,
-                this.recentPathsQuery,
-                this.saveRecentPaths,
-                this.filePicker,
-                this.detectManifestKind
-            ),
-            ExistingBackupPage.Verify => new VerifyBackupViewModel(
-                this.verifyBackup,
-                this.recentPathsQuery,
-                this.saveRecentPaths,
-                this.filePicker,
-                this.detectManifestKind
-            ),
+            ExistingBackupPage.Restore => new RestoreBackupViewModel(this.operations, this.settingsStore, this.filePicker),
+            ExistingBackupPage.Update => new UpdateBackupViewModel(this.operations, this.settingsStore, this.filePicker),
+            ExistingBackupPage.Verify => new VerifyBackupViewModel(this.operations, this.settingsStore, this.filePicker),
             _ => throw new ArgumentOutOfRangeException(nameof(operation)),
         };
     }
@@ -598,28 +515,25 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     private void StubDetection(ManifestKind kind)
     {
         _ = this
-            .detectManifestKind.HandleAsync(
-                Arg.Any<DetectManifestKindQuery>(),
+            .operations.DetectManifestKindAsync(
+                Arg.Any<string>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(kind));
     }
 
     /// <summary>
-    /// Stubs the remembered paths, since an unstubbed handler hands the page a
+    /// Stubs the remembered paths, since an unstubbed store hands the page a
     /// <see langword="null"/> settings object.
     /// </summary>
     private void StubRememberedPaths()
     {
         _ = this
-            .recentPathsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
             .Returns(new RecentPathSettings("remembered-source", "remembered-destination"));
         _ = this
-            .saveRecentPaths.HandleAsync(
-                Arg.Any<SaveSettingsCommand<RecentPathSettings>>(),
+            .settingsStore.SaveAsync(
+                Arg.Any<RecentPathSettings>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Result.Success());
@@ -637,38 +551,55 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// Makes every operation handler report a trivial success, so a test can assert on what the page
+    /// Makes every backup operation report a trivial success, so a test can assert on what the page
     /// did afterwards rather than on the outcome itself.
     /// </summary>
     private void StubOperationsSucceed()
     {
         _ = this
-            .restoreBackup.HandleAsync(Arg.Any<RestoreBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.RestoreAsync(
+                Arg.Any<RestoreBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Task.FromResult(SuccessOutcome()));
         _ = this
-            .updateBackup.HandleAsync(Arg.Any<UpdateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.UpdateAsync(
+                Arg.Any<UpdateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Task.FromResult(SuccessOutcome()));
         _ = this
-            .verifyBackup.HandleAsync(Arg.Any<VerifyBackupQuery>(), Arg.Any<CancellationToken>())
+            .operations.VerifyAsync(
+                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Task.FromResult(SuccessOutcome()));
     }
 
     /// <summary>
-    /// Makes the restore handler report a trivial success and records every command it receives.
+    /// Makes the restore operation report a trivial success and records every request and progress
+    /// sink it receives.
     /// </summary>
-    /// <returns>The list the captured commands are appended to.</returns>
-    private List<RestoreBackupCommand> StubRestoreCapturingCommands()
+    /// <param name="progresses">The list the captured progress sinks are appended to.</param>
+    /// <returns>The list the captured requests are appended to.</returns>
+    private List<RestoreBackupRequest> StubRestoreCapturingRequests(
+        List<IProgress<BackupStatus>?> progresses
+    )
     {
-        List<RestoreBackupCommand> commands = [];
+        List<RestoreBackupRequest> requests = [];
 
         _ = this
-            .restoreBackup.HandleAsync(
-                Arg.Do<RestoreBackupCommand>(commands.Add),
+            .operations.RestoreAsync(
+                Arg.Do<RestoreBackupRequest>(requests.Add),
+                Arg.Do<IProgress<BackupStatus>?>(progresses.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(SuccessOutcome()));
 
-        return commands;
+        return requests;
     }
 
     /// <summary>
@@ -695,16 +626,14 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     /// the source path, as it does on the restore and verify pages. Its operation is never started by
     /// the tests that use it, so it reports a canned success.
     /// </summary>
-    /// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-    /// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+    /// <param name="operations">The backup operations backing backup detection.</param>
+    /// <param name="settingsStore">The store that loads and saves the recently used paths.</param>
     /// <param name="filePicker">The folder picker service.</param>
-    /// <param name="detectManifestKind">The handler backing backup detection.</param>
     private sealed class TestExistingBackupViewModel(
-        IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-        ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
-        IFilePickerService filePicker,
-        IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind
-    ) : ExistingBackupViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker, detectManifestKind)
+        IBackupOperations operations,
+        ISettingsStore settingsStore,
+        IFilePickerService filePicker
+    ) : ExistingBackupViewModelBase(operations, settingsStore, filePicker)
     {
         /// <inheritdoc/>
         protected override string BackupPath => SourcePath;

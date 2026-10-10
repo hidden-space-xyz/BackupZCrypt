@@ -1,12 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
-using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Models;
@@ -27,32 +23,14 @@ namespace BackupZCrypt.Desktop.ViewModels;
 internal sealed partial class SettingsViewModel : ViewModelBase
 {
     /// <summary>
-    /// The handler that loads the saved algorithm defaults.
+    /// The store the algorithm defaults and the language preference are loaded and saved through.
     /// </summary>
-    private readonly IQueryHandler<
-        GetSettingsQuery<BackupCreationSettings>,
-        BackupCreationSettings
-    > creationDefaultsQuery;
+    private readonly ISettingsStore settingsStore;
 
     /// <summary>
-    /// The handler that loads the saved language preference.
+    /// The service that estimates how long a backup of a given size would take.
     /// </summary>
-    private readonly IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings> languageQuery;
-
-    /// <summary>
-    /// The handler that persists the algorithm defaults.
-    /// </summary>
-    private readonly ICommandHandler<SaveSettingsCommand<BackupCreationSettings>, Result> saveCreationDefaults;
-
-    /// <summary>
-    /// The handler that persists the language preference.
-    /// </summary>
-    private readonly ICommandHandler<SaveSettingsCommand<LanguageSettings>, Result> saveLanguage;
-
-    /// <summary>
-    /// The handler that estimates how long a backup of a given size would take.
-    /// </summary>
-    private readonly IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>> estimateBenchmark;
+    private readonly IBackupBenchmarkService benchmarkService;
 
     /// <summary>
     /// A value indicating whether the selections are being set from the stored settings, during which
@@ -196,34 +174,23 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// Initializes a new instance of the <see cref="SettingsViewModel"/> class, building the selectable
     /// algorithm and language option lists from the registered strategies.
     /// </summary>
-    /// <param name="creationDefaultsQuery">The handler that loads the saved algorithm defaults.</param>
-    /// <param name="languageQuery">The handler that loads the saved language preference.</param>
-    /// <param name="saveCreationDefaults">The handler that persists the algorithm defaults.</param>
-    /// <param name="saveLanguage">The handler that persists the language preference.</param>
-    /// <param name="settingsFilePathQuery">The handler that resolves the settings file path shown for reference.</param>
-    /// <param name="estimateBenchmark">The handler that estimates backup processing time.</param>
+    /// <param name="settingsStore">The store the algorithm defaults and the language preference are loaded and saved through.</param>
+    /// <param name="benchmarkService">The service that estimates backup processing time.</param>
     /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
     /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
     /// <param name="compressionStrategies">The available compression strategies.</param>
     public SettingsViewModel(
-        IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings> creationDefaultsQuery,
-        IQueryHandler<GetSettingsQuery<LanguageSettings>, LanguageSettings> languageQuery,
-        ICommandHandler<SaveSettingsCommand<BackupCreationSettings>, Result> saveCreationDefaults,
-        ICommandHandler<SaveSettingsCommand<LanguageSettings>, Result> saveLanguage,
-        ISyncQueryHandler<GetSettingsFilePathQuery<BackupCreationSettings>, string> settingsFilePathQuery,
-        IQueryHandler<EstimateBackupBenchmarkQuery, Result<BenchmarkEstimate>> estimateBenchmark,
+        ISettingsStore settingsStore,
+        IBackupBenchmarkService benchmarkService,
         IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
         IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
         IEnumerable<ICompressionStrategy> compressionStrategies
     )
     {
-        ArgumentNullException.ThrowIfNull(settingsFilePathQuery);
+        ArgumentNullException.ThrowIfNull(settingsStore);
 
-        this.creationDefaultsQuery = creationDefaultsQuery;
-        this.languageQuery = languageQuery;
-        this.saveCreationDefaults = saveCreationDefaults;
-        this.saveLanguage = saveLanguage;
-        this.estimateBenchmark = estimateBenchmark;
+        this.settingsStore = settingsStore;
+        this.benchmarkService = benchmarkService;
 
         EncryptionOptions =
         [
@@ -286,9 +253,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
         BenchmarkDataAmount = "100";
         SelectedDataUnit = DataUnitOptions[1];
 
-        SettingsFilePath = settingsFilePathQuery.Handle(
-            new GetSettingsFilePathQuery<BackupCreationSettings>()
-        );
+        SettingsFilePath = settingsStore.GetFilePath<BackupCreationSettings>();
     }
 
     /// <summary>
@@ -327,20 +292,14 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// discarded when the user leaves the page.
     /// </summary>
     /// <remarks>
-    /// The handlers absorb a failure to read the stored settings into the defaults, which match the
-    /// selections the constructor made, so the page always offers a valid configuration to save.
+    /// The settings store absorbs a failure to read the stored settings into the defaults, which match
+    /// the selections the constructor made, so the page always offers a valid configuration to save.
     /// </remarks>
     /// <returns>A task that completes once the settings have been loaded.</returns>
     public override async Task OnNavigatedToAsync()
     {
-        var defaults = await creationDefaultsQuery.HandleAsync(
-            new GetSettingsQuery<BackupCreationSettings>(),
-            CancellationToken.None
-        );
-        var language = await languageQuery.HandleAsync(
-            new GetSettingsQuery<LanguageSettings>(),
-            CancellationToken.None
-        );
+        var defaults = await settingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None);
+        var language = await settingsStore.LoadAsync<LanguageSettings>(CancellationToken.None);
 
         if (!startupLanguageCaptured)
         {
@@ -386,8 +345,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// for the new language to take effect.
     /// </summary>
     /// <remarks>
-    /// A failed write is reported on the page; the handlers already absorb the failure itself into the
-    /// result contract.
+    /// A failed write is reported on the page; the settings store already turns the failure itself
+    /// into a result.
     /// </remarks>
     /// <returns>A task that completes once the settings have been written.</returns>
     [RelayCommand]
@@ -398,10 +357,7 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
         var settings = CurrentDefaults();
 
-        var defaultsResult = await saveCreationDefaults.HandleAsync(
-            new SaveSettingsCommand<BackupCreationSettings>(settings),
-            CancellationToken.None
-        );
+        var defaultsResult = await settingsStore.SaveAsync(settings, CancellationToken.None);
 
         if (!defaultsResult.IsSuccess)
         {
@@ -411,8 +367,8 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
         savedDefaults = settings;
 
-        var languageResult = await saveLanguage.HandleAsync(
-            new SaveSettingsCommand<LanguageSettings>(new LanguageSettings(SelectedLanguage.Code)),
+        var languageResult = await settingsStore.SaveAsync(
+            new LanguageSettings(SelectedLanguage.Code),
             CancellationToken.None
         );
 
@@ -551,14 +507,14 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
         try
         {
-            EstimateBackupBenchmarkQuery query = new(
+            BenchmarkRequest request = new(
                 SelectedEncryption.Id,
                 SelectedKeyDerivation.Id,
                 SelectedCompression.Id,
                 dataBytes
             );
 
-            var estimate = await Task.Run(() => estimateBenchmark.HandleAsync(query));
+            var estimate = await Task.Run(() => benchmarkService.EstimateAsync(request));
 
             if (!estimate.IsSuccess)
             {

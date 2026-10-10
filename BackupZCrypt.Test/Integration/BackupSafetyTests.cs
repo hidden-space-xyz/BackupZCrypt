@@ -3,10 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
@@ -26,7 +23,7 @@ namespace BackupZCrypt.Test.Integration;
 /// user selected is left out silently, and a restore reproduces the files with their metadata.
 /// </summary>
 /// <remarks>
-/// Every case drives the real handlers over real temporary folders, because each guarantee depends on
+/// Every case drives the real backup operations over real temporary folders, because each guarantee depends on
 /// the validator, the orchestrator, and the engine agreeing with one another.
 /// </remarks>
 public sealed class BackupSafetyTests
@@ -105,9 +102,9 @@ public sealed class BackupSafetyTests
 
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => provider
-                .GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>()
-                .HandleAsync(
-                    new CreateBackupCommand(
+                .GetRequiredService<IBackupOperations>()
+                .CreateAsync(
+                    new CreateBackupRequest(
                         secondSource.Path,
                         destination.Path,
                         Password,
@@ -116,10 +113,8 @@ public sealed class BackupSafetyTests
                         KeyDerivationAlgorithm.PBKDF2,
                         CompressionMode.None,
                         ProceedOnWarnings: true
-                    )
-                    {
-                        Progress = progress,
-                    },
+                    ),
+                    progress,
                     cancellation.Token
                 )
         );
@@ -471,14 +466,14 @@ public sealed class BackupSafetyTests
     }
 
     /// <summary>
-    /// Runs a create through its handler.
+    /// Runs a create through the backup operations.
     /// </summary>
     /// <param name="provider">The service provider.</param>
     /// <param name="source">The folder to back up.</param>
     /// <param name="destination">The backup folder.</param>
     /// <param name="password">The password.</param>
-    /// <param name="progress">The progress sink, or <see langword="null"/> for a throwaway one.</param>
-    /// <returns>The handler's result.</returns>
+    /// <param name="progress">The progress sink, or <see langword="null"/> to discard the reports.</param>
+    /// <returns>The operation's result.</returns>
     private static Task<Result<BackupOutcome>> CreateAsync(
         IServiceProvider provider,
         string source,
@@ -488,9 +483,9 @@ public sealed class BackupSafetyTests
     )
     {
         return provider
-            .GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new CreateBackupCommand(
+            .GetRequiredService<IBackupOperations>()
+            .CreateAsync(
+                new CreateBackupRequest(
                     source,
                     destination,
                     password,
@@ -499,22 +494,20 @@ public sealed class BackupSafetyTests
                     KeyDerivationAlgorithm.PBKDF2,
                     CompressionMode.None,
                     ProceedOnWarnings: true
-                )
-                {
-                    Progress = progress ?? new RecordingProgress<BackupStatus>(),
-                },
+                ),
+                progress,
                 TestContext.Current.CancellationToken
             );
     }
 
     /// <summary>
-    /// Runs an update through its handler.
+    /// Runs an update through the backup operations.
     /// </summary>
     /// <param name="provider">The service provider.</param>
     /// <param name="source">The folder the update reads.</param>
     /// <param name="destination">The backup folder.</param>
     /// <param name="proceedOnWarnings">Whether to proceed past warnings.</param>
-    /// <returns>The handler's result.</returns>
+    /// <returns>The operation's result.</returns>
     private static Task<Result<BackupOutcome>> UpdateAsync(
         IServiceProvider provider,
         string source,
@@ -523,24 +516,22 @@ public sealed class BackupSafetyTests
     )
     {
         return provider
-            .GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new UpdateBackupCommand(source, destination, Password, proceedOnWarnings)
-                {
-                    Progress = new RecordingProgress<BackupStatus>(),
-                },
+            .GetRequiredService<IBackupOperations>()
+            .UpdateAsync(
+                new UpdateBackupRequest(source, destination, Password, proceedOnWarnings),
+                new RecordingProgress<BackupStatus>(),
                 TestContext.Current.CancellationToken
             );
     }
 
     /// <summary>
-    /// Runs a restore through its handler, past any warning.
+    /// Runs a restore through the backup operations, past any warning.
     /// </summary>
     /// <param name="provider">The service provider.</param>
     /// <param name="backup">The backup folder.</param>
     /// <param name="destination">The restore folder.</param>
     /// <param name="password">The password.</param>
-    /// <returns>The handler's result.</returns>
+    /// <returns>The operation's result.</returns>
     private static Task<Result<BackupOutcome>> RestoreAsync(
         IServiceProvider provider,
         string backup,
@@ -549,12 +540,10 @@ public sealed class BackupSafetyTests
     )
     {
         return provider
-            .GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new RestoreBackupCommand(backup, destination, password, ProceedOnWarnings: true)
-                {
-                    Progress = new RecordingProgress<BackupStatus>(),
-                },
+            .GetRequiredService<IBackupOperations>()
+            .RestoreAsync(
+                new RestoreBackupRequest(backup, destination, password, ProceedOnWarnings: true),
+                new RecordingProgress<BackupStatus>(),
                 TestContext.Current.CancellationToken
             );
     }
@@ -562,7 +551,7 @@ public sealed class BackupSafetyTests
     /// <summary>
     /// Asserts that an operation ran and every file in it succeeded.
     /// </summary>
-    /// <param name="result">The handler's result.</param>
+    /// <param name="result">The operation's result.</param>
     private static void AssertCompleted(Result<BackupOutcome> result)
     {
         Assert.True(

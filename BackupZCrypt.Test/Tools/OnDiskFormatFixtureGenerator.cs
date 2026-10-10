@@ -1,9 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -154,9 +152,9 @@ public sealed class OnDiskFormatFixtureGenerator
         await using var provider = TestHost.CreateProvider();
 
         var result = await provider
-            .GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>()
-            .HandleAsync(
-                new CreateBackupCommand(
+            .GetRequiredService<IBackupOperations>()
+            .CreateAsync(
+                new CreateBackupRequest(
                     source.Path,
                     target,
                     Password,
@@ -165,10 +163,8 @@ public sealed class OnDiskFormatFixtureGenerator
                     fixture.KeyDerivation,
                     fixture.Compression,
                     ProceedOnWarnings: true
-                )
-                {
-                    Progress = new RecordingProgress<BackupStatus>(),
-                },
+                ),
+                new RecordingProgress<BackupStatus>(),
                 CancellationToken.None
             );
 

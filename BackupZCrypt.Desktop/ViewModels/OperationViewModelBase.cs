@@ -1,10 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -21,16 +18,14 @@ using CommunityToolkit.Mvvm.Input;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// Shared engine for the create/update/restore/verify pages: message execution with progress reporting,
-/// cancellation, the warnings confirmation flow, and the final result panel. Subclasses only describe
-/// how to build their message and which handler executes it.
+/// Shared engine for the create/update/restore/verify pages: operation execution with progress
+/// reporting, cancellation, the warnings confirmation flow, and the final result panel. Subclasses only
+/// describe how to build their request and which operation runs it.
 /// </summary>
-/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+/// <param name="settingsStore">The store the page loads and saves its settings through.</param>
 /// <param name="filePicker">The folder picker service.</param>
 internal abstract partial class OperationViewModelBase(
-    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
+    ISettingsStore settingsStore,
     IFilePickerService filePicker
 ) : ViewModelBase
 {
@@ -212,11 +207,16 @@ internal abstract partial class OperationViewModelBase(
     protected IFilePickerService FilePicker { get; } = filePicker;
 
     /// <summary>
+    /// Gets the store the page loads and saves its settings through, including the recently used paths.
+    /// </summary>
+    protected ISettingsStore SettingsStore { get; } = settingsStore;
+
+    /// <summary>
     /// Loads and applies the most recently used paths the first time the page is shown.
     /// </summary>
     /// <remarks>
-    /// Recent paths are a convenience only, and the handler absorbs a failure to read them into the
-    /// defaults, so the page simply starts with empty inputs in that case.
+    /// Recent paths are a convenience only, and the settings store absorbs a failure to read them
+    /// into the defaults, so the page simply starts with empty inputs in that case.
     /// </remarks>
     /// <returns>A task that completes once the recent paths have been applied.</returns>
     public override async Task OnNavigatedToAsync()
@@ -228,16 +228,13 @@ internal abstract partial class OperationViewModelBase(
 
         recentPathsLoaded = true;
 
-        var recent = await recentPathsQuery.HandleAsync(
-            new GetSettingsQuery<RecentPathSettings>(),
-            CancellationToken.None
-        );
+        var recent = await SettingsStore.LoadAsync<RecentPathSettings>(CancellationToken.None);
 
         ApplyRecentPaths(recent);
     }
 
     /// <summary>
-    /// Builds the page's message from the current inputs and dispatches it to the page's handler.
+    /// Builds the page's request from the current inputs and runs the page's operation with it.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <param name="progress">The sink that receives incremental status updates.</param>
@@ -397,7 +394,7 @@ internal abstract partial class OperationViewModelBase(
     /// a cancellation, or an unexpected exception into the result panel.
     /// </summary>
     /// <remarks>
-    /// The handler funnels its own failures into a <c>Result</c>, so the exception handler is
+    /// The operation funnels its own failures into a <c>Result</c>, so the exception handler is
     /// reached only when something escaped it. The raw exception text is wrapped in the localized
     /// unexpected-error frame rather than shown bare, so the sentence the user reads follows their
     /// language even when the detail inside it cannot be translated. The progress sink is constructed
@@ -555,10 +552,10 @@ internal abstract partial class OperationViewModelBase(
     protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
 
     /// <summary>
-    /// Turns the handler outcome into either a failure list, the warnings confirmation prompt, or
+    /// Turns the operation outcome into either a failure list, the warnings confirmation prompt, or
     /// the success/partial summary, and remembers the used paths when the operation succeeded.
     /// </summary>
-    /// <param name="result">The outcome returned by the page's handler.</param>
+    /// <param name="result">The outcome returned by the page's operation.</param>
     private void HandleResult(Result<BackupOutcome> result)
     {
         if (!result.IsSuccess)
@@ -651,7 +648,7 @@ internal abstract partial class OperationViewModelBase(
     /// </para>
     /// <para>
     /// Only on success, and only after <see cref="ExecuteOperationAsync"/> has already captured the
-    /// value into its message. Clearing on failure would be actively hostile: the commonest reason to
+    /// value into its request. Clearing on failure would be actively hostile: the commonest reason to
     /// re-run a restore is a mistyped password, and the user would have to retype a fifty-character
     /// generated one.
     /// </para>
@@ -728,23 +725,17 @@ internal abstract partial class OperationViewModelBase(
     /// Persists the paths of the completed operation so the pages can pre-fill them next time.
     /// </summary>
     /// <remarks>
-    /// Remembering the last-used paths is a best-effort convenience, and both handlers absorb their
-    /// own storage failures: it must not affect the already-completed operation. The write is
+    /// Remembering the last-used paths is a best-effort convenience, and the settings store absorbs
+    /// its own storage failures: it must not affect the already-completed operation. The write is
     /// deliberately not cancellable — the operation has finished, and cancelling it must not discard
     /// where it ran.
     /// </remarks>
     /// <returns><see langword="true"/> if the paths were persisted; otherwise <see langword="false"/>.</returns>
     private async Task<bool> TrySaveRecentPathsAsync()
     {
-        var recent = await recentPathsQuery.HandleAsync(
-            new GetSettingsQuery<RecentPathSettings>(),
-            CancellationToken.None
-        );
+        var recent = await SettingsStore.LoadAsync<RecentPathSettings>(CancellationToken.None);
 
-        var saved = await saveRecentPathsCommand.HandleAsync(
-            new SaveSettingsCommand<RecentPathSettings>(BuildRecentPaths(recent)),
-            CancellationToken.None
-        );
+        var saved = await SettingsStore.SaveAsync(BuildRecentPaths(recent), CancellationToken.None);
 
         return saved.IsSuccess;
     }

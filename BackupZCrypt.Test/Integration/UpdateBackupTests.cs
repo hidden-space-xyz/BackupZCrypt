@@ -1,10 +1,7 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -32,9 +29,7 @@ public sealed class UpdateBackupTests
     internal async Task Update_ThenRestore_ReflectsModifiedAndAddedFiles()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -44,9 +39,9 @@ public sealed class UpdateBackupTests
         _ = source.WriteText("changing.txt", "original content");
         _ = source.WriteText(Path.Join("dir", "keep.txt"), "nested keep");
 
-        var createResult = await createHandler.HandleAsync(
-            NewCreateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Multiple(
             () => Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess),
@@ -58,9 +53,9 @@ public sealed class UpdateBackupTests
         const string AddedContent = "freshly added file";
         _ = source.WriteText(Path.Join("dir", "added.txt"), AddedContent);
 
-        var updateResult = await updateHandler.HandleAsync(
-            NewUpdateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var updateResult = await operations.UpdateAsync(
+            NewUpdateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Multiple(
             () =>
@@ -77,9 +72,9 @@ public sealed class UpdateBackupTests
             () => Assert.Equal(4, ChunkFiles(destination.Path).Length)
         );
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path),
-            TestContext.Current.CancellationToken
+        var restoreResult = await operations.RestoreAsync(
+            NewRestoreRequest(destination.Path, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.True(
             restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
@@ -120,27 +115,25 @@ public sealed class UpdateBackupTests
         const string Content = "unchanged source content used to repair a missing chunk";
 
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var restored = new TempDir();
 
         _ = source.WriteText("only.txt", Content);
-        var createResult = await createHandler.HandleAsync(
-            NewCreateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess);
 
         var missingChunk = Assert.Single(ChunkFiles(destination.Path));
         File.Delete(missingChunk);
 
-        var updateResult = await updateHandler.HandleAsync(
-            NewUpdateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var updateResult = await operations.UpdateAsync(
+            NewUpdateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         Assert.Multiple(
@@ -153,9 +146,9 @@ public sealed class UpdateBackupTests
             () => _ = Assert.Single(ChunkFiles(destination.Path))
         );
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path),
-            TestContext.Current.CancellationToken
+        var restoreResult = await operations.RestoreAsync(
+            NewRestoreRequest(destination.Path, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.True(
             restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
@@ -173,9 +166,7 @@ public sealed class UpdateBackupTests
     internal async Task Update_SourceFileDeleted_DropsItsEntryAndPrunesOnlyTheChunksNothingElseUses()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var updateHandler = provider.GetRequiredService<ICommandHandler<UpdateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -186,9 +177,9 @@ public sealed class UpdateBackupTests
         var survivorRelativePath = Path.Join("dir", "twin-b.txt");
         _ = source.WriteText(survivorRelativePath, SharedContent);
 
-        var createResult = await createHandler.HandleAsync(
-            NewCreateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Multiple(
             () => Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess),
@@ -199,9 +190,9 @@ public sealed class UpdateBackupTests
         File.Delete(uniquePath);
         File.Delete(twinPath);
 
-        var updateResult = await updateHandler.HandleAsync(
-            NewUpdateCommand(source.Path, destination.Path),
-            TestContext.Current.CancellationToken
+        var updateResult = await operations.UpdateAsync(
+            NewUpdateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Multiple(
             () => Assert.True(updateResult.IsSuccess),
@@ -210,9 +201,9 @@ public sealed class UpdateBackupTests
             () => _ = Assert.Single(ChunkFiles(destination.Path))
         );
 
-        var restoreResult = await restoreHandler.HandleAsync(
-            NewRestoreCommand(destination.Path, restored.Path),
-            TestContext.Current.CancellationToken
+        var restoreResult = await operations.RestoreAsync(
+            NewRestoreRequest(destination.Path, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.True(
             restoreResult.IsSuccess && restoreResult.Value.Completion!.IsSuccess,
@@ -247,15 +238,14 @@ public sealed class UpdateBackupTests
     }
 
     /// <summary>
-    /// Builds an AES, PBKDF2, and Zstd create command that proceeds past advisory warnings and
-    /// records progress into a fresh sink.
+    /// Builds an AES, PBKDF2, and Zstd create request that proceeds past advisory warnings.
     /// </summary>
     /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
-    /// <returns>The assembled command.</returns>
-    private static CreateBackupCommand NewCreateCommand(string sourcePath, string destinationPath)
+    /// <returns>The assembled request.</returns>
+    private static CreateBackupRequest NewCreateRequest(string sourcePath, string destinationPath)
     {
-        return new CreateBackupCommand(
+        return new CreateBackupRequest(
             sourcePath,
             destinationPath,
             Password,
@@ -264,39 +254,30 @@ public sealed class UpdateBackupTests
             KeyDerivationAlgorithm.PBKDF2,
             CompressionMode.Zstd,
             ProceedOnWarnings: true
-        )
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        );
     }
 
     /// <summary>
-    /// Builds an update command that proceeds past advisory warnings and records progress into a
-    /// fresh sink; the archive's own algorithms govern the run.
+    /// Builds an update request that proceeds past advisory warnings; the archive's own
+    /// algorithms govern the run.
     /// </summary>
     /// <param name="sourcePath">The tree whose current contents feed the update.</param>
     /// <param name="backupPath">The existing backup directory to update.</param>
-    /// <returns>The assembled command.</returns>
-    private static UpdateBackupCommand NewUpdateCommand(string sourcePath, string backupPath)
+    /// <returns>The assembled request.</returns>
+    private static UpdateBackupRequest NewUpdateRequest(string sourcePath, string backupPath)
     {
-        return new UpdateBackupCommand(sourcePath, backupPath, Password, ProceedOnWarnings: true)
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        return new UpdateBackupRequest(sourcePath, backupPath, Password, ProceedOnWarnings: true);
     }
 
     /// <summary>
-    /// Builds a restore command that proceeds past advisory warnings and records progress into a
-    /// fresh sink; the archive's own algorithms govern the run.
+    /// Builds a restore request that proceeds past advisory warnings; the archive's own
+    /// algorithms govern the run.
     /// </summary>
     /// <param name="backupPath">The backup directory to restore from.</param>
     /// <param name="destinationPath">The directory the restored files are written to.</param>
-    /// <returns>The assembled command.</returns>
-    private static RestoreBackupCommand NewRestoreCommand(string backupPath, string destinationPath)
+    /// <returns>The assembled request.</returns>
+    private static RestoreBackupRequest NewRestoreRequest(string backupPath, string destinationPath)
     {
-        return new RestoreBackupCommand(backupPath, destinationPath, Password, ProceedOnWarnings: true)
-        {
-            Progress = new RecordingProgress<BackupStatus>(),
-        };
+        return new RestoreBackupRequest(backupPath, destinationPath, Password, ProceedOnWarnings: true);
     }
 }

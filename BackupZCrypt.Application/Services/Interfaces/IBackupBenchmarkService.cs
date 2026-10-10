@@ -1,3 +1,4 @@
+using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 
 namespace BackupZCrypt.Application.Services.Interfaces;
@@ -17,13 +18,16 @@ public interface IBackupBenchmarkService
     /// </summary>
     /// <param name="request">The cryptographic options to exercise and the amount of data to estimate for.</param>
     /// <param name="cancellationToken">A token to cancel the benchmark.</param>
-    /// <returns>An estimate of the total processing time and the measurements it was derived from.</returns>
+    /// <returns>
+    /// An estimate of the total processing time and the measurements it was derived from, or a
+    /// failure carrying the reason the benchmark could not run, such as an algorithm that is not
+    /// registered.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <see cref="BenchmarkRequest.DataBytes"/> is not greater than zero, or the requested encryption
-    /// algorithm is not registered.
+    /// <see cref="BenchmarkRequest.DataBytes"/> is not greater than zero.
     /// </exception>
-    public Task<BenchmarkEstimate> EstimateAsync(
+    public Task<Result<BenchmarkEstimate>> EstimateAsync(
         BenchmarkRequest request,
         CancellationToken cancellationToken = default
     );

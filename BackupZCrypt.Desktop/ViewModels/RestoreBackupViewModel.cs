@@ -1,10 +1,6 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Application.ValueObjects.Settings;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -17,18 +13,14 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// ViewModel for the restore page: reads an existing backup from the source path and writes the
 /// recovered files to the destination path.
 /// </summary>
-/// <param name="restoreBackup">The handler that executes the restore-backup command.</param>
-/// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-/// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+/// <param name="operations">The backup operations the page runs.</param>
+/// <param name="settingsStore">The store that loads and saves the recently used paths.</param>
 /// <param name="filePicker">The folder picker service.</param>
-/// <param name="detectManifestKind">The handler that detects the kind of manifest at the backup path.</param>
 internal sealed partial class RestoreBackupViewModel(
-    ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>> restoreBackup,
-    IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-    ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
-    IFilePickerService filePicker,
-    IQueryHandler<DetectManifestKindQuery, ManifestKind> detectManifestKind
-) : ExistingBackupViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker, detectManifestKind)
+    IBackupOperations operations,
+    ISettingsStore settingsStore,
+    IFilePickerService filePicker
+) : ExistingBackupViewModelBase(operations, settingsStore, filePicker)
 {
     /// <summary>
     /// Gets the backup location, which for a restore is the source path.
@@ -62,7 +54,7 @@ internal sealed partial class RestoreBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the restore-backup command from the current inputs and dispatches it to its handler.
+    /// Builds the restore-backup request from the current inputs and runs it.
     /// </summary>
     /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
     /// <param name="progress">The sink that receives incremental status updates.</param>
@@ -74,12 +66,11 @@ internal sealed partial class RestoreBackupViewModel(
         CancellationToken cancellationToken
     )
     {
-        var command = new RestoreBackupCommand(SourcePath, DestinationPath, Password, proceedOnWarnings)
-        {
-            Progress = progress,
-        };
-
-        return restoreBackup.HandleAsync(command, cancellationToken);
+        return Operations.RestoreAsync(
+            new RestoreBackupRequest(SourcePath, DestinationPath, Password, proceedOnWarnings),
+            progress,
+            cancellationToken
+        );
     }
 
     /// <summary>

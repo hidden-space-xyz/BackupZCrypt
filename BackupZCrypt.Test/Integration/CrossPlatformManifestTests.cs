@@ -1,9 +1,6 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
 using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
@@ -40,8 +37,7 @@ public sealed class CrossPlatformManifestTests
     internal async Task CreateThenRestore_NestedTree_RecordsForwardSlashPathsAndRebuildsTheSameStructure()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -51,7 +47,7 @@ public sealed class CrossPlatformManifestTests
         _ = source.WriteText(Path.Join("docs", "notes.md"), "# notes");
         _ = source.WriteText(Path.Join("docs", "sub", "deep.txt"), "deep");
 
-        await CreateBackupAsync(createHandler, source.Path, destination.Path);
+        await CreateBackupAsync(operations, source.Path, destination.Path);
 
         var manifest = await ReadManifestAsync(provider, destination.Path);
         var manifestPaths = manifest.Files.Select(static f => f.OriginalPath).ToList();
@@ -66,7 +62,7 @@ public sealed class CrossPlatformManifestTests
             () => Assert.Equivalent(expectedManifestPaths, manifestPaths, strict: true)
         );
 
-        await RestoreBackupAsync(restoreHandler, destination.Path, restored.Path);
+        await RestoreBackupAsync(operations, destination.Path, restored.Path);
 
         var restoredPaths = Directory
             .GetFiles(restored.Path, "*", SearchOption.AllDirectories)
@@ -87,8 +83,7 @@ public sealed class CrossPlatformManifestTests
     internal async Task Restore_ManifestEntryWithBackslashSeparators_IsRejectedOnEveryPlatform()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
@@ -96,14 +91,12 @@ public sealed class CrossPlatformManifestTests
 
         _ = source.WriteText(Path.Join("docs", "notes.md"), "# notes");
 
-        await CreateBackupAsync(createHandler, source.Path, destination.Path);
+        await CreateBackupAsync(operations, source.Path, destination.Path);
         await RewriteManifestPathsAsync(provider, destination.Path, static _ => "docs\\notes.md");
 
-        var result = await restoreHandler.HandleAsync(
-            new RestoreBackupCommand(destination.Path, restored.Path, Password, ProceedOnWarnings: true)
-            {
-                Progress = new RecordingProgress<BackupStatus>(),
-            },
+        var result = await operations.RestoreAsync(
+            new RestoreBackupRequest(destination.Path, restored.Path, Password, ProceedOnWarnings: true),
+            new RecordingProgress<BackupStatus>(),
             TestContext.Current.CancellationToken
         );
 
@@ -121,25 +114,22 @@ public sealed class CrossPlatformManifestTests
     internal async Task Restore_ManifestPathWithWindowsTraversal_IsRejectedAndWritesNothing()
     {
         await using var provider = TestHost.CreateProvider();
-        var createHandler = provider.GetRequiredService<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
-        var restoreHandler = provider.GetRequiredService<ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>>>();
+        var operations = provider.GetRequiredService<IBackupOperations>();
 
         using var source = new TempDir();
         using var destination = new TempDir();
         using var restored = new TempDir();
 
         _ = source.WriteText("payload.txt", "payload");
-        await CreateBackupAsync(createHandler, source.Path, destination.Path);
+        await CreateBackupAsync(operations, source.Path, destination.Path);
 
         var escapedName = "bzc-escaped-" + Guid.NewGuid().ToString("N") + ".txt";
         var escapeTarget = Path.Join(Path.GetTempPath(), escapedName);
         await RewriteManifestPathsAsync(provider, destination.Path, _ => "..\\..\\" + escapedName);
 
-        var result = await restoreHandler.HandleAsync(
-            new RestoreBackupCommand(destination.Path, restored.Path, Password, ProceedOnWarnings: true)
-            {
-                Progress = new RecordingProgress<BackupStatus>(),
-            },
+        var result = await operations.RestoreAsync(
+            new RestoreBackupRequest(destination.Path, restored.Path, Password, ProceedOnWarnings: true),
+            new RecordingProgress<BackupStatus>(),
             TestContext.Current.CancellationToken
         );
 
@@ -171,18 +161,18 @@ public sealed class CrossPlatformManifestTests
     /// advisory warnings, and fails the test if creation did not succeed, so a later assertion
     /// never reports a missing archive as a portability defect.
     /// </summary>
-    /// <param name="handler">The handler that executes the create command.</param>
+    /// <param name="operations">The backup operations to run it with.</param>
     /// <param name="sourcePath">The tree to back up.</param>
     /// <param name="destinationPath">The directory the backup is written to.</param>
     /// <returns>A task that completes once the backup exists.</returns>
     private static async Task CreateBackupAsync(
-        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> handler,
+        IBackupOperations operations,
         string sourcePath,
         string destinationPath
     )
     {
-        var result = await handler.HandleAsync(
-            new CreateBackupCommand(
+        var result = await operations.CreateAsync(
+            new CreateBackupRequest(
                 sourcePath,
                 destinationPath,
                 Password,
@@ -192,9 +182,6 @@ public sealed class CrossPlatformManifestTests
                 CompressionMode.None,
                 ProceedOnWarnings: true
             )
-            {
-                Progress = new RecordingProgress<BackupStatus>(),
-            }
         );
 
         Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Backup creation failed.");
@@ -203,21 +190,18 @@ public sealed class CrossPlatformManifestTests
     /// <summary>
     /// Restores a backup and fails the test if the restore did not fully succeed.
     /// </summary>
-    /// <param name="handler">The handler that executes the restore command.</param>
+    /// <param name="operations">The backup operations to run it with.</param>
     /// <param name="backupPath">The backup root to restore from.</param>
     /// <param name="destinationPath">The directory the files are reconstructed into.</param>
     /// <returns>A task that completes once the restore has finished.</returns>
     private static async Task RestoreBackupAsync(
-        ICommandHandler<RestoreBackupCommand, Result<BackupOutcome>> handler,
+        IBackupOperations operations,
         string backupPath,
         string destinationPath
     )
     {
-        var result = await handler.HandleAsync(
-            new RestoreBackupCommand(backupPath, destinationPath, Password, ProceedOnWarnings: true)
-            {
-                Progress = new RecordingProgress<BackupStatus>(),
-            }
+        var result = await operations.RestoreAsync(
+            new RestoreBackupRequest(backupPath, destinationPath, Password, ProceedOnWarnings: true)
         );
 
         Assert.True(result.IsSuccess && result.Value.Completion!.IsSuccess, "Restore failed.");

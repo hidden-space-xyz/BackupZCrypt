@@ -1,7 +1,4 @@
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -69,28 +66,14 @@ public sealed class CreateBackupViewModelTests
     ];
 
     /// <summary>
-    /// The substituted handler the page dispatches the create command to.
+    /// The substituted backup operations the page runs the create request through.
     /// </summary>
-    private readonly ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup =
-        Substitute.For<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+    private readonly IBackupOperations operations = Substitute.For<IBackupOperations>();
 
     /// <summary>
-    /// The substituted handler supplying the remembered paths.
+    /// The substituted store supplying the remembered paths and the saved algorithm defaults.
     /// </summary>
-    private readonly IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery =
-        Substitute.For<IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings>>();
-
-    /// <summary>
-    /// The substituted handler the page persists the recent paths through.
-    /// </summary>
-    private readonly ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPaths =
-        Substitute.For<ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result>>();
-
-    /// <summary>
-    /// The substituted handler supplying the saved algorithm defaults.
-    /// </summary>
-    private readonly IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings> creationDefaultsQuery =
-        Substitute.For<IQueryHandler<GetSettingsQuery<BackupCreationSettings>, BackupCreationSettings>>();
+    private readonly ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
 
     /// <summary>
     /// The substituted folder picker, never exercised here but required by the constructor.
@@ -103,16 +86,9 @@ public sealed class CreateBackupViewModelTests
     private readonly IClipboardService clipboardService = Substitute.For<IClipboardService>();
 
     /// <summary>
-    /// The substituted handler behind password generation.
+    /// The substituted service behind password generation and the strength meter.
     /// </summary>
-    private readonly ISyncQueryHandler<GeneratePasswordQuery, string> generatePassword =
-        Substitute.For<ISyncQueryHandler<GeneratePasswordQuery, string>>();
-
-    /// <summary>
-    /// The substituted handler behind the strength meter.
-    /// </summary>
-    private readonly ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis> analyzePasswordStrength =
-        Substitute.For<ISyncQueryHandler<AnalyzePasswordStrengthQuery, PasswordStrengthAnalysis>>();
+    private readonly IPasswordService passwordService = Substitute.For<IPasswordService>();
 
     [Fact]
     internal async Task StartCommand_CanExecute_AgreesWithTheRequestValidatorOnEveryPasswordRule()
@@ -170,10 +146,14 @@ public sealed class CreateBackupViewModelTests
     internal void GeneratePasswordCommand_FillsBothFieldsWithALongPasswordUsingEveryCharacterClass()
     {
         var sut = CreateSut();
-        List<GeneratePasswordQuery> queries = [];
+        const PasswordGenerationOptions EveryCharacterClass =
+            PasswordGenerationOptions.IncludeUppercase
+            | PasswordGenerationOptions.IncludeLowercase
+            | PasswordGenerationOptions.IncludeNumbers
+            | PasswordGenerationOptions.IncludeSpecialCharacters;
 
         _ = this
-            .generatePassword.Handle(Arg.Do<GeneratePasswordQuery>(queries.Add))
+            .passwordService.GeneratePassword(Arg.Any<int>(), Arg.Any<PasswordGenerationOptions>())
             .Returns("GENERATED-PASSWORD");
 
         sut.RevealPassword = true;
@@ -181,19 +161,8 @@ public sealed class CreateBackupViewModelTests
 
         sut.GeneratePasswordCommand.Execute(null);
 
-        GeneratePasswordQuery[] expectedQueries =
-        [
-            new GeneratePasswordQuery(
-                50,
-                PasswordGenerationOptions.IncludeUppercase
-                    | PasswordGenerationOptions.IncludeLowercase
-                    | PasswordGenerationOptions.IncludeNumbers
-                    | PasswordGenerationOptions.IncludeSpecialCharacters
-            ),
-        ];
-
         Assert.Multiple(
-            () => Assert.Equal(expectedQueries, queries),
+            () => _ = this.passwordService.Received(1).GeneratePassword(50, EveryCharacterClass),
             () => Assert.Equal("GENERATED-PASSWORD", sut.Password),
             () => Assert.Equal("GENERATED-PASSWORD", sut.ConfirmPassword),
             () => Assert.False(sut.RevealPassword),
@@ -239,7 +208,7 @@ public sealed class CreateBackupViewModelTests
             [MessageCode.TipIncreaseLength]
         );
         _ = this
-            .analyzePasswordStrength.Handle(new AnalyzePasswordStrengthQuery("weak-password"))
+            .passwordService.AnalyzePasswordStrength("weak-password")
             .Returns(analysis);
 
         sut.Password = "weak-password";
@@ -282,10 +251,7 @@ public sealed class CreateBackupViewModelTests
     {
         var sut = CreateSut();
         _ = this
-            .creationDefaultsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
             .Returns(
                 new BackupCreationSettings(
                     (EncryptionAlgorithm)99,
@@ -294,7 +260,7 @@ public sealed class CreateBackupViewModelTests
                 )
             );
 
-        var commands = StubCreateCapturingCommands();
+        var requests = StubCreateCapturingRequests();
 
         await sut.OnNavigatedToAsync();
 
@@ -306,13 +272,13 @@ public sealed class CreateBackupViewModelTests
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.Single(commands),
-            () => Assert.Equal(EncryptionAlgorithm.Aes, commands[0].EncryptionAlgorithm),
-            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, commands[0].KeyDerivationAlgorithm),
-            () => Assert.Equal(CompressionMode.ZstdBest, commands[0].Compression),
-            () => Assert.Equal("good-password", commands[0].Password),
-            () => Assert.Equal("good-password", commands[0].ConfirmPassword),
-            () => Assert.False(commands[0].ProceedOnWarnings),
+            () => Assert.Single(requests),
+            () => Assert.Equal(EncryptionAlgorithm.Aes, requests[0].EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Scrypt, requests[0].KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.ZstdBest, requests[0].Compression),
+            () => Assert.Equal("good-password", requests[0].Password),
+            () => Assert.Equal("good-password", requests[0].ConfirmPassword),
+            () => Assert.False(requests[0].ProceedOnWarnings),
             () =>
                 Assert.Equal(
                     AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes),
@@ -358,10 +324,7 @@ public sealed class CreateBackupViewModelTests
     {
         var sut = CreateSut();
         _ = this
-            .creationDefaultsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
             .Returns(
                 new BackupCreationSettings(
                     (EncryptionAlgorithm)77,
@@ -384,10 +347,7 @@ public sealed class CreateBackupViewModelTests
     {
         var sut = CreateSut();
         _ = this
-            .creationDefaultsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
             .Returns(
                 new BackupCreationSettings(
                     EncryptionAlgorithm.Serpent,
@@ -445,10 +405,7 @@ public sealed class CreateBackupViewModelTests
     {
         var sut = CreateSut();
         _ = this
-            .creationDefaultsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
             .Returns(
                 new BackupCreationSettings(
                     EncryptionAlgorithm.Serpent,
@@ -457,7 +414,7 @@ public sealed class CreateBackupViewModelTests
                 )
             );
 
-        var commands = StubCreateCapturingCommands();
+        var requests = StubCreateCapturingRequests();
 
         sut.IsRunning = true;
         await sut.OnNavigatedToAsync();
@@ -471,10 +428,10 @@ public sealed class CreateBackupViewModelTests
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.Single(commands),
-            () => Assert.Equal(EncryptionAlgorithm.Aes, commands[0].EncryptionAlgorithm),
-            () => Assert.Equal(KeyDerivationAlgorithm.Argon2id, commands[0].KeyDerivationAlgorithm),
-            () => Assert.Equal(CompressionMode.None, commands[0].Compression)
+            () => Assert.Single(requests),
+            () => Assert.Equal(EncryptionAlgorithm.Aes, requests[0].EncryptionAlgorithm),
+            () => Assert.Equal(KeyDerivationAlgorithm.Argon2id, requests[0].KeyDerivationAlgorithm),
+            () => Assert.Equal(CompressionMode.None, requests[0].Compression)
         );
     }
 
@@ -491,55 +448,44 @@ public sealed class CreateBackupViewModelTests
 
     /// <summary>
     /// Builds the page with the settings reads and the strength analysis stubbed, since an unstubbed
-    /// handler hands the page a <see langword="null"/> settings object.
+    /// store hands the page a <see langword="null"/> settings object.
     /// </summary>
     /// <returns>The system under test.</returns>
     private CreateBackupViewModel CreateSut()
     {
         _ = this
-            .recentPathsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
             .Returns(RecentPathSettings.DefaultValue);
         _ = this
-            .saveRecentPaths.HandleAsync(
-                Arg.Any<SaveSettingsCommand<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.SaveAsync(Arg.Any<RecentPathSettings>(), Arg.Any<CancellationToken>())
             .Returns(Result.Success());
         _ = this
-            .creationDefaultsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<BackupCreationSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
             .Returns(BackupCreationSettings.DefaultValue);
-        _ = this.analyzePasswordStrength.Handle(Arg.Any<AnalyzePasswordStrengthQuery>())
+        _ = this.passwordService.AnalyzePasswordStrength(Arg.Any<string>())
             .Returns(new PasswordStrengthAnalysis(PasswordStrength.Good, 70, 72.5, []));
 
         return new CreateBackupViewModel(
-            this.createBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.creationDefaultsQuery,
+            this.operations,
+            this.settingsStore,
             this.filePicker,
             this.clipboardService,
-            this.generatePassword,
-            this.analyzePasswordStrength
+            this.passwordService
         );
     }
 
     /// <summary>
-    /// Makes the create handler report a trivial success and records every command it receives.
+    /// Makes the create operation report a trivial success and records every request it receives.
     /// </summary>
-    /// <returns>The list the captured commands are appended to.</returns>
-    private List<CreateBackupCommand> StubCreateCapturingCommands()
+    /// <returns>The list the captured requests are appended to.</returns>
+    private List<CreateBackupRequest> StubCreateCapturingRequests()
     {
-        List<CreateBackupCommand> commands = [];
+        List<CreateBackupRequest> requests = [];
 
         _ = this
-            .createBackup.HandleAsync(
-                Arg.Do<CreateBackupCommand>(commands.Add),
+            .operations.CreateAsync(
+                Arg.Do<CreateBackupRequest>(requests.Add),
+                Arg.Any<IProgress<BackupStatus>?>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
@@ -552,6 +498,6 @@ public sealed class CreateBackupViewModelTests
                 )
             );
 
-        return commands;
+        return requests;
     }
 }

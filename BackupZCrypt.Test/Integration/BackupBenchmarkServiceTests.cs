@@ -2,6 +2,7 @@ using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.ValueObjects.Benchmark;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -75,10 +76,12 @@ public sealed class BackupBenchmarkServiceTests
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
 
-        var estimate = await service.EstimateAsync(
+        var result = await service.EstimateAsync(
             NewRequest(OneGigabyte, compression, encryption),
             TestContext.Current.CancellationToken
         );
+        Assert.True(result.IsSuccess, "The benchmark of a registered configuration failed.");
+        var estimate = result.Value;
 
         var recomputed = BackupBenchmarkService.ComputeEstimatedDuration(
             estimate.KeyDerivationDuration,
@@ -133,7 +136,7 @@ public sealed class BackupBenchmarkServiceTests
     }
 
     [Fact]
-    internal async Task EstimateAsync_UnregisteredEncryptionAlgorithm_Throws()
+    internal async Task EstimateAsync_UnregisteredEncryptionAlgorithm_ReportsAnUnexpectedErrorInsteadOfThrowing()
     {
         await using var provider = TestHost.CreateProvider();
         var service = provider.GetRequiredService<IBackupBenchmarkService>();
@@ -143,9 +146,9 @@ public sealed class BackupBenchmarkServiceTests
             EncryptionAlgorithm = (EncryptionAlgorithm)999,
         };
 
-        _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => service.EstimateAsync(request, TestContext.Current.CancellationToken)
-        );
+        var result = await service.EstimateAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(MessageCode.UnexpectedErrorFormat, Assert.Single(result.Errors).Code);
     }
 
     [Fact]

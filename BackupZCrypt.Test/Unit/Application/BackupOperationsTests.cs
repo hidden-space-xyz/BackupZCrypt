@@ -1,9 +1,10 @@
-using BackupZCrypt.Application.Orchestrators;
+using BackupZCrypt.Application.Services;
 using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.Validators.Interfaces;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.ValueObjects.Manifest;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -17,16 +18,17 @@ using NSubstitute.ExceptionExtensions;
 namespace BackupZCrypt.Test.Unit.Application;
 
 /// <summary>
-/// Unit tests for the backup operation runner: the validation gate, the preview of an update or
-/// restore, the post-validation source and destination checks, the backup lock, operation dispatch,
-/// cancellation, and unexpected-error mapping. The validator, file system, storage, and backup service
-/// are all substituted, so nothing here touches the real disk.
+/// Unit tests for the backup operations: the validation gate, the preview of an update or restore,
+/// the post-validation source and destination checks, the backup lock, operation dispatch,
+/// cancellation, unexpected-error mapping, and the classification of a picked backup folder. The
+/// validator, file system, storage, backup service, and manifest service are all substituted, so
+/// nothing here touches the real disk.
 /// </summary>
 /// <remarks>
-/// The runner must never delete user data. A create used to empty an existing destination before it
+/// The operations must never delete user data. A create used to empty an existing destination before it
 /// started; the assertions that no deletion was received guard against that coming back.
 /// </remarks>
-public sealed class BackupOperationRunnerTests
+public sealed class BackupOperationsTests
 {
     /// <summary>
     /// The password every request carries, also used as the confirmation so the two always match.
@@ -59,36 +61,36 @@ public sealed class BackupOperationRunnerTests
     /// system is substituted, but the path must be absolute to survive path normalization.
     /// </summary>
     private static readonly string SourceDir = Path.GetFullPath(
-        Path.Join(Path.GetTempPath(), "bzc-runner-src")
+        Path.Join(Path.GetTempPath(), "bzc-operations-src")
     );
 
     /// <summary>
     /// The rooted destination path the requests point at, kept distinct from <see cref="SourceDir"/>.
     /// </summary>
     private static readonly string DestinationDir = Path.GetFullPath(
-        Path.Join(Path.GetTempPath(), "bzc-runner-dst")
+        Path.Join(Path.GetTempPath(), "bzc-operations-dst")
     );
 
     /// <summary>
     /// The substituted validator, which lets a test choose exactly which blocking errors and advisory
-    /// warnings the runner sees without depending on the real validator's file-system probes.
+    /// warnings the operations see without depending on the real validator's file-system probes.
     /// </summary>
     private readonly IBackupRequestValidator validator =
         Substitute.For<IBackupRequestValidator>();
 
     /// <summary>
-    /// The substituted file system the runner probes for the source and destination.
+    /// The substituted file system the operations probe for the source and destination.
     /// </summary>
     private readonly IFileOperationsService fileOperations =
         Substitute.For<IFileOperationsService>();
 
     /// <summary>
-    /// The substituted lock service the runner takes and probes the backup's lock through.
+    /// The substituted lock service the operations take and probe the backup's lock through.
     /// </summary>
     private readonly IFileLockService fileLock = Substitute.For<IFileLockService>();
 
     /// <summary>
-    /// The substituted backup engine the runner dispatches each operation to.
+    /// The substituted backup engine the operations dispatch each run to.
     /// </summary>
     private readonly IChunkedBackupService chunkedBackupService =
         Substitute.For<IChunkedBackupService>();
@@ -99,23 +101,54 @@ public sealed class BackupOperationRunnerTests
     private readonly ISystemStorageService systemStorage = Substitute.For<ISystemStorageService>();
 
     /// <summary>
-    /// The progress sink handed to the runner; assertions check it is forwarded unchanged.
+    /// The substituted manifest service a picked backup folder is classified through.
+    /// </summary>
+    private readonly IManifestService manifestService = Substitute.For<IManifestService>();
+
+    /// <summary>
+    /// The progress sink handed to the operations; assertions check it is forwarded unchanged.
     /// </summary>
     private readonly RecordingProgress<BackupStatus> progress = new();
 
     /// <summary>
-    /// Creates a runner wired to the substituted dependencies.
+    /// Creates the operations wired to the substituted dependencies.
     /// </summary>
     /// <returns>The system under test.</returns>
-    private BackupOperationRunner CreateSut()
+    private BackupOperations CreateSut()
     {
         return new(
             this.validator,
             this.fileOperations,
             this.fileLock,
             this.chunkedBackupService,
-            this.systemStorage
+            this.systemStorage,
+            this.manifestService
         );
+    }
+
+    /// <summary>
+    /// Runs a create, update, or restore request through the operation matching its type, so a
+    /// theory can drive the shared pipeline with each of them.
+    /// </summary>
+    /// <param name="request">The request to run.</param>
+    /// <param name="progress">The sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The outcome of the operation.</returns>
+    private Task<Result<BackupOutcome>> RunAsync(
+        BackupRequest request,
+        IProgress<BackupStatus>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        var sut = this.CreateSut();
+
+        return request switch
+        {
+            CreateBackupRequest create => sut.CreateAsync(create, progress, cancellationToken),
+            UpdateBackupRequest update => sut.UpdateAsync(update, progress, cancellationToken),
+            RestoreBackupRequest restore => sut.RestoreAsync(restore, progress, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(request)),
+        };
     }
 
     /// <summary>
@@ -173,7 +206,7 @@ public sealed class BackupOperationRunnerTests
 
     /// <summary>
     /// Appends a redundant <c>.</c> segment so the raw path differs from its normalized form, letting
-    /// a test prove the runner hands the resolved path to the backup service.
+    /// a test prove the operations hand the resolved path to the backup service.
     /// </summary>
     /// <param name="path">The already-normalized path to perturb.</param>
     /// <returns>A path that normalizes back to <paramref name="path"/>.</returns>
@@ -295,7 +328,7 @@ public sealed class BackupOperationRunnerTests
     }
 
     /// <summary>
-    /// Asserts that the runner never asked the file system to delete anything.
+    /// Asserts that the operations never asked the file system to delete anything.
     /// </summary>
     private void AssertNothingDeleted()
     {
@@ -311,8 +344,7 @@ public sealed class BackupOperationRunnerTests
             .Returns(Messages(MessageCode.PasswordTooShort));
         _ = this.fileOperations.DirectoryExists(Arg.Any<string>()).Returns(true);
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -357,7 +389,7 @@ public sealed class BackupOperationRunnerTests
 
         var request = Request(RunOperation.Create, proceedOnWarnings: proceedOnWarnings);
 
-        var result = await this.CreateSut().RunAsync(request, this.progress, CancellationToken.None);
+        var result = await this.RunAsync(request, this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.True(result.IsSuccess),
@@ -410,8 +442,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(destinationExists);
         this.StubOperationsSucceed();
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(operation), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(operation), this.progress, CancellationToken.None);
 
         Assert.True(result.Value.Completion!.IsSuccess);
 
@@ -433,7 +464,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileLock.AcquireExclusiveLock(lockFile).Returns(backupLock);
         this.StubOperationsSucceed();
 
-        _ = await this.CreateSut().RunAsync(Request(operation), this.progress, CancellationToken.None);
+        _ = await this.RunAsync(Request(operation), this.progress, CancellationToken.None);
 
         Received.InOrder(() =>
         {
@@ -457,7 +488,7 @@ public sealed class BackupOperationRunnerTests
             .Throws(new IOException("in use"));
         this.StubOperationsSucceed();
 
-        var result = await this.CreateSut().RunAsync(Request(operation), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(operation), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
         await this.chunkedBackupService.DidNotReceive()
@@ -486,8 +517,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileLock.IsLockHeld(Arg.Any<string>()).Returns(true);
         this.StubOperationsSucceed();
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
         await this.chunkedBackupService.DidNotReceive()
@@ -518,8 +548,7 @@ public sealed class BackupOperationRunnerTests
             )
             .Returns(Result<BackupResult>.Failure(MessageCode.AllFilesFailed));
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         this.fileOperations.Received(1).DeleteEmptyDirectory(DestinationDir);
@@ -543,8 +572,7 @@ public sealed class BackupOperationRunnerTests
             )
             .Returns(Result<BackupResult>.Failure(MessageCode.AllFilesFailed));
 
-        _ = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
+        _ = await this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
 
         this.AssertNothingDeleted();
     }
@@ -558,8 +586,7 @@ public sealed class BackupOperationRunnerTests
         this.StubOperationsSucceed();
         this.StubPreviews(removedPaths: ["gone.txt"], matchedFiles: 2);
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Update), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Update), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.True(result.Value.NeedsWarningConfirmation),
@@ -589,8 +616,7 @@ public sealed class BackupOperationRunnerTests
         this.StubOperationsSucceed();
         this.StubPreviews(removedPaths: ["a.txt", "b.txt", "c.txt"], matchedFiles: 0);
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Update), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Update), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>(
             [MessageCode.UpdateSourceMismatchFormat],
@@ -606,12 +632,11 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
         this.StubOperationsSucceed();
 
-        var result = await this.CreateSut()
-            .RunAsync(
-                Request(RunOperation.Update, proceedOnWarnings: true),
-                this.progress,
-                CancellationToken.None
-            );
+        var result = await this.RunAsync(
+            Request(RunOperation.Update, proceedOnWarnings: true),
+            this.progress,
+            CancellationToken.None
+        );
 
         Assert.True(result.Value.Completion!.IsSuccess);
         await this.chunkedBackupService.DidNotReceive()
@@ -635,8 +660,7 @@ public sealed class BackupOperationRunnerTests
             .PreviewRestoreAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Result<BackupPreview>.Failure(MessageCode.InvalidPassword));
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>([MessageCode.InvalidPassword], Codes(result.Errors));
         await this.fileOperations.DidNotReceive()
@@ -662,8 +686,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.systemStorage.IsDriveReady("root").Returns(true);
         _ = this.systemStorage.GetAvailableFreeSpace("root").Returns(1_000);
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>([MessageCode.LowDiskSpaceFormat], Codes(result.Value.PendingWarnings));
     }
@@ -688,7 +711,7 @@ public sealed class BackupOperationRunnerTests
             destination: Unnormalized(DestinationDir)
         );
 
-        var result = await this.CreateSut().RunAsync(request, this.progress, cancellation.Token);
+        var result = await this.RunAsync(request, this.progress, cancellation.Token);
 
         Assert.True(result.Value.Completion!.IsSuccess);
 
@@ -733,8 +756,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
         this.StubOperationsSucceed();
 
-        _ = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), null, CancellationToken.None);
+        _ = await this.RunAsync(Request(RunOperation.Create), null, CancellationToken.None);
 
         await this.chunkedBackupService.Received(1)
             .CreateAsync(
@@ -759,8 +781,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
         _ = this.fileOperations.FileExists(SourceDir).Returns(sourceIsFile);
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -780,12 +801,11 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
         this.StubOperationsSucceed();
 
-        var result = await this.CreateSut()
-            .RunAsync(
-                Request(RunOperation.Update, proceedOnWarnings: true),
-                this.progress,
-                CancellationToken.None
-            );
+        var result = await this.RunAsync(
+            Request(RunOperation.Update, proceedOnWarnings: true),
+            this.progress,
+            CancellationToken.None
+        );
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -823,8 +843,7 @@ public sealed class BackupOperationRunnerTests
             )
             .ThrowsAsync(new InvalidOperationException("boom"));
 
-        var result = await this.CreateSut()
-            .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
+        var result = await this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -835,52 +854,6 @@ public sealed class BackupOperationRunnerTests
                 ),
             () => Assert.Equal<object>(["boom"], result.Errors[0].Args)
         );
-    }
-
-    [Fact]
-    internal async Task RunAsync_UnrecognizedOperation_FailsLoudlyInsteadOfSilentlyDoingNothing()
-    {
-        this.PassValidation();
-        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
-        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
-        this.StubOperationsSucceed();
-
-        var result = await this.CreateSut()
-            .RunAsync(new UnrecognizedRequest(), this.progress, CancellationToken.None);
-
-        Assert.Multiple(
-            () => Assert.False(result.IsSuccess),
-            () =>
-                Assert.Equal<MessageCode>(
-                    [MessageCode.UnexpectedErrorFormat],
-                    Codes(result.Errors)
-                )
-        );
-
-        await this.chunkedBackupService.DidNotReceive()
-            .CreateAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            );
-        await this.chunkedBackupService.DidNotReceive()
-            .UpdateAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<UpdateBackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            );
-        await this.chunkedBackupService.DidNotReceive()
-            .RestoreAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<RestoreBackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
-                Arg.Any<CancellationToken>()
-            );
     }
 
     [Fact]
@@ -900,13 +873,12 @@ public sealed class BackupOperationRunnerTests
             .ThrowsAsync(new OperationCanceledException());
 
         _ = await Assert.ThrowsAsync<OperationCanceledException>(
-            () => this.CreateSut()
-                .RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None)
+            () => this.RunAsync(Request(RunOperation.Create), this.progress, CancellationToken.None)
         );
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
+    internal async Task VerifyAsync_OperationCancelled_PropagatesCancellationInsteadOfMappingIt()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -920,12 +892,12 @@ public sealed class BackupOperationRunnerTests
 
         _ = await Assert.ThrowsAsync<OperationCanceledException>(
             () => this.CreateSut()
-                .RunVerifyAsync(VerifyRequest(), this.progress, CancellationToken.None)
+                .VerifyAsync(VerifyRequest(), this.progress, CancellationToken.None)
         );
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_ExistingArchive_SkipsValidationAndNeverWritesToADestination()
+    internal async Task VerifyAsync_ExistingArchive_SkipsValidationAndNeverWritesToADestination()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -940,7 +912,7 @@ public sealed class BackupOperationRunnerTests
         var request = VerifyRequest();
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(request, this.progress, CancellationToken.None);
+            .VerifyAsync(request, this.progress, CancellationToken.None);
 
         Assert.True(result.Value.Completion!.IsSuccess);
 
@@ -956,13 +928,13 @@ public sealed class BackupOperationRunnerTests
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_WhileTheBackupIsBeingModified_ReportsBackupInUse()
+    internal async Task VerifyAsync_WhileTheBackupIsBeingModified_ReportsBackupInUse()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.fileLock.IsLockHeld(Arg.Any<string>()).Returns(true);
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
+            .VerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
 
         Assert.Equal<MessageCode>([MessageCode.BackupInUse], Codes(result.Errors));
         await this.chunkedBackupService.DidNotReceive()
@@ -975,12 +947,12 @@ public sealed class BackupOperationRunnerTests
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_WithoutPassword_ReportsPasswordRequiredBeforeAnyProbing()
+    internal async Task VerifyAsync_WithoutPassword_ReportsPasswordRequiredBeforeAnyProbing()
     {
         var request = VerifyRequest(password: string.Empty);
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(request, this.progress, CancellationToken.None);
+            .VerifyAsync(request, this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -1002,12 +974,12 @@ public sealed class BackupOperationRunnerTests
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_WithAnUnnormalizablePath_ReportsTheInvalidPathBeforeProbing()
+    internal async Task VerifyAsync_WithAnUnnormalizablePath_ReportsTheInvalidPathBeforeProbing()
     {
         var request = VerifyRequest(backup: UnnormalizablePath());
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(request, this.progress, CancellationToken.None);
+            .VerifyAsync(request, this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -1031,7 +1003,7 @@ public sealed class BackupOperationRunnerTests
     [Theory]
     [InlineData(true, MessageCode.SourceMustBeDirectory)]
     [InlineData(false, MessageCode.SourcePathNotExist)]
-    internal async Task RunVerifyAsync_SourceIsAFileOrGone_FailsWithoutReadingTheArchive(
+    internal async Task VerifyAsync_SourceIsAFileOrGone_FailsWithoutReadingTheArchive(
         bool sourceIsFile,
         MessageCode expectedCode
     )
@@ -1040,7 +1012,7 @@ public sealed class BackupOperationRunnerTests
         _ = this.fileOperations.FileExists(SourceDir).Returns(sourceIsFile);
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
+            .VerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -1057,7 +1029,7 @@ public sealed class BackupOperationRunnerTests
     }
 
     [Fact]
-    internal async Task RunVerifyAsync_EngineThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
+    internal async Task VerifyAsync_EngineThrows_ReportsUnexpectedErrorCarryingOnlyTheMessage()
     {
         _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
         _ = this.chunkedBackupService
@@ -1070,7 +1042,7 @@ public sealed class BackupOperationRunnerTests
             .ThrowsAsync(new InvalidOperationException("verify boom"));
 
         var result = await this.CreateSut()
-            .RunVerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
+            .VerifyAsync(VerifyRequest(), this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -1097,7 +1069,7 @@ public sealed class BackupOperationRunnerTests
             destination: UnnormalizablePath()
         );
 
-        var result = await this.CreateSut().RunAsync(request, this.progress, CancellationToken.None);
+        var result = await this.RunAsync(request, this.progress, CancellationToken.None);
 
         Assert.Multiple(
             () => Assert.False(result.IsSuccess),
@@ -1114,10 +1086,74 @@ public sealed class BackupOperationRunnerTests
         this.AssertNothingDeleted();
     }
 
-    /// <summary>
-    /// A request of a type the runner does not know, standing in for an operation added without being
-    /// wired into its dispatch.
-    /// </summary>
-    private sealed record class UnrecognizedRequest()
-        : BackupRequest(SourceDir, DestinationDir, BackupOperationRunnerTests.Password, ProceedOnWarnings: false);
+    [Theory]
+    [InlineData(ManifestKind.Missing)]
+    [InlineData(ManifestKind.Encrypted)]
+    [InlineData(ManifestKind.Damaged)]
+    internal async Task DetectManifestKindAsync_ProbeSucceeds_ReturnsTheDetectedKind(ManifestKind kind)
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(kind);
+
+        var result = await this.CreateSut()
+            .DetectManifestKindAsync(SourceDir, TestContext.Current.CancellationToken);
+
+        Assert.Equal(kind, result);
+    }
+
+    [Fact]
+    internal async Task DetectManifestKindAsync_PathPastedWithQuotes_IsProbedWithoutThem()
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(ManifestKind.Encrypted);
+
+        var result = await this.CreateSut()
+            .DetectManifestKindAsync($"\"{SourceDir}\"", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ManifestKind.Encrypted, result);
+    }
+
+    [Theory]
+    [InlineData("some-backup")]
+    [InlineData("")]
+    [InlineData("   ")]
+    internal async Task DetectManifestKindAsync_RelativeOrBlankPath_IsReportedAsNotFoundWithoutProbing(
+        string path
+    )
+    {
+        var result = await this.CreateSut()
+            .DetectManifestKindAsync(path, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ManifestKind.PathNotFound, result);
+        _ = await this.manifestService.DidNotReceive()
+            .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    internal async Task DetectManifestKindAsync_ProbeThrows_ReportsMissingInsteadOfLeakingTheException()
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new UnauthorizedAccessException("locked"));
+
+        var result = await this.CreateSut()
+            .DetectManifestKindAsync(SourceDir, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ManifestKind.Missing, result);
+    }
+
+    [Fact]
+    internal async Task DetectManifestKindAsync_ProbeCancelled_PropagatesCancellationInsteadOfMappingIt()
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => this.CreateSut()
+                .DetectManifestKindAsync(SourceDir, TestContext.Current.CancellationToken)
+        );
+    }
 }

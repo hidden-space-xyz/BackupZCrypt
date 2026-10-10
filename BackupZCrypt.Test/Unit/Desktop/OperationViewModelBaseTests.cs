@@ -1,10 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-using BackupZCrypt.Application.Commands;
-using BackupZCrypt.Application.Commands.Interfaces;
-using BackupZCrypt.Application.Queries;
-using BackupZCrypt.Application.Queries.Interfaces;
+using BackupZCrypt.Application.Services.Interfaces;
 using BackupZCrypt.Application.Utilities.Formatters;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
@@ -30,22 +27,14 @@ namespace BackupZCrypt.Test.Unit.Desktop;
 public sealed class OperationViewModelBaseTests : IDisposable
 {
     /// <summary>
-    /// The substituted handler every run of the test page is dispatched to.
+    /// The substituted backup operations every run of the test page is dispatched to.
     /// </summary>
-    private readonly ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup =
-        Substitute.For<ICommandHandler<CreateBackupCommand, Result<BackupOutcome>>>();
+    private readonly IBackupOperations operations = Substitute.For<IBackupOperations>();
 
     /// <summary>
-    /// The substituted handler the page reads the recent paths through.
+    /// The substituted store the page reads and persists the recent paths through.
     /// </summary>
-    private readonly IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery =
-        Substitute.For<IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings>>();
-
-    /// <summary>
-    /// The substituted handler the page persists the recent paths through.
-    /// </summary>
-    private readonly ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPaths =
-        Substitute.For<ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result>>();
+    private readonly ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
 
     /// <summary>
     /// The substituted folder picker, never exercised here but required by the constructor.
@@ -118,7 +107,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     internal async Task StartCommand_ResultWithWarningsAndAnUpdateSummary_ListsThemInTheResultPanel()
     {
         var sut = CreateSut();
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(
@@ -161,7 +150,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     internal async Task StartCommand_UpdateThatFoundNothingToDo_SaysSoInsteadOfZeroOfZero()
     {
         var sut = CreateSut();
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0, unchangedFiles: 4))
             )
@@ -184,7 +173,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     )
     {
         var sut = CreateSut();
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(TimeSpan.FromMinutes(3), 2048, processedFiles, 5)
@@ -234,7 +223,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     {
         var sut = CreateSut();
         LocalizableMessage warning = new(MessageCode.DestinationExistingFilesFormat, 12);
-        StubHandler(Result<BackupOutcome>.Success(BackupOutcome.AwaitingConfirmation([warning])));
+        StubOperation(Result<BackupOutcome>.Success(BackupOutcome.AwaitingConfirmation([warning])));
 
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
@@ -252,7 +241,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     internal async Task StartCommand_WhenACompletedRunCarriesWarnings_ShowsTheResultInsteadOfTheGate()
     {
         var sut = CreateSut();
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(
@@ -279,14 +268,15 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Fact]
-    internal async Task ContinueAnywayCommand_ReRunsTheMessageWithProceedOnWarningsSet()
+    internal async Task ContinueAnywayCommand_ReRunsTheRequestWithProceedOnWarningsSet()
     {
-        List<CreateBackupCommand> commands = [];
+        List<CreateBackupRequest> requests = [];
         var sut = CreateSut();
 
         _ = this
-            .createBackup.HandleAsync(
-                Arg.Do<CreateBackupCommand>(commands.Add),
+            .operations.CreateAsync(
+                Arg.Do<CreateBackupRequest>(requests.Add),
+                Arg.Any<IProgress<BackupStatus>?>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
@@ -319,7 +309,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
             () =>
                 Assert.Equal<bool>(
                     [false, true],
-                    commands.Select(static command => command.ProceedOnWarnings)
+                    requests.Select(static request => request.ProceedOnWarnings)
                 ),
             () => Assert.False(sut.ShowWarnings),
             () => Assert.Empty(sut.Warnings),
@@ -329,12 +319,16 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Fact]
-    internal async Task CancelOperationCommand_CancelsTheTokenTheHandlerReceived_AndLeavesThePageIdle()
+    internal async Task CancelOperationCommand_CancelsTheTokenTheOperationReceived_AndLeavesThePageIdle()
     {
         var sut = CreateSut();
 
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(callInfo =>
             {
                 var token = callInfo.Arg<CancellationToken>();
@@ -366,11 +360,15 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Fact]
-    internal async Task StartCommand_WhenTheHandlerThrows_ShowsTheMessageAndReturnsToIdle()
+    internal async Task StartCommand_WhenTheOperationThrows_ShowsTheMessageAndReturnsToIdle()
     {
         var sut = CreateSut();
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Throws(new IOException("disk gone"));
 
         sut.SourcePath = "source";
@@ -403,11 +401,15 @@ public sealed class OperationViewModelBaseTests : IDisposable
             + "that fatal exceptions like OutOfMemoryException escape the page's catch instead of "
             + "being swallowed and reported as an ordinary failure."
     )]
-    internal async Task StartCommand_WhenTheHandlerRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
+    internal async Task StartCommand_WhenTheOperationRunsOutOfMemory_LetsItEscapeAndStillClearsTheRunningState()
     {
         var sut = CreateSut();
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Throws(new OutOfMemoryException());
 
         sut.SourcePath = "source";
@@ -428,18 +430,17 @@ public sealed class OperationViewModelBaseTests : IDisposable
         var percentWhileScanning = -1d;
 
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(callInfo =>
             {
-                var command =
-                    callInfo.Arg<CreateBackupCommand>()
-                    ?? throw new InvalidOperationException(
-                        "The handler was invoked without a command."
-                    );
                 var progress =
-                    command.Progress
+                    callInfo.Arg<IProgress<BackupStatus>?>()
                     ?? throw new InvalidOperationException(
-                        "The handler received a command without a progress reporter."
+                        "The operation was invoked without a progress reporter."
                     );
 
                 progress.Report(new BackupStatus(0, 10, 0, 0, TimeSpan.Zero));
@@ -484,7 +485,11 @@ public sealed class OperationViewModelBaseTests : IDisposable
         var sut = CreateSut();
 
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(
                 Task.FromResult(
                     Result<BackupOutcome>.Failure(
@@ -531,13 +536,13 @@ public sealed class OperationViewModelBaseTests : IDisposable
         var sut = CreateSut();
 
         _ = this
-            .saveRecentPaths.HandleAsync(
-                Arg.Do<SaveSettingsCommand<RecentPathSettings>>(command => saved.Add(command.Settings)),
+            .settingsStore.SaveAsync(
+                Arg.Do<RecentPathSettings>(saved.Add),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Result.Success());
 
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(TimeSpan.FromSeconds(1), 16, succeeded ? 2 : 1, 2)
@@ -578,14 +583,11 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Fact]
-    internal async Task OnNavigatedToAsync_WhenTheHandlerReportsTheDefaults_LeavesThePageUsable()
+    internal async Task OnNavigatedToAsync_WhenTheStoreReportsTheDefaults_LeavesThePageUsable()
     {
         var sut = CreateSut();
         _ = this
-            .recentPathsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
             .Returns(RecentPathSettings.DefaultValue);
 
         await sut.OnNavigatedToAsync();
@@ -613,7 +615,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     )
     {
         var sut = CreateSut();
-        StubHandler(
+        StubOperation(
             Result<BackupOutcome>.Success(
                 BackupOutcome.Completed(
                     new BackupResult(
@@ -638,12 +640,13 @@ public sealed class OperationViewModelBaseTests : IDisposable
     [Fact]
     internal async Task StartCommand_CapturesThePasswordBeforeClearingIt()
     {
-        List<CreateBackupCommand> commands = [];
+        List<CreateBackupRequest> requests = [];
         var sut = CreateSut();
 
         _ = this
-            .createBackup.HandleAsync(
-                Arg.Do<CreateBackupCommand>(commands.Add),
+            .operations.CreateAsync(
+                Arg.Do<CreateBackupRequest>(requests.Add),
+                Arg.Any<IProgress<BackupStatus>?>(),
                 Arg.Any<CancellationToken>()
             )
             .Returns(
@@ -662,45 +665,38 @@ public sealed class OperationViewModelBaseTests : IDisposable
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        Assert.Equal<string>(["secret"], commands.Select(static command => command.Password));
+        Assert.Equal<string>(["secret"], requests.Select(static request => request.Password));
     }
 
     /// <summary>
     /// Builds the concrete test page with the remembered paths already stubbed, since an unstubbed
-    /// handler hands the page a <see langword="null"/> settings object.
+    /// store hands the page a <see langword="null"/> settings object.
     /// </summary>
     /// <returns>The system under test.</returns>
     private TestOperationViewModel CreateSut()
     {
         _ = this
-            .recentPathsQuery.HandleAsync(
-                Arg.Any<GetSettingsQuery<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.LoadAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
             .Returns(new RecentPathSettings("remembered-source", "remembered-destination"));
         _ = this
-            .saveRecentPaths.HandleAsync(
-                Arg.Any<SaveSettingsCommand<RecentPathSettings>>(),
-                Arg.Any<CancellationToken>()
-            )
+            .settingsStore.SaveAsync(Arg.Any<RecentPathSettings>(), Arg.Any<CancellationToken>())
             .Returns(Result.Success());
 
-        return new TestOperationViewModel(
-            this.createBackup,
-            this.recentPathsQuery,
-            this.saveRecentPaths,
-            this.filePicker
-        );
+        return new TestOperationViewModel(this.operations, this.settingsStore, this.filePicker);
     }
 
     /// <summary>
-    /// Makes every handler call return the same outcome.
+    /// Makes every create run return the same outcome.
     /// </summary>
-    /// <param name="result">The outcome the handler reports.</param>
-    private void StubHandler(Result<BackupOutcome> result)
+    /// <param name="result">The outcome the operation reports.</param>
+    private void StubOperation(Result<BackupOutcome> result)
     {
         _ = this
-            .createBackup.HandleAsync(Arg.Any<CreateBackupCommand>(), Arg.Any<CancellationToken>())
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Task.FromResult(result));
     }
 
@@ -724,20 +720,18 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     /// <summary>
-    /// The minimal concrete page used to exercise the abstract engine: it builds a create command
+    /// The minimal concrete page used to exercise the abstract engine: it builds a create request
     /// from the current inputs and records every recent-path application so the load-once guard is
     /// observable.
     /// </summary>
-    /// <param name="createBackup">The handler that executes the operation.</param>
-    /// <param name="recentPathsQuery">The handler that loads the recently used paths.</param>
-    /// <param name="saveRecentPathsCommand">The handler that persists the recently used paths.</param>
+    /// <param name="operations">The backup operations that run the page's request.</param>
+    /// <param name="settingsStore">The store that loads and saves the recently used paths.</param>
     /// <param name="filePicker">The folder picker service.</param>
     private sealed class TestOperationViewModel(
-        ICommandHandler<CreateBackupCommand, Result<BackupOutcome>> createBackup,
-        IQueryHandler<GetSettingsQuery<RecentPathSettings>, RecentPathSettings> recentPathsQuery,
-        ICommandHandler<SaveSettingsCommand<RecentPathSettings>, Result> saveRecentPathsCommand,
+        IBackupOperations operations,
+        ISettingsStore settingsStore,
         IFilePickerService filePicker
-    ) : OperationViewModelBase(recentPathsQuery, saveRecentPathsCommand, filePicker)
+    ) : OperationViewModelBase(settingsStore, filePicker)
     {
         /// <summary>
         /// Gets the recent-path settings handed to the page, one entry per application.
@@ -747,7 +741,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
         /// <inheritdoc/>
         /// <remarks>
         /// Reads the real <c>Password</c> rather than a literal, so a change that cleared it before
-        /// the message was built shows up here instead of hiding behind a stub value.
+        /// the request was built shows up here instead of hiding behind a stub value.
         /// </remarks>
         protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
             bool proceedOnWarnings,
@@ -755,7 +749,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
             CancellationToken cancellationToken
         )
         {
-            var command = new CreateBackupCommand(
+            var request = new CreateBackupRequest(
                 SourcePath,
                 DestinationPath,
                 Password,
@@ -764,12 +758,9 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 KeyDerivationAlgorithm.PBKDF2,
                 CompressionMode.None,
                 proceedOnWarnings
-            )
-            {
-                Progress = progress,
-            };
+            );
 
-            return createBackup.HandleAsync(command, cancellationToken);
+            return operations.CreateAsync(request, progress, cancellationToken);
         }
 
         /// <inheritdoc/>
