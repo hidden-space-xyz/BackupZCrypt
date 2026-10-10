@@ -8,7 +8,6 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -16,68 +15,35 @@ using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Services;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
-/// Implements chunk-based backup, update, restore, and verification. Files are split into
-/// content-defined chunks that are deduplicated by content hash, optionally compressed, and
-/// individually encrypted with per-chunk nonces; sub-keys for chunk encryption, nonce derivation,
-/// chunk naming, and the manifest are derived from the password-derived master key via HKDF.
+/// The write path of the backup engine: creates an archive from a source folder and updates an
+/// existing one. Files are split into content-defined chunks that are deduplicated by content hash,
+/// optionally compressed, and individually encrypted with per-chunk nonces, and the manifest that
+/// lists them is published only once every chunk is on disk.
 /// </summary>
-/// <remarks>
-/// The class is split across partial files along its operation seams — this file carries the write
-/// path (create and update), <c>.Restore</c> the read path (restore and verify), <c>.Preview</c> the
-/// read-only comparisons run before an operation, <c>.Chunks</c> the chunk store and the
-/// manifest-entry plumbing both paths share, and <c>.Keys</c> the key derivation, salt, and
-/// chunk-naming primitives. The split is purely a file boundary: it moves no member between types.
-/// </remarks>
 /// <param name="compressionStrategies">The registered compression strategies, looked up by mode.</param>
 /// <param name="encryptionStrategies">The registered encryption strategies, looked up by algorithm.</param>
-/// <param name="fileOperationsService">The service used to read, write, and enumerate files.</param>
-/// <param name="directoryScanService">The service used to walk the source tree.</param>
-/// <param name="fileMetadataService">The service used to read and restore file metadata.</param>
-/// <param name="manifestService">The service used to read and write the encrypted backup manifest.</param>
-/// <param name="chunkingStrategy">The strategy used to split file streams into content-defined chunks.</param>
 /// <param name="keyDerivationStrategies">The registered key derivation strategies, looked up by algorithm.</param>
-internal sealed partial class ChunkedBackupService(
+/// <param name="fileOperationsService">The service used to measure source files.</param>
+/// <param name="directoryScanService">The service used to walk the source tree.</param>
+/// <param name="fileMetadataService">The service used to read file metadata.</param>
+/// <param name="manifestService">The service used to write the encrypted backup manifest.</param>
+/// <param name="chunkStore">The chunk store the files are written into.</param>
+/// <param name="backupOpener">The opener of the backup an update works on.</param>
+internal sealed class BackupWriter(
     IStrategyRegistry<CompressionMode, ICompressionStrategy> compressionStrategies,
     IStrategyRegistry<EncryptionAlgorithm, IEncryptionAlgorithmStrategy> encryptionStrategies,
+    IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
     IFileOperationsService fileOperationsService,
     IDirectoryScanService directoryScanService,
     IFileMetadataService fileMetadataService,
     IManifestService manifestService,
-    IChunkingStrategy chunkingStrategy,
-    IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy> keyDerivationStrategies
-) : IChunkedBackupService
+    ChunkStore chunkStore,
+    BackupOpener backupOpener
+)
 {
-    /// <summary>
-    /// The largest encrypted chunk file the reader accepts. Zstandard's bounded overhead is well
-    /// below 64 KiB for a 4 MiB input; the margin rejects unbounded allocations without constraining
-    /// any chunk the writer can produce.
-    /// </summary>
-    private const int MaximumStoredChunkSize =
-        BackupConstants.MaximumChunkSize + (64 * 1024) + EncryptionConstants.TagSize;
-
-    /// <summary>
-    /// The number of file pipelines run at once on this machine, as decided by
-    /// <see cref="FileParallelismPolicy"/>.
-    /// </summary>
-    private static readonly int MaximumParallelFileOperations =
-        FileParallelismPolicy.ForProcessorCount(Environment.ProcessorCount);
-
-    /// <summary>
-    /// The number of chunks compressed, encrypted, and written at once across every file of a run.
-    /// Bounding it caps memory at a few chunk buffers each, while still letting a single large file
-    /// keep every processor busy instead of being processed one chunk at a time.
-    /// </summary>
-    private static readonly int MaximumChunksInFlight =
-        FileParallelismPolicy.ChunksInFlightForProcessorCount(Environment.ProcessorCount);
-
-    /// <summary>
-    /// The comparison applied to backup paths, shared with every other layer that compares them.
-    /// </summary>
-    private static readonly StringComparison PathComparer = PathNormalizationHelper.PathComparer;
-
     /// <summary>
     /// Creates a new chunked backup, processing files in parallel, deduplicating chunks by content,
     /// and persisting an encrypted manifest.
@@ -95,7 +61,7 @@ internal sealed partial class ChunkedBackupService(
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the backup outcome, including any per-file errors.</returns>
-    public async Task<Result<BackupResult>> CreateAsync(
+    internal async Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
         CreateBackupRequest request,
@@ -121,11 +87,11 @@ internal sealed partial class ChunkedBackupService(
             );
         }
 
-        var chunksDir = await this.PrepareChunksDirectoryAsync(destinationPath, cancellationToken)
+        var chunksDir = await chunkStore.PrepareChunksDirectoryAsync(destinationPath, cancellationToken)
             .ConfigureAwait(false);
 
         byte[]? masterSalt = null;
-        using ChunkWriteContext context = new(MaximumChunksInFlight);
+        using ChunkWriteContext context = new(EngineLimits.MaximumChunksInFlight);
         var committed = false;
 
         try
@@ -142,7 +108,7 @@ internal sealed partial class ChunkedBackupService(
                 keys.ChunkNonceKey,
                 keys.NamingKey,
                 encryptionStrategies.Resolve(request.EncryptionAlgorithm),
-                this.CreateCompressionStrategy(request.Compression)
+                compressionStrategies.ResolveOrNull(request.Compression)
             );
 
             List<ChunkWorkItem> workItems = [.. snapshot.Files.Select(static f => new ChunkWorkItem(f, null))];
@@ -191,7 +157,7 @@ internal sealed partial class ChunkedBackupService(
                 snapshot.EmptyDirectories
             );
 
-            ValidateManifestEntries(manifestData.Files);
+            ManifestEntries.Validate(manifestData.Files);
 
             var manifestErrors = await manifestService
                 .SaveChunkManifestAsync(
@@ -210,7 +176,7 @@ internal sealed partial class ChunkedBackupService(
 
             committed = true;
 
-            _ = await this.TryPruneBackupAsync(
+            _ = await chunkStore.TryPruneBackupAsync(
                     destinationPath,
                     chunksDir,
                     manifestData.Files.SelectMany(static f => f.Chunks).Select(static c => c.Hash),
@@ -236,7 +202,7 @@ internal sealed partial class ChunkedBackupService(
         {
             if (!committed)
             {
-                this.DeleteWrittenChunks(context, chunksDir);
+                chunkStore.DeleteWrittenChunks(context, chunksDir);
             }
 
             if (masterSalt is not null)
@@ -273,7 +239,7 @@ internal sealed partial class ChunkedBackupService(
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the update outcome, including any per-file errors.</returns>
-    public async Task<Result<BackupResult>> UpdateAsync(
+    internal async Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
         UpdateBackupRequest request,
@@ -283,7 +249,7 @@ internal sealed partial class ChunkedBackupService(
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var (backup, openError) = await this.OpenBackupAsync(
+        var (backup, openError) = await backupOpener.OpenAsync(
                 destinationPath,
                 request.Password,
                 MessageCode.ManifestRequiredForUpdate,
@@ -341,7 +307,7 @@ internal sealed partial class ChunkedBackupService(
 
         var existingManifest = backup.Manifest;
         var keys = backup.Keys;
-        var compressionStrategy = this.CreateCompressionStrategy(existingManifest.Header.Compression);
+        var compressionStrategy = compressionStrategies.ResolveOrNull(existingManifest.Header.Compression);
 
         ChunkCipherSet cipher = new(
             keys.ChunkEncryptionKey,
@@ -351,10 +317,10 @@ internal sealed partial class ChunkedBackupService(
             compressionStrategy
         );
 
-        var chunksDir = await this.PrepareChunksDirectoryAsync(destinationPath, cancellationToken)
+        var chunksDir = await chunkStore.PrepareChunksDirectoryAsync(destinationPath, cancellationToken)
             .ConfigureAwait(false);
 
-        ValidateManifestEntries(existingManifest.Files);
+        ManifestEntries.Validate(existingManifest.Files);
 
         Dictionary<string, ChunkManifestFileEntry> existingFileIndex = new(StringComparer.Ordinal);
         foreach (var entry in existingManifest.Files)
@@ -362,8 +328,8 @@ internal sealed partial class ChunkedBackupService(
             existingFileIndex[entry.OriginalPath] = entry;
         }
 
-        var storedChunks = BuildStoredChunkCache(existingManifest.Files);
-        this.RemoveUnavailableStoredChunks(
+        var storedChunks = ChunkStore.BuildStoredChunkCache(existingManifest.Files);
+        chunkStore.RemoveUnavailableStoredChunks(
             storedChunks,
             existingManifest.Files,
             chunksDir,
@@ -373,7 +339,7 @@ internal sealed partial class ChunkedBackupService(
 
         var plan = this.PlanUpdate(snapshot, existingFileIndex, storedChunks);
 
-        using ChunkWriteContext context = new(MaximumChunksInFlight);
+        using ChunkWriteContext context = new(EngineLimits.MaximumChunksInFlight);
         var committed = false;
 
         try
@@ -424,7 +390,7 @@ internal sealed partial class ChunkedBackupService(
                 entries,
                 MergeDirectories(snapshot, existingManifest.Directories, entries)
             );
-            ValidateManifestEntries(newManifest.Files);
+            ManifestEntries.Validate(newManifest.Files);
 
             var manifestErrors = await manifestService
                 .SaveChunkManifestAsync(
@@ -445,7 +411,7 @@ internal sealed partial class ChunkedBackupService(
 
             committed = true;
 
-            _ = await this.TryPruneBackupAsync(
+            _ = await chunkStore.TryPruneBackupAsync(
                     destinationPath,
                     chunksDir,
                     entries.SelectMany(static f => f.Chunks).Select(static c => c.Hash),
@@ -473,7 +439,7 @@ internal sealed partial class ChunkedBackupService(
         {
             if (!committed)
             {
-                this.DeleteWrittenChunks(context, chunksDir);
+                chunkStore.DeleteWrittenChunks(context, chunksDir);
             }
         }
     }
@@ -506,7 +472,7 @@ internal sealed partial class ChunkedBackupService(
             {
                 metadata = fileMetadataService.GetFileMetadata(file.FullPath);
             }
-            catch (Exception exception) when (IsFileLevelError(exception))
+            catch (Exception exception) when (FileFailures.IsConfinedToOneFile(exception))
             {
                 metadata = null;
             }
@@ -514,11 +480,11 @@ internal sealed partial class ChunkedBackupService(
             if (
                 existing is not null
                 && metadata is not null
-                && IsUnchanged(existing, metadata)
+                && ManifestEntries.IsUnchanged(existing, metadata)
                 && existing.Chunks.All(chunk => storedChunks.ContainsKey(chunk.Hash))
             )
             {
-                carriedOver.Add(WithMetadata(existing, metadata));
+                carriedOver.Add(ManifestEntries.WithMetadata(existing, metadata));
                 continue;
             }
 
@@ -543,20 +509,6 @@ internal sealed partial class ChunkedBackupService(
         }
 
         return new UpdatePlan(carriedOver, workItems, removedCount);
-    }
-
-    /// <summary>
-    /// Determines whether a recorded entry still describes the file on disk, judged by its size and
-    /// modification time, the way most backup tools detect changes without reading the file.
-    /// </summary>
-    /// <param name="entry">The recorded manifest entry.</param>
-    /// <param name="metadata">The file's current metadata.</param>
-    /// <returns><see langword="true"/> when the file can be carried over without being read.</returns>
-    private static bool IsUnchanged(ChunkManifestFileEntry entry, FileMetadata metadata)
-    {
-        return entry.TotalSize == metadata.Size
-            && entry.LastWriteTimeUtc.ToUniversalTime().Ticks
-                == metadata.LastWriteTimeUtc.ToUniversalTime().Ticks;
     }
 
     /// <summary>
@@ -634,7 +586,7 @@ internal sealed partial class ChunkedBackupService(
                     Enumerable.Range(0, workItems.Count),
                     new ParallelOptions
                     {
-                        MaxDegreeOfParallelism = MaximumParallelFileOperations,
+                        MaxDegreeOfParallelism = EngineLimits.MaximumParallelFileOperations,
                         CancellationToken = linkedCts.Token,
                     },
                     async (index, token) =>
@@ -645,7 +597,7 @@ internal sealed partial class ChunkedBackupService(
                         {
                             var metadata = fileMetadataService.GetFileMetadata(item.File.FullPath);
 
-                            entries[index] = await this.ChunkAndEncryptFileAsync(
+                            entries[index] = await chunkStore.ChunkAndEncryptFileAsync(
                                     item.File.FullPath,
                                     item.File.RelativePath,
                                     metadata,
@@ -660,7 +612,7 @@ internal sealed partial class ChunkedBackupService(
                             tracker.CompleteFile();
                         }
                         catch (Exception ex)
-                            when (ex is not OperationCanceledException && IsFileLevelError(ex))
+                            when (ex is not OperationCanceledException && FileFailures.IsConfinedToOneFile(ex))
                         {
                             failures[index] = new LocalizableMessage(
                                 MessageCode.FileBackupErrorFormat,
@@ -707,78 +659,6 @@ internal sealed partial class ChunkedBackupService(
     }
 
     /// <summary>
-    /// Creates the backup folder and its chunks directory, refusing a chunks directory reached
-    /// through a link.
-    /// </summary>
-    /// <param name="destinationPath">The backup folder.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The full path of the chunks directory.</returns>
-    private async Task<string> PrepareChunksDirectoryAsync(
-        string destinationPath,
-        CancellationToken cancellationToken
-    )
-    {
-        await fileOperationsService
-            .CreateDirectoryAsync(destinationPath, cancellationToken)
-            .ConfigureAwait(false);
-
-        var chunksDir = Path.Join(
-            destinationPath,
-            BackupConstants.ChunksDirectoryName
-        );
-
-        RestorePathGuard.EnsureNoReparsePointDescendants(
-            fileOperationsService,
-            destinationPath,
-            chunksDir
-        );
-        await fileOperationsService
-            .CreateDirectoryAsync(chunksDir, cancellationToken)
-            .ConfigureAwait(false);
-        RestorePathGuard.EnsureNoReparsePointDescendants(
-            fileOperationsService,
-            destinationPath,
-            chunksDir
-        );
-
-        return chunksDir;
-    }
-
-    /// <summary>
-    /// Deletes every chunk file a run wrote, after the run failed or was cancelled before its manifest
-    /// was published, and removes the chunks directory again when that leaves it empty.
-    /// </summary>
-    /// <remarks>
-    /// The chunks of a run are named under its own keys, so none of them can belong to the backup the
-    /// run was going to replace. Cleanup is best-effort: a file that cannot be deleted stays behind as
-    /// an orphan the next successful run prunes.
-    /// </remarks>
-    /// <param name="context">The run's record of the chunk files it wrote.</param>
-    /// <param name="chunksDir">The chunks directory.</param>
-    private void DeleteWrittenChunks(ChunkWriteContext context, string chunksDir)
-    {
-        foreach (var chunkFile in context.WrittenChunks)
-        {
-            _ = fileOperationsService.TryDeleteFile(chunkFile);
-        }
-
-        try
-        {
-            if (
-                fileOperationsService.DirectoryExists(chunksDir)
-                && fileOperationsService.GetDirectoryEntryNames(chunksDir).Count is 0
-            )
-            {
-                fileOperationsService.DeleteEmptyDirectory(chunksDir);
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return;
-        }
-    }
-
-    /// <summary>
     /// Adds up the sizes of the files about to be backed up to seed the progress total.
     /// </summary>
     /// <remarks>
@@ -805,26 +685,6 @@ internal sealed partial class ChunkedBackupService(
         }
 
         return total;
-    }
-
-    /// <summary>
-    /// Attaches the metadata read from the source file to the entry produced for it.
-    /// </summary>
-    /// <param name="entry">The entry produced by chunking the file.</param>
-    /// <param name="metadata">The file's metadata, read before its content.</param>
-    /// <returns>The entry carrying the file's modification time and attributes.</returns>
-    private static ChunkManifestFileEntry WithMetadata(ChunkManifestFileEntry entry, FileMetadata metadata)
-    {
-        var attributes =
-            (metadata.IsReadOnly ? ManifestFileAttributes.ReadOnly : ManifestFileAttributes.None)
-            | (metadata.IsHidden ? ManifestFileAttributes.Hidden : ManifestFileAttributes.None);
-
-        return entry with
-        {
-            LastWriteTimeUtc = DateTime.SpecifyKind(metadata.LastWriteTimeUtc, DateTimeKind.Utc),
-            Attributes = attributes is ManifestFileAttributes.None ? null : attributes,
-            UnixMode = metadata.UnixMode,
-        };
     }
 
     /// <summary>
@@ -864,102 +724,4 @@ internal sealed partial class ChunkedBackupService(
         List<ChunkWorkItem> FailedItems,
         LocalizableMessage? FatalError
     );
-
-    /// <summary>
-    /// The resources one create or update shares between its files: the slots bounding how many chunks
-    /// are processed at once, and the record of the chunk files the run wrote.
-    /// </summary>
-    /// <param name="maximumChunksInFlight">The number of chunks processed at once.</param>
-    private sealed class ChunkWriteContext(int maximumChunksInFlight) : IDisposable
-    {
-        /// <summary>
-        /// Gets the slots a chunk takes while it is compressed, encrypted, and written.
-        /// </summary>
-        public SemaphoreSlim ChunkSlots { get; } = new(maximumChunksInFlight, maximumChunksInFlight);
-
-        /// <summary>
-        /// Gets the chunk files this run created.
-        /// </summary>
-        public ConcurrentBag<string> WrittenChunks { get; } = [];
-
-        /// <summary>
-        /// Releases the chunk slots.
-        /// </summary>
-        public void Dispose()
-        {
-            this.ChunkSlots.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Reports the progress of a run as bytes are read and files complete. The processed byte count
-    /// is capped at the total measured before the run, so a file that grows while it is read never
-    /// produces an impossible report.
-    /// </summary>
-    /// <param name="progress">The sink that receives status updates.</param>
-    /// <param name="stopwatch">The running timer of the operation.</param>
-    /// <param name="totalFiles">The number of files in the run.</param>
-    /// <param name="totalBytes">The size of the files measured before the run.</param>
-    private sealed class ProgressTracker(
-        IProgress<BackupStatus>? progress,
-        Stopwatch stopwatch,
-        int totalFiles,
-        long totalBytes
-    )
-    {
-        /// <summary>
-        /// The bytes read so far.
-        /// </summary>
-        private long processedBytes;
-
-        /// <summary>
-        /// The files completed so far.
-        /// </summary>
-        private int processedFiles;
-
-        /// <summary>
-        /// Reports the empty starting status.
-        /// </summary>
-        public void ReportStart()
-        {
-            progress?.Report(new BackupStatus(0, totalFiles, 0, totalBytes, TimeSpan.Zero));
-        }
-
-        /// <summary>
-        /// Records bytes read from a file.
-        /// </summary>
-        /// <param name="bytes">The number of bytes read.</param>
-        public void AddBytes(long bytes)
-        {
-            var current = Interlocked.Add(ref this.processedBytes, bytes);
-            this.Report(Volatile.Read(ref this.processedFiles), current);
-        }
-
-        /// <summary>
-        /// Records a completed file.
-        /// </summary>
-        public void CompleteFile()
-        {
-            var files = Interlocked.Increment(ref this.processedFiles);
-            this.Report(files, Volatile.Read(ref this.processedBytes));
-        }
-
-        /// <summary>
-        /// Sends one status report.
-        /// </summary>
-        /// <param name="files">The files completed so far.</param>
-        /// <param name="bytes">The bytes read so far.</param>
-        private void Report(int files, long bytes)
-        {
-            progress?.Report(
-                new BackupStatus(
-                    Math.Min(files, totalFiles),
-                    totalFiles,
-                    Math.Clamp(bytes, 0, totalBytes),
-                    totalBytes,
-                    stopwatch.Elapsed
-                )
-            );
-        }
-    }
 }

@@ -1,5 +1,6 @@
 using BackupZCrypt.Application.Commands;
 using BackupZCrypt.Application.Commands.Interfaces;
+using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.Orchestrators;
 using BackupZCrypt.Application.Queries;
 using BackupZCrypt.Application.Queries.Interfaces;
@@ -94,6 +95,11 @@ public static class DependencyInjection
         _ = services.AddSingleton<ISystemStorageService, SystemStorageService>();
         _ = services.AddSingleton<ISettingsService, SettingsService>();
 
+        _ = services.AddSingleton<ChunkStore>();
+        _ = services.AddSingleton<BackupOpener>();
+        _ = services.AddSingleton<BackupWriter>();
+        _ = services.AddSingleton<BackupRestorer>();
+        _ = services.AddSingleton<BackupPreviewer>();
         _ = services.AddSingleton<IChunkedBackupService, ChunkedBackupService>();
         _ = services.AddSingleton<IBackupBenchmarkService, BackupBenchmarkService>();
         _ = services.AddSingleton<IBackupRequestValidator, BackupRequestValidator>();

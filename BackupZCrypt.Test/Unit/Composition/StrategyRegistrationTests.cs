@@ -46,10 +46,10 @@ public sealed class StrategyRegistrationTests
     /// and is covered by <see cref="Resolve_CompressionModeNone_IsDeliberatelyUnregistered"/>.
     /// </summary>
     /// <remarks>
-    /// <c>ChunkedBackupService</c> and <c>BackupBenchmarkService</c> map <see cref="CompressionMode.None"/>
-    /// to a null strategy before ever reaching the registry, so registering a pass-through strategy for it
-    /// would silently change the on-disk chunk layout. Leaving it unregistered keeps that mapping the
-    /// callers' job.
+    /// The backup engine (through <c>CompressionStrategies.ResolveOrNull</c>) and <c>BackupBenchmarkService</c>
+    /// map <see cref="CompressionMode.None"/> to a null strategy before ever reaching the registry, so
+    /// registering a pass-through strategy for it would silently change the on-disk chunk layout. Leaving
+    /// it unregistered keeps that mapping the callers' job.
     /// </remarks>
     /// <returns>Every value of <see cref="CompressionMode"/> except <see cref="CompressionMode.None"/>.</returns>
     public static TheoryData<CompressionMode> CompressionModes()

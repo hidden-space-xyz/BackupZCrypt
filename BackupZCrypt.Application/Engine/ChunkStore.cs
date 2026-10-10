@@ -6,13 +6,23 @@ using BackupZCrypt.Application.Utilities.Extensions;
 using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 
-namespace BackupZCrypt.Application.Services;
+namespace BackupZCrypt.Application.Engine;
 
-internal sealed partial class ChunkedBackupService
+/// <summary>
+/// The chunk store of a backup folder on the write side: it splits files into content-defined
+/// chunks, compresses, encrypts, and writes each chunk once under its keyed name, deduplicating
+/// identical content, and prunes or deletes chunk files a run no longer needs.
+/// </summary>
+/// <param name="fileOperationsService">The service used to read source files and write chunk files.</param>
+/// <param name="chunkingStrategy">The strategy used to split file streams into content-defined chunks.</param>
+internal sealed class ChunkStore(
+    IFileOperationsService fileOperationsService,
+    IChunkingStrategy chunkingStrategy
+)
 {
     /// <summary>
     /// Splits a file into content-defined chunks, stores each chunk encrypted on disk, hashes the
@@ -42,7 +52,7 @@ internal sealed partial class ChunkedBackupService
     /// <param name="tracker">The progress tracker that is told about every chunk read.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The manifest entry describing the file and its ordered chunk references.</returns>
-    private async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
+    internal async Task<ChunkManifestFileEntry> ChunkAndEncryptFileAsync(
         string filePath,
         string relativePath,
         FileMetadata metadata,
@@ -115,7 +125,7 @@ internal sealed partial class ChunkedBackupService
 
             try
             {
-                return WithMetadata(
+                return ManifestEntries.WithMetadata(
                     new ChunkManifestFileEntry(
                         relativePath,
                         Convert.ToBase64String(fileHash),
@@ -171,7 +181,7 @@ internal sealed partial class ChunkedBackupService
 
             chunkHash = SHA256.HashData(chunkData.Span);
             var chunkHashB64 = Convert.ToBase64String(chunkHash);
-            var chunkFilePath = ComputeChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
+            var chunkFilePath = BackupLayout.ChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
             var ownedHash = chunkHash;
 
             var chunkOperation = new Lazy<Task>(
@@ -248,13 +258,6 @@ internal sealed partial class ChunkedBackupService
             );
         }
     }
-
-    /// <summary>
-    /// A chunk of a file whose store has been started.
-    /// </summary>
-    /// <param name="Size">The plaintext length of the chunk.</param>
-    /// <param name="Store">The store operation, resolving to the chunk's Base64-encoded hash.</param>
-    private sealed record class PendingChunk(int Size, Task<string> Store);
 
     /// <summary>
     /// Compresses a chunk when compression is enabled, encrypts it, and writes the ciphertext to its
@@ -337,7 +340,7 @@ internal sealed partial class ChunkedBackupService
 
             if (
                 dataToEncrypt is not null
-                && dataToEncrypt.Length > MaximumStoredChunkSize - EncryptionConstants.TagSize
+                && dataToEncrypt.Length > EngineLimits.MaximumStoredChunkSize - EncryptionConstants.TagSize
             )
             {
                 throw new InvalidDataException("Compressed chunk exceeds the supported size.");
@@ -395,7 +398,7 @@ internal sealed partial class ChunkedBackupService
     /// </remarks>
     /// <param name="manifestFiles">The manifest entries whose chunk references are indexed.</param>
     /// <returns>A cache keyed by Base64 chunk hash.</returns>
-    private static ConcurrentDictionary<string, Lazy<Task>> BuildStoredChunkCache(
+    internal static ConcurrentDictionary<string, Lazy<Task>> BuildStoredChunkCache(
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles
     )
     {
@@ -419,7 +422,7 @@ internal sealed partial class ChunkedBackupService
     /// <param name="chunksDir">The archive directory that should contain the chunk files.</param>
     /// <param name="namingKey">The sub-key used to derive chunk file names.</param>
     /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
-    private void RemoveUnavailableStoredChunks(
+    internal void RemoveUnavailableStoredChunks(
         ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
         string chunksDir,
@@ -466,12 +469,12 @@ internal sealed partial class ChunkedBackupService
 
         try
         {
-            chunkHash = DecodeBase64FixedLength(
+            chunkHash = ManifestEntries.DecodeBase64FixedLength(
                 chunk.Hash,
                 SHA256.HashSizeInBytes,
                 "Invalid chunk hash."
             );
-            var chunkFilePath = ComputeChunkFilePath(chunksDir, namingKey, chunkHash);
+            var chunkFilePath = BackupLayout.ChunkFilePath(chunksDir, namingKey, chunkHash);
 
             if (
                 !fileOperationsService.FileExists(chunkFilePath)
@@ -484,13 +487,13 @@ internal sealed partial class ChunkedBackupService
             var storedSize = fileOperationsService.GetFileSize(chunkFilePath);
             var maximumStoredSize = compressionStrategy is null
                 ? checked(chunk.Size + EncryptionConstants.TagSize)
-                : MaximumStoredChunkSize;
+                : EngineLimits.MaximumStoredChunkSize;
 
             return storedSize >= EncryptionConstants.TagSize
                 && storedSize <= maximumStoredSize
                 && (compressionStrategy is not null || storedSize == maximumStoredSize);
         }
-        catch (Exception exception) when (IsFileLevelError(exception))
+        catch (Exception exception) when (FileFailures.IsConfinedToOneFile(exception))
         {
             return false;
         }
@@ -500,111 +503,6 @@ internal sealed partial class ChunkedBackupService
             {
                 CryptographicOperations.ZeroMemory(chunkHash);
             }
-        }
-    }
-
-    /// <summary>
-    /// Validates every entry path, file hash, and chunk reference a manifest records, before any file
-    /// is created, read, or overwritten.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This runs as one up-front sweep so a malformed or crafted manifest is rejected before a restore
-    /// creates a directory, before a verify reads a chunk, and before an update rewrites the manifest.
-    /// The decoded bytes serve only as a length check and are zeroed immediately.
-    /// </para>
-    /// <para>
-    /// Paths are recorded in a single canonical form, so two entries are duplicates when their paths
-    /// are identical. Paths that only differ in letter case are distinct files on the system that wrote
-    /// them; a restore onto a system that ignores case reports the clash for the second file instead of
-    /// rejecting the whole archive.
-    /// </para>
-    /// </remarks>
-    /// <param name="manifestFiles">The manifest entries to validate.</param>
-    /// <exception cref="InvalidDataException">
-    /// An entry path is invalid or duplicated, a size is impossible, one chunk hash is recorded with two
-    /// sizes, or chunk sizes do not add up to the file size.
-    /// </exception>
-    /// <exception cref="CryptographicException">
-    /// A file hash or chunk hash is not canonical Base64 of the expected length.
-    /// </exception>
-    private static void ValidateManifestEntries(
-        IReadOnlyList<ChunkManifestFileEntry> manifestFiles
-    )
-    {
-        HashSet<string> paths = new(StringComparer.Ordinal);
-        Dictionary<string, int> chunkSizes = new(StringComparer.Ordinal);
-
-        foreach (var file in manifestFiles)
-        {
-            ManifestPathPolicy.ValidateRelative(file.OriginalPath);
-            if (!paths.Add(file.OriginalPath))
-            {
-                throw new InvalidDataException("Manifest contains duplicate file paths.");
-            }
-
-            if (file.TotalSize < 0)
-            {
-                throw new InvalidDataException("Manifest file size cannot be negative.");
-            }
-
-            EnsureCanonicalHash(file.FileHash, "Invalid file hash.");
-
-            long totalChunkSize = 0;
-
-            foreach (var chunk in file.Chunks)
-            {
-                if (chunk.Size is <= 0 or > BackupConstants.MaximumChunkSize)
-                {
-                    throw new InvalidDataException("Manifest chunk size is outside the supported range.");
-                }
-
-                try
-                {
-                    totalChunkSize = checked(totalChunkSize + chunk.Size);
-                }
-                catch (OverflowException ex)
-                {
-                    throw new InvalidDataException("Manifest chunk sizes overflow the file size.", ex);
-                }
-
-                EnsureCanonicalHash(chunk.Hash, "Invalid chunk hash.");
-
-                if (!chunkSizes.TryAdd(chunk.Hash, chunk.Size) && chunkSizes[chunk.Hash] != chunk.Size)
-                {
-                    throw new InvalidDataException("One chunk hash has inconsistent size metadata.");
-                }
-            }
-
-            if (totalChunkSize != file.TotalSize)
-            {
-                throw new InvalidDataException(
-                    "Manifest chunk sizes do not add up to the declared file size."
-                );
-            }
-        }
-    }
-
-    /// <summary>
-    /// Confirms that a hash read from the manifest is the canonical Base64 form of a SHA-256 digest.
-    /// </summary>
-    /// <param name="hash">The Base64 hash to check.</param>
-    /// <param name="errorMessage">The message carried by the exception when the hash is invalid.</param>
-    /// <exception cref="CryptographicException">The hash is not canonical Base64 of a SHA-256 digest.</exception>
-    private static void EnsureCanonicalHash(string hash, string errorMessage)
-    {
-        var decoded = DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, errorMessage);
-
-        try
-        {
-            if (!string.Equals(hash, Convert.ToBase64String(decoded), StringComparison.Ordinal))
-            {
-                throw new CryptographicException(errorMessage);
-            }
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(decoded);
         }
     }
 
@@ -666,7 +564,7 @@ internal sealed partial class ChunkedBackupService
     /// <see langword="true"/> if every unneeded file was removed; <see langword="false"/> if one or
     /// more were left behind.
     /// </returns>
-    private async Task<bool> TryPruneBackupAsync(
+    internal async Task<bool> TryPruneBackupAsync(
         string backupRoot,
         string chunksDir,
         IEnumerable<string> referencedChunkHashes,
@@ -679,7 +577,7 @@ internal sealed partial class ChunkedBackupService
             HashSet<string> expectedFileNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (var hash in referencedChunkHashes)
             {
-                var hashBytes = DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, "Invalid chunk hash.");
+                var hashBytes = ManifestEntries.DecodeBase64FixedLength(hash, SHA256.HashSizeInBytes, "Invalid chunk hash.");
                 try
                 {
                     var fileName = ChunkCrypto.ComputeChunkFileName(namingKey, hashBytes);
@@ -735,19 +633,6 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
-    /// Resolves the compression strategy for a mode, treating <see cref="CompressionMode.None"/> as
-    /// no strategy so chunks bypass the compression path entirely.
-    /// </summary>
-    /// <param name="compressionMode">The compression mode recorded for the backup.</param>
-    /// <returns>The compression strategy, or <see langword="null"/> when compression is disabled.</returns>
-    private ICompressionStrategy? CreateCompressionStrategy(CompressionMode compressionMode)
-    {
-        return compressionMode is CompressionMode.None
-            ? null
-            : compressionStrategies.Resolve(compressionMode);
-    }
-
-    /// <summary>
     /// Wraps a block of memory in a non-writable stream, reusing the backing array when the memory
     /// exposes one so chunk data is not copied.
     /// </summary>
@@ -761,18 +646,81 @@ internal sealed partial class ChunkedBackupService
     }
 
     /// <summary>
-    /// Determines whether a failure is confined to the file being processed, in which case the run
-    /// records the error and moves on instead of aborting the whole operation.
+    /// Creates the backup folder and its chunks directory, refusing a chunks directory reached
+    /// through a link.
+    /// </summary>
+    /// <param name="destinationPath">The backup folder.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The full path of the chunks directory.</returns>
+    internal async Task<string> PrepareChunksDirectoryAsync(
+        string destinationPath,
+        CancellationToken cancellationToken
+    )
+    {
+        await fileOperationsService
+            .CreateDirectoryAsync(destinationPath, cancellationToken)
+            .ConfigureAwait(false);
+
+        var chunksDir = Path.Join(
+            destinationPath,
+            BackupConstants.ChunksDirectoryName
+        );
+
+        RestorePathGuard.EnsureNoReparsePointDescendants(
+            fileOperationsService,
+            destinationPath,
+            chunksDir
+        );
+        await fileOperationsService
+            .CreateDirectoryAsync(chunksDir, cancellationToken)
+            .ConfigureAwait(false);
+        RestorePathGuard.EnsureNoReparsePointDescendants(
+            fileOperationsService,
+            destinationPath,
+            chunksDir
+        );
+
+        return chunksDir;
+    }
+
+    /// <summary>
+    /// Deletes every chunk file a run wrote, after the run failed or was cancelled before its manifest
+    /// was published, and removes the chunks directory again when that leaves it empty.
     /// </summary>
     /// <remarks>
-    /// <see cref="FileNotFoundException"/>, <see cref="DirectoryNotFoundException"/>, and
-    /// <see cref="PathTooLongException"/> all derive from <see cref="IOException"/>. Invalid archive
-    /// data is also confined to the manifest entry currently being processed.
+    /// The chunks of a run are named under its own keys, so none of them can belong to the backup the
+    /// run was going to replace. Cleanup is best-effort: a file that cannot be deleted stays behind as
+    /// an orphan the next successful run prunes.
     /// </remarks>
-    /// <param name="ex">The exception thrown while processing a file.</param>
-    /// <returns><see langword="true"/> if the failure affects only one file; otherwise <see langword="false"/>.</returns>
-    private static bool IsFileLevelError(Exception ex)
+    /// <param name="context">The run's record of the chunk files it wrote.</param>
+    /// <param name="chunksDir">The chunks directory.</param>
+    internal void DeleteWrittenChunks(ChunkWriteContext context, string chunksDir)
     {
-        return ex is IOException or InvalidDataException or UnauthorizedAccessException;
+        foreach (var chunkFile in context.WrittenChunks)
+        {
+            _ = fileOperationsService.TryDeleteFile(chunkFile);
+        }
+
+        try
+        {
+            if (
+                fileOperationsService.DirectoryExists(chunksDir)
+                && fileOperationsService.GetDirectoryEntryNames(chunksDir).Count is 0
+            )
+            {
+                fileOperationsService.DeleteEmptyDirectory(chunksDir);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
     }
+
+    /// <summary>
+    /// A chunk of a file whose store has been started.
+    /// </summary>
+    /// <param name="Size">The plaintext length of the chunk.</param>
+    /// <param name="Store">The store operation, resolving to the chunk's Base64-encoded hash.</param>
+    private sealed record class PendingChunk(int Size, Task<string> Store);
 }

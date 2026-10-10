@@ -2,12 +2,24 @@ using BackupZCrypt.Application.Utilities.Helpers;
 using BackupZCrypt.Application.ValueObjects;
 using BackupZCrypt.Application.ValueObjects.Backup;
 using BackupZCrypt.Domain.Archive;
+using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
-namespace BackupZCrypt.Application.Services;
+namespace BackupZCrypt.Application.Engine;
 
-internal sealed partial class ChunkedBackupService
+/// <summary>
+/// Compares what an update or restore is about to do with the backup it works on, without writing
+/// anything, so its consequences can be confirmed first.
+/// </summary>
+/// <param name="backupOpener">The opener of the backup being previewed.</param>
+/// <param name="directoryScanService">The service used to walk the source tree an update reads.</param>
+/// <param name="fileMetadataService">The service used to read source file metadata.</param>
+internal sealed class BackupPreviewer(
+    BackupOpener backupOpener,
+    IDirectoryScanService directoryScanService,
+    IFileMetadataService fileMetadataService
+)
 {
     /// <summary>
     /// Opens an existing backup and compares it with the source an update would read, without
@@ -18,14 +30,14 @@ internal sealed partial class ChunkedBackupService
     /// <param name="password">The password the backup was created with.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The comparison, or a failure when the backup cannot be opened.</returns>
-    public async Task<Result<BackupPreview>> PreviewUpdateAsync(
+    internal async Task<Result<BackupPreview>> PreviewUpdateAsync(
         string sourcePath,
         string backupPath,
         string password,
         CancellationToken cancellationToken
     )
     {
-        var (backup, openError) = await this.OpenBackupAsync(
+        var (backup, openError) = await backupOpener.OpenAsync(
                 backupPath,
                 password,
                 MessageCode.ManifestRequiredForUpdate,
@@ -88,7 +100,7 @@ internal sealed partial class ChunkedBackupService
 
                 if (
                     !recordedFiles.TryGetValue(file.RelativePath, out var recorded)
-                    || !IsUnchanged(recorded, metadata)
+                    || !ManifestEntries.IsUnchanged(recorded, metadata)
                 )
                 {
                     bytesToProcess = metadata.Size > long.MaxValue - bytesToProcess
@@ -118,13 +130,13 @@ internal sealed partial class ChunkedBackupService
     /// <param name="password">The password the backup was created with.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The backup's contents summary, or a failure when it cannot be opened.</returns>
-    public async Task<Result<BackupPreview>> PreviewRestoreAsync(
+    internal async Task<Result<BackupPreview>> PreviewRestoreAsync(
         string backupPath,
         string password,
         CancellationToken cancellationToken
     )
     {
-        var (backup, openError) = await this.OpenBackupAsync(
+        var (backup, openError) = await backupOpener.OpenAsync(
                 backupPath,
                 password,
                 MessageCode.ManifestRequiredForDecryption,
@@ -176,7 +188,7 @@ internal sealed partial class ChunkedBackupService
         {
             return fileMetadataService.GetFileMetadata(filePath);
         }
-        catch (Exception exception) when (IsFileLevelError(exception))
+        catch (Exception exception) when (FileFailures.IsConfinedToOneFile(exception))
         {
             return null;
         }

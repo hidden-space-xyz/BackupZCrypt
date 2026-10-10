@@ -20,6 +20,19 @@ public static class BackupLayout
     private const int TemporaryNameHexLength = 24;
 
     /// <summary>
+    /// Resolves the full path of a chunk inside a backup's chunks directory, under the keyed name
+    /// <see cref="ChunkCrypto.ComputeChunkFileName"/> gives it.
+    /// </summary>
+    /// <param name="chunksDirectory">The directory encrypted chunk files live in.</param>
+    /// <param name="namingKey">The chunk-naming sub-key.</param>
+    /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
+    /// <returns>The path of the chunk file.</returns>
+    public static string ChunkFilePath(string chunksDirectory, byte[] namingKey, byte[] chunkHash)
+    {
+        return Path.Join(chunksDirectory, ChunkCrypto.ComputeChunkFileName(namingKey, chunkHash));
+    }
+
+    /// <summary>
     /// Determines whether a name is that of a stored chunk file.
     /// </summary>
     /// <param name="fileName">The file name to test.</param>
