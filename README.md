@@ -47,14 +47,15 @@ BackupZCrypt gives you privacy and security with efficient, incremental backups:
 
 ## 🚀 Usage
 
-- **🔐 Create Backup** — Select a source folder, an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete), and a password to produce an encrypted backup. Nothing in the destination is ever deleted
+- **🔐 Create Backup** — Select a source folder, an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete), and a password to produce an encrypted backup. Only the previous backup's own files are ever removed from the destination
 - **🔄 Update Backup** — Re-scan the source: files whose size and modification time are unchanged are kept without being read, and only changed chunks are re-encrypted. Files deleted from the source are removed from the backup, and you are told which ones before anything changes
-- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere, with their modification times, read-only and hidden attributes, and empty folders
+- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere, with their modification times, read-only and hidden attributes on Windows or permission bits on Linux and macOS, and empty folders
 - **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without restoring anything. Damaged chunks are set aside so the next update rebuilds them from the source
 - **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
 
 Settings are stored as plain JSON under `%LocalAppData%\BackupZCrypt` on Windows and the equivalent
-local application data directory on Linux and macOS. They hold preferences only — never your password.
+local application data directory on Linux and macOS. They hold your preferences and the last source and
+destination folders you chose — never your password.
 
 ## 📸 Screenshots
 
@@ -84,9 +85,9 @@ On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
 
 | Layer | What BackupZCrypt does |
 | --- | --- |
-| **Key derivation** | Your password and a 32-byte random salt produce a 256-bit master key through Argon2id (256 MiB, 4 passes), Scrypt (N = 2¹⁸, r = 8, p = 1) or PBKDF2-SHA256 (800,000 iterations) |
-| **Key separation** | HKDF-SHA256 splits that master key into four purpose-bound sub-keys, so the key that names a chunk cannot decrypt it |
-| **Chunk encryption** | Each chunk is compressed, then sealed with the chosen AEAD cipher under a 96-bit nonce derived from its own content hash, carrying a 128-bit authentication tag |
+| **Key derivation** | Your password and a 32-byte random salt produce a 256-bit master key through Argon2id (256 MiB, 4 passes, 2 lanes), Scrypt (N = 2¹⁸, r = 8, p = 1) or PBKDF2-SHA256 (800,000 iterations) |
+| **Key separation** | HKDF-SHA256 expands that master key into four purpose-bound sub-keys, so the key that names a chunk cannot decrypt it |
+| **Chunk encryption** | Each chunk is compressed, then sealed with the chosen AEAD cipher under a 96-bit nonce derived by HMAC from its own content hash, carrying a 128-bit authentication tag |
 | **File names** | Chunks are stored under `HMAC-SHA256(naming key, content hash)`, so the names in your backup folder reveal nothing about their contents |
 | **Manifest** | The file list is a separately encrypted, authenticated document. Only its 34-byte header — cipher, key derivation function and salt — is readable, and that header is bound into the ciphertext so it cannot be swapped |
 | **Restore** | Entry paths are validated and confined to the destination, decompression is bounded by the declared size, and every restored file's SHA-256 is re-checked against the manifest |

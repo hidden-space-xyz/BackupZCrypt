@@ -1,7 +1,6 @@
 # GitHub Actions workflow
 
-BackupZCrypt follows the same gated release flow as CodigoActivo, with the Docker publication stage
-replaced by cross-platform desktop packaging:
+BackupZCrypt ships through a single gated flow that ends in cross-platform desktop packaging:
 
 ```text
 push to master

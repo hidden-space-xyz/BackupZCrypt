@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`BackupZCrypt.sln` contains six .NET 10 projects. `BackupZCrypt.Domain` defines contracts, enums, factories, and value objects; `BackupZCrypt.Application` contains commands, queries, validators, and backup orchestration; `BackupZCrypt.Infrastructure` implements cryptography, compression, chunking, settings, and file access. Dependency injection lives in `BackupZCrypt.Composition`. The Avalonia/MVVM client is in `BackupZCrypt.Desktop`, with UI code split among `Views`, `ViewModels`, `Services`, and `Resources`. Tests are centralized in `BackupZCrypt.Test/Unit` and `BackupZCrypt.Test/Integration`; shared fixtures belong in `Common`. Treat `dist`, `bin`, and `obj` as generated output.
+`BackupZCrypt.sln` contains six .NET 10 projects. `BackupZCrypt.Domain` defines contracts, enums, factories, and value objects; `BackupZCrypt.Application` contains commands, queries, validators, and backup orchestration; `BackupZCrypt.Infrastructure` implements cryptography, compression, chunking, settings, and file access. Dependency injection lives in `BackupZCrypt.Composition`. The Avalonia/MVVM client is in `BackupZCrypt.Desktop`, with UI code split among `Views`, `ViewModels`, `Services`, and `Resources`. Tests are centralized in `BackupZCrypt.Test/Unit` and `BackupZCrypt.Test/Integration`; shared fixtures belong in `Common`. Committed on-disk format archives live in `BackupZCrypt.Test/TestData/OnDiskFormatArchives`; `BackupZCrypt.Test/Tools` holds their shared definitions and the explicit-only generator that rewrites them. Treat `dist`, `bin`, and `obj` as generated output.
 
 ## Build, Test, and Development Commands
 
@@ -21,11 +21,11 @@ Follow standard C# formatting with four-space indentation, file-scoped organizat
 
 ## Testing Guidelines
 
-Use xUnit v3 and NSubstitute. Name test classes `TypeNameTests` and test methods after observable behavior. Place isolated tests under the matching `Unit/<Layer>` folder and filesystem or end-to-end scenarios under `Integration`. Tests must be deterministic, locale-independent, and own and clean up temporary files. No numeric coverage threshold is defined; cover new behavior, failure paths, archive compatibility, and security-sensitive edge cases.
+Use xUnit v3 and NSubstitute. Name test classes `TypeNameTests` and test methods after observable behavior. Place isolated tests under the matching `Unit/<Layer>` folder and filesystem or end-to-end scenarios under `Integration`. Tests must be deterministic, locale-independent, and own and clean up temporary files. CI requires at least 90% line, branch, and method coverage of the `Application`, `Composition`, `Domain`, and `Infrastructure` assemblies (see `BackupZCrypt.Test/CodeCoverage.config` and the local gate in `README.md`); cover new behavior, failure paths, archive compatibility, and security-sensitive edge cases. Regenerate the format fixtures only for a deliberate format change with `dotnet run --project BackupZCrypt.Test -- -explicit only -class "*OnDiskFormatFixtureGenerator"`, and review the resulting diff.
 
 ## Commit & Pull Request Guidelines
 
-Use Conventional Commits, consistent with history: `feat:`, `fix:`, `refactor:`, `chore:`, or `ci:`. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer. Branch from `develop` and open pull requests against `develop`; `master` is reserved for releases. PRs should explain intent and risk, link relevant issues, list verification commands, and include screenshots for Avalonia UI changes. Run build, tests, and the whitespace check before requesting review.
+Use Conventional Commits, consistent with history: `feat:`, `fix:`, `perf:`, `refactor:`, `chore:`, `ci:`, or `bump:` for dependency updates. Mark breaking changes with `!` in the subject; the release workflow reads only commit subjects, so a `BREAKING CHANGE:` footer alone does not bump the major version. Only breaking, `feat:`, `fix:`, and `perf:` commits publish a release. Branch from `develop` and open pull requests against `develop`; `master` is reserved for releases. PRs should explain intent and risk, link relevant issues, list verification commands, and include screenshots for Avalonia UI changes. Run build, tests, and the whitespace check before requesting review.
 
 ## Security & Configuration
 
