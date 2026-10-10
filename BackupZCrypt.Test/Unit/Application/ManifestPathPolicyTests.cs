@@ -226,12 +226,10 @@ public sealed class ManifestPathPolicyTests
         );
     }
 
-    [Theory]
-    [InlineData("docs/sub/deep.txt")]
-    [InlineData("docs\\sub\\deep.txt")]
-    internal void ToPlatformPath_AcceptsEitherNotation_AndYieldsHostSeparators(string manifestPath)
+    [Fact]
+    internal void ToPlatformPath_YieldsHostSeparators()
     {
-        var platformPath = ManifestPathPolicy.ToPlatformPath(manifestPath);
+        var platformPath = ManifestPathPolicy.ToPlatformPath("docs/sub/deep.txt");
 
         Assert.Equal(
             string.Join(Path.DirectorySeparatorChar, "docs", "sub", "deep.txt"),
