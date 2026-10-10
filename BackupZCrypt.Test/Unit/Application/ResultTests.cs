@@ -1,4 +1,4 @@
-using BackupZCrypt.Application.ValueObjects;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
@@ -10,7 +10,7 @@ namespace BackupZCrypt.Test.Unit.Application;
 /// The implicit conversions are asserted alongside the factory method that each one forwards to, rather
 /// than in methods of their own: a one-line forward cannot regress independently of its target, but the
 /// conversion still has to be exercised so that the two implicit operators of
-/// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}"/> keep resolving to the intended one. Both are
+/// <see cref="BackupZCrypt.Application.Common.Result{T}"/> keep resolving to the intended one. Both are
 /// in scope for a <see cref="MessageCode"/>, and binding one to the value operator instead of the message
 /// operator would silently turn a failure into a success.
 /// </remarks>

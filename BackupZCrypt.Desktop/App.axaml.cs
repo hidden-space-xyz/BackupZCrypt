@@ -3,8 +3,7 @@ using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Composition;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;

@@ -1,6 +1,6 @@
 root = true
 
-[BackupZCrypt.Application/ValueObjects/ResultOfT.cs]
+[BackupZCrypt.Application/Common/ResultOfT.cs]
 dotnet_diagnostic.CA1000.severity = none
 
 [*.cs]

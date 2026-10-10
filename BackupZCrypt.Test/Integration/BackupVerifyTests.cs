@@ -1,8 +1,7 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -361,7 +360,7 @@ public sealed class BackupVerifyTests
     /// <summary>
     /// Gathers the operation's own error codes together with the per-file codes of the completed engine
     /// result, which is only read when the outer result succeeded with a completion because
-    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
+    /// <see cref="BackupZCrypt.Application.Common.Result{T}.Value"/> throws on a failure.
     /// </summary>
     /// <param name="result">The operation outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>

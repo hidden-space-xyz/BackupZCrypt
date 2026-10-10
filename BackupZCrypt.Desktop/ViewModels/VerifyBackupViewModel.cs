@@ -1,7 +1,6 @@
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
-using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
+using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-using BackupZCrypt.Application.ValueObjects.Password;
+using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Domain.Enums;

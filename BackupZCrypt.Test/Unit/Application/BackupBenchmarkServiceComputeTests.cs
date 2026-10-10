@@ -1,4 +1,4 @@
-using BackupZCrypt.Application.Services;
+using BackupZCrypt.Application.Benchmark;
 
 namespace BackupZCrypt.Test.Unit.Application;
 

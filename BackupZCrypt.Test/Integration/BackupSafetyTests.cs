@@ -3,9 +3,8 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;

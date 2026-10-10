@@ -1,8 +1,9 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
+using BackupZCrypt.Application.Engine;
+using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -949,7 +950,7 @@ public sealed class ChunkedBackupFailurePathTests
     /// <summary>
     /// Gathers the engine's own error codes together with the per-file codes of the inner backup
     /// result, which is only read when the outer result succeeded because
-    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure.
+    /// <see cref="BackupZCrypt.Application.Common.Result{T}.Value"/> throws on a failure.
     /// </summary>
     /// <param name="result">The outcome to inspect.</param>
     /// <returns>The distinct message codes reported at either level.</returns>

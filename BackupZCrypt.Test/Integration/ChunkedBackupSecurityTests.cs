@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
+using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
@@ -691,7 +691,7 @@ public sealed class ChunkedBackupSecurityTests
     /// <summary>
     /// Gathers the operation's own error codes together with the per-file codes of the completed engine
     /// result, which is only read when the outer result succeeded and carries a completion, because
-    /// <see cref="BackupZCrypt.Application.ValueObjects.Result{T}.Value"/> throws on a failure and
+    /// <see cref="BackupZCrypt.Application.Common.Result{T}.Value"/> throws on a failure and
     /// <see cref="BackupOutcome.Completion"/> is <see langword="null"/> while warnings await confirmation.
     /// </summary>
     /// <param name="result">The operation outcome to inspect.</param>

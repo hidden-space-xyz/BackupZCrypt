@@ -1,4 +1,4 @@
-using BackupZCrypt.Application.Services;
+using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 

@@ -1,8 +1,6 @@
+using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Application.Services.Interfaces;
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Benchmark;
-using BackupZCrypt.Application.ValueObjects.Settings;
+using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;

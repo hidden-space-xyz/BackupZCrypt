@@ -1,5 +1,5 @@
-using BackupZCrypt.Application.ValueObjects;
-using BackupZCrypt.Application.ValueObjects.Backup;
+using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.FileSystem;
