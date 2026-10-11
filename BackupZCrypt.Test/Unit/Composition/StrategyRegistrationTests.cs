@@ -1,3 +1,4 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Test.Common;

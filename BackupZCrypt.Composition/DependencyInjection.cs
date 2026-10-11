@@ -1,3 +1,4 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Engine;
@@ -5,7 +6,6 @@ using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Domain.Strategies;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Infrastructure.Services;
 using BackupZCrypt.Infrastructure.Services.Settings;
@@ -52,8 +52,9 @@ public static class DependencyInjection
     /// </para>
     /// <para>
     /// A front end depends only on the use-case services: <see cref="IBackupOperations"/>,
-    /// <see cref="ISettingsStore"/>, <see cref="IPasswordService"/>, and
-    /// <see cref="IBackupBenchmarkService"/>. Every other registration is a collaborator of these.
+    /// <see cref="ISettingsStore"/>, <see cref="IPasswordService"/>,
+    /// <see cref="IBackupBenchmarkService"/>, and <see cref="IAlgorithmCatalog"/>. Every other
+    /// registration is a collaborator of these.
     /// </para>
     /// </remarks>
     /// <param name="services">The service collection to add the registrations to.</param>
@@ -96,6 +97,7 @@ public static class DependencyInjection
         _ = services.AddSingleton<IManifestService, ManifestService>();
         _ = services.AddSingleton<IPasswordService, PasswordService>();
 
+        _ = services.AddSingleton<IAlgorithmCatalog, AlgorithmCatalog>();
         _ = services.AddSingleton<ISettingsStore, SettingsStore>();
         _ = services.AddSingleton<IBackupOperations, BackupOperations>();
 

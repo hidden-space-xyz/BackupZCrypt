@@ -5,7 +5,7 @@ namespace BackupZCrypt.Application.Backup;
 /// <summary>
 /// Validates backup requests, separating blocking errors from advisory warnings.
 /// </summary>
-public interface IBackupRequestValidator
+internal interface IBackupRequestValidator
 {
     /// <summary>
     /// Analyzes a request for blocking errors that must prevent the operation from running.

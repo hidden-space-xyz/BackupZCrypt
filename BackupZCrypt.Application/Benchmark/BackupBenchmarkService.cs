@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Domain.Constants;

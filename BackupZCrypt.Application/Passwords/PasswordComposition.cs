@@ -8,7 +8,7 @@ namespace BackupZCrypt.Application.Passwords;
 /// <param name="HasDigit">Whether the password contains an ASCII decimal digit.</param>
 /// <param name="HasSpecial">Whether the password contains one of the recognized ASCII punctuation or symbol characters.</param>
 /// <param name="HasOther">Whether the password contains a non-ASCII (Unicode) character.</param>
-public sealed record class PasswordComposition(
+internal sealed record class PasswordComposition(
     bool HasUpper,
     bool HasLower,
     bool HasDigit,

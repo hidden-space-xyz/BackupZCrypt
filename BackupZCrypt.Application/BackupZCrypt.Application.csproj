@@ -3,6 +3,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="BackupZCrypt.Composition" />
     <InternalsVisibleTo Include="BackupZCrypt.Test" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>

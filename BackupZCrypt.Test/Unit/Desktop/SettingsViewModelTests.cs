@@ -1,10 +1,10 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -14,9 +14,9 @@ using NSubstitute;
 namespace BackupZCrypt.Test.Unit.Desktop;
 
 /// <summary>
-/// Unit tests for the settings page: the option lists it builds from the registered strategies, the
-/// load-once behaviour of the stored defaults, persistence and the language restart note, and the
-/// benchmark amount parsing.
+/// Unit tests for the settings page: the option lists it builds from the algorithm catalog, the
+/// reload of the stored defaults each time the page is shown, persistence and the language restart
+/// note, and the benchmark amount parsing.
 /// </summary>
 public sealed class SettingsViewModelTests
 {
@@ -32,20 +32,57 @@ public sealed class SettingsViewModelTests
     private readonly IBackupBenchmarkService benchmarkService = Substitute.For<IBackupBenchmarkService>();
 
     [Fact]
-    internal void Constructor_WithTheRegisteredStrategies_GivesEveryOptionDistinctDisplayText()
+    internal void Constructor_ListsTheOptionsInTheOrderTheCatalogGivesThem()
     {
-        using var provider = TestHost.CreateProvider();
-        var encryption = provider.GetServices<IEncryptionAlgorithmStrategy>().ToArray();
-        var keyDerivation = provider.GetServices<IKeyDerivationAlgorithmStrategy>().ToArray();
-        var compression = provider.GetServices<ICompressionStrategy>().ToArray();
+        var catalog = AlgorithmCatalogs.Offering(
+            [EncryptionAlgorithm.Serpent, EncryptionAlgorithm.Aes],
+            [KeyDerivationAlgorithm.Scrypt, KeyDerivationAlgorithm.Argon2id],
+            [CompressionMode.Zstd, CompressionMode.None]
+        );
 
+        SettingsViewModel sut = new(this.settingsStore, this.benchmarkService, catalog);
+
+        Assert.Multiple(
+            () => Assert.Equal(catalog.EncryptionAlgorithms, sut.EncryptionOptions.Select(static option => option.Id)),
+            () => Assert.Equal(catalog.KeyDerivationAlgorithms, sut.KeyDerivationOptions.Select(static option => option.Id)),
+            () => Assert.Equal(catalog.CompressionModes, sut.CompressionOptions.Select(static option => option.Id))
+        );
+    }
+
+    [Fact]
+    internal async Task OnNavigatedToAsync_StoredAlgorithmsThisBuildDoesNotOffer_SelectTheDefaults()
+    {
+        StubStoredSettings(
+            new BackupCreationSettings(EncryptionAlgorithm.Serpent, KeyDerivationAlgorithm.Scrypt, CompressionMode.ZstdBest),
+            LanguageSettings.DefaultValue
+        );
+        _ = this.settingsStore.GetFilePath<BackupCreationSettings>().Returns("settings-path.json");
         SettingsViewModel sut = new(
             this.settingsStore,
             this.benchmarkService,
-            encryption,
-            keyDerivation,
-            compression
+            AlgorithmCatalogs.Offering(
+                [EncryptionAlgorithm.Aes, EncryptionAlgorithm.Twofish],
+                [KeyDerivationAlgorithm.Argon2id, KeyDerivationAlgorithm.PBKDF2],
+                [CompressionMode.None, CompressionMode.Zstd]
+            )
         );
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Multiple(
+            () => Assert.Equal(EncryptionAlgorithm.Aes, sut.SelectedEncryption.Id),
+            () => Assert.Equal(KeyDerivationAlgorithm.Argon2id, sut.SelectedKeyDerivation.Id),
+            () => Assert.Equal(CompressionMode.None, sut.SelectedCompression.Id)
+        );
+    }
+
+    [Fact]
+    internal void Constructor_WithTheRegisteredCatalog_GivesEveryOptionDistinctDisplayText()
+    {
+        using var provider = TestHost.CreateProvider();
+        var catalog = provider.GetRequiredService<IAlgorithmCatalog>();
+
+        SettingsViewModel sut = new(this.settingsStore, this.benchmarkService, catalog);
 
         List<string> names =
         [
@@ -66,9 +103,9 @@ public sealed class SettingsViewModelTests
         var encryptionIds = sut.EncryptionOptions.Select(static option => option.Id).ToList();
 
         Assert.Multiple(
-            () => Assert.Equal(encryption.Length, sut.EncryptionOptions.Count),
-            () => Assert.Equal(keyDerivation.Length, sut.KeyDerivationOptions.Count),
-            () => Assert.Equal(compression.Length + 1, sut.CompressionOptions.Count),
+            () => Assert.Equal(catalog.EncryptionAlgorithms.Count, sut.EncryptionOptions.Count),
+            () => Assert.Equal(catalog.KeyDerivationAlgorithms.Count, sut.KeyDerivationOptions.Count),
+            () => Assert.Equal(catalog.CompressionModes.Count, sut.CompressionOptions.Count),
             () => Assert.Equal(CompressionMode.None, sut.CompressionOptions[0].Id),
             () => Assert.DoesNotContain(names, string.IsNullOrWhiteSpace),
             () => Assert.DoesNotContain(descriptions, string.IsNullOrWhiteSpace),
@@ -378,67 +415,7 @@ public sealed class SettingsViewModelTests
     }
 
     /// <summary>
-    /// Builds one substituted strategy per encryption algorithm so every algorithm is selectable.
-    /// </summary>
-    /// <returns>The substituted encryption strategies.</returns>
-    private static List<IEncryptionAlgorithmStrategy> EncryptionStrategies()
-    {
-        List<IEncryptionAlgorithmStrategy> strategies = [];
-
-        foreach (var id in Enum.GetValues<EncryptionAlgorithm>())
-        {
-            var strategy = Substitute.For<IEncryptionAlgorithmStrategy>();
-            _ = strategy.Id.Returns(id);
-            strategies.Add(strategy);
-        }
-
-        return strategies;
-    }
-
-    /// <summary>
-    /// Builds one substituted strategy per key-derivation algorithm.
-    /// </summary>
-    /// <returns>The substituted key-derivation strategies.</returns>
-    private static List<IKeyDerivationAlgorithmStrategy> KeyDerivationStrategies()
-    {
-        List<IKeyDerivationAlgorithmStrategy> strategies = [];
-
-        foreach (var id in Enum.GetValues<KeyDerivationAlgorithm>())
-        {
-            var strategy = Substitute.For<IKeyDerivationAlgorithmStrategy>();
-            _ = strategy.Id.Returns(id);
-            strategies.Add(strategy);
-        }
-
-        return strategies;
-    }
-
-    /// <summary>
-    /// Builds one substituted strategy per compression mode except <see cref="CompressionMode.None"/>,
-    /// which the page adds itself.
-    /// </summary>
-    /// <returns>The substituted compression strategies.</returns>
-    private static List<ICompressionStrategy> CompressionStrategies()
-    {
-        List<ICompressionStrategy> strategies = [];
-
-        foreach (var id in Enum.GetValues<CompressionMode>())
-        {
-            if (id is CompressionMode.None)
-            {
-                continue;
-            }
-
-            var strategy = Substitute.For<ICompressionStrategy>();
-            _ = strategy.Id.Returns(id);
-            strategies.Add(strategy);
-        }
-
-        return strategies;
-    }
-
-    /// <summary>
-    /// Builds the page over substituted strategies covering every algorithm, with the stored settings
+    /// Builds the page over a substituted catalog covering every algorithm, with the stored settings
     /// stubbed to the built-in defaults and the settings path resolved to a known value.
     /// </summary>
     /// <returns>The system under test.</returns>
@@ -452,9 +429,7 @@ public sealed class SettingsViewModelTests
         return new SettingsViewModel(
             this.settingsStore,
             this.benchmarkService,
-            EncryptionStrategies(),
-            KeyDerivationStrategies(),
-            CompressionStrategies()
+            AlgorithmCatalogs.Every()
         );
     }
 

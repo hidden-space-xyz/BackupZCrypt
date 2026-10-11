@@ -10,16 +10,20 @@ using BackupZCrypt.Test.Tools;
 namespace BackupZCrypt.Test.Unit.Architecture;
 
 /// <summary>
-/// Pins which feature folders of the Application layer each Application feature and each outer
-/// assembly references, so a feature cannot quietly start depending on one that depends on it and an
-/// outer assembly cannot reach past the part of Application meant for it.
+/// Pins which feature folders of the Application layer each Application feature references, and
+/// which Application features and Domain areas each outer assembly references, so a feature cannot
+/// quietly start depending on one that depends on it and an outer assembly cannot reach past the
+/// part of the inner layers meant for it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The features form a directed acyclic graph: <c>Common</c> and the <c>FileSystem</c> ports depend
-/// on no feature, the chunked <c>Engine</c> depends only on <c>Common</c>, <c>FileSystem</c>, and
+/// The features form a directed acyclic graph: <c>Algorithms</c>, <c>Common</c>, and the
+/// <c>FileSystem</c> ports depend on no feature, the chunked <c>Engine</c> depends only on those and
 /// <c>Manifest</c>, and the use-case features sit on top. Infrastructure reaches only the ports it
-/// implements, and the desktop front end neither the engine nor the file-system ports.
+/// implements and the Domain it implements them for; the desktop front end reaches neither the
+/// engine nor the ports, and of the Domain only the algorithm identifiers. Because a port can share
+/// a feature namespace with a use case, Desktop is also checked against every contract Infrastructure
+/// implements.
 /// </para>
 /// <para>
 /// The tables are exact rather than upper bounds: an edge the code no longer uses fails as surely as
@@ -51,24 +55,44 @@ public sealed partial class FeatureDependencyTests
         StringComparer.Ordinal
     )
     {
+        ["Algorithms"] = [],
         ["Common"] = [],
         ["FileSystem"] = [],
-        ["Manifest"] = ["Common", "FileSystem"],
-        ["Engine"] = ["Common", "FileSystem", "Manifest"],
+        ["Manifest"] = ["Algorithms", "Common", "FileSystem"],
+        ["Engine"] = ["Algorithms", "Common", "FileSystem", "Manifest"],
         ["Passwords"] = ["Common"],
-        ["Settings"] = ["Common"],
-        ["Benchmark"] = ["Common", "Engine"],
-        ["Backup"] = ["Common", "Engine", "FileSystem", "Manifest", "Passwords"],
+        ["Settings"] = ["Algorithms", "Common"],
+        ["Benchmark"] = ["Algorithms", "Common", "Engine"],
+        ["Backup"] = ["Algorithms", "Common", "Engine", "FileSystem", "Manifest", "Passwords"],
     };
 
     /// <summary>
-    /// The Application features each outer project references. The composition root is not listed:
-    /// wiring every implementation to its contract is its job.
+    /// The Application features and Domain areas each outer project references, each named by its
+    /// namespace below <c>BackupZCrypt</c>. The composition root is not listed: wiring every
+    /// implementation to its contract is its job.
     /// </summary>
     private static readonly Dictionary<string, string[]> OuterReferences = new(StringComparer.Ordinal)
     {
-        ["BackupZCrypt.Infrastructure"] = ["FileSystem", "Settings"],
-        ["BackupZCrypt.Desktop"] = ["Backup", "Benchmark", "Common", "Manifest", "Passwords", "Settings"],
+        ["BackupZCrypt.Infrastructure"] =
+        [
+            "Application.FileSystem",
+            "Application.Settings",
+            "Domain.Archive",
+            "Domain.Constants",
+            "Domain.Enums",
+            "Domain.Strategies",
+        ],
+        ["BackupZCrypt.Desktop"] =
+        [
+            "Application.Algorithms",
+            "Application.Backup",
+            "Application.Benchmark",
+            "Application.Common",
+            "Application.Manifest",
+            "Application.Passwords",
+            "Application.Settings",
+            "Domain.Enums",
+        ],
     };
 
     /// <summary>
@@ -97,8 +121,8 @@ public sealed partial class FeatureDependencyTests
     [MemberData(nameof(Features))]
     internal void FeatureReferences_MatchTheDocumentedFeatureRules(string feature)
     {
-        var found = CompiledReferences(ApplicationTypes().Where(type => FeatureOf(type) == feature))
-            .Concat(SourceReferences(FeatureFolder(feature), requireRootNamespace: false))
+        var found = CompiledReferences(ApplicationTypes().Where(type => FeatureOf(type) == feature), FeatureOf)
+            .Concat(SourceReferences(FeatureFolder(feature), RelativeFeatureNamespace()))
             .Where(reference => reference.Feature != feature);
 
         AssertReferencesMatch(feature, FeatureReferences[feature], found);
@@ -108,15 +132,37 @@ public sealed partial class FeatureDependencyTests
     [MemberData(nameof(OuterProjects))]
     internal void OuterProjectReferences_MatchTheDocumentedRules(string project)
     {
-        var found = CompiledReferences(OuterAssembliesByProject[project].GetTypes())
+        var found = CompiledReferences(OuterAssembliesByProject[project].GetTypes(), AreaOf)
             .Concat(
-                SourceReferences(
-                    Path.Join(OnDiskFormatFixtures.RepositoryRoot, project),
-                    requireRootNamespace: true
-                )
+                SourceReferences(Path.Join(OnDiskFormatFixtures.RepositoryRoot, project), QualifiedArea())
             );
 
         AssertReferencesMatch(project, OuterReferences[project], found);
+    }
+
+    [Fact]
+    internal void Desktop_UsesNoContractInfrastructureImplements()
+    {
+        var implemented = OuterAssembliesByProject["BackupZCrypt.Infrastructure"]
+            .GetTypes()
+            .SelectMany(static type => type.GetInterfaces())
+            .Select(static contract => contract.IsGenericType ? contract.GetGenericTypeDefinition() : contract)
+            .Where(static contract => contract.Namespace?.StartsWith("BackupZCrypt.", StringComparison.Ordinal) is true)
+            .ToHashSet();
+
+        var violations = OuterAssembliesByProject["BackupZCrypt.Desktop"]
+            .GetTypes()
+            .SelectMany(type =>
+                TypeReferences
+                    .Of(type)
+                    .Where(implemented.Contains)
+                    .Select(contract => $"{type.FullName} -> {contract.FullName}")
+            )
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(implemented);
+        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
     [Fact]
@@ -180,38 +226,33 @@ public sealed partial class FeatureDependencyTests
     }
 
     /// <summary>
-    /// Lists the Application features the given compiled types reference.
+    /// Lists the features or areas the given compiled types reference.
     /// </summary>
     /// <param name="types">The types whose references are read.</param>
-    /// <returns>Each referenced feature with the type that references it.</returns>
-    private static IEnumerable<(string Feature, string Origin)> CompiledReferences(IEnumerable<Type> types)
+    /// <param name="classify">Names the feature or area a referenced type belongs to, or returns <see langword="null"/> to ignore it.</param>
+    /// <returns>Each referenced feature or area with the type that references it.</returns>
+    private static IEnumerable<(string Feature, string Origin)> CompiledReferences(
+        IEnumerable<Type> types,
+        Func<Type, string?> classify
+    )
     {
         return types.SelectMany(type =>
             TypeReferences
                 .Of(type)
-                .Select(FeatureOf)
+                .Select(classify)
                 .OfType<string>()
                 .Select(feature => (feature, type.FullName ?? type.Name))
         );
     }
 
     /// <summary>
-    /// Lists the Application features the C# and XAML source files under a folder mention.
+    /// Lists the features or areas the C# and XAML source files under a folder mention.
     /// </summary>
     /// <param name="folder">The folder searched, excluding build output.</param>
-    /// <param name="requireRootNamespace">
-    /// Whether only fully qualified mentions count. Inside Application a name relative to the
-    /// <c>BackupZCrypt</c> root also resolves; elsewhere a bare <c>Application.</c> belongs to other
-    /// libraries, such as Avalonia's <c>Application.Current</c>.
-    /// </param>
-    /// <returns>Each referenced feature with the file that mentions it.</returns>
-    private static IEnumerable<(string Feature, string Origin)> SourceReferences(
-        string folder,
-        bool requireRootNamespace
-    )
+    /// <param name="pattern">The expression whose <c>feature</c> group names what a mention refers to.</param>
+    /// <returns>Each referenced feature or area with the file that mentions it.</returns>
+    private static IEnumerable<(string Feature, string Origin)> SourceReferences(string folder, Regex pattern)
     {
-        var pattern = requireRootNamespace ? QualifiedFeatureNamespace() : RelativeFeatureNamespace();
-
         return SourceFiles(folder, "*.cs")
             .Concat(SourceFiles(folder, "*.axaml"))
             .SelectMany(file =>
@@ -279,11 +320,30 @@ public sealed partial class FeatureDependencyTests
     }
 
     /// <summary>
-    /// Matches a fully qualified mention of an Application feature namespace and captures the feature.
+    /// Gets the Application feature or Domain area a type belongs to, from its namespace.
+    /// </summary>
+    /// <param name="type">The type to classify.</param>
+    /// <returns>
+    /// The namespace below <c>BackupZCrypt</c> cut after its second segment, such as
+    /// <c>Application.Backup</c> or <c>Domain.Enums</c>, or <see langword="null"/> for a type outside
+    /// both layers.
+    /// </returns>
+    private static string? AreaOf(Type type)
+    {
+        return type.Namespace is { } ns && QualifiedArea().Match(ns) is { Success: true, Index: 0 } match
+            ? match.Groups["feature"].Value
+            : null;
+    }
+
+    /// <summary>
+    /// Matches a fully qualified mention of an Application feature or Domain area namespace and
+    /// captures it below the <c>BackupZCrypt</c> root. Only fully qualified mentions count outside
+    /// Application, where a bare <c>Application.</c> belongs to other libraries, such as Avalonia's
+    /// <c>Application.Current</c>.
     /// </summary>
     /// <returns>The compiled expression.</returns>
-    [GeneratedRegex(@"\bBackupZCrypt\.Application\.(?<feature>[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
-    private static partial Regex QualifiedFeatureNamespace();
+    [GeneratedRegex(@"\bBackupZCrypt\.(?<feature>(?:Application|Domain)\.[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
+    private static partial Regex QualifiedArea();
 
     /// <summary>
     /// Matches a mention of an Application feature namespace, fully qualified or relative to the

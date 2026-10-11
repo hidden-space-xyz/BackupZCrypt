@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Manifest;

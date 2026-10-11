@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.FileSystem;
@@ -17,11 +18,13 @@ namespace BackupZCrypt.Application.Backup;
 /// <param name="directoryScanService">The service used to walk the source tree.</param>
 /// <param name="systemStorage">The service used to query drive readiness, format, and free space.</param>
 /// <param name="passwordService">The service used to assess password strength for warnings.</param>
+/// <param name="algorithmCatalog">The catalog of algorithms this build can write an archive with.</param>
 internal sealed class BackupRequestValidator(
     IFileOperationsService fileOperations,
     IDirectoryScanService directoryScanService,
     ISystemStorageService systemStorage,
-    IPasswordService passwordService
+    IPasswordService passwordService,
+    IAlgorithmCatalog algorithmCatalog
 ) : IBackupRequestValidator
 {
     /// <summary>
@@ -386,19 +389,19 @@ internal sealed class BackupRequestValidator(
     }
 
     /// <summary>
-    /// Reports a create that names an algorithm or compression mode this version does not have, such
-    /// as one read from a hand-edited settings file, before any key is derived.
+    /// Reports a create that names an algorithm or compression mode this build cannot write, such as
+    /// one read from a hand-edited settings file, before any key is derived.
     /// </summary>
     /// <param name="request">The backup request carrying the algorithm choices.</param>
     /// <param name="errors">The list the findings are appended to.</param>
-    private static void ValidateAlgorithms(BackupRequest request, List<LocalizableMessage> errors)
+    private void ValidateAlgorithms(BackupRequest request, List<LocalizableMessage> errors)
     {
         if (
             request is CreateBackupRequest create
             && (
-                !Enum.IsDefined(create.EncryptionAlgorithm)
-                || !Enum.IsDefined(create.KeyDerivationAlgorithm)
-                || !Enum.IsDefined(create.Compression)
+                !algorithmCatalog.EncryptionAlgorithms.Contains(create.EncryptionAlgorithm)
+                || !algorithmCatalog.KeyDerivationAlgorithms.Contains(create.KeyDerivationAlgorithm)
+                || !algorithmCatalog.CompressionModes.Contains(create.Compression)
             )
         )
         {

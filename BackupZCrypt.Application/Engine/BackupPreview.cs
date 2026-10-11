@@ -11,7 +11,7 @@ namespace BackupZCrypt.Application.Engine;
 /// <param name="BytesToProcess">
 /// For an update, the size of the source files that are new or have changed since the backup.
 /// </param>
-public sealed record class BackupPreview(
+internal sealed record class BackupPreview(
     int FileCount,
     long TotalBytes,
     int MatchedFiles,

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;

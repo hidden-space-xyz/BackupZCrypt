@@ -1,6 +1,6 @@
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-namespace BackupZCrypt.Domain.Strategies;
+namespace BackupZCrypt.Application.Algorithms;
 
 /// <summary>
 /// Indexes the registered strategies of one family by the identifier each one implements.
@@ -30,12 +30,16 @@ internal sealed class StrategyRegistry<TId, TStrategy> : IStrategyRegistry<TId, 
     public StrategyRegistry(IEnumerable<TStrategy> strategies)
     {
         this.strategies = strategies.ToDictionary(static s => s.Id);
+        this.Ids = Array.AsReadOnly([.. this.strategies.Keys.Order()]);
 
         if (this.strategies.Count is 0)
         {
             throw new InvalidOperationException($"No {typeof(TStrategy).Name} is registered.");
         }
     }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<TId> Ids { get; }
 
     /// <inheritdoc/>
     public TStrategy Resolve(TId id)

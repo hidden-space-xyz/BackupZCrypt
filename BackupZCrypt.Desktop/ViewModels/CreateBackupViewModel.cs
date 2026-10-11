@@ -1,3 +1,4 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
@@ -21,12 +22,14 @@ namespace BackupZCrypt.Desktop.ViewModels;
 /// <param name="filePicker">The folder picker service.</param>
 /// <param name="clipboardService">The clipboard service used to copy a generated password.</param>
 /// <param name="passwordService">The service that generates passwords and analyzes their strength.</param>
+/// <param name="algorithmCatalog">The catalog of algorithms a new archive can be written with.</param>
 internal sealed partial class CreateBackupViewModel(
     IBackupOperations operations,
     ISettingsStore settingsStore,
     IFilePickerService filePicker,
     IClipboardService clipboardService,
-    IPasswordService passwordService
+    IPasswordService passwordService,
+    IAlgorithmCatalog algorithmCatalog
 ) : OperationViewModelBase(settingsStore, filePicker)
 {
     /// <summary>
@@ -136,8 +139,9 @@ internal sealed partial class CreateBackupViewModel(
     /// currently in flight.
     /// </summary>
     /// <remarks>
-    /// The settings store absorbs a failure to read the stored defaults into the built-in defaults, so
-    /// the page always offers a usable configuration.
+    /// The settings store absorbs a failure to read the stored defaults into the built-in defaults,
+    /// and a stored choice this build does not offer is replaced, so the page always offers a usable
+    /// configuration.
     /// </remarks>
     /// <returns>A task that completes once the encryption state has been refreshed.</returns>
     public override async Task OnNavigatedToAsync()
@@ -149,17 +153,12 @@ internal sealed partial class CreateBackupViewModel(
             return;
         }
 
-        var defaults = await SettingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None);
+        var defaults = (await SettingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None))
+            .RestrictedTo(algorithmCatalog);
 
-        encryptionAlgorithm = Enum.IsDefined(defaults.EncryptionAlgorithm)
-            ? defaults.EncryptionAlgorithm
-            : BackupCreationSettings.DefaultValue.EncryptionAlgorithm;
-        keyDerivationAlgorithm = Enum.IsDefined(defaults.KeyDerivationAlgorithm)
-            ? defaults.KeyDerivationAlgorithm
-            : BackupCreationSettings.DefaultValue.KeyDerivationAlgorithm;
-        compressionMode = Enum.IsDefined(defaults.CompressionMode)
-            ? defaults.CompressionMode
-            : BackupCreationSettings.DefaultValue.CompressionMode;
+        encryptionAlgorithm = defaults.EncryptionAlgorithm;
+        keyDerivationAlgorithm = defaults.KeyDerivationAlgorithm;
+        compressionMode = defaults.CompressionMode;
 
         OnPropertyChanged(nameof(EncryptionName));
         OnPropertyChanged(nameof(KeyDerivationName));

@@ -1,3 +1,4 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
@@ -85,6 +86,11 @@ public sealed class CreateBackupViewModelTests
     /// The substituted service behind password generation and the strength meter.
     /// </summary>
     private readonly IPasswordService passwordService = Substitute.For<IPasswordService>();
+
+    /// <summary>
+    /// The catalog of algorithms the page may preselect, offering every algorithm unless a test narrows it.
+    /// </summary>
+    private IAlgorithmCatalog algorithmCatalog = AlgorithmCatalogs.Every();
 
     [Fact]
     internal async Task StartCommand_CanExecute_AgreesWithTheRequestValidatorOnEveryPasswordRule()
@@ -339,6 +345,34 @@ public sealed class CreateBackupViewModelTests
     }
 
     [Fact]
+    internal async Task OnNavigatedToAsync_StoredAlgorithmsThisBuildDoesNotOffer_FallBackToTheDefaults()
+    {
+        this.algorithmCatalog = AlgorithmCatalogs.Offering(
+            [EncryptionAlgorithm.Aes, EncryptionAlgorithm.ChaCha20],
+            [KeyDerivationAlgorithm.Argon2id],
+            [CompressionMode.None, CompressionMode.Zstd]
+        );
+        var sut = CreateSut();
+        _ = this
+            .settingsStore.LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>())
+            .Returns(
+                new BackupCreationSettings(
+                    EncryptionAlgorithm.Serpent,
+                    KeyDerivationAlgorithm.Scrypt,
+                    CompressionMode.Zstd
+                )
+            );
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Multiple(
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes), sut.EncryptionName),
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(KeyDerivationAlgorithm.Argon2id), sut.KeyDerivationName),
+            () => Assert.Equal(AlgorithmMetadataProvider.GetName(CompressionMode.Zstd), sut.CompressionName)
+        );
+    }
+
+    [Fact]
     internal async Task OnNavigatedToAsync_ShowsTheNamesOfTheAlgorithmsTheNextBackupWillUse()
     {
         var sut = CreateSut();
@@ -466,7 +500,8 @@ public sealed class CreateBackupViewModelTests
             this.settingsStore,
             this.filePicker,
             this.clipboardService,
-            this.passwordService
+            this.passwordService,
+            this.algorithmCatalog
         );
     }
 

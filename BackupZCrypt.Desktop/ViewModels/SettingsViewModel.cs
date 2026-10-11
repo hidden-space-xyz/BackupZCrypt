@@ -1,14 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,6 +29,11 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// The service that estimates how long a backup of a given size would take.
     /// </summary>
     private readonly IBackupBenchmarkService benchmarkService;
+
+    /// <summary>
+    /// The catalog of algorithms the options are built from and stored choices are checked against.
+    /// </summary>
+    private readonly IAlgorithmCatalog algorithmCatalog;
 
     /// <summary>
     /// A value indicating whether the selections are being set from the stored settings, during which
@@ -171,62 +175,49 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SettingsViewModel"/> class, building the selectable
-    /// algorithm and language option lists from the registered strategies.
+    /// algorithm and language option lists from the algorithm catalog.
     /// </summary>
     /// <param name="settingsStore">The store the algorithm defaults and the language preference are loaded and saved through.</param>
     /// <param name="benchmarkService">The service that estimates backup processing time.</param>
-    /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
-    /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
-    /// <param name="compressionStrategies">The available compression strategies.</param>
+    /// <param name="algorithmCatalog">The catalog of algorithms a new archive can be written with.</param>
     public SettingsViewModel(
         ISettingsStore settingsStore,
         IBackupBenchmarkService benchmarkService,
-        IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
-        IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-        IEnumerable<ICompressionStrategy> compressionStrategies
+        IAlgorithmCatalog algorithmCatalog
     )
     {
         ArgumentNullException.ThrowIfNull(settingsStore);
+        ArgumentNullException.ThrowIfNull(algorithmCatalog);
 
         this.settingsStore = settingsStore;
         this.benchmarkService = benchmarkService;
+        this.algorithmCatalog = algorithmCatalog;
 
         EncryptionOptions =
         [
-            .. encryptionStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new EncryptionOption(
-                    s.Id,
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id)
-                )),
+            .. algorithmCatalog.EncryptionAlgorithms.Select(static id => new EncryptionOption(
+                id,
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id)
+            )),
         ];
 
         KeyDerivationOptions =
         [
-            .. keyDerivationStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new KeyDerivationOption(
-                    s.Id,
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id)
-                )),
+            .. algorithmCatalog.KeyDerivationAlgorithms.Select(static id => new KeyDerivationOption(
+                id,
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id)
+            )),
         ];
 
         CompressionOptions =
         [
-            new CompressionOption(
-                CompressionMode.None,
-                AlgorithmMetadataProvider.GetName(CompressionMode.None),
-                AlgorithmMetadataProvider.GetSummary(CompressionMode.None)
-            ),
-            .. compressionStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new CompressionOption(
-                    s.Id,
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id)
-                )),
+            .. algorithmCatalog.CompressionModes.Select(static id => new CompressionOption(
+                id,
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id)
+            )),
         ];
 
         LanguageOptions =
@@ -291,13 +282,15 @@ internal sealed partial class SettingsViewModel : ViewModelBase
     /// discarded when the user leaves the page.
     /// </summary>
     /// <remarks>
-    /// The settings store absorbs a failure to read the stored settings into the defaults, which match
-    /// the selections the constructor made, so the page always offers a valid configuration to save.
+    /// The settings store absorbs a failure to read the stored settings into the defaults, and a
+    /// stored choice this build does not offer is replaced, so the page always offers a valid
+    /// configuration to save.
     /// </remarks>
     /// <returns>A task that completes once the settings have been loaded.</returns>
     public override async Task OnNavigatedToAsync()
     {
-        var defaults = await settingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None);
+        var defaults = (await settingsStore.LoadAsync<BackupCreationSettings>(CancellationToken.None))
+            .RestrictedTo(algorithmCatalog);
         var language = await settingsStore.LoadAsync<LanguageSettings>(CancellationToken.None);
 
         if (!startupLanguageCaptured)
@@ -310,17 +303,9 @@ internal sealed partial class SettingsViewModel : ViewModelBase
 
         try
         {
-            SelectedEncryption =
-                EncryptionOptions.FirstOrDefault(o => o.Id == defaults.EncryptionAlgorithm)
-                ?? EncryptionOptions.First(o => o.Id == BackupCreationSettings.DefaultValue.EncryptionAlgorithm);
-            SelectedKeyDerivation =
-                KeyDerivationOptions.FirstOrDefault(o => o.Id == defaults.KeyDerivationAlgorithm)
-                ?? KeyDerivationOptions.First(o =>
-                    o.Id == BackupCreationSettings.DefaultValue.KeyDerivationAlgorithm
-                );
-            SelectedCompression =
-                CompressionOptions.FirstOrDefault(o => o.Id == defaults.CompressionMode)
-                ?? CompressionOptions.First(o => o.Id == BackupCreationSettings.DefaultValue.CompressionMode);
+            SelectedEncryption = EncryptionOptions.First(o => o.Id == defaults.EncryptionAlgorithm);
+            SelectedKeyDerivation = KeyDerivationOptions.First(o => o.Id == defaults.KeyDerivationAlgorithm);
+            SelectedCompression = CompressionOptions.First(o => o.Id == defaults.CompressionMode);
 
             SelectedLanguage =
                 LanguageOptions.FirstOrDefault(o =>

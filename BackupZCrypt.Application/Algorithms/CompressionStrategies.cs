@@ -1,7 +1,7 @@
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
-namespace BackupZCrypt.Application.Engine;
+namespace BackupZCrypt.Application.Algorithms;
 
 /// <summary>
 /// Looks up the compression an archive records, treating <see cref="CompressionMode.None"/> as no

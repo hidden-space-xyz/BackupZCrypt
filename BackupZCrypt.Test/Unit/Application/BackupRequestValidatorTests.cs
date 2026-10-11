@@ -1,8 +1,10 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Test.Common;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -120,6 +122,11 @@ public sealed class BackupRequestValidatorTests
     private readonly IPasswordService passwordService = Substitute.For<IPasswordService>();
 
     /// <summary>
+    /// The catalog of algorithms the validator accepts, offering every algorithm unless a test narrows it.
+    /// </summary>
+    private IAlgorithmCatalog algorithmCatalog = AlgorithmCatalogs.Every();
+
+    /// <summary>
     /// Supplies the exception thrown while listing the source, the error code it must map to, and the
     /// format arguments that message is allowed to carry.
     /// </summary>
@@ -172,12 +179,19 @@ public sealed class BackupRequestValidatorTests
     }
 
     /// <summary>
-    /// Creates a validator wired to the substituted file, directory scan, storage, and password services.
+    /// Creates a validator wired to the substituted file, directory scan, storage, and password
+    /// services and to the algorithm catalog.
     /// </summary>
     /// <returns>The system under test.</returns>
     private BackupRequestValidator CreateSut()
     {
-        return new(this.fileOperations, this.directoryScan, this.systemStorage, this.passwordService);
+        return new(
+            this.fileOperations,
+            this.directoryScan,
+            this.systemStorage,
+            this.passwordService,
+            this.algorithmCatalog
+        );
     }
 
     /// <summary>
@@ -1162,6 +1176,31 @@ public sealed class BackupRequestValidatorTests
             () => Assert.Equal<object>([1, "linked"], warnings[0].Args),
             () => Assert.Equal<object>([1, "secret"], warnings[1].Args)
         );
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_CreateWithAnAlgorithmThisBuildDoesNotOffer_IsRefused()
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        this.algorithmCatalog = AlgorithmCatalogs.Offering(
+            [EncryptionAlgorithm.Aes],
+            [KeyDerivationAlgorithm.PBKDF2],
+            [CompressionMode.None]
+        );
+
+        var request = new CreateBackupRequest(
+            SourceDir,
+            DestinationDir,
+            "Str0ng-Passw0rd!",
+            "Str0ng-Passw0rd!",
+            EncryptionAlgorithm.Serpent,
+            KeyDerivationAlgorithm.PBKDF2
+        );
+
+        var errors = await this.CreateSut().AnalyzeErrorsAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.AlgorithmNotSupported], Codes(errors));
     }
 
     [Fact]

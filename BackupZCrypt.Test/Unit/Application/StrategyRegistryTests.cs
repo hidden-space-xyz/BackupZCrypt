@@ -1,13 +1,13 @@
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies;
 using BackupZCrypt.Domain.Strategies.Interfaces;
 
 using NSubstitute;
 
-namespace BackupZCrypt.Test.Unit.Domain;
+namespace BackupZCrypt.Test.Unit.Application;
 
 /// <summary>
-/// Unit tests for the strategy registry's lookup. The successful lookups of every registered
+/// Unit tests for the strategy registry's lookup and the identifiers it lists. The successful lookups of every registered
 /// algorithm are covered end to end against the real container by
 /// <see cref="BackupZCrypt.Test.Unit.Composition.StrategyRegistrationTests"/>; what only a
 /// substituted strategy set can show is what the registry does when the requested identifier has no
@@ -43,6 +43,19 @@ public sealed class StrategyRegistryTests
         );
 
         Assert.Equal(EncryptionAlgorithm.Serpent, exception.ActualValue);
+    }
+
+    [Fact]
+    internal void Ids_ListTheRegisteredIdentifiersInIdentifierOrder()
+    {
+        var registry = new StrategyRegistry<CompressionMode, ICompressionStrategy>(
+            [
+                Stub<CompressionMode, ICompressionStrategy>(CompressionMode.ZstdBest),
+                Stub<CompressionMode, ICompressionStrategy>(CompressionMode.ZstdFast),
+            ]
+        );
+
+        Assert.Equal([CompressionMode.ZstdFast, CompressionMode.ZstdBest], registry.Ids);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Domain.Archive;

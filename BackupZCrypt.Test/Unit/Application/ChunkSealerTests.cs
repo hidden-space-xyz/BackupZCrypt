@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Engine;
@@ -9,6 +10,7 @@ using BackupZCrypt.Infrastructure.Strategies.Encryption;
 using BackupZCrypt.Test.Tools;
 
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace BackupZCrypt.Test.Unit.Application;
 
@@ -378,6 +380,53 @@ public sealed class ChunkSealerTests
         AssertAllWiped(encryption.AssociatedData);
     }
 
+    [Fact]
+    internal async Task Seal_ChunkNotBackedByAnArray_IsSealedLikeTheSameBytesInAnArray()
+    {
+        var sealer = CreateSealer(compressed: true);
+        var chunk = CreateSample();
+        var chunkHash = SHA256.HashData(chunk);
+        using NativeMemory native = new(chunk);
+
+        var fromArray = await sealer.SealAsync(chunk, chunkHash, CancellationToken.None);
+        var fromNative = await sealer.SealAsync(native.Memory, chunkHash, CancellationToken.None);
+
+        Assert.Equal(fromArray, fromNative);
+    }
+
+    [Fact]
+    internal async Task Seal_CompressionThatFails_PropagatesItsError()
+    {
+        var compression = Substitute.For<ICompressionStrategy>();
+        _ = compression
+            .CompressAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidDataException("compressor failed"));
+        ChunkSealer sealer = new(CreateRandomKey(), CreateRandomKey(), new AesEncryptionStrategy(), compression);
+        var chunk = CreateSample();
+
+        var exception = await Assert.ThrowsAsync<InvalidDataException>(
+            () => sealer.SealAsync(chunk, SHA256.HashData(chunk), CancellationToken.None)
+        );
+        Assert.Equal("compressor failed", exception.Message);
+    }
+
+    [Fact]
+    internal async Task Seal_CompressedStreamFailingToClose_PropagatesItsErrorAndEncryptsNothing()
+    {
+        RecordingEncryption encryption = new();
+        var compression = Substitute.For<ICompressionStrategy>();
+        _ = compression
+            .CompressAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<Stream>(new FailingDisposeStream([1, 2, 3])));
+        ChunkSealer sealer = new(CreateRandomKey(), CreateRandomKey(), encryption, compression);
+        var chunk = CreateSample();
+
+        _ = await Assert.ThrowsAsync<IOException>(
+            () => sealer.SealAsync(chunk, SHA256.HashData(chunk), CancellationToken.None)
+        );
+        Assert.Empty(encryption.Nonces);
+    }
+
     /// <summary>
     /// Asserts that every recorded buffer holds only zero bytes.
     /// </summary>
@@ -463,6 +512,52 @@ public sealed class ChunkSealerTests
             });
 
         return compression;
+    }
+
+    /// <summary>
+    /// A stream over fixed bytes whose asynchronous disposal fails, as a compression stream might
+    /// when flushing its last block.
+    /// </summary>
+    /// <param name="contents">The bytes the stream yields.</param>
+    private sealed class FailingDisposeStream(byte[] contents) : MemoryStream(contents, writable: false)
+    {
+        /// <inheritdoc/>
+        public override async ValueTask DisposeAsync()
+        {
+            await base.DisposeAsync();
+
+            throw new IOException("close failed");
+        }
+    }
+
+    /// <summary>
+    /// Memory that hides the array behind it, so the sealer has to treat it as memory it cannot
+    /// wrap without copying.
+    /// </summary>
+    /// <param name="contents">The bytes exposed.</param>
+    private sealed class NativeMemory(byte[] contents) : MemoryManager<byte>
+    {
+        /// <inheritdoc/>
+        public override Span<byte> GetSpan()
+        {
+            return contents;
+        }
+
+        /// <inheritdoc/>
+        public override MemoryHandle Pin(int elementIndex = 0)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <inheritdoc/>
+        public override void Unpin()
+        {
+        }
+
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+        }
     }
 
     /// <summary>

@@ -1,4 +1,6 @@
-namespace BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Strategies.Interfaces;
+
+namespace BackupZCrypt.Application.Algorithms;
 
 /// <summary>
 /// Looks up the registered strategy that implements a given algorithm or mode.
@@ -10,10 +12,15 @@ namespace BackupZCrypt.Domain.Strategies.Interfaces;
 /// </remarks>
 /// <typeparam name="TId">The enum whose members name the implementations of the strategy family.</typeparam>
 /// <typeparam name="TStrategy">The strategy family looked up.</typeparam>
-public interface IStrategyRegistry<TId, out TStrategy>
+internal interface IStrategyRegistry<TId, out TStrategy>
     where TId : struct, Enum
     where TStrategy : IAlgorithmStrategy<TId>
 {
+    /// <summary>
+    /// Gets the identifiers a strategy is registered for, in identifier order; never empty.
+    /// </summary>
+    public IReadOnlyList<TId> Ids { get; }
+
     /// <summary>
     /// Returns the strategy registered for the specified identifier.
     /// </summary>

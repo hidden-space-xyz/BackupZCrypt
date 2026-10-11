@@ -7,7 +7,7 @@ namespace BackupZCrypt.Application.Manifest;
 /// <summary>
 /// Reads, writes, and decrypts backup manifests, which store the metadata required to restore a backup.
 /// </summary>
-public interface IManifestService
+internal interface IManifestService
 {
     /// <summary>
     /// Classifies the location a user picked as a backup folder.

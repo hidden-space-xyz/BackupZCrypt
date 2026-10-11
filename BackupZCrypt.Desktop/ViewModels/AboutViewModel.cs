@@ -2,11 +2,10 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Reflection;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Desktop.ViewModels;
 
@@ -18,53 +17,38 @@ internal sealed class AboutViewModel : ViewModelBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AboutViewModel"/> class, building the algorithm
-    /// description lists from the registered strategies and resolving the assembly version.
+    /// description lists from the algorithm catalog and resolving the assembly version.
     /// </summary>
-    /// <param name="encryptionStrategies">The available encryption algorithm strategies.</param>
-    /// <param name="keyDerivationStrategies">The available key-derivation algorithm strategies.</param>
-    /// <param name="compressionStrategies">The available compression strategies.</param>
-    public AboutViewModel(
-        IEnumerable<IEncryptionAlgorithmStrategy> encryptionStrategies,
-        IEnumerable<IKeyDerivationAlgorithmStrategy> keyDerivationStrategies,
-        IEnumerable<ICompressionStrategy> compressionStrategies
-    )
+    /// <param name="algorithmCatalog">The catalog of algorithms a new archive can be written with.</param>
+    public AboutViewModel(IAlgorithmCatalog algorithmCatalog)
     {
+        ArgumentNullException.ThrowIfNull(algorithmCatalog);
+
         EncryptionAlgorithms =
         [
-            .. encryptionStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id),
-                    AlgorithmMetadataProvider.GetDescription(s.Id)
-                )),
+            .. algorithmCatalog.EncryptionAlgorithms.Select(static id => new AlgorithmInfo(
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id),
+                AlgorithmMetadataProvider.GetDescription(id)
+            )),
         ];
 
         KeyDerivationAlgorithms =
         [
-            .. keyDerivationStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id),
-                    AlgorithmMetadataProvider.GetDescription(s.Id)
-                )),
+            .. algorithmCatalog.KeyDerivationAlgorithms.Select(static id => new AlgorithmInfo(
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id),
+                AlgorithmMetadataProvider.GetDescription(id)
+            )),
         ];
 
         CompressionAlgorithms =
         [
-            new AlgorithmInfo(
-                AlgorithmMetadataProvider.GetName(CompressionMode.None),
-                AlgorithmMetadataProvider.GetSummary(CompressionMode.None),
-                AlgorithmMetadataProvider.GetDescription(CompressionMode.None)
-            ),
-            .. compressionStrategies
-                .OrderBy(static s => s.Id)
-                .Select(static s => new AlgorithmInfo(
-                    AlgorithmMetadataProvider.GetName(s.Id),
-                    AlgorithmMetadataProvider.GetSummary(s.Id),
-                    AlgorithmMetadataProvider.GetDescription(s.Id)
-                )),
+            .. algorithmCatalog.CompressionModes.Select(static id => new AlgorithmInfo(
+                AlgorithmMetadataProvider.GetName(id),
+                AlgorithmMetadataProvider.GetSummary(id),
+                AlgorithmMetadataProvider.GetDescription(id)
+            )),
         ];
 
         var version =

@@ -7,7 +7,7 @@ namespace BackupZCrypt.Application.Engine;
 /// Performs chunk-based backup operations: splitting files into content-defined chunks
 /// that are individually compressed, encrypted, and recorded in an encrypted manifest.
 /// </summary>
-public interface IChunkedBackupService
+internal interface IChunkedBackupService
 {
     /// <summary>
     /// Creates a new chunked backup of the source at the destination.

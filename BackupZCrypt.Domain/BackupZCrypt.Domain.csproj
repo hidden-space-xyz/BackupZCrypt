@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <InternalsVisibleTo Include="BackupZCrypt.Composition" />
     <InternalsVisibleTo Include="BackupZCrypt.Test" />
   </ItemGroup>
 
