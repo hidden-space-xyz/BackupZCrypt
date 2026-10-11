@@ -479,11 +479,11 @@ internal sealed class BackupRestorer(
         return new ChunkReader(
             fileOperationsService,
             Path.Join(backupRoot, BackupConstants.ChunksDirectoryName),
-            backup.Keys.ChunkEncryptionKey,
-            backup.Keys.ChunkNonceKey,
-            backup.Keys.NamingKey,
-            encryptionStrategies.Resolve(backup.Manifest.Header.EncryptionAlgorithm),
-            compressionStrategies.ResolveOrNull(backup.Manifest.Header.Compression)
+            ChunkCipherSet.For(
+                backup.Keys,
+                encryptionStrategies.Resolve(backup.Manifest.Header.EncryptionAlgorithm),
+                compressionStrategies.ResolveOrNull(backup.Manifest.Header.Compression)
+            )
         );
     }
 

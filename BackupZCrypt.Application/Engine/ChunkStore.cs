@@ -45,7 +45,7 @@ internal sealed class ChunkStore(
     /// <param name="relativePath">The file's path relative to the backup root, as recorded in the manifest.</param>
     /// <param name="metadata">The file's metadata, read before its content and recorded in the entry.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
-    /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
+    /// <param name="cipher">The archive's chunk sealer and naming sub-key.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
     /// <param name="context">The run's chunk slots and the record of the chunk files it wrote.</param>
     /// <param name="tracker">The progress tracker that is told about every chunk read.</param>
@@ -158,7 +158,7 @@ internal sealed class ChunkStore(
     /// </remarks>
     /// <param name="chunkData">The plaintext bytes of the chunk, owned by this call.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
-    /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
+    /// <param name="cipher">The archive's chunk sealer and naming sub-key.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
     /// <param name="context">The run's chunk slots and the record of the chunk files it wrote.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -185,14 +185,11 @@ internal sealed class ChunkStore(
 
             var chunkOperation = new Lazy<Task>(
                 () =>
-                    this.EncryptAndStoreChunkAsync(
+                    this.SealAndStoreChunkAsync(
                         chunkData,
                         ownedHash,
                         chunkFilePath,
-                        cipher.ChunkEncryptionKey,
-                        cipher.ChunkNonceKey,
-                        cipher.EncryptionStrategy,
-                        cipher.CompressionStrategy,
+                        cipher.Sealer,
                         cancellationToken
                     ),
                 LazyThreadSafetyMode.ExecutionAndPublication
@@ -259,129 +256,39 @@ internal sealed class ChunkStore(
     }
 
     /// <summary>
-    /// Compresses a chunk when compression is enabled, encrypts it, and writes the ciphertext to its
-    /// content-addressed file.
+    /// Seals a chunk and writes the stored bytes to its content-addressed file.
     /// </summary>
     /// <remarks>
-    /// Compression runs before encryption so ciphertext is never compressed. The nonce is derived
-    /// deterministically from the chunk hash, which lets identical content deduplicate while keeping
-    /// the nonce key-dependent, and the chunk hash concatenated with that nonce is bound in as
-    /// associated data. The compressed copy of the chunk, the ciphertext, the associated data, and
-    /// the nonce are zeroed before returning; the plaintext buffer is owned by the caller.
+    /// The stored bytes are zeroed once they are on disk; the plaintext and the chunk hash are owned
+    /// by the caller.
     /// </remarks>
     /// <param name="chunkData">The plaintext bytes of the chunk.</param>
     /// <param name="chunkHash">The SHA-256 content hash of the chunk.</param>
-    /// <param name="chunkFilePath">The full path the encrypted chunk is written to.</param>
-    /// <param name="encryptionKey">The chunk encryption sub-key.</param>
-    /// <param name="nonceKey">The sub-key the chunk nonce is derived from.</param>
-    /// <param name="encryptionStrategy">The strategy used to encrypt the chunk.</param>
-    /// <param name="compressionStrategy">The compression strategy, or <see langword="null"/> to store the chunk uncompressed.</param>
+    /// <param name="chunkFilePath">The full path the sealed chunk is written to.</param>
+    /// <param name="sealer">The sealer that turns the chunk into its stored bytes.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes once the chunk file is on disk.</returns>
-    private async Task EncryptAndStoreChunkAsync(
+    private async Task SealAndStoreChunkAsync(
         ReadOnlyMemory<byte> chunkData,
         byte[] chunkHash,
         string chunkFilePath,
-        byte[] encryptionKey,
-        byte[] nonceKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        ICompressionStrategy? compressionStrategy,
+        ChunkSealer sealer,
         CancellationToken cancellationToken
     )
     {
-        var nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
-        byte[]? dataToEncrypt = null;
-        byte[]? encrypted = null;
-        byte[]? associatedData = null;
+        var storedChunk = await sealer
+            .SealAsync(chunkData, chunkHash, cancellationToken)
+            .ConfigureAwait(false);
 
         try
         {
-            if (compressionStrategy is not null)
-            {
-                await using var inputStream = CreateReadOnlyStream(chunkData);
-
-                await using var compressedStream = await compressionStrategy
-                    .CompressAsync(inputStream, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (compressedStream is MemoryStream compressedMemory)
-                {
-                    dataToEncrypt = compressedMemory.ToArray();
-                    if (compressedMemory.TryGetBuffer(out var compressedSegment))
-                    {
-                        CryptographicOperations.ZeroMemory(
-                            compressedSegment.Array!.AsSpan(
-                                compressedSegment.Offset,
-                                compressedSegment.Count
-                            )
-                        );
-                    }
-                }
-                else
-                {
-                    await using MemoryStream compressedBuffer = new();
-                    await compressedStream
-                        .CopyToAsync(compressedBuffer, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    dataToEncrypt = compressedBuffer.ToArray();
-                    if (compressedBuffer.TryGetBuffer(out var compressedSegment))
-                    {
-                        CryptographicOperations.ZeroMemory(
-                            compressedSegment.Array!.AsSpan(
-                                compressedSegment.Offset,
-                                compressedSegment.Count
-                            )
-                        );
-                    }
-                }
-            }
-
-            if (
-                dataToEncrypt is not null
-                && dataToEncrypt.Length > EngineLimits.MaximumStoredChunkSize - EncryptionConstants.TagSize
-            )
-            {
-                throw new InvalidDataException("Compressed chunk exceeds the supported size.");
-            }
-
-            associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
-            encrypted = dataToEncrypt is not null
-                ? encryptionStrategy.EncryptChunk(
-                    dataToEncrypt,
-                    encryptionKey,
-                    nonce,
-                    associatedData
-                )
-                : encryptionStrategy.EncryptChunk(
-                    chunkData.Span,
-                    encryptionKey,
-                    nonce,
-                    associatedData
-                );
-
             await fileOperationsService
-                .WriteAllBytesAtomicallyAsync(chunkFilePath, encrypted, cancellationToken)
+                .WriteAllBytesAtomicallyAsync(chunkFilePath, storedChunk, cancellationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
-            if (dataToEncrypt is not null)
-            {
-                CryptographicOperations.ZeroMemory(dataToEncrypt);
-            }
-
-            if (encrypted is not null)
-            {
-                CryptographicOperations.ZeroMemory(encrypted);
-            }
-
-            if (associatedData is not null)
-            {
-                CryptographicOperations.ZeroMemory(associatedData);
-            }
-
-            CryptographicOperations.ZeroMemory(nonce);
+            CryptographicOperations.ZeroMemory(storedChunk);
         }
     }
 
@@ -414,19 +321,17 @@ internal sealed class ChunkStore(
 
     /// <summary>
     /// Removes preloaded deduplication entries whose stored chunk is absent, linked, or has an
-    /// impossible ciphertext size, so an update regenerates them from the source.
+    /// impossible stored size, so an update regenerates them from the source.
     /// </summary>
     /// <param name="storedChunks">The preloaded deduplication cache to filter.</param>
     /// <param name="manifestFiles">The existing manifest entries that describe stored chunks.</param>
     /// <param name="chunksDir">The archive directory that should contain the chunk files.</param>
-    /// <param name="namingKey">The sub-key used to derive chunk file names.</param>
-    /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
+    /// <param name="cipher">The archive's chunk sealer and naming sub-key.</param>
     internal void RemoveUnavailableStoredChunks(
         ConcurrentDictionary<string, Lazy<Task>> storedChunks,
         IReadOnlyList<ChunkManifestFileEntry> manifestFiles,
         string chunksDir,
-        byte[] namingKey,
-        ICompressionStrategy? compressionStrategy
+        ChunkCipherSet cipher
     )
     {
         HashSet<string> inspectedHashes = new(StringComparer.Ordinal);
@@ -436,12 +341,7 @@ internal sealed class ChunkStore(
                 .SelectMany(static file => file.Chunks)
                 .Where(chunk =>
                     inspectedHashes.Add(chunk.Hash)
-                    && !this.IsStoredChunkAvailable(
-                        chunk,
-                        chunksDir,
-                        namingKey,
-                        compressionStrategy
-                    )
+                    && !this.IsStoredChunkAvailable(chunk, chunksDir, cipher)
                 )
         )
         {
@@ -453,15 +353,13 @@ internal sealed class ChunkStore(
     /// Checks whether one stored chunk can safely be reused without reading it into memory.
     /// </summary>
     /// <param name="chunk">The manifest reference describing the plaintext chunk.</param>
-    /// <param name="chunksDir">The directory expected to contain its ciphertext.</param>
-    /// <param name="namingKey">The sub-key used to derive its on-disk name.</param>
-    /// <param name="compressionStrategy">The archive compression strategy, or <see langword="null"/>.</param>
+    /// <param name="chunksDir">The directory expected to contain its stored bytes.</param>
+    /// <param name="cipher">The archive's chunk sealer and naming sub-key.</param>
     /// <returns><see langword="true"/> when the entry is a regular file of a plausible size.</returns>
     private bool IsStoredChunkAvailable(
         ChunkManifestChunkRef chunk,
         string chunksDir,
-        byte[] namingKey,
-        ICompressionStrategy? compressionStrategy
+        ChunkCipherSet cipher
     )
     {
         byte[]? chunkHash = null;
@@ -473,7 +371,7 @@ internal sealed class ChunkStore(
                 SHA256.HashSizeInBytes,
                 "Invalid chunk hash."
             );
-            var chunkFilePath = BackupLayout.ChunkFilePath(chunksDir, namingKey, chunkHash);
+            var chunkFilePath = BackupLayout.ChunkFilePath(chunksDir, cipher.NamingKey, chunkHash);
 
             if (
                 !fileOperationsService.FileExists(chunkFilePath)
@@ -483,14 +381,10 @@ internal sealed class ChunkStore(
                 return false;
             }
 
-            var storedSize = fileOperationsService.GetFileSize(chunkFilePath);
-            var maximumStoredSize = compressionStrategy is null
-                ? checked(chunk.Size + EncryptionConstants.TagSize)
-                : EngineLimits.MaximumStoredChunkSize;
-
-            return storedSize >= EncryptionConstants.TagSize
-                && storedSize <= maximumStoredSize
-                && (compressionStrategy is not null || storedSize == maximumStoredSize);
+            return cipher.Sealer.IsPlausibleStoredSize(
+                fileOperationsService.GetFileSize(chunkFilePath),
+                chunk.Size
+            );
         }
         catch (Exception exception) when (FileFailures.IsConfinedToOneFile(exception))
         {
@@ -629,19 +523,6 @@ internal sealed class ChunkStore(
         {
             return false;
         }
-    }
-
-    /// <summary>
-    /// Wraps a block of memory in a non-writable stream, reusing the backing array when the memory
-    /// exposes one so chunk data is not copied.
-    /// </summary>
-    /// <param name="data">The bytes to expose as a stream.</param>
-    /// <returns>A read-only stream over the data.</returns>
-    private static MemoryStream CreateReadOnlyStream(ReadOnlyMemory<byte> data)
-    {
-        return System.Runtime.InteropServices.MemoryMarshal.TryGetArray(data, out var segment)
-            ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
-            : new MemoryStream(data.ToArray(), writable: false);
     }
 
     /// <summary>

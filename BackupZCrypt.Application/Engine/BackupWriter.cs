@@ -101,10 +101,8 @@ internal sealed class BackupWriter(
                 keyDerivationStrategies.Resolve(request.KeyDerivationAlgorithm)
             );
 
-            ChunkCipherSet cipher = new(
-                keys.ChunkEncryptionKey,
-                keys.ChunkNonceKey,
-                keys.NamingKey,
+            var cipher = ChunkCipherSet.For(
+                keys,
                 encryptionStrategies.Resolve(request.EncryptionAlgorithm),
                 compressionStrategies.ResolveOrNull(request.Compression)
             );
@@ -305,14 +303,10 @@ internal sealed class BackupWriter(
 
         var existingManifest = backup.Manifest;
         var keys = backup.Keys;
-        var compressionStrategy = compressionStrategies.ResolveOrNull(existingManifest.Header.Compression);
-
-        ChunkCipherSet cipher = new(
-            keys.ChunkEncryptionKey,
-            keys.ChunkNonceKey,
-            keys.NamingKey,
+        var cipher = ChunkCipherSet.For(
+            keys,
             encryptionStrategies.Resolve(backup.Preamble.Algorithm),
-            compressionStrategy
+            compressionStrategies.ResolveOrNull(existingManifest.Header.Compression)
         );
 
         var chunksDir = await chunkStore.PrepareChunksDirectoryAsync(destinationPath, cancellationToken)
@@ -331,8 +325,7 @@ internal sealed class BackupWriter(
             storedChunks,
             existingManifest.Files,
             chunksDir,
-            keys.NamingKey,
-            compressionStrategy
+            cipher
         );
 
         var plan = this.PlanUpdate(snapshot, existingFileIndex, storedChunks);
@@ -550,7 +543,7 @@ internal sealed class BackupWriter(
     /// </remarks>
     /// <param name="workItems">The files to capture.</param>
     /// <param name="chunksDir">The directory encrypted chunk files are written into.</param>
-    /// <param name="cipher">The key material and strategies chunks are compressed and encrypted with.</param>
+    /// <param name="cipher">The archive's chunk sealer and naming sub-key.</param>
     /// <param name="storedChunks">The shared cache mapping a chunk hash to its in-flight or completed store operation.</param>
     /// <param name="context">The run's chunk slots and the record of chunk files it wrote.</param>
     /// <param name="tracker">The progress tracker of the run.</param>

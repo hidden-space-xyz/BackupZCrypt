@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
-using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
@@ -118,10 +117,7 @@ internal sealed class BackupBenchmarkService(
     )
     {
         var encryptionStrategy = encryptionStrategies.Resolve(request.EncryptionAlgorithm);
-        var compressionStrategy =
-            request.Compression is CompressionMode.None
-                ? null
-                : compressionStrategies.Resolve(request.Compression);
+        var compressionStrategy = compressionStrategies.ResolveOrNull(request.Compression);
         var keyDerivationStrategy = keyDerivationStrategies.Resolve(
             request.KeyDerivationAlgorithm
         );
@@ -138,16 +134,9 @@ internal sealed class BackupBenchmarkService(
             nonceKey = RandomNumberGenerator.GetBytes(KeySizeBytes);
 
             var keyDerivationDuration = MeasureKeyDerivation(keyDerivationStrategy, salt);
+            ChunkSealer sealer = new(encryptionKey, nonceKey, encryptionStrategy, compressionStrategy);
 
-            await WarmUpAsync(
-                    sample,
-                    encryptionKey,
-                    nonceKey,
-                    encryptionStrategy,
-                    compressionStrategy,
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
+            await WarmUpAsync(sample, sealer, cancellationToken).ConfigureAwait(false);
 
             var chunkSlots = ComputeChunkSlotCount(Environment.ProcessorCount);
 
@@ -155,10 +144,7 @@ internal sealed class BackupBenchmarkService(
                     sample,
                     ComputeWorkerCount(Environment.ProcessorCount),
                     chunkSlots,
-                    encryptionKey,
-                    nonceKey,
-                    encryptionStrategy,
-                    compressionStrategy,
+                    sealer,
                     cancellationToken
                 )
                 .ConfigureAwait(false);
@@ -167,10 +153,7 @@ internal sealed class BackupBenchmarkService(
                     sample,
                     1,
                     chunkSlots,
-                    encryptionKey,
-                    nonceKey,
-                    encryptionStrategy,
-                    compressionStrategy,
+                    sealer,
                     cancellationToken
                 )
                 .ConfigureAwait(false);
@@ -278,20 +261,10 @@ internal sealed class BackupBenchmarkService(
     /// distort the timed measurement that follows.
     /// </summary>
     /// <param name="sample">The synthetic sample data to chunk.</param>
-    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
-    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
-    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
-    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="sealer">The sealer under test, holding the throwaway keys.</param>
     /// <param name="cancellationToken">A token to cancel the warm-up.</param>
     /// <returns>A task that completes once one chunk has been processed.</returns>
-    private async Task WarmUpAsync(
-        byte[] sample,
-        byte[] encryptionKey,
-        byte[] nonceKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        ICompressionStrategy? compressionStrategy,
-        CancellationToken cancellationToken
-    )
+    private async Task WarmUpAsync(byte[] sample, ChunkSealer sealer, CancellationToken cancellationToken)
     {
         await using var stream = new MemoryStream(sample, 0, sample.Length, writable: false);
         using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -305,16 +278,7 @@ internal sealed class BackupBenchmarkService(
         {
             fileHasher.AppendData(chunk.Span);
 
-            await EncryptChunkAsync(
-                    chunk,
-                    SHA256.HashData(chunk.Span),
-                    encryptionKey,
-                    nonceKey,
-                    encryptionStrategy,
-                    compressionStrategy,
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
+            await SealAndDiscardAsync(sealer, chunk, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -326,20 +290,14 @@ internal sealed class BackupBenchmarkService(
     /// <param name="sample">The synthetic sample data each reader reads from.</param>
     /// <param name="readers">The number of files read at once.</param>
     /// <param name="chunkSlots">The number of chunks compressed and encrypted at once.</param>
-    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
-    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
-    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
-    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="sealer">The sealer under test, holding the throwaway keys.</param>
     /// <param name="cancellationToken">A token to cancel the measurement.</param>
     /// <returns>The measured throughput in source bytes per second.</returns>
     private async Task<double> MeasureThroughputAsync(
         byte[] sample,
         int readers,
         int chunkSlots,
-        byte[] encryptionKey,
-        byte[] nonceKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        ICompressionStrategy? compressionStrategy,
+        ChunkSealer sealer,
         CancellationToken cancellationToken
     )
     {
@@ -355,10 +313,7 @@ internal sealed class BackupBenchmarkService(
                         sample,
                         stopwatch,
                         slots,
-                        encryptionKey,
-                        nonceKey,
-                        encryptionStrategy,
-                        compressionStrategy,
+                        sealer,
                         cancellationToken
                     ),
                 cancellationToken
@@ -379,20 +334,14 @@ internal sealed class BackupBenchmarkService(
     /// <param name="sample">The synthetic sample data to chunk.</param>
     /// <param name="stopwatch">The stopwatch shared by all readers that bounds the measure window.</param>
     /// <param name="slots">The chunk slots shared by all readers.</param>
-    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
-    /// <param name="nonceKey">The throwaway key used to derive per-chunk nonces.</param>
-    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
-    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
+    /// <param name="sealer">The sealer under test, holding the throwaway keys.</param>
     /// <param name="cancellationToken">A token to cancel the reader.</param>
     /// <returns>The number of source bytes this reader processed.</returns>
     private async Task<long> MeasureReaderAsync(
         byte[] sample,
         Stopwatch stopwatch,
         SemaphoreSlim slots,
-        byte[] encryptionKey,
-        byte[] nonceKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        ICompressionStrategy? compressionStrategy,
+        ChunkSealer sealer,
         CancellationToken cancellationToken
     )
     {
@@ -422,15 +371,7 @@ internal sealed class BackupBenchmarkService(
                             {
                                 try
                                 {
-                                    await EncryptChunkAsync(
-                                            chunk,
-                                            SHA256.HashData(chunk.Span),
-                                            encryptionKey,
-                                            nonceKey,
-                                            encryptionStrategy,
-                                            compressionStrategy,
-                                            cancellationToken
-                                        )
+                                    await SealAndDiscardAsync(sealer, chunk, cancellationToken)
                                         .ConfigureAwait(false);
                                 }
                                 finally
@@ -456,104 +397,39 @@ internal sealed class BackupBenchmarkService(
     }
 
     /// <summary>
-    /// Runs one hashed chunk through the rest of the production pipeline — nonce derivation, optional
-    /// compression, and authenticated encryption — then discards the ciphertext.
+    /// Hashes one chunk and runs it through the sealer a real backup stores chunks with, then discards
+    /// the stored bytes.
     /// </summary>
     /// <remarks>
-    /// Every intermediate buffer, including the chunk hash, nonce, associated data, and ciphertext, is zeroed
-    /// in a <see langword="finally"/> block so the benchmark leaves no derived material in memory.
+    /// The chunk hash and the stored bytes are zeroed in a <see langword="finally"/> block so the
+    /// benchmark leaves no derived material in memory; the sealer wipes its own intermediate buffers.
     /// </remarks>
+    /// <param name="sealer">The sealer under test, holding the throwaway keys.</param>
     /// <param name="chunk">The chunk produced by the chunking strategy.</param>
-    /// <param name="chunkHash">The chunk's SHA-256 content hash, owned by this call.</param>
-    /// <param name="encryptionKey">The throwaway chunk encryption key.</param>
-    /// <param name="nonceKey">The throwaway key used to derive the per-chunk nonce.</param>
-    /// <param name="encryptionStrategy">The encryption strategy under test.</param>
-    /// <param name="compressionStrategy">The compression strategy under test, or <see langword="null"/> when disabled.</param>
     /// <param name="cancellationToken">A token to cancel the compression step.</param>
-    /// <returns>A task that completes when the chunk has been processed and its buffers cleared.</returns>
-    private static async Task EncryptChunkAsync(
+    /// <returns>A task that completes when the chunk has been sealed and its buffers cleared.</returns>
+    private static async Task SealAndDiscardAsync(
+        ChunkSealer sealer,
         ReadOnlyMemory<byte> chunk,
-        byte[] chunkHash,
-        byte[] encryptionKey,
-        byte[] nonceKey,
-        IEncryptionAlgorithmStrategy encryptionStrategy,
-        ICompressionStrategy? compressionStrategy,
         CancellationToken cancellationToken
     )
     {
-        byte[]? nonce = null;
-        byte[]? associatedData = null;
-        byte[]? compressed = null;
-        byte[]? encrypted = null;
+        var chunkHash = SHA256.HashData(chunk.Span);
+        byte[]? storedChunk = null;
 
         try
         {
-            nonce = ChunkCrypto.ComputeChunkNonce(nonceKey, chunkHash);
-
-            if (compressionStrategy is not null)
-            {
-                compressed = await CompressChunkAsync(compressionStrategy, chunk, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
-            associatedData = ChunkCrypto.BuildChunkAssociatedData(chunkHash, nonce);
-            encrypted = compressed is not null
-                ? encryptionStrategy.EncryptChunk(compressed, encryptionKey, nonce, associatedData)
-                : encryptionStrategy.EncryptChunk(
-                    chunk.Span,
-                    encryptionKey,
-                    nonce,
-                    associatedData
-                );
+            storedChunk = await sealer.SealAsync(chunk, chunkHash, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(chunkHash);
 
-            if (nonce is not null)
+            if (storedChunk is not null)
             {
-                CryptographicOperations.ZeroMemory(nonce);
-            }
-
-            if (associatedData is not null)
-            {
-                CryptographicOperations.ZeroMemory(associatedData);
-            }
-
-            if (compressed is not null)
-            {
-                CryptographicOperations.ZeroMemory(compressed);
-            }
-
-            if (encrypted is not null)
-            {
-                CryptographicOperations.ZeroMemory(encrypted);
+                CryptographicOperations.ZeroMemory(storedChunk);
             }
         }
-    }
-
-    /// <summary>
-    /// Compresses a chunk entirely in memory and returns the compressed bytes.
-    /// </summary>
-    /// <param name="compressionStrategy">The compression strategy under test.</param>
-    /// <param name="chunk">The chunk to compress.</param>
-    /// <param name="cancellationToken">A token to cancel the compression.</param>
-    /// <returns>The compressed representation of the chunk.</returns>
-    private static async Task<byte[]> CompressChunkAsync(
-        ICompressionStrategy compressionStrategy,
-        ReadOnlyMemory<byte> chunk,
-        CancellationToken cancellationToken
-    )
-    {
-        await using var input = new MemoryStream(chunk.ToArray(), writable: false);
-
-        await using var compressed = await compressionStrategy
-            .CompressAsync(input, cancellationToken)
-            .ConfigureAwait(false);
-
-        await using MemoryStream buffer = new();
-        await compressed.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-        return buffer.ToArray();
     }
 
     /// <summary>

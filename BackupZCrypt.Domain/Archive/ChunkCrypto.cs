@@ -7,8 +7,9 @@ namespace BackupZCrypt.Domain.Archive;
 /// <summary>
 /// Derives the per-chunk cryptographic values that bind a chunk's ciphertext to its content: the
 /// deterministic AEAD nonce, the associated data, and the keyed file name the chunk is stored under.
-/// Centralized here so every service that encrypts or decrypts chunks (backup, restore, verify, and
-/// the benchmark) shares one identical layout and cannot silently diverge.
+/// Centralized here so every path that seals, opens, or names chunks (backup, restore, verify, and
+/// the benchmark, all through the engine's chunk sealer and store) shares one identical layout and
+/// cannot silently diverge.
 /// </summary>
 public static class ChunkCrypto
 {
