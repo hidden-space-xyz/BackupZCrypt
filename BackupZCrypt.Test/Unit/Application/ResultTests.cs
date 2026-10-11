@@ -1,5 +1,4 @@
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
 

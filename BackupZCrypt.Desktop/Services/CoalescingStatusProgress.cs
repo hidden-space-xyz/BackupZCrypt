@@ -1,4 +1,4 @@
-using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Application.Common;
 
 namespace BackupZCrypt.Desktop.Services;
 

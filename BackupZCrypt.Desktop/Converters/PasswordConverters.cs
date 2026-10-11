@@ -2,7 +2,7 @@ using System.Globalization;
 
 using Avalonia.Data.Converters;
 
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Application.Passwords;
 
 namespace BackupZCrypt.Desktop.Converters;
 

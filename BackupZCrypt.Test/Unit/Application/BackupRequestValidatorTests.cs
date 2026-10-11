@@ -1,9 +1,8 @@
 using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
+using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileSystem;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

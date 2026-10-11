@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileSystem;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// The attributes of a file that a backup records so a restore can reproduce them.

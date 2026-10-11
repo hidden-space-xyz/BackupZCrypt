@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.ValueObjects.Localization;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// Language-neutral identifiers for user-facing messages produced by the lower layers.

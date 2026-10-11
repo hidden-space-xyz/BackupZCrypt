@@ -1,6 +1,4 @@
-using BackupZCrypt.Domain.ValueObjects.FileSystem;
-
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Reads the metadata a backup records for a file and applies it again when the file is restored.

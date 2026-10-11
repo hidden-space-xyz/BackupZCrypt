@@ -1,8 +1,8 @@
 using System.IO.Enumeration;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Application.FileSystem;
+using BackupZCrypt.Domain.Archive;
 
 namespace BackupZCrypt.Infrastructure.Services;
 
@@ -202,20 +202,7 @@ internal sealed class FileOperationsService : IFileOperationsService
             throw new InvalidOperationException($"File path '{finalPath}' has no directory.");
         }
 
-        var randomSuffix = RandomNumberGenerator.GetBytes(12);
-        string tempPath;
-
-        try
-        {
-            tempPath = Path.Join(
-                directory,
-                "." + Convert.ToHexStringLower(randomSuffix) + ".tmp"
-            );
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(randomSuffix);
-        }
+        var tempPath = Path.Join(directory, BackupLayout.NewTemporaryFileName());
 
         try
         {

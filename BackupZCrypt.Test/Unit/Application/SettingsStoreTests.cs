@@ -1,6 +1,5 @@
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

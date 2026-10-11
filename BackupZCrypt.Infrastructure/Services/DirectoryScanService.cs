@@ -1,7 +1,6 @@
 using System.IO.Enumeration;
 
-using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.FileSystem;
+using BackupZCrypt.Application.FileSystem;
 
 namespace BackupZCrypt.Infrastructure.Services;
 

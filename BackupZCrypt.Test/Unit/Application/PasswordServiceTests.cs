@@ -1,6 +1,5 @@
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Application;
 

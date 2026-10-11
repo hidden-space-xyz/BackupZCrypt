@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Provides access to host storage information such as drive roots, free space, and readiness.

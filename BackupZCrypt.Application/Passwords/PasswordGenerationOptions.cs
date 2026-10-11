@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Enums;
+namespace BackupZCrypt.Application.Passwords;
 
 /// <summary>
 /// Flags that control which character classes a generated password may contain.

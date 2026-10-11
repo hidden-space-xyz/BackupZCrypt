@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Abstracts the file and folder I/O used by backup and restore operations so the

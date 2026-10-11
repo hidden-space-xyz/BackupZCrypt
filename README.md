@@ -140,9 +140,9 @@ specific locale, and every temporary file lives in a directory the test owns and
 
 | Project | Purpose |
 |---|---|
-| `BackupZCrypt.Domain` | Core contracts and the archive format: enums, constants, strategy and service interfaces, value objects, the strategy registry, and the manifest, key schedule, and chunk layout every archive is written with |
-| `BackupZCrypt.Application` | Business logic: backup orchestration, chunked backup engine, manifest and settings services |
-| `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; file system access |
+| `BackupZCrypt.Domain` | The archive domain, free of I/O: algorithm enums, strategy contracts and their registry, format constants, and the manifest, key schedule, and chunk layout every archive is written with |
+| `BackupZCrypt.Application` | Use cases and the ports they need: backup orchestration, chunked backup engine, manifest, password and settings services, and the file-system and settings ports |
+| `BackupZCrypt.Infrastructure` | Implementations: encryption, key derivation, compression, and chunking strategies; the file-system and settings ports |
 | `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |
 | `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
 | `BackupZCrypt.Test` | xUnit suite: unit, integration, architecture, and on-disk format tests |

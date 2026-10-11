@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-
-using BackupZCrypt.Domain.Services.Interfaces;
+using BackupZCrypt.Application.FileSystem;
+using BackupZCrypt.Application.Settings;
 
 namespace BackupZCrypt.Infrastructure.Services.Settings;
 

@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileSystem;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// A folder whose contents could not be listed while a directory tree was walked.

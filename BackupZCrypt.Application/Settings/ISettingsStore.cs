@@ -1,5 +1,4 @@
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Domain.Services.Interfaces;
 
 namespace BackupZCrypt.Application.Settings;
 

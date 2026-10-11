@@ -1,6 +1,6 @@
-using BackupZCrypt.Domain.ValueObjects.Backup;
+using BackupZCrypt.Application.Common;
 
-namespace BackupZCrypt.Test.Unit.Domain;
+namespace BackupZCrypt.Test.Unit.Application;
 
 /// <summary>
 /// Unit tests for the backup status value object.

@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.ValueObjects.Backup;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// An immutable snapshot of the progress of an in-flight backup or restore operation.

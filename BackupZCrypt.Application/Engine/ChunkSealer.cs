@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Strategies.Interfaces;

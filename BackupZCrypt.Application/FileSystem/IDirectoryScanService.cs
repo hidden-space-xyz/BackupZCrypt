@@ -1,6 +1,4 @@
-using BackupZCrypt.Domain.ValueObjects.FileSystem;
-
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Walks the source tree a backup reads, deciding which entries are regular files, which folders

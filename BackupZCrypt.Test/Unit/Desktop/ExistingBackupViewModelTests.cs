@@ -5,7 +5,6 @@ using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 
 using NSubstitute;
 

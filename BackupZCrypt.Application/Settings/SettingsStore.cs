@@ -1,6 +1,4 @@
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Settings;
 

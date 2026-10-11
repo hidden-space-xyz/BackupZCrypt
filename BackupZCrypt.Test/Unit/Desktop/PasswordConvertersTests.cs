@@ -1,7 +1,7 @@
 using System.Globalization;
 
+using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Desktop.Converters;
-using BackupZCrypt.Domain.Enums;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 

@@ -1,5 +1,3 @@
-using BackupZCrypt.Domain.Enums;
-
 namespace BackupZCrypt.Application.Passwords;
 
 /// <summary>

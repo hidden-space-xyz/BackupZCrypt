@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 

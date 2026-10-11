@@ -1,29 +1,34 @@
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Desktop;
+using BackupZCrypt.Infrastructure.Services;
 using BackupZCrypt.Test.Tools;
 
 namespace BackupZCrypt.Test.Unit.Architecture;
 
 /// <summary>
-/// Enforces the dependency rules between the feature folders of the Application layer, so a feature
-/// cannot quietly start depending on one that depends on it.
+/// Pins which feature folders of the Application layer each Application feature and each outer
+/// assembly references, so a feature cannot quietly start depending on one that depends on it and an
+/// outer assembly cannot reach past the part of Application meant for it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The features form a directed acyclic graph: <c>Common</c> depends on no feature, the chunked
-/// <c>Engine</c> depends only on <c>Common</c> and <c>Manifest</c>, and the use-case features sit on
-/// top.
+/// The features form a directed acyclic graph: <c>Common</c> and the <c>FileSystem</c> ports depend
+/// on no feature, the chunked <c>Engine</c> depends only on <c>Common</c>, <c>FileSystem</c>, and
+/// <c>Manifest</c>, and the use-case features sit on top. Infrastructure reaches only the ports it
+/// implements, and the desktop front end neither the engine nor the file-system ports.
 /// </para>
 /// <para>
-/// Each feature is checked twice, because neither view sees every reference. The compiled view reads
-/// every type a feature's members and method bodies use, which catches a reference however it was
-/// spelled, including a name qualified only relative to the shared parent namespace. The source
-/// view reads every mention of another feature's namespace, which also catches what compilation
-/// erases: a documentation <c>cref</c>, an unused <c>using</c>, or an inlined constant.
+/// The tables are exact rather than upper bounds: an edge the code no longer uses fails as surely as
+/// a new one, so the tables always describe the code and can never pass vacuously. Each assembly is
+/// read twice, because neither view sees every reference. The compiled view reads every type the
+/// signatures, attributes, generic constraints, and method bodies use, however the name was spelled.
+/// The source view reads every mention of a feature namespace, which also catches what compilation
+/// erases: a documentation <c>cref</c>, an unused <c>using</c>, a <c>nameof</c>, or an inlined
+/// constant.
 /// </para>
 /// </remarks>
 public sealed partial class FeatureDependencyTests
@@ -39,73 +44,79 @@ public sealed partial class FeatureDependencyTests
     private const string ApplicationNamespace = "BackupZCrypt.Application";
 
     /// <summary>
-    /// The features each Application feature is allowed to reference: the single source of truth for
-    /// these rules, which AGENTS.md points to.
+    /// The features each Application feature references: the single source of truth for these
+    /// rules, which AGENTS.md points to.
     /// </summary>
-    private static readonly Dictionary<string, string[]> AllowedFeatureReferences = new(
+    private static readonly Dictionary<string, string[]> FeatureReferences = new(
         StringComparer.Ordinal
     )
     {
         ["Common"] = [],
-        ["Manifest"] = ["Common"],
-        ["Engine"] = ["Common", "Manifest"],
+        ["FileSystem"] = [],
+        ["Manifest"] = ["Common", "FileSystem"],
+        ["Engine"] = ["Common", "FileSystem", "Manifest"],
         ["Passwords"] = ["Common"],
         ["Settings"] = ["Common"],
         ["Benchmark"] = ["Common", "Engine"],
-        ["Backup"] = ["Common", "Engine", "Manifest", "Passwords"],
+        ["Backup"] = ["Common", "Engine", "FileSystem", "Manifest", "Passwords"],
     };
 
     /// <summary>
-    /// Every IL opcode keyed by its encoded value, used to step over operands while scanning method bodies.
+    /// The Application features each outer project references. The composition root is not listed:
+    /// wiring every implementation to its contract is its job.
     /// </summary>
-    private static readonly Dictionary<short, OpCode> OpCodesByValue = typeof(OpCodes)
-        .GetFields(BindingFlags.Public | BindingFlags.Static)
-        .Select(static field => (OpCode)field.GetValue(null)!)
-        .ToDictionary(static code => code.Value);
+    private static readonly Dictionary<string, string[]> OuterReferences = new(StringComparer.Ordinal)
+    {
+        ["BackupZCrypt.Infrastructure"] = ["FileSystem", "Settings"],
+        ["BackupZCrypt.Desktop"] = ["Backup", "Benchmark", "Common", "Manifest", "Passwords", "Settings"],
+    };
 
     /// <summary>
-    /// Gets the features under the dependency rules, as the theory data that runs the checks once per
-    /// feature.
+    /// The compiled assembly of each outer project.
     /// </summary>
-    public static TheoryData<string> Features => new(AllowedFeatureReferences.Keys);
+    private static readonly Dictionary<string, Assembly> OuterAssembliesByProject = new(
+        StringComparer.Ordinal
+    )
+    {
+        ["BackupZCrypt.Infrastructure"] = typeof(FileOperationsService).Assembly,
+        ["BackupZCrypt.Desktop"] = typeof(App).Assembly,
+    };
+
+    /// <summary>
+    /// Gets the Application features under the rules, as the theory data that runs the check once
+    /// per feature.
+    /// </summary>
+    public static TheoryData<string> Features => new(FeatureReferences.Keys);
+
+    /// <summary>
+    /// Gets the outer projects under the rules, as the theory data that runs the check once per project.
+    /// </summary>
+    public static TheoryData<string> OuterProjects => new(OuterReferences.Keys);
 
     [Theory]
     [MemberData(nameof(Features))]
-    internal void CompiledFeatureReferences_StayWithinTheDocumentedFeatureRules(string feature)
+    internal void FeatureReferences_MatchTheDocumentedFeatureRules(string feature)
     {
-        var allowed = AllowedOrSelf(feature);
+        var found = CompiledReferences(ApplicationTypes().Where(type => FeatureOf(type) == feature))
+            .Concat(SourceReferences(FeatureFolder(feature), requireRootNamespace: false))
+            .Where(reference => reference.Feature != feature);
 
-        var violations = ApplicationTypes()
-            .Where(type => FeatureOf(type) == feature)
-            .SelectMany(type =>
-                ReferencedTypes(type)
-                    .Select(FeatureOf)
-                    .OfType<string>()
-                    .Where(referenced => !allowed.Contains(referenced))
-                    .Select(referenced => $"{type.FullName} -> {referenced}")
-            )
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        Assert.Empty(violations);
+        AssertReferencesMatch(feature, FeatureReferences[feature], found);
     }
 
     [Theory]
-    [MemberData(nameof(Features))]
-    internal void SourceFeatureReferences_StayWithinTheDocumentedFeatureRules(string feature)
+    [MemberData(nameof(OuterProjects))]
+    internal void OuterProjectReferences_MatchTheDocumentedRules(string project)
     {
-        var allowed = AllowedOrSelf(feature);
+        var found = CompiledReferences(OuterAssembliesByProject[project].GetTypes())
+            .Concat(
+                SourceReferences(
+                    Path.Join(OnDiskFormatFixtures.RepositoryRoot, project),
+                    requireRootNamespace: true
+                )
+            );
 
-        var violations = SourceFilesOf(feature)
-            .SelectMany(file =>
-                ReferencedFeatures(File.ReadAllText(file))
-                    .Where(referenced => !allowed.Contains(referenced))
-                    .Select(referenced => $"{Path.GetFileName(file)} -> {referenced}")
-            )
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        Assert.Empty(violations);
+        AssertReferencesMatch(project, OuterReferences[project], found);
     }
 
     [Fact]
@@ -114,11 +125,11 @@ public sealed partial class FeatureDependencyTests
         var undocumented = ApplicationTypes()
             .Where(static type => !type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false))
             .Where(static type => type.Namespace?.StartsWith(ApplicationNamespace, StringComparison.Ordinal) is true)
-            .Where(static type => FeatureOf(type) is not { } feature || !AllowedFeatureReferences.ContainsKey(feature))
+            .Where(static type => FeatureOf(type) is not { } feature || !FeatureReferences.ContainsKey(feature))
             .Select(static type => type.FullName)
             .ToList();
 
-        Assert.Empty(undocumented);
+        Assert.True(undocumented.Count == 0, string.Join(Environment.NewLine, undocumented));
     }
 
     [Fact]
@@ -126,28 +137,115 @@ public sealed partial class FeatureDependencyTests
     {
         var projectRoot = Path.Join(OnDiskFormatFixtures.RepositoryRoot, ApplicationProject);
 
-        var misplaced = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
+        var misplaced = SourceFiles(projectRoot, "*.cs")
             .Select(file => Path.GetRelativePath(projectRoot, file))
-            .Where(static path => !path.StartsWith("bin", StringComparison.Ordinal))
-            .Where(static path => !path.StartsWith("obj", StringComparison.Ordinal))
             .Where(static path =>
                 path.Split(Path.DirectorySeparatorChar) is not [var folder, _, ..]
-                || !AllowedFeatureReferences.ContainsKey(folder)
+                || !FeatureReferences.ContainsKey(folder)
             )
             .ToList();
 
-        Assert.Empty(misplaced);
+        Assert.True(misplaced.Count == 0, string.Join(Environment.NewLine, misplaced));
     }
 
     /// <summary>
-    /// Builds the set of features a feature may reference, including itself.
+    /// Asserts that the features found are exactly the documented ones, listing where each
+    /// unexpected reference came from and which documented edges are no longer used.
     /// </summary>
-    /// <param name="feature">The feature being checked.</param>
-    /// <returns>The allowed feature names.</returns>
-    private static HashSet<string> AllowedOrSelf(string feature)
+    /// <param name="subject">The feature or project checked.</param>
+    /// <param name="documented">The features the rules say it references.</param>
+    /// <param name="found">The references found, each with where it was seen.</param>
+    private static void AssertReferencesMatch(
+        string subject,
+        IEnumerable<string> documented,
+        IEnumerable<(string Feature, string Origin)> found
+    )
     {
-        return AllowedFeatureReferences[feature].Append(feature).ToHashSet(StringComparer.Ordinal);
+        var expected = documented.ToHashSet(StringComparer.Ordinal);
+        var references = found.ToList();
+
+        var unexpected = references
+            .Where(reference => !expected.Contains(reference.Feature))
+            .Select(static reference => $"unexpected {reference.Feature} from {reference.Origin}")
+            .Distinct(StringComparer.Ordinal);
+        var unused = expected
+            .Except(references.Select(static reference => reference.Feature), StringComparer.Ordinal)
+            .Select(static feature => $"documented but unused {feature}");
+        var problems = unexpected.Concat(unused).Order(StringComparer.Ordinal).ToList();
+
+        Assert.True(
+            problems.Count == 0,
+            $"{subject}:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}"
+        );
+    }
+
+    /// <summary>
+    /// Lists the Application features the given compiled types reference.
+    /// </summary>
+    /// <param name="types">The types whose references are read.</param>
+    /// <returns>Each referenced feature with the type that references it.</returns>
+    private static IEnumerable<(string Feature, string Origin)> CompiledReferences(IEnumerable<Type> types)
+    {
+        return types.SelectMany(type =>
+            TypeReferences
+                .Of(type)
+                .Select(FeatureOf)
+                .OfType<string>()
+                .Select(feature => (feature, type.FullName ?? type.Name))
+        );
+    }
+
+    /// <summary>
+    /// Lists the Application features the C# and XAML source files under a folder mention.
+    /// </summary>
+    /// <param name="folder">The folder searched, excluding build output.</param>
+    /// <param name="requireRootNamespace">
+    /// Whether only fully qualified mentions count. Inside Application a name relative to the
+    /// <c>BackupZCrypt</c> root also resolves; elsewhere a bare <c>Application.</c> belongs to other
+    /// libraries, such as Avalonia's <c>Application.Current</c>.
+    /// </param>
+    /// <returns>Each referenced feature with the file that mentions it.</returns>
+    private static IEnumerable<(string Feature, string Origin)> SourceReferences(
+        string folder,
+        bool requireRootNamespace
+    )
+    {
+        var pattern = requireRootNamespace ? QualifiedFeatureNamespace() : RelativeFeatureNamespace();
+
+        return SourceFiles(folder, "*.cs")
+            .Concat(SourceFiles(folder, "*.axaml"))
+            .SelectMany(file =>
+                pattern
+                    .Matches(File.ReadAllText(file))
+                    .Select(match => (match.Groups["feature"].Value, Path.GetRelativePath(folder, file)))
+            );
+    }
+
+    /// <summary>
+    /// Lists the source files under a folder, leaving out build output.
+    /// </summary>
+    /// <param name="folder">The folder searched.</param>
+    /// <param name="pattern">The file name pattern.</param>
+    /// <returns>The full paths of the matching files.</returns>
+    private static IEnumerable<string> SourceFiles(string folder, string pattern)
+    {
+        Assert.True(Directory.Exists(folder), $"Could not find {folder}.");
+
+        return Directory
+            .EnumerateFiles(folder, pattern, SearchOption.AllDirectories)
+            .Where(file =>
+                Path.GetRelativePath(folder, file).Split(Path.DirectorySeparatorChar)[0] is not ("bin" or "obj")
+            );
+    }
+
+    /// <summary>
+    /// Gets the folder of one Application feature.
+    /// </summary>
+    /// <param name="feature">The feature name.</param>
+    /// <returns>The folder's full path.</returns>
+    private static string FeatureFolder(string feature)
+    {
+        return Path.Join(OnDiskFormatFixtures.RepositoryRoot, ApplicationProject, feature);
     }
 
     /// <summary>
@@ -181,203 +279,17 @@ public sealed partial class FeatureDependencyTests
     }
 
     /// <summary>
-    /// Collects every type a type depends on through its base types, its members' signatures, the
-    /// locals of its method bodies, and the types, methods, and fields those bodies reference.
+    /// Matches a fully qualified mention of an Application feature namespace and captures the feature.
     /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <returns>The referenced types, with array, by-ref, and generic types expanded into their parts.</returns>
-    private static IEnumerable<Type> ReferencedTypes(Type type)
-    {
-        const BindingFlags declared =
-            BindingFlags.Public
-            | BindingFlags.NonPublic
-            | BindingFlags.Instance
-            | BindingFlags.Static
-            | BindingFlags.DeclaredOnly;
-
-        List<Type> direct = [.. type.GetInterfaces()];
-
-        if (type.BaseType is { } baseType)
-        {
-            direct.Add(baseType);
-        }
-
-        direct.AddRange(type.GetFields(declared).Select(static field => field.FieldType));
-
-        foreach (var method in type.GetMethods(declared).Cast<MethodBase>().Concat(type.GetConstructors(declared)))
-        {
-            direct.AddRange(method.GetParameters().Select(static parameter => parameter.ParameterType));
-
-            if (method is MethodInfo info)
-            {
-                direct.Add(info.ReturnType);
-            }
-
-            direct.AddRange(TypesUsedByBody(method));
-        }
-
-        return direct.SelectMany(Expand);
-    }
-
-    /// <summary>
-    /// Collects the local variable types of a method body and the declaring and signature types of
-    /// every type, method, and field its IL references.
-    /// </summary>
-    /// <param name="method">The method whose body is scanned.</param>
-    /// <returns>The types the body uses.</returns>
-    private static IEnumerable<Type> TypesUsedByBody(MethodBase method)
-    {
-        var body = method.GetMethodBody();
-        if (body?.GetILAsByteArray() is not { } il)
-        {
-            yield break;
-        }
-
-        foreach (var local in body.LocalVariables)
-        {
-            yield return local.LocalType;
-        }
-
-        var typeArguments = method.DeclaringType is { IsGenericType: true } declaring
-            ? declaring.GetGenericArguments()
-            : null;
-        var methodArguments = method is MethodInfo { IsGenericMethod: true } ? method.GetGenericArguments() : null;
-
-        var position = 0;
-        while (position < il.Length)
-        {
-            short value = il[position++];
-            if (value == 0xFE)
-            {
-                value = unchecked((short)(0xFE00 | il[position++]));
-            }
-
-            var operandType = OpCodesByValue[value].OperandType;
-
-            if (operandType is OperandType.InlineMethod or OperandType.InlineField or OperandType.InlineType or OperandType.InlineTok)
-            {
-                var token = BitConverter.ToInt32(il, position);
-
-                foreach (var used in TypesOfMember(method.Module.ResolveMember(token, typeArguments, methodArguments)))
-                {
-                    yield return used;
-                }
-            }
-
-            position += OperandSize(operandType, il, position);
-        }
-    }
-
-    /// <summary>
-    /// Gets the types a member referenced from IL brings with it.
-    /// </summary>
-    /// <param name="member">The resolved member.</param>
-    /// <returns>Its declaring type and the types of its signature.</returns>
-    private static IEnumerable<Type> TypesOfMember(MemberInfo? member)
-    {
-        switch (member)
-        {
-            case Type referenced:
-                yield return referenced;
-                break;
-            case FieldInfo field:
-                yield return field.DeclaringType!;
-                yield return field.FieldType;
-                break;
-            case MethodBase called:
-                if (called.DeclaringType is { } owner)
-                {
-                    yield return owner;
-                }
-
-                foreach (var parameter in called.GetParameters())
-                {
-                    yield return parameter.ParameterType;
-                }
-
-                if (called is MethodInfo info)
-                {
-                    yield return info.ReturnType;
-
-                    foreach (var argument in info.IsGenericMethod ? info.GetGenericArguments() : [])
-                    {
-                        yield return argument;
-                    }
-                }
-
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Gets the length in bytes of an IL instruction's operand.
-    /// </summary>
-    /// <param name="operandType">The operand kind of the instruction.</param>
-    /// <param name="il">The method body's IL.</param>
-    /// <param name="position">The offset of the operand.</param>
-    /// <returns>The operand length.</returns>
-    private static int OperandSize(OperandType operandType, byte[] il, int position)
-    {
-        return operandType switch
-        {
-            OperandType.InlineNone => 0,
-            OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
-            OperandType.InlineVar => 2,
-            OperandType.InlineI8 or OperandType.InlineR => 8,
-            OperandType.InlineSwitch => 4 + (4 * BitConverter.ToInt32(il, position)),
-            _ => 4,
-        };
-    }
-
-    /// <summary>
-    /// Expands a type into itself and the types it is composed of: the element type of an array,
-    /// pointer, or by-ref type, and the definition and arguments of a generic type.
-    /// </summary>
-    /// <param name="type">The type to expand.</param>
-    /// <returns>The type and its parts.</returns>
-    private static IEnumerable<Type> Expand(Type type)
-    {
-        if (type.HasElementType)
-        {
-            return Expand(type.GetElementType()!);
-        }
-
-        return type.IsGenericType && !type.IsGenericTypeDefinition
-            ? type.GetGenericArguments().SelectMany(Expand).Prepend(type.GetGenericTypeDefinition())
-            : [type];
-    }
-
-    /// <summary>
-    /// Lists the C# source files of one feature folder.
-    /// </summary>
-    /// <param name="feature">The feature folder name.</param>
-    /// <returns>The full paths of its source files.</returns>
-    private static IEnumerable<string> SourceFilesOf(string feature)
-    {
-        var folder = Path.Join(OnDiskFormatFixtures.RepositoryRoot, ApplicationProject, feature);
-
-        Assert.True(Directory.Exists(folder), $"Could not find {folder}.");
-        return Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories);
-    }
-
-    /// <summary>
-    /// Extracts the Application features a source file mentions by namespace.
-    /// </summary>
-    /// <param name="source">The file's text.</param>
-    /// <returns>The distinct feature names referenced.</returns>
-    private static IEnumerable<string> ReferencedFeatures(string source)
-    {
-        return FeatureNamespace()
-            .Matches(source)
-            .Select(static match => match.Groups["feature"].Value)
-            .Distinct(StringComparer.Ordinal);
-    }
+    /// <returns>The compiled expression.</returns>
+    [GeneratedRegex(@"\bBackupZCrypt\.Application\.(?<feature>[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
+    private static partial Regex QualifiedFeatureNamespace();
 
     /// <summary>
     /// Matches a mention of an Application feature namespace, fully qualified or relative to the
-    /// <c>BackupZCrypt</c> root, and captures the feature name.
+    /// <c>BackupZCrypt</c> root, and captures the feature.
     /// </summary>
     /// <returns>The compiled expression.</returns>
     [GeneratedRegex(@"(?<![\w.])(?:BackupZCrypt\.)?Application\.(?<feature>[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
-    private static partial Regex FeatureNamespace();
+    private static partial Regex RelativeFeatureNamespace();
 }

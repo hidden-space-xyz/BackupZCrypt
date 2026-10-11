@@ -1,11 +1,13 @@
+using System.Security.Cryptography;
+
 using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Services.Interfaces;
 
 namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>
-/// Recognizes the files and folders this program writes into a backup folder, so cleanup only ever
-/// touches its own files and a create can tell a folder holding a backup from one holding user data.
+/// Recognizes the names of the files and folders this program writes into a backup folder, so cleanup
+/// only ever touches its own files and a create can tell a folder holding a backup from one holding
+/// user data.
 /// </summary>
 public static class BackupLayout
 {
@@ -75,71 +77,22 @@ public static class BackupLayout
     }
 
     /// <summary>
-    /// Determines whether a folder holds nothing but a backup written by this program: its manifest,
-    /// its chunks directory with chunk files only, its lock file, and leftover temporary files.
+    /// Creates a fresh random name of the shape <see cref="IsTemporaryFileName"/> recognizes, for a
+    /// file written beside its target before an atomic rename.
     /// </summary>
-    /// <param name="fileOperationsService">The service used to list the folder.</param>
-    /// <param name="directoryPath">The folder to inspect.</param>
-    /// <param name="containsManifest">Receives whether the folder holds a manifest.</param>
-    /// <returns><see langword="true"/> when every entry belongs to a backup.</returns>
-    public static bool ContainsOnlyBackupFiles(
-        IFileOperationsService fileOperationsService,
-        string directoryPath,
-        out bool containsManifest
-    )
+    /// <returns>The temporary file name, without a directory.</returns>
+    public static string NewTemporaryFileName()
     {
-        ArgumentNullException.ThrowIfNull(fileOperationsService);
+        var randomPart = RandomNumberGenerator.GetBytes(TemporaryNameHexLength / 2);
 
-        containsManifest = false;
-
-        foreach (var name in fileOperationsService.GetDirectoryEntryNames(directoryPath))
+        try
         {
-            var fullPath = Path.Join(directoryPath, name);
-
-            if (string.Equals(name, BackupConstants.ManifestFileName, StringComparison.OrdinalIgnoreCase)
-                && fileOperationsService.FileExists(fullPath))
-            {
-                containsManifest = true;
-                continue;
-            }
-
-            if (string.Equals(name, BackupConstants.ChunksDirectoryName, StringComparison.OrdinalIgnoreCase)
-                && fileOperationsService.DirectoryExists(fullPath)
-                && !fileOperationsService.IsReparsePoint(fullPath)
-                && ContainsOnlyChunkFiles(fileOperationsService, fullPath))
-            {
-                continue;
-            }
-
-            if ((string.Equals(name, BackupConstants.LockFileName, StringComparison.OrdinalIgnoreCase)
-                    || IsTemporaryFileName(name))
-                && fileOperationsService.FileExists(fullPath))
-            {
-                continue;
-            }
-
-            return false;
+            return "." + Convert.ToHexStringLower(randomPart) + BackupConstants.TemporaryFileExtension;
         }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Determines whether a chunks directory holds only chunk, quarantined chunk, and temporary files.
-    /// </summary>
-    /// <param name="fileOperationsService">The service used to list the folder.</param>
-    /// <param name="chunksDirectory">The chunks directory to inspect.</param>
-    /// <returns><see langword="true"/> when every entry is a file this program writes there.</returns>
-    private static bool ContainsOnlyChunkFiles(
-        IFileOperationsService fileOperationsService,
-        string chunksDirectory
-    )
-    {
-        return fileOperationsService
-            .GetDirectoryEntryNames(chunksDirectory)
-            .All(static name =>
-                IsChunkFileName(name) || IsQuarantinedChunkFileName(name) || IsTemporaryFileName(name)
-            );
+        finally
+        {
+            CryptographicOperations.ZeroMemory(randomPart);
+        }
     }
 
     /// <summary>

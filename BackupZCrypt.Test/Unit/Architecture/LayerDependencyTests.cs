@@ -17,7 +17,8 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// </para>
 /// <para>
 /// Related architecture checks live elsewhere: <c>FeatureDependencyTests</c> covers the feature folders
-/// inside the Application layer, <c>LocalizationParityTests</c> covers the message catalogue, and
+/// inside the Application layer and what the outer projects use of them, <c>DomainPurityTests</c> keeps
+/// the Domain free of I/O, <c>LocalizationParityTests</c> covers the message catalogue, and
 /// <c>StrategyRegistrationTests</c> covers the composition root.
 /// </para>
 /// </remarks>
@@ -37,7 +38,7 @@ public sealed class LayerDependencyTests
     {
         ["BackupZCrypt.Domain"] = [],
         ["BackupZCrypt.Application"] = ["BackupZCrypt.Domain"],
-        ["BackupZCrypt.Infrastructure"] = ["BackupZCrypt.Domain"],
+        ["BackupZCrypt.Infrastructure"] = ["BackupZCrypt.Application"],
         ["BackupZCrypt.Composition"] = ["BackupZCrypt.Application", "BackupZCrypt.Infrastructure"],
         ["BackupZCrypt.Desktop"] = ["BackupZCrypt.Application", "BackupZCrypt.Composition"],
         ["BackupZCrypt.Test"] =

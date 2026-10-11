@@ -2,8 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Localization;
+using BackupZCrypt.Application.Common;
 
 namespace BackupZCrypt.Application.Passwords;
 

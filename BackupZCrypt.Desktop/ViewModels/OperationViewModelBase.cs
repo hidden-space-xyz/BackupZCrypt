@@ -7,8 +7,6 @@ using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Backup;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

@@ -9,8 +9,6 @@ using BackupZCrypt.Desktop.Services;
 using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Backup;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

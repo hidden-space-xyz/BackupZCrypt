@@ -5,7 +5,6 @@ using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;

@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Holds and probes the lock file that keeps two processes from modifying one backup at once.

@@ -6,7 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BackupZCrypt.Domain\BackupZCrypt.Domain.csproj" />
+    <ProjectReference Include="..\BackupZCrypt.Application\BackupZCrypt.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

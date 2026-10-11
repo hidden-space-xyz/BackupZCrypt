@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Services.Interfaces;
+namespace BackupZCrypt.Application.Settings;
 
 /// <summary>
 /// Marks a settings type that can be persisted and recreated with defaults, using the

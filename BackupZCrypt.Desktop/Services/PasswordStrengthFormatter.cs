@@ -1,10 +1,9 @@
 using System.Globalization;
 using System.Text;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Desktop.Services;
 

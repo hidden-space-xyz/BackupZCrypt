@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Enums;
+namespace BackupZCrypt.Application.Passwords;
 
 /// <summary>
 /// Rates the estimated strength of a password from weakest to strongest.

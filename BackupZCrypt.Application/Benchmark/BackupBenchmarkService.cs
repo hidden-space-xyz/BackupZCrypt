@@ -7,7 +7,6 @@ using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Benchmark;
 

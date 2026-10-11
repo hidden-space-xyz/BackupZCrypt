@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.ValueObjects.FileSystem;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// The result of walking a source directory tree: the regular files to back up, the leaf folders

@@ -1,6 +1,5 @@
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;
-using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Backup;
 

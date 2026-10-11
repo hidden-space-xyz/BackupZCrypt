@@ -2,12 +2,8 @@ using System.Runtime.CompilerServices;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
+using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Passwords;
-using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Services.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Application.Backup;
 
@@ -308,7 +304,7 @@ internal sealed class BackupRequestValidator(
         {
             if (
                 fileOperations.DirectoryExists(destinationPath)
-                && !BackupLayout.ContainsOnlyBackupFiles(fileOperations, destinationPath, out _)
+                && !fileOperations.ContainsOnlyBackupFiles(destinationPath, out _)
             )
             {
                 errors.Add(new LocalizableMessage(MessageCode.DestinationNotEmpty));
@@ -529,7 +525,7 @@ internal sealed class BackupRequestValidator(
         {
             if (
                 fileOperations.DirectoryExists(destinationPath)
-                && BackupLayout.ContainsOnlyBackupFiles(fileOperations, destinationPath, out var containsManifest)
+                && fileOperations.ContainsOnlyBackupFiles(destinationPath, out var containsManifest)
                 && containsManifest
             )
             {

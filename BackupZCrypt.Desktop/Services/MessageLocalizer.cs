@@ -1,7 +1,7 @@
 using System.Globalization;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Desktop.Services;
 

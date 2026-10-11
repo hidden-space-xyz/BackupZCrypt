@@ -1,5 +1,3 @@
-using BackupZCrypt.Domain.ValueObjects.Localization;
-
 namespace BackupZCrypt.Application.Common;
 
 /// <summary>

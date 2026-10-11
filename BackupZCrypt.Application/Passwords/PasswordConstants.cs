@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Constants;
+namespace BackupZCrypt.Application.Passwords;
 
 /// <summary>
 /// The bounds a backup password must satisfy.

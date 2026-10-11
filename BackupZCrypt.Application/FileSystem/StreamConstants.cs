@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Domain.Constants;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Tuning constants for stream-based I/O.

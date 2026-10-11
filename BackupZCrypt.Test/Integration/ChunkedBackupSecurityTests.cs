@@ -8,7 +8,6 @@ using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -686,7 +685,6 @@ public sealed class ChunkedBackupSecurityTests
             ? Directory.GetFiles(root, "*", SearchOption.AllDirectories)
             : [];
     }
-
 
     /// <summary>
     /// Gathers the operation's own error codes together with the per-file codes of the completed engine

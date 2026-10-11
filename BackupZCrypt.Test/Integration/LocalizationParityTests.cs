@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Xml.Linq;
 
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Domain.ValueObjects.Localization;
 
 namespace BackupZCrypt.Test.Integration;
 

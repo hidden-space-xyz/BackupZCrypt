@@ -1,6 +1,4 @@
-using BackupZCrypt.Domain.ValueObjects.Localization;
-
-namespace BackupZCrypt.Domain.ValueObjects.Backup;
+namespace BackupZCrypt.Application.Common;
 
 /// <summary>
 /// The immutable outcome of a completed backup or restore operation, including timing,

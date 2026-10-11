@@ -1,6 +1,4 @@
-using BackupZCrypt.Domain.Services.Interfaces;
-
-namespace BackupZCrypt.Application.Common;
+namespace BackupZCrypt.Application.FileSystem;
 
 /// <summary>
 /// Shared atomic byte-array writes plus best-effort housekeeping probes.
