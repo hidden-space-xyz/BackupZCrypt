@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Strategies.Encryption;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Domain.Archive;
+using BackupZCrypt.Infrastructure.Algorithms.Encryption;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 

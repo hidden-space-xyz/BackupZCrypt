@@ -6,6 +6,8 @@ dotnet_diagnostic.CA1000.severity = none
 [*.cs]
 dotnet_diagnostic.CA1863.severity = none
 dotnet_diagnostic.IDE0005.severity = warning
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = warning
 
 [BackupZCrypt.Test/**.cs]
 dotnet_diagnostic.CA5394.severity = none

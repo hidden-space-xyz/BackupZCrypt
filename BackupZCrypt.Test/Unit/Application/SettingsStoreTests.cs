@@ -67,6 +67,32 @@ public sealed class SettingsStoreTests
     }
 
     [Fact]
+    internal async Task LoadAsync_OutOfMemory_PropagatesInsteadOfFallingBackToTheDefaults()
+    {
+        _ = this.settingsService
+            .GetOrCreateAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () => this.CreateSut().LoadAsync<RecentPathSettings>(TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    internal async Task SaveAsync_OutOfMemory_PropagatesInsteadOfBeingReportedAsAFailure()
+    {
+        _ = this.settingsService
+            .SaveAsync(Arg.Any<RecentPathSettings>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () =>
+                this.CreateSut()
+                    .SaveAsync(RecentPathSettings.DefaultValue, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
     internal async Task SaveAsync_SaveSucceeds_PersistsTheGivenInstanceAndReportsSuccess()
     {
         RecentPathSettings settings = new("some-source", "some-destination");

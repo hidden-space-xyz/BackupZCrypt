@@ -2,7 +2,6 @@ using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services.Interfaces;
 
 using CommunityToolkit.Mvvm.Input;
 

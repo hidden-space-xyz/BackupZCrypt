@@ -1,8 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Algorithms;
 
 namespace BackupZCrypt.Domain.Archive;
 

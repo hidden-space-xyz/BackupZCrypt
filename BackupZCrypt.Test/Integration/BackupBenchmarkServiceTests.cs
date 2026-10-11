@@ -1,6 +1,6 @@
 using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;

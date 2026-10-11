@@ -3,7 +3,6 @@ using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 
 using NSubstitute;

@@ -2,8 +2,8 @@ using System.Globalization;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
+using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 

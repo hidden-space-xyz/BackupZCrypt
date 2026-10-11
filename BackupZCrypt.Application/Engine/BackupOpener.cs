@@ -1,9 +1,8 @@
 using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 
 namespace BackupZCrypt.Application.Engine;
 

@@ -1,5 +1,5 @@
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Unit.Application;

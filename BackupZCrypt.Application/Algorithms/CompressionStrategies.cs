@@ -1,5 +1,4 @@
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Algorithms;
 
 namespace BackupZCrypt.Application.Algorithms;
 

@@ -239,7 +239,7 @@ internal sealed record class SourceSnapshot(
             : new LocalizableMessage(
                 MessageCode.SourceLinksSkippedFormat,
                 this.SkippedLinks.Count,
-                PathSample.Join(this.SkippedLinks)
+                PathSample.Of(this.SkippedLinks)
             );
 
     /// <summary>

@@ -3,7 +3,7 @@
              xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
              xmlns:m="using:BackupZCrypt.Desktop.Models"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
-             xmlns:local="using:BackupZCrypt.Desktop"
+             xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.AboutView"
              x:DataType="vm:AboutViewModel">
 
@@ -45,7 +45,7 @@
 
       <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
         <Border Grid.Column="0" Classes="pageIcon">
-          <PathIcon Data="{x:Static local:Icons.Info}" />
+          <PathIcon Data="{x:Static assets:Icons.Info}" />
         </Border>
         <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
           <TextBlock Classes="h1" Text="{x:Static res:Strings.AboutTitle}" />
@@ -60,7 +60,7 @@
           <StackPanel Spacing="18">
             <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <PathIcon Data="{x:Static local:Icons.ShieldLock}" />
+                <PathIcon Data="{x:Static assets:Icons.ShieldLock}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpCreateTitle}" />
@@ -70,7 +70,7 @@
 
             <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <PathIcon Data="{x:Static local:Icons.ArrowSync}" />
+                <PathIcon Data="{x:Static assets:Icons.ArrowSync}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpUpdateTitle}" />
@@ -80,7 +80,7 @@
 
             <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <PathIcon Data="{x:Static local:Icons.BoxArrowDown}" />
+                <PathIcon Data="{x:Static assets:Icons.BoxArrowDown}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpRestoreTitle}" />
@@ -90,7 +90,7 @@
 
             <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <PathIcon Data="{x:Static local:Icons.ShieldCheck}" />
+                <PathIcon Data="{x:Static assets:Icons.ShieldCheck}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpVerifyTitle}" />
@@ -100,7 +100,7 @@
 
             <Grid Classes="guideItem" ColumnDefinitions="Auto,*">
               <Border Grid.Column="0" Classes="helpBadge">
-                <PathIcon Data="{x:Static local:Icons.Settings}" />
+                <PathIcon Data="{x:Static assets:Icons.Settings}" />
               </Border>
               <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                 <TextBlock Classes="label" Text="{x:Static res:Strings.HelpSettingsTitle}" />
@@ -113,7 +113,7 @@
 
       <Border Classes="notice warning" Padding="18,16">
         <Grid ColumnDefinitions="Auto,*">
-          <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Key}" Width="18" Height="18" Margin="0,1,14,0" />
+          <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Key}" Width="18" Height="18" Margin="0,1,14,0" />
           <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock FontSize="14" FontWeight="SemiBold" Text="{x:Static res:Strings.HelpPasswordTitle}" />
             <TextBlock Foreground="{StaticResource PrimaryTextBrush}" Text="{x:Static res:Strings.HelpPasswordText}" />
@@ -126,7 +126,7 @@
           <StackPanel Spacing="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Border Classes="stepBadge">
-                <PathIcon Data="{x:Static local:Icons.Lock}" />
+                <PathIcon Data="{x:Static assets:Icons.Lock}" />
               </Border>
               <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.EncryptionLabel}" />
             </StackPanel>
@@ -143,7 +143,7 @@
           <StackPanel Spacing="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Border Classes="stepBadge">
-                <PathIcon Data="{x:Static local:Icons.Key}" />
+                <PathIcon Data="{x:Static assets:Icons.Key}" />
               </Border>
               <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.KeyDerivationLabel}" />
             </StackPanel>
@@ -160,7 +160,7 @@
           <StackPanel Spacing="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Border Classes="stepBadge">
-                <PathIcon Data="{x:Static local:Icons.Archive}" />
+                <PathIcon Data="{x:Static assets:Icons.Archive}" />
               </Border>
               <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.CompressionLabel}" />
             </StackPanel>

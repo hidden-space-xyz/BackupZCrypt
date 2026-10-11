@@ -6,13 +6,13 @@ using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Services;
-using BackupZCrypt.Infrastructure.Services.Settings;
-using BackupZCrypt.Infrastructure.Strategies.Chunking;
-using BackupZCrypt.Infrastructure.Strategies.Compression;
-using BackupZCrypt.Infrastructure.Strategies.Encryption;
-using BackupZCrypt.Infrastructure.Strategies.KeyDerivation;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Infrastructure.Algorithms.Chunking;
+using BackupZCrypt.Infrastructure.Algorithms.Compression;
+using BackupZCrypt.Infrastructure.Algorithms.Encryption;
+using BackupZCrypt.Infrastructure.Algorithms.KeyDerivation;
+using BackupZCrypt.Infrastructure.FileSystem;
+using BackupZCrypt.Infrastructure.Settings;
 
 using Microsoft.Extensions.DependencyInjection;
 

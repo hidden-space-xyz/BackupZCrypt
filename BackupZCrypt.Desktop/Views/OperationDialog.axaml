@@ -4,7 +4,7 @@
              xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
-             xmlns:local="using:BackupZCrypt.Desktop"
+             xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
              x:DataType="vm:OperationViewModelBase">
 
@@ -194,7 +194,7 @@
         <StackPanel x:Name="WarningsPanel" Classes="reveal" Spacing="18" IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="12">
             <Border Classes="statusBadge warning">
-              <PathIcon Data="{x:Static local:Icons.Warning}" />
+              <PathIcon Data="{x:Static assets:Icons.Warning}" />
             </Border>
             <TextBlock Classes="cardTitle"
                        FontSize="16"
@@ -236,10 +236,10 @@
           <StackPanel Spacing="14">
             <Panel HorizontalAlignment="Center">
               <Border Classes="resultBadge success" IsVisible="{Binding ResultIsSuccess}">
-                <PathIcon Data="{x:Static local:Icons.CheckCircle}" />
+                <PathIcon Data="{x:Static assets:Icons.CheckCircle}" />
               </Border>
               <Border Classes="resultBadge danger" IsVisible="{Binding !ResultIsSuccess}">
-                <PathIcon Data="{x:Static local:Icons.ErrorCircle}" />
+                <PathIcon Data="{x:Static assets:Icons.ErrorCircle}" />
               </Border>
             </Panel>
             <TextBlock HorizontalAlignment="Center"
@@ -254,19 +254,19 @@
           <Border Classes="resultStats" IsVisible="{Binding HasResultDetails}">
             <StackPanel Spacing="12">
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Document}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Document}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultFiles}" />
               </Grid>
               <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasResultUpdateDetails}">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.ArrowSync}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.ArrowSync}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultUpdateDetails}" />
               </Grid>
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Clock}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Clock}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultDuration}" />
               </Grid>
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Database}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Database}" />
                 <TextBlock Grid.Column="1" Text="{Binding ResultSize}" />
               </Grid>
             </StackPanel>

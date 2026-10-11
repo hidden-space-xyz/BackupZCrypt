@@ -4,7 +4,7 @@
              xmlns:m="using:BackupZCrypt.Desktop.Models"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:conv="using:BackupZCrypt.Desktop.Converters"
-             xmlns:local="using:BackupZCrypt.Desktop"
+             xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
@@ -14,7 +14,7 @@
 
         <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
           <Border Grid.Column="0" Classes="pageIcon">
-            <PathIcon Data="{x:Static local:Icons.Settings}" />
+            <PathIcon Data="{x:Static assets:Icons.Settings}" />
           </Border>
           <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="h1" Text="{x:Static res:Strings.SettingsTitle}" />
@@ -32,7 +32,7 @@
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Data="{x:Static local:Icons.Lock}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <PathIcon Data="{x:Static assets:Icons.Lock}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
                   <TextBlock Classes="label" Text="{x:Static res:Strings.EncryptionLabel}" />
                 </StackPanel>
                 <TextBlock Classes="caption" Text="{x:Static res:Strings.EncryptionIntro}" />
@@ -61,7 +61,7 @@
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Data="{x:Static local:Icons.Key}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <PathIcon Data="{x:Static assets:Icons.Key}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
                   <TextBlock Classes="label" Text="{x:Static res:Strings.KeyDerivationLabel}" />
                 </StackPanel>
                 <TextBlock Classes="caption" Text="{x:Static res:Strings.KeyDerivationIntro}" />
@@ -90,7 +90,7 @@
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Data="{x:Static local:Icons.Archive}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
+                  <PathIcon Data="{x:Static assets:Icons.Archive}" Width="14" Height="14" Foreground="{StaticResource AccentBrush}" />
                   <TextBlock Classes="label" Text="{x:Static res:Strings.CompressionLabel}" />
                 </StackPanel>
                 <TextBlock Classes="caption" Text="{x:Static res:Strings.CompressionIntro}" />
@@ -120,7 +120,7 @@
           <StackPanel Spacing="16">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Border Classes="stepBadge">
-                <PathIcon Data="{x:Static local:Icons.Gauge}" />
+                <PathIcon Data="{x:Static assets:Icons.Gauge}" />
               </Border>
               <TextBlock Classes="cardTitle" Text="{x:Static res:Strings.BenchmarkSection}" />
             </StackPanel>
@@ -153,7 +153,7 @@
                         Command="{Binding RunBenchmarkCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Panel Width="16" Height="16" VerticalAlignment="Center">
-                      <PathIcon Data="{x:Static local:Icons.Gauge}"
+                      <PathIcon Data="{x:Static assets:Icons.Gauge}"
                                 IsVisible="{Binding !IsBenchmarkRunning}" />
                       <Panel IsVisible="{Binding IsBenchmarkRunning}">
                         <Ellipse Classes="spinnerTrack" StrokeThickness="2" />
@@ -199,7 +199,7 @@
 
             <Border Classes="notice danger reveal" IsVisible="{Binding HasBenchmarkError}">
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.ErrorCircle}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.ErrorCircle}" />
                 <TextBlock Grid.Column="1" Text="{Binding BenchmarkError}" />
               </Grid>
             </Border>
@@ -220,7 +220,7 @@
             </ListBox>
             <Border Classes="notice warning reveal" IsVisible="{Binding ShowRestartNote}">
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Info}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Info}" />
                 <TextBlock Grid.Column="1" Text="{x:Static res:Strings.LanguageRestartNote}" />
               </Grid>
             </Border>
@@ -245,7 +245,7 @@
                       Orientation="Horizontal"
                       Spacing="8"
                       IsVisible="{Binding ShowSavedNotice}">
-            <PathIcon Data="{x:Static local:Icons.CheckCircle}"
+            <PathIcon Data="{x:Static assets:Icons.CheckCircle}"
                       Width="16" Height="16"
                       Foreground="{StaticResource SuccessBrush}" />
             <TextBlock FontSize="13"
@@ -258,7 +258,7 @@
                       Orientation="Horizontal"
                       Spacing="8"
                       IsVisible="{Binding ShowSaveError}">
-            <PathIcon Data="{x:Static local:Icons.ErrorCircle}"
+            <PathIcon Data="{x:Static assets:Icons.ErrorCircle}"
                       Width="16" Height="16"
                       Foreground="{StaticResource DangerBrush}" />
             <TextBlock FontSize="13"
@@ -272,7 +272,7 @@
                       Orientation="Horizontal"
                       Spacing="8"
                       IsVisible="{Binding ShowUnsavedNote}">
-            <PathIcon Data="{x:Static local:Icons.Info}"
+            <PathIcon Data="{x:Static assets:Icons.Info}"
                       Width="16" Height="16"
                       Foreground="{StaticResource WarningBrush}" />
             <TextBlock FontSize="13"
@@ -288,7 +288,7 @@
                 AutomationProperties.Name="{x:Static res:Strings.SaveButton}"
                 Command="{Binding SaveCommand}">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <PathIcon Data="{x:Static local:Icons.CheckCircle}" />
+            <PathIcon Data="{x:Static assets:Icons.CheckCircle}" />
             <TextBlock Text="{x:Static res:Strings.SaveButton}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>

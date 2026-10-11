@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Infrastructure.Strategies.Chunking;
+using BackupZCrypt.Infrastructure.Algorithms.Chunking;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 
-using BackupZCrypt.Desktop.Models;
 using BackupZCrypt.Desktop.Resources;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -70,16 +69,16 @@ internal sealed partial class MainWindowViewModel : ViewModelBase
 
         OperationItems =
         [
-            new NavigationItem(Icons.ShieldLock, Strings.NavCreate, createBackup),
-            new NavigationItem(Icons.ArrowSync, Strings.NavUpdate, updateBackup),
-            new NavigationItem(Icons.BoxArrowDown, Strings.NavRestore, restoreBackup),
-            new NavigationItem(Icons.ShieldCheck, Strings.NavVerify, verifyBackup),
+            new NavigationItem(NavigationIcon.CreateBackup, Strings.NavCreate, createBackup),
+            new NavigationItem(NavigationIcon.UpdateBackup, Strings.NavUpdate, updateBackup),
+            new NavigationItem(NavigationIcon.RestoreBackup, Strings.NavRestore, restoreBackup),
+            new NavigationItem(NavigationIcon.VerifyBackup, Strings.NavVerify, verifyBackup),
         ];
 
         UtilityItems =
         [
-            new NavigationItem(Icons.Settings, Strings.NavSettings, settings),
-            new NavigationItem(Icons.Info, Strings.NavAbout, about),
+            new NavigationItem(NavigationIcon.Settings, Strings.NavSettings, settings),
+            new NavigationItem(NavigationIcon.About, Strings.NavAbout, about),
         ];
 
         VersionText = about.VersionText;

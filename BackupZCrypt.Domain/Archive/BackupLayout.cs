@@ -1,7 +1,5 @@
 using System.Security.Cryptography;
 
-using BackupZCrypt.Domain.Constants;
-
 namespace BackupZCrypt.Domain.Archive;
 
 /// <summary>

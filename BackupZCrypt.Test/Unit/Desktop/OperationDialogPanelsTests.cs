@@ -1,6 +1,5 @@
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Desktop.Services.Interfaces;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Desktop.Views;
 

@@ -4,7 +4,7 @@
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:controls="using:BackupZCrypt.Desktop.Controls"
-             xmlns:local="using:BackupZCrypt.Desktop"
+             xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.UpdateBackupView"
              x:DataType="vm:UpdateBackupViewModel">
 
@@ -14,7 +14,7 @@
 
         <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
           <Border Grid.Column="0" Classes="pageIcon">
-            <PathIcon Data="{x:Static local:Icons.ArrowSync}" />
+            <PathIcon Data="{x:Static assets:Icons.ArrowSync}" />
           </Border>
           <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="h1" Text="{x:Static res:Strings.UpdateTitle}" />
@@ -43,7 +43,7 @@
                             ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
                             AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
                             Command="{Binding PickSourceFolderCommand}">
-                      <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+                      <PathIcon Data="{x:Static assets:Icons.FolderOpen}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -62,7 +62,7 @@
                             ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
                             AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
                             Command="{Binding PickBackupFolderCommand}">
-                      <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+                      <PathIcon Data="{x:Static assets:Icons.FolderOpen}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -71,14 +71,14 @@
 
             <Border Classes="notice success reveal" IsVisible="{Binding IsBackupDetected}">
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.CheckCircle}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.CheckCircle}" />
                 <TextBlock Grid.Column="1" Text="{x:Static res:Strings.DetectFound}" />
               </Grid>
             </Border>
 
             <Border Classes="notice warning reveal" IsVisible="{Binding HasDetection}">
               <Grid ColumnDefinitions="Auto,*">
-                <PathIcon Grid.Column="0" Data="{x:Static local:Icons.Warning}" />
+                <PathIcon Grid.Column="0" Data="{x:Static assets:Icons.Warning}" />
                 <TextBlock Grid.Column="1" Text="{Binding DetectionMessage}" />
               </Grid>
             </Border>
@@ -106,7 +106,7 @@
                                   IsChecked="{Binding $parent[TextBox].RevealPassword}"
                                   ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}"
                                   AutomationProperties.Name="{x:Static res:Strings.RevealPasswordTooltip}">
-                      <PathIcon Data="{x:Static local:Icons.Eye}" />
+                      <PathIcon Data="{x:Static assets:Icons.Eye}" />
                     </ToggleButton>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -127,7 +127,7 @@
                 IsDefault="{Binding IsActivePage}"
                 Command="{Binding StartCommand}">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <PathIcon Data="{x:Static local:Icons.ArrowSync}" />
+            <PathIcon Data="{x:Static assets:Icons.ArrowSync}" />
             <TextBlock Text="{x:Static res:Strings.StartUpdate}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>

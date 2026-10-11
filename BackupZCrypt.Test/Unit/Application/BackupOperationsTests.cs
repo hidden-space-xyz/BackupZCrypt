@@ -3,9 +3,8 @@ using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Manifest;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Test.Common;
 
 using NSubstitute;
@@ -615,7 +614,7 @@ public sealed class BackupOperationsTests
                     [MessageCode.UpdateRemovesFilesFormat],
                     Codes(result.Value.PendingWarnings)
                 ),
-            () => Assert.Equal<object>([1, "gone.txt"], result.Value.PendingWarnings[0].Args)
+            () => Assert.Equal<object>([1, PathSample.Of(["gone.txt"])], result.Value.PendingWarnings[0].Args)
         );
         await this.chunkedBackupService.DidNotReceive()
             .UpdateAsync(
@@ -696,6 +695,33 @@ public sealed class BackupOperationsTests
     }
 
     [Fact]
+    internal async Task RunAsync_PreviewOutOfMemory_PropagatesInsteadOfSkippingThePreview()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        this.StubOperationsSucceed();
+        _ = this.chunkedBackupService
+            .PreviewRestoreAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () => this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None)
+        );
+    }
+
+    [Fact]
+    internal async Task DetectManifestKindAsync_ProbeOutOfMemory_PropagatesInsteadOfReportingMissing()
+    {
+        _ = this.manifestService
+            .DetectManifestKindAsync(SourceDir, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () => this.CreateSut().DetectManifestKindAsync(SourceDir, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
     internal async Task RunAsync_RestoreLargerThanTheFreeSpace_WarnsWithTheRecordedSize()
     {
         this.PassValidation();
@@ -708,7 +734,14 @@ public sealed class BackupOperationsTests
 
         var result = await this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None);
 
-        Assert.Equal<MessageCode>([MessageCode.LowDiskSpaceFormat], Codes(result.Value.PendingWarnings));
+        Assert.Multiple(
+            () => Assert.Equal<MessageCode>([MessageCode.LowDiskSpaceFormat], Codes(result.Value.PendingWarnings)),
+            () =>
+                Assert.Equal<object>(
+                    [new ByteCount(1_000), new ByteCount(5_000)],
+                    result.Value.PendingWarnings[0].Args
+                )
+        );
     }
 
     [Theory]

@@ -5,7 +5,7 @@
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:conv="using:BackupZCrypt.Desktop.Converters"
-             xmlns:local="using:BackupZCrypt.Desktop"
+             xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.CreateBackupView"
              x:DataType="vm:CreateBackupViewModel">
 
@@ -15,7 +15,7 @@
 
         <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
           <Border Grid.Column="0" Classes="pageIcon">
-            <PathIcon Data="{x:Static local:Icons.ShieldLock}" />
+            <PathIcon Data="{x:Static assets:Icons.ShieldLock}" />
           </Border>
           <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="h1" Text="{x:Static res:Strings.CreateTitle}" />
@@ -44,7 +44,7 @@
                             ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
                             AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
                             Command="{Binding PickSourceFolderCommand}">
-                      <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+                      <PathIcon Data="{x:Static assets:Icons.FolderOpen}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -63,7 +63,7 @@
                             ToolTip.Tip="{x:Static res:Strings.PickFolderTitle}"
                             AutomationProperties.Name="{x:Static res:Strings.PickFolderTitle}"
                             Command="{Binding PickDestinationFolderCommand}">
-                      <PathIcon Data="{x:Static local:Icons.FolderOpen}" />
+                      <PathIcon Data="{x:Static assets:Icons.FolderOpen}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -95,19 +95,19 @@
                                   IsChecked="{Binding RevealPassword}"
                                   ToolTip.Tip="{x:Static res:Strings.RevealPasswordTooltip}"
                                   AutomationProperties.Name="{x:Static res:Strings.RevealPasswordTooltip}">
-                      <PathIcon Data="{x:Static local:Icons.Eye}" />
+                      <PathIcon Data="{x:Static assets:Icons.Eye}" />
                     </ToggleButton>
                     <Button Classes="ghost"
                             Command="{Binding GeneratePasswordCommand}"
                             ToolTip.Tip="{x:Static res:Strings.GenerateButton}"
                             AutomationProperties.Name="{x:Static res:Strings.GenerateButton}">
-                      <PathIcon Data="{x:Static local:Icons.Sparkle}" />
+                      <PathIcon Data="{x:Static assets:Icons.Sparkle}" />
                     </Button>
                     <Button Classes="ghost"
                             Command="{Binding CopyPasswordCommand}"
                             ToolTip.Tip="{x:Static res:Strings.CopyPasswordTooltip}"
                             AutomationProperties.Name="{x:Static res:Strings.CopyPasswordTooltip}">
-                      <PathIcon Data="{x:Static local:Icons.Clipboard}" />
+                      <PathIcon Data="{x:Static assets:Icons.Clipboard}" />
                     </Button>
                   </StackPanel>
                 </TextBox.InnerRightContent>
@@ -166,19 +166,19 @@
                    LineSpacing="8">
           <Border Classes="chip" ToolTip.Tip="{x:Static res:Strings.EncryptionLabel}">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <PathIcon Data="{x:Static local:Icons.Lock}" />
+              <PathIcon Data="{x:Static assets:Icons.Lock}" />
               <TextBlock Text="{Binding EncryptionName}" />
             </StackPanel>
           </Border>
           <Border Classes="chip" ToolTip.Tip="{x:Static res:Strings.KeyDerivationLabel}">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <PathIcon Data="{x:Static local:Icons.Key}" />
+              <PathIcon Data="{x:Static assets:Icons.Key}" />
               <TextBlock Text="{Binding KeyDerivationName}" />
             </StackPanel>
           </Border>
           <Border Classes="chip" ToolTip.Tip="{x:Static res:Strings.CompressionLabel}">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <PathIcon Data="{x:Static local:Icons.Archive}" />
+              <PathIcon Data="{x:Static assets:Icons.Archive}" />
               <TextBlock Text="{Binding CompressionName}" />
             </StackPanel>
           </Border>
@@ -191,7 +191,7 @@
                 IsDefault="{Binding IsActivePage}"
                 Command="{Binding StartCommand}">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <PathIcon Data="{x:Static local:Icons.ShieldLock}" />
+            <PathIcon Data="{x:Static assets:Icons.ShieldLock}" />
             <TextBlock Text="{x:Static res:Strings.StartBackup}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>

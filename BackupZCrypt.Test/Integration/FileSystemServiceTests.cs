@@ -1,4 +1,5 @@
-using BackupZCrypt.Infrastructure.Services;
+using BackupZCrypt.Domain.Archive;
+using BackupZCrypt.Infrastructure.FileSystem;
 using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Integration;
@@ -113,6 +114,31 @@ public sealed class FileSystemServiceTests
         Assert.Multiple(
             () => Assert.Contains(included, files),
             () => Assert.DoesNotContain(link, files)
+        );
+    }
+
+    [Fact]
+    internal async Task WriteFileAtomicallyAsync_WritesThroughASiblingTheBackupLayoutRecognizes()
+    {
+        using var dir = new TempDir();
+        var service = new FileOperationsService();
+        var target = Path.Join(dir.Path, "manifest.bzc");
+        string[] namesWhileWriting = [];
+
+        await service.WriteFileAtomicallyAsync(
+            target,
+            async (stream, token) =>
+            {
+                namesWhileWriting = [.. Directory.EnumerateFileSystemEntries(dir.Path).Select(Path.GetFileName).OfType<string>()];
+                await stream.WriteAsync("content"u8.ToArray(), token);
+            },
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.True(BackupLayout.IsTemporaryFileName(Assert.Single(namesWhileWriting))),
+            () => Assert.Equal(["manifest.bzc"], Directory.EnumerateFileSystemEntries(dir.Path).Select(Path.GetFileName)),
+            () => Assert.Equal("content", File.ReadAllText(target))
         );
     }
 

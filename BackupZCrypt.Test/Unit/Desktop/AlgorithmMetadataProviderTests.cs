@@ -1,6 +1,6 @@
+using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 

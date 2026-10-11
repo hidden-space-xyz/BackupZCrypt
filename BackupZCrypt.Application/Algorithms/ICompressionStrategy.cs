@@ -1,0 +1,25 @@
+using BackupZCrypt.Domain.Algorithms;
+
+namespace BackupZCrypt.Application.Algorithms;
+
+/// <summary>
+/// Compresses and decompresses streams for a specific compression mode.
+/// </summary>
+public interface ICompressionStrategy : IAlgorithmStrategy<CompressionMode>
+{
+    /// <summary>
+    /// Compresses the input stream.
+    /// </summary>
+    /// <param name="inputStream">The stream containing the data to compress.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A stream over the compressed data, positioned at offset zero.</returns>
+    public Task<Stream> CompressAsync(Stream inputStream, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Decompresses the input stream.
+    /// </summary>
+    /// <param name="inputStream">The stream containing the compressed data.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A stream that yields the decompressed data.</returns>
+    public Task<Stream> DecompressAsync(Stream inputStream, CancellationToken cancellationToken = default);
+}

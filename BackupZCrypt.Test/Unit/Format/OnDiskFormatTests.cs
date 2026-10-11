@@ -4,10 +4,8 @@ using System.Text;
 using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Test.Common;
 using BackupZCrypt.Test.Tools;
 

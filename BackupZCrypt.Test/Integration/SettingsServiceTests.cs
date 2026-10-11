@@ -1,8 +1,8 @@
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Infrastructure.Services;
-using BackupZCrypt.Infrastructure.Services.Settings;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Infrastructure.FileSystem;
+using BackupZCrypt.Infrastructure.Settings;
 using BackupZCrypt.Test.Common;
 
 using NSubstitute;

@@ -5,9 +5,8 @@ using System.Security.Cryptography;
 using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Domain.Archive;
 
 namespace BackupZCrypt.Application.Benchmark;
 

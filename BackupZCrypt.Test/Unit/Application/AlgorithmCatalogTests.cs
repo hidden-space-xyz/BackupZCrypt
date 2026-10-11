@@ -1,8 +1,7 @@
 using System.Collections.ObjectModel;
 
 using BackupZCrypt.Application.Algorithms;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;

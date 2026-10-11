@@ -5,8 +5,7 @@ using Avalonia.Markup.Xaml;
 
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Composition;
-using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Desktop.Services.Interfaces;
+using BackupZCrypt.Desktop.Platform;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Desktop.Views;
 

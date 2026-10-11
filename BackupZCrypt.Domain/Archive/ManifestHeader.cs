@@ -1,4 +1,4 @@
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 
 namespace BackupZCrypt.Domain.Archive;
 

@@ -2,8 +2,9 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services;
+using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 
@@ -138,6 +139,45 @@ public sealed partial class MessageLocalizerTests
                 Strings.GetByKey(nameof(MessageCode.ReasonIoErrorFormat)),
                 "detail"
             )
+        );
+
+        Assert.Equal(expected, text);
+    }
+
+    [Fact]
+    [SetCulture("en-US")]
+    internal void Localize_AmountOfStorage_IsWrittenWithASizeUnit()
+    {
+        var text = MessageLocalizer.Localize(
+            new LocalizableMessage(MessageCode.LowDiskSpaceFormat, new ByteCount(1_000), new ByteCount(5_242_880))
+        );
+
+        var expected = string.Format(
+            CultureInfo.CurrentCulture,
+            Strings.GetByKey(nameof(MessageCode.LowDiskSpaceFormat)),
+            "1000 B",
+            "5.0 MB"
+        );
+
+        Assert.Equal(expected, text);
+    }
+
+    [Theory]
+    [InlineData(new[] { "a.txt" }, "a.txt")]
+    [InlineData(new[] { "a.txt", "b.txt" }, "a.txt, b.txt")]
+    [InlineData(new[] { "1", "2", "3", "4", "5" }, "1, 2, 3, 4, 5")]
+    [InlineData(new[] { "1", "2", "3", "4", "5", "6", "7" }, "1, 2, 3, 4, 5, …")]
+    internal void Localize_SampleOfPaths_IsListedWithAnEllipsisWhenCutShort(string[] paths, string listed)
+    {
+        var text = MessageLocalizer.Localize(
+            new LocalizableMessage(MessageCode.SourceLinksSkippedFormat, paths.Length, PathSample.Of(paths))
+        );
+
+        var expected = string.Format(
+            CultureInfo.CurrentCulture,
+            Strings.GetByKey(nameof(MessageCode.SourceLinksSkippedFormat)),
+            paths.Length,
+            listed
         );
 
         Assert.Equal(expected, text);

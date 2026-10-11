@@ -1,5 +1,4 @@
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
 
 namespace BackupZCrypt.Test.Unit.Domain;
 

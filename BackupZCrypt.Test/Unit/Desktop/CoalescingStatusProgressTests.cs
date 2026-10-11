@@ -1,5 +1,5 @@
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Desktop.Services;
+using BackupZCrypt.Desktop.ViewModels;
 
 namespace BackupZCrypt.Test.Unit.Desktop;
 

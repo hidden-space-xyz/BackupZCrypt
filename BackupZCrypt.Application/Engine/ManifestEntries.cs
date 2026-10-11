@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
 
 namespace BackupZCrypt.Application.Engine;
 

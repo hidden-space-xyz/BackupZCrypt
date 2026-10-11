@@ -1,12 +1,12 @@
 using System.Buffers;
 using System.Security.Cryptography;
 
+using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Engine;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Strategies.Compression;
-using BackupZCrypt.Infrastructure.Strategies.Encryption;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Domain.Archive;
+using BackupZCrypt.Infrastructure.Algorithms.Compression;
+using BackupZCrypt.Infrastructure.Algorithms.Encryption;
 using BackupZCrypt.Test.Tools;
 
 using NSubstitute;

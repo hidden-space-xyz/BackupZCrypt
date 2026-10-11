@@ -3,7 +3,6 @@ using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Domain.Archive;
-using BackupZCrypt.Domain.Constants;
 
 namespace BackupZCrypt.Application.Backup;
 
@@ -551,7 +550,7 @@ internal sealed class BackupOperations(
                     new LocalizableMessage(
                         MessageCode.UpdateRemovesFilesFormat,
                         preview.RemovedPaths.Count,
-                        PathSample.Join(preview.RemovedPaths)
+                        PathSample.Of(preview.RemovedPaths)
                     )
                 );
             }
@@ -575,8 +574,8 @@ internal sealed class BackupOperations(
             warnings.Add(
                 new LocalizableMessage(
                     MessageCode.LowDiskSpaceFormat,
-                    ByteSizeFormatter.Format(available),
-                    ByteSizeFormatter.Format(requiredSpace)
+                    new ByteCount(available),
+                    new ByteCount(requiredSpace)
                 )
             );
         }

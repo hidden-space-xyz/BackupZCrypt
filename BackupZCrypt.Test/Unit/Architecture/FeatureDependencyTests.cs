@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop;
-using BackupZCrypt.Infrastructure.Services;
+using BackupZCrypt.Infrastructure.FileSystem;
 using BackupZCrypt.Test.Tools;
 
 namespace BackupZCrypt.Test.Unit.Architecture;
@@ -23,7 +23,7 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// implements and the Domain it implements them for; the desktop front end reaches neither the
 /// engine nor the ports, and of the Domain only the algorithm identifiers. Because a port can share
 /// a feature namespace with a use case, Desktop is also checked against every contract Infrastructure
-/// implements.
+/// implements, and Infrastructure against every Application service Desktop calls.
 /// </para>
 /// <para>
 /// The tables are exact rather than upper bounds: an edge the code no longer uses fails as surely as
@@ -75,12 +75,11 @@ public sealed partial class FeatureDependencyTests
     {
         ["BackupZCrypt.Infrastructure"] =
         [
+            "Application.Algorithms",
             "Application.FileSystem",
             "Application.Settings",
+            "Domain.Algorithms",
             "Domain.Archive",
-            "Domain.Constants",
-            "Domain.Enums",
-            "Domain.Strategies",
         ],
         ["BackupZCrypt.Desktop"] =
         [
@@ -91,7 +90,7 @@ public sealed partial class FeatureDependencyTests
             "Application.Manifest",
             "Application.Passwords",
             "Application.Settings",
-            "Domain.Enums",
+            "Domain.Algorithms",
         ],
     };
 
@@ -162,6 +161,34 @@ public sealed partial class FeatureDependencyTests
             .ToList();
 
         Assert.NotEmpty(implemented);
+        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+    }
+
+    [Fact]
+    internal void Infrastructure_UsesNoServiceTheFrontEndCalls()
+    {
+        var implementedInside = ApplicationTypes()
+            .Where(static type => type.IsClass && !type.IsPublic && !type.IsNestedPublic)
+            .SelectMany(static type => type.GetInterfaces())
+            .ToHashSet();
+        var frontEndServices = OuterAssembliesByProject["BackupZCrypt.Desktop"]
+            .GetTypes()
+            .SelectMany(TypeReferences.Of)
+            .Where(used => used.IsInterface && FeatureOf(used) is not null && implementedInside.Contains(used))
+            .ToHashSet();
+
+        var violations = OuterAssembliesByProject["BackupZCrypt.Infrastructure"]
+            .GetTypes()
+            .SelectMany(type =>
+                TypeReferences
+                    .Of(type)
+                    .Where(frontEndServices.Contains)
+                    .Select(service => $"{type.FullName} -> {service.FullName}")
+            )
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(frontEndServices);
         Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
@@ -325,7 +352,7 @@ public sealed partial class FeatureDependencyTests
     /// <param name="type">The type to classify.</param>
     /// <returns>
     /// The namespace below <c>BackupZCrypt</c> cut after its second segment, such as
-    /// <c>Application.Backup</c> or <c>Domain.Enums</c>, or <see langword="null"/> for a type outside
+    /// <c>Application.Backup</c> or <c>Domain.Algorithms</c>, or <see langword="null"/> for a type outside
     /// both layers.
     /// </returns>
     private static string? AreaOf(Type type)

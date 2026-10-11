@@ -4,9 +4,8 @@ using System.Globalization;
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
+using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
-using BackupZCrypt.Desktop.Services;
-using BackupZCrypt.Desktop.Services.Interfaces;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

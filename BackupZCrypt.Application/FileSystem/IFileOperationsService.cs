@@ -101,6 +101,11 @@ public interface IFileOperationsService
     /// Writes a complete file through a randomly named sibling and atomically replaces the target
     /// only after the write succeeds.
     /// </summary>
+    /// <remarks>
+    /// The sibling is named by <see cref="Domain.Archive.BackupLayout.NewTemporaryFileName"/>, so when a
+    /// run is interrupted before the rename, cleanup and the check that a folder holds only a backup both
+    /// recognize the leftover as this program's own.
+    /// </remarks>
     /// <param name="finalPath">The final path to publish.</param>
     /// <param name="writer">The callback that writes the complete temporary file.</param>
     /// <param name="cancellationToken">A token to cancel the operation before publication.</param>

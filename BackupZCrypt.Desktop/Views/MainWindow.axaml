@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
-        xmlns:m="using:BackupZCrypt.Desktop.Models"
+        xmlns:conv="using:BackupZCrypt.Desktop.Converters"
         xmlns:res="using:BackupZCrypt.Desktop.Resources"
         xmlns:anim="using:BackupZCrypt.Desktop.Animations"
         x:Class="BackupZCrypt.Desktop.Views.MainWindow"
@@ -17,9 +17,9 @@
         Background="{StaticResource AppBackgroundBrush}">
 
   <Window.Resources>
-    <DataTemplate x:Key="NavigationItemTemplate" x:DataType="m:NavigationItem">
+    <DataTemplate x:Key="NavigationItemTemplate" x:DataType="vm:NavigationItem">
       <StackPanel Orientation="Horizontal" Spacing="12">
-        <PathIcon Data="{Binding Icon}" VerticalAlignment="Center" />
+        <PathIcon Data="{Binding Icon, Converter={x:Static conv:NavigationIconConverters.ToGeometry}}" VerticalAlignment="Center" />
         <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
       </StackPanel>
     </DataTemplate>

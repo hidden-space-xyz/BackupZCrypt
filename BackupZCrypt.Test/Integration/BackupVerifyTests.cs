@@ -2,8 +2,8 @@ using System.Security.Cryptography;
 
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Domain.Constants;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;

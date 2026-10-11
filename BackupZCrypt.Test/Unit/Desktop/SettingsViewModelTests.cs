@@ -2,9 +2,10 @@ using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Benchmark;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
+using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
 using BackupZCrypt.Desktop.ViewModels;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Test.Common;
 
 using Microsoft.Extensions.DependencyInjection;

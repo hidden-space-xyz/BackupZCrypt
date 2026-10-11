@@ -1,5 +1,5 @@
-using BackupZCrypt.Domain.Strategies.Interfaces;
-using BackupZCrypt.Infrastructure.Strategies.Compression;
+using BackupZCrypt.Application.Algorithms;
+using BackupZCrypt.Infrastructure.Algorithms.Compression;
 
 namespace BackupZCrypt.Test.Unit.Infrastructure;
 

@@ -3,7 +3,7 @@ using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Application.Passwords;
-using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Test.Common;
 
 using NSubstitute;
@@ -488,7 +488,8 @@ public sealed class BackupRequestValidatorTests
         var warnings = await this.CreateSut()
             .AnalyzeWarningsAsync(request, TestContext.Current.CancellationToken);
 
-        Assert.Contains(MessageCode.LowDiskSpaceFormat, Codes(warnings));
+        var lowSpace = Assert.Single(warnings, static w => w.Code is MessageCode.LowDiskSpaceFormat);
+        Assert.Equal<object>([new ByteCount(500_000), new ByteCount(1_200_000)], lowSpace.Args);
     }
 
     [Theory]
@@ -1173,8 +1174,8 @@ public sealed class BackupRequestValidatorTests
                     [MessageCode.SourceLinksSkippedFormat, MessageCode.SourceInaccessibleFoldersFormat],
                     Codes(warnings)
                 ),
-            () => Assert.Equal<object>([1, "linked"], warnings[0].Args),
-            () => Assert.Equal<object>([1, "secret"], warnings[1].Args)
+            () => Assert.Equal<object>([1, PathSample.Of(["linked"])], warnings[0].Args),
+            () => Assert.Equal<object>([1, PathSample.Of(["secret"])], warnings[1].Args)
         );
     }
 

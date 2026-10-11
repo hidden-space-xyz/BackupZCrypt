@@ -489,7 +489,7 @@ internal sealed class BackupRequestValidator(
                 new LocalizableMessage(
                     MessageCode.SourceInaccessibleFoldersFormat,
                     snapshot.InaccessibleDirectories.Count,
-                    PathSample.Join(snapshot.InaccessibleDirectories)
+                    PathSample.Of(snapshot.InaccessibleDirectories)
                 )
             );
         }
@@ -500,7 +500,7 @@ internal sealed class BackupRequestValidator(
                 new LocalizableMessage(
                     MessageCode.SourceNameCollisionsFormat,
                     snapshot.Collisions.Count,
-                    PathSample.Join(snapshot.Collisions.Select(static c => c.SkippedPath))
+                    PathSample.Of(snapshot.Collisions.Select(static c => c.SkippedPath))
                 )
             );
         }
@@ -511,7 +511,7 @@ internal sealed class BackupRequestValidator(
                 new LocalizableMessage(
                     MessageCode.SourceUnsupportedNamesFormat,
                     snapshot.UnsupportedNames.Count,
-                    PathSample.Join(snapshot.UnsupportedNames)
+                    PathSample.Of(snapshot.UnsupportedNames)
                 )
             );
         }
@@ -566,8 +566,8 @@ internal sealed class BackupRequestValidator(
             warnings.Add(
                 new LocalizableMessage(
                     MessageCode.LowDiskSpaceFormat,
-                    ByteSizeFormatter.Format(available),
-                    ByteSizeFormatter.Format(requiredSpace)
+                    new ByteCount(available),
+                    new ByteCount(requiredSpace)
                 )
             );
         }
