@@ -4,6 +4,7 @@ using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Test.Common;
 
 namespace BackupZCrypt.Test.Unit.Desktop.Presentation;
 
@@ -101,12 +102,33 @@ public sealed class PasswordStrengthFormatterTests
         Assert.Multiple(
             () => Assert.Equal(
                 expectsSuggestions,
-                caption.Contains(Strings.Suggestions, StringComparison.Ordinal)
+                caption.Contains(SuggestionsLead(), StringComparison.Ordinal)
             ),
             () => Assert.Equal(
                 expectsCongratulation,
                 caption.Contains(Strings.GoodJob, StringComparison.Ordinal)
             )
+        );
+    }
+
+    [Theory]
+    [SetCulture("en-US")]
+    [InlineData(PasswordStrength.Weak, 2, "Weak · Entropy: 30.0 bits · Suggestions: {0}, {1}")]
+    [InlineData(PasswordStrength.Strong, 0, "Strong · Entropy: 30.0 bits · Good job!")]
+    [InlineData(PasswordStrength.Good, 0, "Good · Entropy: 30.0 bits")]
+    internal void Format_EnglishCaption_JoinsItsPartsAndSuggestionsWithTheEnglishSeparators(
+        PasswordStrength strength,
+        int tipCount,
+        string format
+    )
+    {
+        var tips = SampleTips.Take(tipCount).ToArray();
+
+        var caption = PasswordStrengthFormatter.Format(new PasswordStrengthAnalysis(strength, 50, 30.0, tips));
+
+        Assert.Equal(
+            string.Format(CultureInfo.InvariantCulture, format, [.. tips.Select(Localize)]),
+            caption
         );
     }
 
@@ -163,6 +185,17 @@ public sealed class PasswordStrengthFormatterTests
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Gets the text the suggestions part of the caption opens with, before the list of suggestions.
+    /// </summary>
+    /// <returns>The localized lead-in for the current UI culture.</returns>
+    private static string SuggestionsLead()
+    {
+        var format = Strings.SuggestionsFormat;
+
+        return format[..format.IndexOf("{0}", StringComparison.Ordinal)];
     }
 
     /// <summary>

@@ -468,6 +468,23 @@ internal static class Strings
     public static string ResultNoChanges => Get();
 
     /// <summary>
+    /// Gets the separator placed between the items of an inline list, such as a sample of paths or the
+    /// password suggestions.
+    /// </summary>
+    public static string ListSeparator => Get();
+
+    /// <summary>
+    /// Gets the entry that closes an inline list when more items were left out.
+    /// </summary>
+    public static string ListMore => Get();
+
+    /// <summary>
+    /// Gets the separator placed between the parts of a one-line caption, such as the password-strength
+    /// caption.
+    /// </summary>
+    public static string CaptionSeparator => Get();
+
+    /// <summary>
     /// Gets the message shown when the settings could not be written.
     /// </summary>
     public static string SettingsSaveFailed => Get();
@@ -823,9 +840,9 @@ internal static class Strings
     public static string EntropyFormat => Get();
 
     /// <summary>
-    /// Gets the header for the list of password improvement suggestions.
+    /// Gets the format string that introduces the list of password improvement suggestions.
     /// </summary>
-    public static string Suggestions => Get();
+    public static string SuggestionsFormat => Get();
 
     /// <summary>
     /// Gets the positive confirmation that the password needs no improvement.

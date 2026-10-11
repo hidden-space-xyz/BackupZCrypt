@@ -606,8 +606,8 @@
   <data name="EntropyFormat" xml:space="preserve">
     <value>Entropy: {0} bits</value>
   </data>
-  <data name="Suggestions" xml:space="preserve">
-    <value>Suggestions:</value>
+  <data name="SuggestionsFormat" xml:space="preserve">
+    <value>Suggestions: {0}</value>
   </data>
   <data name="GoodJob" xml:space="preserve">
     <value>Good job!</value>
@@ -704,6 +704,15 @@
   </data>
   <data name="ResultNoChanges" xml:space="preserve">
     <value>No file had changed: the backup was already up to date.</value>
+  </data>
+  <data name="ListSeparator" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="ListMore" xml:space="preserve">
+    <value>…</value>
+  </data>
+  <data name="CaptionSeparator" xml:space="preserve">
+    <value> · </value>
   </data>
   <data name="DetectPathNotFound" xml:space="preserve">
     <value>This folder does not exist.</value>

@@ -58,14 +58,17 @@ internal static class MessageLocalizer
     }
 
     /// <summary>
-    /// Lists the paths of a sample separated by commas, ending in an ellipsis when more were left out.
+    /// Lists the paths of a sample with the localized separator, closing the list with the localized
+    /// entry for the paths left out when there were more.
     /// </summary>
     /// <param name="sample">The sample to list.</param>
     /// <returns>The listed paths.</returns>
     private static string ListPaths(PathSample sample)
     {
-        var listed = string.Join(", ", sample.Paths);
+        IEnumerable<string> entries = sample.IsTruncated
+            ? [.. sample.Paths, Strings.ListMore]
+            : sample.Paths;
 
-        return sample.IsTruncated ? listed + ", …" : listed;
+        return string.Join(Strings.ListSeparator, entries);
     }
 }

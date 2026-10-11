@@ -606,8 +606,8 @@
   <data name="EntropyFormat" xml:space="preserve">
     <value>Entropía: {0} bits</value>
   </data>
-  <data name="Suggestions" xml:space="preserve">
-    <value>Sugerencias:</value>
+  <data name="SuggestionsFormat" xml:space="preserve">
+    <value>Sugerencias: {0}</value>
   </data>
   <data name="GoodJob" xml:space="preserve">
     <value>¡Buen trabajo!</value>
@@ -704,6 +704,15 @@
   </data>
   <data name="ResultNoChanges" xml:space="preserve">
     <value>Ningún archivo había cambiado: la copia ya estaba al día.</value>
+  </data>
+  <data name="ListSeparator" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="ListMore" xml:space="preserve">
+    <value>…</value>
+  </data>
+  <data name="CaptionSeparator" xml:space="preserve">
+    <value> · </value>
   </data>
   <data name="DetectPathNotFound" xml:space="preserve">
     <value>Esta carpeta no existe.</value>

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
@@ -13,9 +12,10 @@ namespace BackupZCrypt.Desktop.Presentation;
 /// </summary>
 /// <remarks>
 /// Only the tips travel as <see cref="MessageCode"/> values, because only they are chosen by the
-/// Application layer. The caption's own vocabulary — the strength labels, the entropy format, and the
-/// two closing remarks — is picked here and so reads <see cref="Strings"/> directly rather than routing
-/// presentation text through a language-neutral code the lower layers never emit.
+/// Application layer. The caption's own vocabulary — the strength labels, the entropy format, the
+/// two closing remarks, and the separators between its parts and between the suggestions — is picked
+/// here and so reads <see cref="Strings"/> directly rather than routing presentation text through a
+/// language-neutral code the lower layers never emit.
 /// </remarks>
 internal static class PasswordStrengthFormatter
 {
@@ -37,32 +37,36 @@ internal static class PasswordStrengthFormatter
             _ => Strings.StrengthVeryWeak,
         };
 
-        StringBuilder sb = new();
-        _ = sb.Append(label)
-            .Append(" · ")
-            .AppendFormat(
-            CultureInfo.CurrentCulture,
-            Strings.EntropyFormat,
-            analysis.Entropy.ToString("0.0", CultureInfo.CurrentCulture)
-        );
+        List<string> parts =
+        [
+            label,
+            string.Format(
+                CultureInfo.CurrentCulture,
+                Strings.EntropyFormat,
+                analysis.Entropy.ToString("0.0", CultureInfo.CurrentCulture)
+            ),
+        ];
 
         if (analysis.Tips.Count > 0)
         {
-            _ = sb.Append(" · ")
-                .Append(Strings.Suggestions)
-                .Append(' ')
-                .AppendJoin(
-                ", ",
-                analysis
-                    .Tips.Take(3)
-                    .Select(static tip => MessageLocalizer.Localize(new LocalizableMessage(tip)))
+            parts.Add(
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    Strings.SuggestionsFormat,
+                    string.Join(
+                        Strings.ListSeparator,
+                        analysis
+                            .Tips.Take(3)
+                            .Select(static tip => MessageLocalizer.Localize(new LocalizableMessage(tip)))
+                    )
+                )
             );
         }
         else if (analysis.Strength is PasswordStrength.Strong)
         {
-            _ = sb.Append(" · ").Append(Strings.GoodJob);
+            parts.Add(Strings.GoodJob);
         }
 
-        return sb.ToString();
+        return string.Join(Strings.CaptionSeparator, parts);
     }
 }

@@ -163,6 +163,7 @@ public sealed partial class MessageLocalizerTests
     }
 
     [Theory]
+    [SetCulture("en-US")]
     [InlineData(new[] { "a.txt" }, "a.txt")]
     [InlineData(new[] { "a.txt", "b.txt" }, "a.txt, b.txt")]
     [InlineData(new[] { "1", "2", "3", "4", "5" }, "1, 2, 3, 4, 5")]
