@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
@@ -45,14 +44,14 @@ internal sealed class BackupRestorer(
     /// </remarks>
     /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
     /// <param name="destinationPath">The directory into which files are reconstructed.</param>
-    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the restore outcome; a wrong password surfaces as a failure result.</returns>
     internal async Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
-        RestoreBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -61,7 +60,7 @@ internal sealed class BackupRestorer(
 
         var (backup, openError) = await backupOpener.OpenAsync(
                 sourcePath,
-                request.Password,
+                password,
                 MessageCode.ManifestRequiredForDecryption,
                 MessageCode.InvalidPassword,
                 cancellationToken
@@ -206,13 +205,13 @@ internal sealed class BackupRestorer(
     /// while the damaged bytes stay on disk until that update prunes them.
     /// </remarks>
     /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
-    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
     internal async Task<Result<BackupResult>> VerifyAsync(
         string sourcePath,
-        VerifyBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -221,7 +220,7 @@ internal sealed class BackupRestorer(
 
         var (backup, openError) = await backupOpener.OpenAsync(
                 sourcePath,
-                request.Password,
+                password,
                 MessageCode.ManifestRequiredForVerify,
                 MessageCode.VerifyInvalidPassword,
                 cancellationToken

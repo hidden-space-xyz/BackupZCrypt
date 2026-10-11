@@ -1,7 +1,10 @@
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Application.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
+using BackupZCrypt.Domain.Strategies.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
 using BackupZCrypt.Test.Common;
@@ -121,6 +124,12 @@ public sealed class BackupRestoreRoundtripTests
             () => Assert.True(File.Exists(manifestPath), $"Manifest not written at '{manifestPath}'."),
             () => Assert.NotEmpty(createProgress.Reports),
             () => Assert.Equal(ExpectedChunkFiles, ChunkFiles(destination.Path).Length)
+        );
+
+        await AssertArchiveRecordsAsync(
+            provider,
+            destination.Path,
+            new ManifestHeader(encryption, keyDerivation, compression)
         );
 
         var restoreProgress = new RecordingProgress<BackupStatus>();
@@ -276,6 +285,47 @@ public sealed class BackupRestoreRoundtripTests
                     result.Errors,
                     e => e.Code is MessageCode.ManifestRequiredForDecryption
                 )
+        );
+    }
+
+    /// <summary>
+    /// Opens the archive's manifest with the fixture password and asserts that its preamble and its
+    /// encrypted header record exactly the algorithms the request chose.
+    /// </summary>
+    /// <remarks>
+    /// A restore reads its algorithms back from the same manifest, so a round trip alone would pass
+    /// even if the archive had been written with algorithms other than the ones requested.
+    /// </remarks>
+    /// <param name="provider">The provider holding the real manifest service and key derivation strategies.</param>
+    /// <param name="backupRoot">The archive folder.</param>
+    /// <param name="expected">The algorithms the create request chose.</param>
+    /// <returns>A task that completes once the manifest has been checked.</returns>
+    private static async Task AssertArchiveRecordsAsync(
+        IServiceProvider provider,
+        string backupRoot,
+        ManifestHeader expected
+    )
+    {
+        var manifestService = provider.GetRequiredService<IManifestService>();
+        var preamble = await manifestService.ReadChunkManifestPreambleAsync(
+            backupRoot,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(preamble);
+
+        using var keys = ArchiveKeys.Derive(
+            Password,
+            preamble.MasterSalt,
+            provider
+                .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
+                .Resolve(preamble.KeyDerivation)
+        );
+        var manifest = manifestService.DecryptChunkManifest(preamble, keys.ManifestEncryptionKey);
+
+        Assert.Multiple(
+            () => Assert.Equal(expected.EncryptionAlgorithm, preamble.Algorithm),
+            () => Assert.Equal(expected.KeyDerivationAlgorithm, preamble.KeyDerivation),
+            () => Assert.Equal(expected, manifest?.Header)
         );
     }
 

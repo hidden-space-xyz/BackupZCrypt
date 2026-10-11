@@ -1,4 +1,4 @@
-namespace BackupZCrypt.Application.Backup;
+namespace BackupZCrypt.Application.Engine;
 
 /// <summary>
 /// What an existing backup holds compared with what an operation is about to do with it, gathered

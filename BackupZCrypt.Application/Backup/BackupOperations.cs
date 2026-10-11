@@ -1,6 +1,7 @@
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Services.Interfaces;
 using BackupZCrypt.Domain.ValueObjects.Backup;
@@ -59,7 +60,18 @@ internal sealed class BackupOperations(
         return RunAsync(
             request,
             (sourcePath, destinationPath, sink, token) =>
-                chunkedBackupService.CreateAsync(sourcePath, destinationPath, request, sink, token),
+                chunkedBackupService.CreateAsync(
+                    sourcePath,
+                    destinationPath,
+                    request.Password,
+                    new ManifestHeader(
+                        request.EncryptionAlgorithm,
+                        request.KeyDerivationAlgorithm,
+                        request.Compression
+                    ),
+                    sink,
+                    token
+                ),
             progress,
             cancellationToken
         );
@@ -75,7 +87,13 @@ internal sealed class BackupOperations(
         return RunAsync(
             request,
             (sourcePath, destinationPath, sink, token) =>
-                chunkedBackupService.UpdateAsync(sourcePath, destinationPath, request, sink, token),
+                chunkedBackupService.UpdateAsync(
+                    sourcePath,
+                    destinationPath,
+                    request.Password,
+                    sink,
+                    token
+                ),
             progress,
             cancellationToken
         );
@@ -91,7 +109,13 @@ internal sealed class BackupOperations(
         return RunAsync(
             request,
             (sourcePath, destinationPath, sink, token) =>
-                chunkedBackupService.RestoreAsync(sourcePath, destinationPath, request, sink, token),
+                chunkedBackupService.RestoreAsync(
+                    sourcePath,
+                    destinationPath,
+                    request.Password,
+                    sink,
+                    token
+                ),
             progress,
             cancellationToken
         );
@@ -146,7 +170,7 @@ internal sealed class BackupOperations(
 
             var engineResult = await chunkedBackupService.VerifyAsync(
                 sourcePath,
-                request,
+                request.Password,
                 progress ?? NullProgress<BackupStatus>.Instance,
                 cancellationToken
             );

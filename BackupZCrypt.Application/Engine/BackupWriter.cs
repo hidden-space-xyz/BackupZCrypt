@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
-using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Domain.Archive;
@@ -55,14 +54,16 @@ internal sealed class BackupWriter(
     /// </remarks>
     /// <param name="sourcePath">The directory to back up.</param>
     /// <param name="destinationPath">The directory where the chunks directory and manifest are written.</param>
-    /// <param name="request">The backup request carrying the password and algorithm choices.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
+    /// <param name="algorithms">The cipher, key derivation function, and compression the archive is written with.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the backup outcome, including any per-file errors.</returns>
     internal async Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
-        CreateBackupRequest request,
+        string password,
+        ManifestHeader algorithms,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -96,15 +97,15 @@ internal sealed class BackupWriter(
         {
             masterSalt = ArchiveKeys.GenerateMasterSalt();
             using var keys = ArchiveKeys.Derive(
-                request.Password,
+                password,
                 masterSalt,
-                keyDerivationStrategies.Resolve(request.KeyDerivationAlgorithm)
+                keyDerivationStrategies.Resolve(algorithms.KeyDerivationAlgorithm)
             );
 
             var cipher = ChunkCipherSet.For(
                 keys,
-                encryptionStrategies.Resolve(request.EncryptionAlgorithm),
-                compressionStrategies.ResolveOrNull(request.Compression)
+                encryptionStrategies.Resolve(algorithms.EncryptionAlgorithm),
+                compressionStrategies.ResolveOrNull(algorithms.Compression)
             );
 
             List<ChunkWorkItem> workItems = [.. snapshot.Files.Select(static f => new ChunkWorkItem(f, null))];
@@ -143,11 +144,7 @@ internal sealed class BackupWriter(
             }
 
             ChunkManifestData manifestData = new(
-                new ManifestHeader(
-                    request.EncryptionAlgorithm,
-                    request.KeyDerivationAlgorithm,
-                    request.Compression
-                ),
+                algorithms,
                 Convert.ToBase64String(masterSalt),
                 [.. run.Entries.OrderBy(static f => f.OriginalPath, StringComparer.Ordinal)],
                 snapshot.EmptyDirectories
@@ -160,7 +157,7 @@ internal sealed class BackupWriter(
                     manifestData,
                     destinationPath,
                     keys.ManifestEncryptionKey,
-                    request.EncryptionAlgorithm,
+                    algorithms.EncryptionAlgorithm,
                     cancellationToken
                 )
                 .ConfigureAwait(false);
@@ -216,9 +213,9 @@ internal sealed class BackupWriter(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// An update reuses the algorithms the archive was written with, which is why
-    /// <paramref name="request"/> carries none: a different key derivation function produces a
-    /// different master key and the archive stops opening.
+    /// An update reuses the algorithms the archive was written with, which is why it takes none: a
+    /// different key derivation function produces a different master key and the archive stops
+    /// opening.
     /// </para>
     /// <para>
     /// A file whose size and modification time match the manifest, and whose chunks are all present,
@@ -231,14 +228,14 @@ internal sealed class BackupWriter(
     /// </remarks>
     /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
     /// <param name="destinationPath">The directory containing the existing backup to update.</param>
-    /// <param name="request">The backup request carrying the password used to open the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the update outcome, including any per-file errors.</returns>
     internal async Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
-        UpdateBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
@@ -247,7 +244,7 @@ internal sealed class BackupWriter(
 
         var (backup, openError) = await backupOpener.OpenAsync(
                 destinationPath,
-                request.Password,
+                password,
                 MessageCode.ManifestRequiredForUpdate,
                 MessageCode.InvalidPassword,
                 cancellationToken

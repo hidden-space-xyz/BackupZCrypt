@@ -2,6 +2,7 @@ using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Engine;
 using BackupZCrypt.Application.Manifest;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Constants;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.Services.Interfaces;
@@ -191,6 +192,24 @@ public sealed class BackupOperationsTests
     }
 
     /// <summary>
+    /// Determines whether the algorithms the engine received are exactly the ones a create request
+    /// chose.
+    /// </summary>
+    /// <param name="algorithms">The algorithms the engine received.</param>
+    /// <param name="request">The request the operation was started with.</param>
+    /// <returns><see langword="true"/> when the request is a create naming those algorithms.</returns>
+    private static bool MatchesAlgorithmsOf(ManifestHeader algorithms, BackupRequest request)
+    {
+        return request is CreateBackupRequest create
+            && algorithms
+                == new ManifestHeader(
+                    create.EncryptionAlgorithm,
+                    create.KeyDerivationAlgorithm,
+                    create.Compression
+                );
+    }
+
+    /// <summary>
     /// Builds a verify request for the archive at <see cref="SourceDir"/> unless told otherwise.
     /// </summary>
     /// <param name="backup">The archive path; defaults to <see cref="SourceDir"/>.</param>
@@ -299,7 +318,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -308,7 +328,7 @@ public sealed class BackupOperationsTests
             .UpdateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<UpdateBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -317,7 +337,7 @@ public sealed class BackupOperationsTests
             .RestoreAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<RestoreBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -361,7 +381,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -416,7 +437,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 SourceDir,
                 DestinationDir,
-                Arg.Is<CreateBackupRequest>(r => ReferenceEquals(r, request)),
+                request.Password,
+                Arg.Is<ManifestHeader>(h => MatchesAlgorithmsOf(h, request)),
                 this.progress,
                 Arg.Any<CancellationToken>()
             );
@@ -492,7 +514,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -500,7 +523,7 @@ public sealed class BackupOperationsTests
             .UpdateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<UpdateBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -521,7 +544,7 @@ public sealed class BackupOperationsTests
             .RestoreAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<RestoreBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -539,7 +562,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -563,7 +587,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -598,7 +623,7 @@ public sealed class BackupOperationsTests
             .UpdateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<UpdateBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -666,7 +691,7 @@ public sealed class BackupOperationsTests
             .RestoreAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<RestoreBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -712,35 +737,83 @@ public sealed class BackupOperationsTests
 
         Assert.True(result.Value.Completion!.IsSuccess);
 
-        await this.chunkedBackupService.Received(operation is RunOperation.Create ? 1 : 0)
+        switch (operation)
+        {
+            case RunOperation.Create:
+                await this.chunkedBackupService.Received(1)
+                    .CreateAsync(
+                        SourceDir,
+                        DestinationDir,
+                        request.Password,
+                        Arg.Is<ManifestHeader>(h => MatchesAlgorithmsOf(h, request)),
+                        this.progress,
+                        cancellation.Token
+                    );
+                break;
+            case RunOperation.Update:
+                await this.chunkedBackupService.Received(1)
+                    .UpdateAsync(
+                        SourceDir,
+                        DestinationDir,
+                        request.Password,
+                        this.progress,
+                        cancellation.Token
+                    );
+                break;
+            default:
+                await this.chunkedBackupService.Received(1)
+                    .RestoreAsync(
+                        SourceDir,
+                        DestinationDir,
+                        request.Password,
+                        this.progress,
+                        cancellation.Token
+                    );
+                break;
+        }
+
+        _ = Assert.Single(
+            this.chunkedBackupService.ReceivedCalls(),
+            static call =>
+                call.GetMethodInfo().Name
+                    is nameof(IChunkedBackupService.CreateAsync)
+                        or nameof(IChunkedBackupService.UpdateAsync)
+                        or nameof(IChunkedBackupService.RestoreAsync)
+                        or nameof(IChunkedBackupService.VerifyAsync)
+        );
+    }
+
+    [Fact]
+    internal async Task CreateAsync_ForwardsThePasswordAndEveryChosenAlgorithmToTheEngine()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        this.StubOperationsSucceed();
+
+        var request = new CreateBackupRequest(
+            SourceDir,
+            DestinationDir,
+            Password,
+            "A-Different-Confirmation-7",
+            EncryptionAlgorithm.Twofish,
+            KeyDerivationAlgorithm.Scrypt,
+            CompressionMode.ZstdBest
+        );
+
+        _ = await this.CreateSut().CreateAsync(request, this.progress, CancellationToken.None);
+
+        await this.chunkedBackupService.Received(1)
             .CreateAsync(
                 SourceDir,
                 DestinationDir,
-                Arg.Is<CreateBackupRequest>(r => ReferenceEquals(r, request)),
+                Password,
+                new ManifestHeader(
+                    EncryptionAlgorithm.Twofish,
+                    KeyDerivationAlgorithm.Scrypt,
+                    CompressionMode.ZstdBest
+                ),
                 this.progress,
-                cancellation.Token
-            );
-        await this.chunkedBackupService.Received(operation is RunOperation.Update ? 1 : 0)
-            .UpdateAsync(
-                SourceDir,
-                DestinationDir,
-                Arg.Is<UpdateBackupRequest>(r => ReferenceEquals(r, request)),
-                this.progress,
-                cancellation.Token
-            );
-        await this.chunkedBackupService.Received(operation is RunOperation.Restore ? 1 : 0)
-            .RestoreAsync(
-                SourceDir,
-                DestinationDir,
-                Arg.Is<RestoreBackupRequest>(r => ReferenceEquals(r, request)),
-                this.progress,
-                cancellation.Token
-            );
-        await this.chunkedBackupService.DidNotReceive()
-            .VerifyAsync(
-                Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
-                Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
     }
@@ -759,7 +832,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 SourceDir,
                 DestinationDir,
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 NullProgress<BackupStatus>.Instance,
                 Arg.Any<CancellationToken>()
             );
@@ -819,7 +893,7 @@ public sealed class BackupOperationsTests
             .UpdateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<UpdateBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -834,7 +908,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -863,7 +938,8 @@ public sealed class BackupOperationsTests
             .CreateAsync(
                 Arg.Any<string>(),
                 Arg.Any<string>(),
-                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<string>(),
+                Arg.Any<ManifestHeader>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -881,7 +957,7 @@ public sealed class BackupOperationsTests
         _ = this.chunkedBackupService
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -900,7 +976,7 @@ public sealed class BackupOperationsTests
         _ = this.chunkedBackupService
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )
@@ -914,7 +990,7 @@ public sealed class BackupOperationsTests
         Assert.True(result.Value.Completion!.IsSuccess);
 
         await this.chunkedBackupService.Received(1)
-            .VerifyAsync(SourceDir, request, this.progress, Arg.Any<CancellationToken>());
+            .VerifyAsync(SourceDir, request.Password, this.progress, Arg.Any<CancellationToken>());
         await this.validator.DidNotReceive()
             .AnalyzeErrorsAsync(Arg.Any<BackupRequest>(), Arg.Any<CancellationToken>());
         await this.validator.DidNotReceive()
@@ -937,7 +1013,7 @@ public sealed class BackupOperationsTests
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -964,7 +1040,7 @@ public sealed class BackupOperationsTests
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -991,7 +1067,7 @@ public sealed class BackupOperationsTests
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -1019,7 +1095,7 @@ public sealed class BackupOperationsTests
         await this.chunkedBackupService.DidNotReceive()
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             );
@@ -1032,7 +1108,7 @@ public sealed class BackupOperationsTests
         _ = this.chunkedBackupService
             .VerifyAsync(
                 Arg.Any<string>(),
-                Arg.Any<VerifyBackupRequest>(),
+                Arg.Any<string>(),
                 Arg.Any<IProgress<BackupStatus>>(),
                 Arg.Any<CancellationToken>()
             )

@@ -1,5 +1,5 @@
-using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Engine;
@@ -15,14 +15,16 @@ public interface IChunkedBackupService
     /// </summary>
     /// <param name="sourcePath">The file or directory to back up.</param>
     /// <param name="destinationPath">The directory where chunks and the manifest are written.</param>
-    /// <param name="request">The backup request carrying the password and algorithm choices.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
+    /// <param name="algorithms">The cipher, key derivation function, and compression the archive is written with.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the backup outcome.</returns>
     public Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
-        CreateBackupRequest request,
+        string password,
+        ManifestHeader algorithms,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -32,14 +34,14 @@ public interface IChunkedBackupService
     /// </summary>
     /// <param name="sourcePath">The source directory whose current state is compared against the backup.</param>
     /// <param name="destinationPath">The directory containing the existing backup to update.</param>
-    /// <param name="request">The backup request carrying the password used to open the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the update outcome.</returns>
     public Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
-        UpdateBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -49,14 +51,14 @@ public interface IChunkedBackupService
     /// </summary>
     /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
     /// <param name="destinationPath">The directory into which files are reconstructed.</param>
-    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result describing the restore outcome.</returns>
     public Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
-        RestoreBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -67,13 +69,13 @@ public interface IChunkedBackupService
     /// any file whose chunks are missing, corrupted, or do not match the manifest.
     /// </summary>
     /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
-    /// <param name="request">The backup request carrying the password used to decrypt the manifest.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="progress">A sink that receives incremental status updates.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A result whose value reports how many files verified successfully and any integrity errors.</returns>
     public Task<Result<BackupResult>> VerifyAsync(
         string sourcePath,
-        VerifyBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     );
@@ -84,7 +86,7 @@ public interface IChunkedBackupService
     /// </summary>
     /// <param name="sourcePath">The source directory the update would read.</param>
     /// <param name="backupPath">The directory containing the existing backup.</param>
-    /// <param name="password">The password the backup was created with.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The comparison, or a failure when the backup cannot be opened.</returns>
     public Task<Result<BackupPreview>> PreviewUpdateAsync(
@@ -98,7 +100,7 @@ public interface IChunkedBackupService
     /// Opens an existing backup and reports what a restore would write, without writing anything.
     /// </summary>
     /// <param name="backupPath">The directory containing the existing backup.</param>
-    /// <param name="password">The password the backup was created with.</param>
+    /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The backup's contents summary, or a failure when it cannot be opened.</returns>
     public Task<Result<BackupPreview>> PreviewRestoreAsync(

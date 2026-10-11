@@ -1,5 +1,5 @@
-using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 
 namespace BackupZCrypt.Application.Engine;
@@ -24,47 +24,55 @@ internal sealed class ChunkedBackupService(
     public Task<Result<BackupResult>> CreateAsync(
         string sourcePath,
         string destinationPath,
-        CreateBackupRequest request,
+        string password,
+        ManifestHeader algorithms,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
     {
-        return writer.CreateAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+        return writer.CreateAsync(
+            sourcePath,
+            destinationPath,
+            password,
+            algorithms,
+            progress,
+            cancellationToken
+        );
     }
 
     /// <inheritdoc/>
     public Task<Result<BackupResult>> UpdateAsync(
         string sourcePath,
         string destinationPath,
-        UpdateBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
     {
-        return writer.UpdateAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+        return writer.UpdateAsync(sourcePath, destinationPath, password, progress, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<Result<BackupResult>> RestoreAsync(
         string sourcePath,
         string destinationPath,
-        RestoreBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
     {
-        return restorer.RestoreAsync(sourcePath, destinationPath, request, progress, cancellationToken);
+        return restorer.RestoreAsync(sourcePath, destinationPath, password, progress, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<Result<BackupResult>> VerifyAsync(
         string sourcePath,
-        VerifyBackupRequest request,
+        string password,
         IProgress<BackupStatus> progress,
         CancellationToken cancellationToken
     )
     {
-        return restorer.VerifyAsync(sourcePath, request, progress, cancellationToken);
+        return restorer.VerifyAsync(sourcePath, password, progress, cancellationToken);
     }
 
     /// <inheritdoc/>

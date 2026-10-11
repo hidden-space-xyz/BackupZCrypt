@@ -1,5 +1,5 @@
-using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Engine;
+using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Domain.Enums;
 using BackupZCrypt.Domain.ValueObjects.Backup;
 using BackupZCrypt.Domain.ValueObjects.Localization;
@@ -192,13 +192,11 @@ public sealed class BackupPreviewTests
         var result = await service.CreateAsync(
             sourcePath,
             archivePath,
-            new CreateBackupRequest(
-                sourcePath,
-                archivePath,
-                Password,
-                Password,
+            Password,
+            new ManifestHeader(
                 EncryptionAlgorithm.Aes,
-                KeyDerivationAlgorithm.PBKDF2
+                KeyDerivationAlgorithm.PBKDF2,
+                CompressionMode.None
             ),
             new RecordingProgress<BackupStatus>(),
             TestContext.Current.CancellationToken

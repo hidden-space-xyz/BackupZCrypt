@@ -16,8 +16,9 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// start failing once someone used it — which is exactly when it is too late to be useful.
 /// </para>
 /// <para>
-/// Related architecture checks live elsewhere: <c>LocalizationParityTests</c> covers the message
-/// catalogue and <c>StrategyRegistrationTests</c> covers the composition root.
+/// Related architecture checks live elsewhere: <c>FeatureDependencyTests</c> covers the feature folders
+/// inside the Application layer, <c>LocalizationParityTests</c> covers the message catalogue, and
+/// <c>StrategyRegistrationTests</c> covers the composition root.
 /// </para>
 /// </remarks>
 public sealed class LayerDependencyTests
