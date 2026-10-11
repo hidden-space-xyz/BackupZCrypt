@@ -1,6 +1,6 @@
 using BackupZCrypt.Application.Backup;
-using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -51,23 +51,19 @@ internal sealed partial class RestoreBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the restore-backup request from the current inputs and runs it.
+    /// Captures the request from the current inputs and returns the operation that runs it.
     /// </summary>
-    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <param name="progress">The sink that receives incremental status updates.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The outcome of the operation.</returns>
-    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
-        bool proceedOnWarnings,
-        IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken
-    )
+    /// <returns>The execution of the operation with the captured request.</returns>
+    protected override OperationExecution CaptureExecution()
     {
-        return Operations.RestoreAsync(
-            new RestoreBackupRequest(SourcePath, DestinationPath, Password, proceedOnWarnings),
-            progress,
-            cancellationToken
-        );
+        RestoreBackupRequest request = new(SourcePath, DestinationPath, Password);
+
+        return (proceedOnWarnings, progress, cancellationToken) =>
+            Operations.RestoreAsync(
+                request with { ProceedOnWarnings = proceedOnWarnings },
+                progress,
+                cancellationToken
+            );
     }
 
     /// <summary>

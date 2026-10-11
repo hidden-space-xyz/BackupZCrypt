@@ -1,11 +1,8 @@
-using System.Collections.ObjectModel;
-using System.Globalization;
+using System.ComponentModel;
 
-using BackupZCrypt.Application.Backup;
-using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,43 +10,37 @@ using CommunityToolkit.Mvvm.Input;
 namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
-/// Shared engine for the create/update/restore/verify pages: operation execution with progress
-/// reporting, cancellation, the warnings confirmation flow, and the final result panel. Subclasses only
-/// describe how to build their request and which operation runs it.
+/// Shared page for the create/update/restore/verify operations: the source, destination, and password
+/// inputs, the remembered paths, and the start command. Running the operation and presenting its
+/// outcome belong to <see cref="Session"/>; subclasses only describe how to capture their request and
+/// which operation runs it.
 /// </summary>
-/// <param name="settingsStore">The store the page loads and saves its settings through.</param>
-/// <param name="filePicker">The folder picker service.</param>
-internal abstract partial class OperationViewModelBase(
-    ISettingsStore settingsStore,
-    IFilePickerService filePicker
-) : ViewModelBase
+internal abstract partial class OperationViewModelBase : ViewModelBase
 {
-    /// <summary>
-    /// How often the elapsed time is refreshed while an operation runs, independently of progress
-    /// reports, so the clock keeps moving through a long file.
-    /// </summary>
-    private static readonly TimeSpan ElapsedRefreshInterval = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// The cancellation source of the operation currently in flight, or <see langword="null"/> when idle.
-    /// </summary>
-    private CancellationTokenSource? operationCts;
-
-    /// <summary>
-    /// The timer of the operation currently in flight.
-    /// </summary>
-    private readonly System.Diagnostics.Stopwatch operationStopwatch = new();
-
-    /// <summary>
-    /// The longest elapsed time an engine report has carried during the current run.
-    /// </summary>
-    private TimeSpan reportedElapsed;
-
     /// <summary>
     /// A value indicating whether the remembered paths have already been applied, so returning to the
     /// page never overwrites what the user has typed since.
     /// </summary>
     private bool recentPathsLoaded;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OperationViewModelBase"/> class.
+    /// </summary>
+    /// <param name="settingsStore">The store the page loads and saves its settings through.</param>
+    /// <param name="filePicker">The folder picker service.</param>
+    protected OperationViewModelBase(ISettingsStore settingsStore, IFilePickerService filePicker)
+    {
+        SettingsStore = settingsStore;
+        FilePicker = filePicker;
+        Session = new OperationSession();
+        Session.PropertyChanged += OnSessionPropertyChanged;
+        Session.Succeeded += OnOperationSucceeded;
+    }
+
+    /// <summary>
+    /// Gets the session that runs the page's operations and holds what the operation dialog shows.
+    /// </summary>
+    public OperationSession Session { get; }
 
     /// <summary>
     /// Gets or sets the source path of the operation.
@@ -70,141 +61,43 @@ internal abstract partial class OperationViewModelBase(
     /// </summary>
     /// <remarks>
     /// Declared once here rather than on each page so there is a single owner of the secret, and so
-    /// <see cref="HandleResult"/> has one place to clear it from once the operation has succeeded.
+    /// <see cref="ClearPassword"/> has one place to clear it from once the operation has succeeded.
     /// </remarks>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string Password { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets a value indicating whether an operation is currently running.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    public partial bool IsRunning { get; set; }
-
-    /// <summary>
-    /// Gets or sets the completion percentage (0–100) of the running operation.
-    /// </summary>
-    [ObservableProperty]
-    public partial double ProgressValue { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether progress is indeterminate because the total size of
-    /// the operation is not known yet (the initial scan phase).
-    /// </summary>
-    [ObservableProperty]
-    public partial bool IsProgressIndeterminate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the progress text, such as the number of files processed so far.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ProgressText { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the formatted elapsed time of the running operation.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ElapsedText { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the result panel is shown.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool HasResult { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the completed operation succeeded.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool ResultIsSuccess { get; set; }
-
-    /// <summary>
-    /// Gets or sets the title shown in the result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ResultTitle { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the processed/total files summary shown in the result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ResultFiles { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the duration summary shown in the result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ResultDuration { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the total-size summary shown in the result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ResultSize { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the summary of the files an update kept and removed, shown in the result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial string ResultUpdateDetails { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the update summary row is shown.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool HasResultUpdateDetails { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the result detail rows are shown.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool HasResultDetails { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the completed operation's warnings are listed in the
-    /// result panel.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool ShowResultWarnings { get; set; }
-
-    /// <summary>
-    /// Gets the localized warnings the completed operation reported, such as links it did not follow.
-    /// </summary>
-    public ObservableCollection<string> ResultWarnings { get; } = [];
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the warnings confirmation panel is shown.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool ShowWarnings { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the error list is shown.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool ShowErrors { get; set; }
-
-    /// <summary>
-    /// Gets the localized error messages produced by the last operation.
-    /// </summary>
-    public ObservableCollection<string> Errors { get; } = [];
-
-    /// <summary>
-    /// Gets the localized warning messages produced by the last operation.
-    /// </summary>
-    public ObservableCollection<string> Warnings { get; } = [];
-
-    /// <summary>
     /// Gets the folder picker service.
     /// </summary>
-    protected IFilePickerService FilePicker { get; } = filePicker;
+    protected IFilePickerService FilePicker { get; }
 
     /// <summary>
     /// Gets the store the page loads and saves its settings through, including the recently used paths.
     /// </summary>
-    protected ISettingsStore SettingsStore { get; } = settingsStore;
+    protected ISettingsStore SettingsStore { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether a destination path is required in addition to a source. Pages
+    /// without a destination (such as verification) override this to return <see langword="false"/>.
+    /// </summary>
+    protected virtual bool RequiresDestination => true;
+
+    /// <summary>
+    /// Gets the result title shown when the operation completes successfully. Overridable so each
+    /// page can phrase success in its own terms (for example, "Backup is intact" for verification).
+    /// </summary>
+    protected virtual string SuccessResultTitle => Strings.ResultSuccessTitle;
+
+    /// <summary>
+    /// Gets the result title shown when the operation finishes but some items failed.
+    /// </summary>
+    protected virtual string PartialResultTitle => Strings.ResultPartialTitle;
+
+    /// <summary>
+    /// Gets the result title shown when the operation could not be performed.
+    /// </summary>
+    protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
 
     /// <summary>
     /// Loads and applies the most recently used paths the first time the page is shown.
@@ -229,17 +122,14 @@ internal abstract partial class OperationViewModelBase(
     }
 
     /// <summary>
-    /// Builds the page's request from the current inputs and runs the page's operation with it.
+    /// Captures the page's request from the current inputs and returns the operation that runs it.
     /// </summary>
-    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <param name="progress">The sink that receives incremental status updates.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The outcome of the operation.</returns>
-    protected abstract Task<Result<BackupOutcome>> ExecuteOperationAsync(
-        bool proceedOnWarnings,
-        IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken
-    );
+    /// <remarks>
+    /// Called on the UI thread when the user starts the operation, so the request reflects exactly
+    /// what was on the page then. The same execution runs again if the user continues past warnings.
+    /// </remarks>
+    /// <returns>The execution of the page's operation with the captured request.</returns>
+    protected abstract OperationExecution CaptureExecution();
 
     /// <summary>
     /// Applies the recently used paths to the page inputs. The default implementation does nothing.
@@ -259,28 +149,13 @@ internal abstract partial class OperationViewModelBase(
     }
 
     /// <summary>
-    /// Forwards the generated change notification to the overridable hook.
-    /// </summary>
-    /// <param name="value">The new password.</param>
-    partial void OnPasswordChanged(string value)
-    {
-        OnPasswordUpdated(value);
-    }
-
-    /// <summary>
-    /// Gets a value indicating whether a destination path is required in addition to a source. Pages
-    /// without a destination (such as verification) override this to return <see langword="false"/>.
-    /// </summary>
-    protected virtual bool RequiresDestination => true;
-
-    /// <summary>
     /// Determines whether the operation can start, requiring that no operation is running, the source
     /// path is set, and the destination path is set when <see cref="RequiresDestination"/> is <see langword="true"/>.
     /// </summary>
     /// <returns><see langword="true"/> if the operation may begin; otherwise <see langword="false"/>.</returns>
     protected virtual bool CanStart()
     {
-        return !IsRunning
+        return !Session.IsRunning
             && !string.IsNullOrWhiteSpace(SourcePath)
             && (!RequiresDestination || !string.IsNullOrWhiteSpace(DestinationPath));
     }
@@ -317,320 +192,6 @@ internal abstract partial class OperationViewModelBase(
     }
 
     /// <summary>
-    /// Reacts to a change of the source path by re-running the page's path-dependent work.
-    /// </summary>
-    /// <param name="value">The new source path.</param>
-    partial void OnSourcePathChanged(string value)
-    {
-        HandlePathChanged();
-    }
-
-    /// <summary>
-    /// Reacts to a change of the destination path by re-running the page's path-dependent work.
-    /// </summary>
-    /// <param name="value">The new destination path.</param>
-    partial void OnDestinationPathChanged(string value)
-    {
-        HandlePathChanged();
-    }
-
-    /// <summary>
-    /// Starts the operation, stopping at the confirmation panel when the request raises warnings.
-    /// </summary>
-    /// <returns>A task that completes once the operation has finished and its result is shown.</returns>
-    [RelayCommand(CanExecute = nameof(CanStart))]
-    private Task StartAsync()
-    {
-        return RunAsync(proceedOnWarnings: false);
-    }
-
-    /// <summary>
-    /// Requests cancellation of the operation currently in flight.
-    /// </summary>
-    [RelayCommand]
-    private void CancelOperation()
-    {
-        operationCts?.Cancel();
-    }
-
-    /// <summary>
-    /// Re-runs the operation after the user acknowledged the warnings, telling the pipeline to
-    /// proceed past them.
-    /// </summary>
-    /// <returns>A task that completes once the operation has finished and its result is shown.</returns>
-    [RelayCommand]
-    private Task ContinueAnywayAsync()
-    {
-        ShowWarnings = false;
-        return RunAsync(proceedOnWarnings: true);
-    }
-
-    /// <summary>
-    /// Closes the warnings panel and discards the listed warnings without starting the operation.
-    /// </summary>
-    [RelayCommand]
-    private void DismissWarnings()
-    {
-        ShowWarnings = false;
-        Warnings.Clear();
-    }
-
-    /// <summary>
-    /// Closes the result panel.
-    /// </summary>
-    [RelayCommand]
-    private void DismissResult()
-    {
-        HasResult = false;
-    }
-
-    /// <summary>
-    /// Runs the operation off the UI thread, streaming progress to the page and turning the outcome,
-    /// a cancellation, or an unexpected exception into the result panel.
-    /// </summary>
-    /// <remarks>
-    /// The operation funnels its own failures into a <c>Result</c>, so the exception handler is
-    /// reached only when something escaped it. The raw exception text is wrapped in the localized
-    /// unexpected-error frame rather than shown bare, so the sentence the user reads follows their
-    /// language even when the detail inside it cannot be translated. The progress sink is constructed
-    /// here, on the UI thread, so its callbacks marshal back to it; it coalesces the per-file reports the
-    /// engine sends from its worker threads, so the page is not flooded and never sees progress run backwards.
-    /// </remarks>
-    /// <param name="proceedOnWarnings">Whether the request should continue past advisory warnings.</param>
-    /// <returns>A task that completes once the result has been presented.</returns>
-    private async Task RunAsync(bool proceedOnWarnings)
-    {
-        ResetState();
-        IsProgressIndeterminate = true;
-        IsRunning = true;
-
-        using CancellationTokenSource cts = new();
-        using CancellationTokenSource elapsedCts = new();
-        operationCts = cts;
-        operationStopwatch.Restart();
-        UpdateElapsedText();
-        var elapsedTask = RefreshElapsedAsync(elapsedCts.Token);
-
-        try
-        {
-            CoalescingStatusProgress progress = new(ReportProgress);
-
-            var result = await Task.Run(
-                () => ExecuteOperationAsync(proceedOnWarnings, progress, cts.Token),
-                cts.Token
-            );
-
-            HandleResult(result);
-        }
-        catch (OperationCanceledException)
-        {
-            HasResult = true;
-            ResultIsSuccess = false;
-            ResultTitle = Strings.ResultCancelled;
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            HasResult = true;
-            ResultIsSuccess = false;
-            ResultTitle = Strings.ResultErrorTitle;
-
-            Errors.Add(
-                MessageLocalizer.Localize(
-                    new LocalizableMessage(MessageCode.UnexpectedErrorFormat, ex.Message)
-                )
-            );
-            ShowErrors = true;
-        }
-        finally
-        {
-            await elapsedCts.CancelAsync();
-            await elapsedTask;
-            operationStopwatch.Stop();
-            IsRunning = false;
-            operationCts = null;
-        }
-    }
-
-    /// <summary>
-    /// Refreshes the elapsed time once a second until the operation ends, so the clock moves even while
-    /// no progress report arrives.
-    /// </summary>
-    /// <param name="cancellationToken">A token cancelled when the operation ends.</param>
-    /// <returns>A task that completes once the operation has ended.</returns>
-    private async Task RefreshElapsedAsync(CancellationToken cancellationToken)
-    {
-        using PeriodicTimer timer = new(ElapsedRefreshInterval);
-
-        try
-        {
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                UpdateElapsedText();
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-    }
-
-    /// <summary>
-    /// Shows the longer of the time measured here and the time the engine last reported.
-    /// </summary>
-    private void UpdateElapsedText()
-    {
-        var elapsed = operationStopwatch.Elapsed > reportedElapsed
-            ? operationStopwatch.Elapsed
-            : reportedElapsed;
-
-        ElapsedText = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ElapsedFormat,
-            FormatDuration(elapsed)
-        );
-    }
-
-    /// <summary>
-    /// Formats a duration as hours, minutes, and seconds, counting hours past a day instead of
-    /// wrapping them.
-    /// </summary>
-    /// <param name="duration">The duration to format.</param>
-    /// <returns>The duration as <c>hh:mm:ss</c>, with as many hour digits as needed.</returns>
-    protected static string FormatDuration(TimeSpan duration)
-    {
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{(long)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}"
-        );
-    }
-
-    /// <summary>
-    /// Projects an engine status report onto the progress bar and its captions, staying indeterminate
-    /// while the total size is still unknown.
-    /// </summary>
-    /// <param name="status">The latest status reported by the engine.</param>
-    private void ReportProgress(BackupStatus status)
-    {
-        IsProgressIndeterminate = status.TotalBytes == 0;
-        ProgressValue =
-            status.TotalBytes > 0 ? (double)status.ProcessedBytes / status.TotalBytes * 100 : 0;
-
-        ProgressText = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ProgressFilesFormat,
-            status.ProcessedFiles,
-            status.TotalFiles
-        );
-
-        if (status.Elapsed > reportedElapsed)
-        {
-            reportedElapsed = status.Elapsed;
-        }
-
-        UpdateElapsedText();
-    }
-
-    /// <summary>
-    /// Gets the result title shown when the operation completes successfully. Overridable so each
-    /// page can phrase success in its own terms (for example, "Backup is intact" for verification).
-    /// </summary>
-    protected virtual string SuccessResultTitle => Strings.ResultSuccessTitle;
-
-    /// <summary>
-    /// Gets the result title shown when the operation finishes but some items failed.
-    /// </summary>
-    protected virtual string PartialResultTitle => Strings.ResultPartialTitle;
-
-    /// <summary>
-    /// Gets the result title shown when the operation could not be performed.
-    /// </summary>
-    protected virtual string FailureResultTitle => Strings.ResultErrorTitle;
-
-    /// <summary>
-    /// Turns the operation outcome into either a failure list, the warnings confirmation prompt, or
-    /// the success/partial summary, and remembers the used paths when the operation succeeded.
-    /// </summary>
-    /// <param name="result">The outcome returned by the page's operation.</param>
-    private void HandleResult(Result<BackupOutcome> result)
-    {
-        if (!result.IsSuccess)
-        {
-            ShowFailure(result.Errors);
-            return;
-        }
-
-        if (result.Value.Completion is not { } operation)
-        {
-            foreach (var warning in result.Value.PendingWarnings)
-            {
-                Warnings.Add(MessageLocalizer.Localize(warning));
-            }
-
-            ShowWarnings = true;
-            return;
-        }
-
-        HasResult = true;
-        ResultIsSuccess = operation.IsSuccess;
-        ResultTitle = operation.IsSuccess ? SuccessResultTitle : PartialResultTitle;
-
-        var isUpdate = operation.UnchangedFiles > 0 || operation.RemovedFiles > 0;
-
-        ResultFiles =
-            isUpdate && operation.TotalFiles is 0 && operation.RemovedFiles is 0
-                ? Strings.ResultNoChanges
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    Strings.ResultFilesFormat,
-                    operation.ProcessedFiles,
-                    operation.TotalFiles
-                );
-
-        HasResultUpdateDetails = isUpdate;
-        ResultUpdateDetails = isUpdate
-            ? string.Format(
-                CultureInfo.CurrentCulture,
-                Strings.ResultUpdateDetailsFormat,
-                operation.UnchangedFiles,
-                operation.RemovedFiles
-            )
-            : string.Empty;
-
-        ResultDuration = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ResultDurationFormat,
-            FormatDuration(operation.ElapsedTime)
-        );
-
-        ResultSize = string.Format(
-            CultureInfo.CurrentCulture,
-            Strings.ResultSizeFormat,
-            ByteSizeFormatter.Format(operation.TotalBytes)
-        );
-
-        HasResultDetails = true;
-
-        foreach (var error in operation.Errors)
-        {
-            Errors.Add(MessageLocalizer.Localize(error));
-        }
-
-        foreach (var warning in operation.Warnings)
-        {
-            ResultWarnings.Add(MessageLocalizer.Localize(warning));
-        }
-
-        ShowErrors = Errors.Count > 0;
-        ShowResultWarnings = ResultWarnings.Count > 0;
-
-        if (operation.IsSuccess)
-        {
-            _ = TrySaveRecentPathsAsync();
-            ClearPassword();
-        }
-    }
-
-    /// <summary>
     /// Drops the password once the operation it protected has succeeded.
     /// </summary>
     /// <remarks>
@@ -639,63 +200,18 @@ internal abstract partial class OperationViewModelBase(
     /// plaintext password stays reachable from a live object for as long as the application runs.
     /// Be clear about what this does and does not buy: a .NET <see cref="string"/> cannot be zeroed,
     /// and the bound <c>TextBox</c> keeps its own copy, so this only drops the last permanently-held
-    /// reference and lets the garbage collector reclaim it eventually. It is not a wipe.
+    /// reference and lets the garbage collector reclaim it eventually. It is not a wipe. The session
+    /// drops the execution that captured the password as soon as it no longer needs it.
     /// </para>
     /// <para>
-    /// Only on success, and only after <see cref="ExecuteOperationAsync"/> has already captured the
-    /// value into its request. Clearing on failure would be actively hostile: the commonest reason to
-    /// re-run a restore is a mistyped password, and the user would have to retype a fifty-character
+    /// Only on success. Clearing on failure would be actively hostile: the commonest reason to re-run
+    /// a restore is a mistyped password, and the user would have to retype a fifty-character
     /// generated one.
     /// </para>
     /// </remarks>
     protected virtual void ClearPassword()
     {
         Password = string.Empty;
-    }
-
-    /// <summary>
-    /// Shows the result panel in its failed state and lists the localized errors.
-    /// </summary>
-    /// <param name="errors">The messages to localize and display.</param>
-    private void ShowFailure(IEnumerable<LocalizableMessage> errors)
-    {
-        HasResult = true;
-        ResultIsSuccess = false;
-        ResultTitle = FailureResultTitle;
-
-        foreach (var error in errors)
-        {
-            Errors.Add(MessageLocalizer.Localize(error));
-        }
-
-        ShowErrors = Errors.Count > 0;
-    }
-
-    /// <summary>
-    /// Clears the progress, result, and message state so a new run starts from an empty panel.
-    /// </summary>
-    private void ResetState()
-    {
-        Errors.Clear();
-        Warnings.Clear();
-        ResultWarnings.Clear();
-        ShowErrors = false;
-        ShowWarnings = false;
-        ShowResultWarnings = false;
-        HasResult = false;
-        HasResultDetails = false;
-        HasResultUpdateDetails = false;
-        ResultIsSuccess = false;
-        ResultTitle = string.Empty;
-        ResultFiles = string.Empty;
-        ResultUpdateDetails = string.Empty;
-        ResultDuration = string.Empty;
-        ResultSize = string.Empty;
-        ProgressValue = 0;
-        IsProgressIndeterminate = false;
-        ProgressText = string.Empty;
-        ElapsedText = string.Empty;
-        reportedElapsed = TimeSpan.Zero;
     }
 
     /// <summary>
@@ -714,6 +230,69 @@ internal abstract partial class OperationViewModelBase(
             LastSourcePath = SourcePath,
             LastDestinationPath = DestinationPath,
         };
+    }
+
+    /// <summary>
+    /// Forwards the generated change notification to the overridable hook.
+    /// </summary>
+    /// <param name="value">The new password.</param>
+    partial void OnPasswordChanged(string value)
+    {
+        OnPasswordUpdated(value);
+    }
+
+    /// <summary>
+    /// Reacts to a change of the source path by re-running the page's path-dependent work.
+    /// </summary>
+    /// <param name="value">The new source path.</param>
+    partial void OnSourcePathChanged(string value)
+    {
+        HandlePathChanged();
+    }
+
+    /// <summary>
+    /// Reacts to a change of the destination path by re-running the page's path-dependent work.
+    /// </summary>
+    /// <param name="value">The new destination path.</param>
+    partial void OnDestinationPathChanged(string value)
+    {
+        HandlePathChanged();
+    }
+
+    /// <summary>
+    /// Starts the operation with the request captured from the current inputs.
+    /// </summary>
+    /// <returns>A task that completes once the outcome is shown.</returns>
+    [RelayCommand(CanExecute = nameof(CanStart))]
+    private Task StartAsync()
+    {
+        return Session.RunAsync(
+            new OperationRun(CaptureExecution(), SuccessResultTitle, PartialResultTitle, FailureResultTitle)
+        );
+    }
+
+    /// <summary>
+    /// Re-evaluates the start command when an operation starts or stops running.
+    /// </summary>
+    /// <param name="sender">The session.</param>
+    /// <param name="e">The changed property.</param>
+    private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(OperationSession.Phase))
+        {
+            NotifyStartCanExecuteChanged();
+        }
+    }
+
+    /// <summary>
+    /// Remembers the paths of a successful operation and drops the password it no longer needs.
+    /// </summary>
+    /// <param name="sender">The session.</param>
+    /// <param name="e">The event data.</param>
+    private void OnOperationSucceeded(object? sender, EventArgs e)
+    {
+        _ = TrySaveRecentPathsAsync();
+        ClearPassword();
     }
 
     /// <summary>

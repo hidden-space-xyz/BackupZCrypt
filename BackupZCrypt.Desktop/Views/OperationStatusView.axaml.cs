@@ -5,6 +5,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 
 using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 namespace BackupZCrypt.Desktop.Views;
 
@@ -15,10 +16,10 @@ namespace BackupZCrypt.Desktop.Views;
 internal sealed partial class OperationStatusView : UserControl
 {
     /// <summary>
-    /// The view model whose state changes are being observed, or <see langword="null"/> while the
+    /// The page's operation session whose phase changes are being observed, or <see langword="null"/> while the
     /// control is not subscribed.
     /// </summary>
-    private OperationViewModelBase? viewModel;
+    private OperationSession? viewModel;
 
     /// <summary>
     /// A value indicating whether a dialog is already on screen, so a further state change cannot
@@ -38,7 +39,7 @@ internal sealed partial class OperationStatusView : UserControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        Hook(DataContext as OperationViewModelBase);
+        Hook((DataContext as OperationViewModelBase)?.Session);
     }
 
     /// <inheritdoc/>
@@ -52,15 +53,15 @@ internal sealed partial class OperationStatusView : UserControl
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        Hook(DataContext as OperationViewModelBase);
+        Hook((DataContext as OperationViewModelBase)?.Session);
     }
 
     /// <summary>
-    /// Moves the property-changed subscription to the given view model, detaching from the previous
+    /// Moves the property-changed subscription to the given session, detaching from the previous
     /// one first so the control never leaves a handler behind.
     /// </summary>
-    /// <param name="vm">The view model to observe, or <see langword="null"/> to only detach.</param>
-    private void Hook(OperationViewModelBase? vm)
+    /// <param name="vm">The page's operation session to observe, or <see langword="null"/> to only detach.</param>
+    private void Hook(OperationSession? vm)
     {
         if (ReferenceEquals(viewModel, vm))
         {
@@ -75,7 +76,7 @@ internal sealed partial class OperationStatusView : UserControl
     }
 
     /// <summary>
-    /// Opens the modal dialog when the running, warnings, or result state of the view model changes.
+    /// Opens the modal dialog when the phase of the page's operation session changes.
     /// </summary>
     /// <remarks>
     /// An event handler cannot return a task, so a fault escaping <see cref="TryShowDialogAsync"/>
@@ -87,14 +88,7 @@ internal sealed partial class OperationStatusView : UserControl
     /// <param name="e">The property change notification.</param>
     private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (
-            e.PropertyName
-            is not (
-                nameof(OperationViewModelBase.IsRunning)
-                or nameof(OperationViewModelBase.ShowWarnings)
-                or nameof(OperationViewModelBase.HasResult)
-            )
-        )
+        if (e.PropertyName is not nameof(OperationSession.Phase))
         {
             return;
         }
@@ -128,7 +122,7 @@ internal sealed partial class OperationStatusView : UserControl
         {
             while (
                 viewModel is { } vm
-                && (vm.IsRunning || vm.ShowWarnings || vm.HasResult)
+                && vm.Phase is not OperationPhase.Idle
                 && OverlayLayer.GetOverlayLayer(this) is { } layer
             )
             {

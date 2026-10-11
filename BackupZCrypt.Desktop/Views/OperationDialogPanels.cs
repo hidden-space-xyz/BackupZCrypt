@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 namespace BackupZCrypt.Desktop.Views;
 
@@ -11,20 +11,18 @@ namespace BackupZCrypt.Desktop.Views;
 internal static class OperationDialogPanels
 {
     /// <summary>
-    /// Selects the panel that matches the operation's state. A running operation outranks pending warnings,
-    /// and pending warnings outrank a finished result.
+    /// Selects the panel that matches a session's phase.
     /// </summary>
-    /// <param name="operation">The operation being presented.</param>
-    /// <returns>The panel to show, or <see cref="OperationDialogPanel.None"/> when the operation is idle.</returns>
-    public static OperationDialogPanel For(OperationViewModelBase operation)
+    /// <param name="phase">The phase of the session being presented.</param>
+    /// <returns>The panel to show, or <see cref="OperationDialogPanel.None"/> when the session is idle.</returns>
+    public static OperationDialogPanel For(OperationPhase phase)
     {
-        ArgumentNullException.ThrowIfNull(operation);
-
-        return operation switch
+        return phase switch
         {
-            { IsRunning: true } => OperationDialogPanel.Running,
-            { ShowWarnings: true } => OperationDialogPanel.Warnings,
-            { HasResult: true } => OperationDialogPanel.Result,
+            OperationPhase.Running => OperationDialogPanel.Running,
+            OperationPhase.AwaitingConfirmation => OperationDialogPanel.Warnings,
+            OperationPhase.Completed => OperationDialogPanel.Result,
+            OperationPhase.Idle => OperationDialogPanel.None,
             _ => OperationDialogPanel.None,
         };
     }
@@ -36,7 +34,7 @@ internal static class OperationDialogPanels
     /// <param name="panel">The panel on display.</param>
     /// <param name="operation">The operation being presented.</param>
     /// <returns>The command to run, or <see langword="null"/> when Escape does nothing on the panel.</returns>
-    public static ICommand? EscapeCommand(OperationDialogPanel panel, OperationViewModelBase operation)
+    public static ICommand? EscapeCommand(OperationDialogPanel panel, OperationSession operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -61,7 +59,7 @@ internal static class OperationDialogPanels
     /// <param name="panel">The panel on display.</param>
     /// <param name="operation">The operation being presented.</param>
     /// <returns>The command to run, or <see langword="null"/> when Enter does nothing on the panel.</returns>
-    public static ICommand? EnterCommand(OperationDialogPanel panel, OperationViewModelBase operation)
+    public static ICommand? EnterCommand(OperationDialogPanel panel, OperationSession operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
 

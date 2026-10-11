@@ -1,10 +1,10 @@
 using BackupZCrypt.Application.Algorithms;
 using BackupZCrypt.Application.Backup;
-using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Passwords;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 using BackupZCrypt.Domain.Algorithms;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -147,7 +147,7 @@ internal sealed partial class CreateBackupViewModel(
     {
         await base.OnNavigatedToAsync();
 
-        if (IsRunning)
+        if (Session.IsRunning)
         {
             return;
         }
@@ -177,31 +177,27 @@ internal sealed partial class CreateBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the create-backup request from the current source, destination, password, and configured
-    /// algorithms, and runs it.
+    /// Captures the request from the current inputs and returns the operation that runs it.
     /// </summary>
-    /// <param name="proceedOnWarnings">Whether the operation should continue past warnings.</param>
-    /// <param name="progress">The sink that receives incremental status updates.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The outcome of the operation.</returns>
-    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
-        bool proceedOnWarnings,
-        IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken
-    )
+    /// <returns>The execution of the operation with the captured request.</returns>
+    protected override OperationExecution CaptureExecution()
     {
-        var request = new CreateBackupRequest(
+        CreateBackupRequest request = new(
             SourcePath,
             DestinationPath,
             Password,
             ConfirmPassword,
             encryptionAlgorithm,
             keyDerivationAlgorithm,
-            compressionMode,
-            proceedOnWarnings
+            compressionMode
         );
 
-        return operations.CreateAsync(request, progress, cancellationToken);
+        return (proceedOnWarnings, progress, cancellationToken) =>
+            operations.CreateAsync(
+                request with { ProceedOnWarnings = proceedOnWarnings },
+                progress,
+                cancellationToken
+            );
     }
 
     /// <summary>

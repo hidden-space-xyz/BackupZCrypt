@@ -6,8 +6,10 @@ using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Presentation;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 using BackupZCrypt.Desktop.ViewModels;
 using BackupZCrypt.Domain.Algorithms;
+using BackupZCrypt.Test.Common;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -85,17 +87,53 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Fact]
-    internal void StartCommand_WhileAnOperationRuns_IsBlockedAndBecomesAvailableAgainWhenItEnds()
+    internal async Task StartCommand_WhileAContinuedOperationRuns_IsBlockedAndBecomesAvailableAgainWhenItEnds()
     {
         var sut = CreateSut();
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
+        TaskCompletionSource<Result<BackupOutcome>> release = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        var calls = 0;
 
-        sut.IsRunning = true;
-        Assert.False(sut.StartCommand.CanExecute(null));
+        _ = this
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(_ =>
+                ++calls == 1
+                    ? Task.FromResult(
+                        Result<BackupOutcome>.Success(
+                            BackupOutcome.AwaitingConfirmation(
+                                [new LocalizableMessage(MessageCode.DestinationContainsBackup)]
+                            )
+                        )
+                    )
+                    : release.Task
+            );
 
-        sut.IsRunning = false;
-        Assert.True(sut.StartCommand.CanExecute(null));
+        await sut.StartCommand.ExecuteAsync(null);
+        List<bool> announced = [];
+        sut.StartCommand.CanExecuteChanged += (_, _) => announced.Add(sut.StartCommand.CanExecute(null));
+        var continuing = sut.Session.ContinueAnywayCommand.ExecuteAsync(null);
+        var blockedWhileRunning = !sut.StartCommand.CanExecute(null);
+
+        release.SetResult(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0))
+            )
+        );
+        await continuing;
+
+        Assert.Multiple(
+            () => Assert.True(blockedWhileRunning),
+            () => Assert.True(sut.StartCommand.CanExecute(null)),
+            () => Assert.Contains(false, announced),
+            () => Assert.True(announced[^1])
+        );
     }
 
     [Fact]
@@ -124,20 +162,20 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.True(sut.ResultIsSuccess),
-            () => Assert.True(sut.ShowResultWarnings),
+            () => Assert.True(sut.Session.ResultIsSuccess),
+            () => Assert.True(sut.Session.ShowResultWarnings),
             () =>
                 Assert.Equal(
                     [MessageLocalizer.Localize(new LocalizableMessage(MessageCode.SourceLinksSkippedFormat, 1, "linked"))],
-                    sut.ResultWarnings
+                    sut.Session.ResultWarnings
                 ),
-            () => Assert.True(sut.HasResultUpdateDetails),
+            () => Assert.True(sut.Session.HasResultUpdateDetails),
             () =>
                 Assert.Equal(
                     string.Format(CultureInfo.CurrentCulture, Strings.ResultUpdateDetailsFormat, 7, 2),
-                    sut.ResultUpdateDetails
+                    sut.Session.ResultUpdateDetails
                 ),
-            () => Assert.Contains("25:00:00", sut.ResultDuration, StringComparison.Ordinal)
+            () => Assert.Contains("25:00:00", sut.Session.ResultDuration, StringComparison.Ordinal)
         );
     }
 
@@ -156,7 +194,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
 
         await sut.StartCommand.ExecuteAsync(null);
 
-        Assert.Equal(Strings.ResultNoChanges, sut.ResultFiles);
+        Assert.Equal(Strings.ResultNoChanges, sut.Session.ResultFiles);
     }
 
     [Theory]
@@ -182,13 +220,13 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.True(sut.HasResult),
-            () => Assert.True(sut.HasResultDetails),
-            () => Assert.Equal(succeeded, sut.ResultIsSuccess),
+            () => Assert.True(sut.Session.HasResult),
+            () => Assert.True(sut.Session.HasResultDetails),
+            () => Assert.Equal(succeeded, sut.Session.ResultIsSuccess),
             () =>
                 Assert.Equal(
                     succeeded ? Strings.ResultSuccessTitle : Strings.ResultPartialTitle,
-                    sut.ResultTitle
+                    sut.Session.ResultTitle
                 ),
             () =>
                 Assert.Equal(
@@ -198,18 +236,18 @@ public sealed class OperationViewModelBaseTests : IDisposable
                         processedFiles,
                         5
                     ),
-                    sut.ResultFiles
+                    sut.Session.ResultFiles
                 ),
-            () => Assert.Contains("00:03:00", sut.ResultDuration, StringComparison.Ordinal),
+            () => Assert.Contains("00:03:00", sut.Session.ResultDuration, StringComparison.Ordinal),
             () =>
                 Assert.Contains(
                     ByteSizeFormatter.Format(2048),
-                    sut.ResultSize,
+                    sut.Session.ResultSize,
                     StringComparison.Ordinal
                 ),
-            () => Assert.False(sut.ShowErrors),
-            () => Assert.False(sut.ShowWarnings),
-            () => Assert.False(sut.IsRunning)
+            () => Assert.False(sut.Session.ShowErrors),
+            () => Assert.False(sut.Session.ShowWarnings),
+            () => Assert.False(sut.Session.IsRunning)
         );
     }
 
@@ -226,9 +264,9 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.True(sut.ShowWarnings),
-            () => Assert.False(sut.HasResult),
-            () => Assert.Equal<string>([MessageLocalizer.Localize(warning)], sut.Warnings)
+            () => Assert.True(sut.Session.ShowWarnings),
+            () => Assert.False(sut.Session.HasResult),
+            () => Assert.Equal<string>([MessageLocalizer.Localize(warning)], sut.Session.Warnings)
         );
     }
 
@@ -256,9 +294,9 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.False(sut.ShowWarnings),
-            () => Assert.True(sut.HasResult),
-            () => Assert.Equal(Strings.ResultPartialTitle, sut.ResultTitle)
+            () => Assert.False(sut.Session.ShowWarnings),
+            () => Assert.True(sut.Session.HasResult),
+            () => Assert.Equal(Strings.ResultPartialTitle, sut.Session.ResultTitle)
         );
     }
 
@@ -295,9 +333,9 @@ public sealed class OperationViewModelBaseTests : IDisposable
         sut.DestinationPath = "destination";
 
         await sut.StartCommand.ExecuteAsync(null);
-        var gateOpened = sut.ShowWarnings;
+        var gateOpened = sut.Session.ShowWarnings;
 
-        await sut.ContinueAnywayCommand.ExecuteAsync(null);
+        await sut.Session.ContinueAnywayCommand.ExecuteAsync(null);
 
         Assert.Multiple(
             () => Assert.True(gateOpened),
@@ -306,10 +344,10 @@ public sealed class OperationViewModelBaseTests : IDisposable
                     [false, true],
                     requests.Select(static request => request.ProceedOnWarnings)
                 ),
-            () => Assert.False(sut.ShowWarnings),
-            () => Assert.Empty(sut.Warnings),
-            () => Assert.True(sut.HasResult),
-            () => Assert.True(sut.ResultIsSuccess)
+            () => Assert.False(sut.Session.ShowWarnings),
+            () => Assert.Empty(sut.Session.Warnings),
+            () => Assert.True(sut.Session.HasResult),
+            () => Assert.True(sut.Session.ResultIsSuccess)
         );
     }
 
@@ -327,7 +365,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
             .Returns(callInfo =>
             {
                 var token = callInfo.Arg<CancellationToken>();
-                sut.CancelOperationCommand.Execute(null);
+                sut.Session.CancelOperationCommand.Execute(null);
                 token.ThrowIfCancellationRequested();
 
                 return Task.FromResult(
@@ -343,15 +381,15 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.True(sut.HasResult),
-            () => Assert.False(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.ResultCancelled, sut.ResultTitle),
-            () => Assert.False(sut.ShowErrors),
-            () => Assert.False(sut.IsRunning),
+            () => Assert.True(sut.Session.HasResult),
+            () => Assert.False(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultCancelled, sut.Session.ResultTitle),
+            () => Assert.False(sut.Session.ShowErrors),
+            () => Assert.False(sut.Session.IsRunning),
             () => Assert.True(sut.StartCommand.CanExecute(null))
         );
 
-        Assert.Null(Record.Exception(() => sut.CancelOperationCommand.Execute(null)));
+        Assert.Null(Record.Exception(() => sut.Session.CancelOperationCommand.Execute(null)));
     }
 
     [Fact]
@@ -372,18 +410,18 @@ public sealed class OperationViewModelBaseTests : IDisposable
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
-            () => Assert.True(sut.HasResult),
-            () => Assert.False(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.ResultErrorTitle, sut.ResultTitle),
-            () => _ = Assert.Single(sut.Errors),
+            () => Assert.True(sut.Session.HasResult),
+            () => Assert.False(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultErrorTitle, sut.Session.ResultTitle),
+            () => _ = Assert.Single(sut.Session.Errors),
             () =>
                 Assert.All(
-                    sut.Errors,
+                    sut.Session.Errors,
                     error => Assert.Contains("disk gone", error, StringComparison.Ordinal)
                 ),
-            () => Assert.NotEqual("disk gone", sut.Errors[0]),
-            () => Assert.True(sut.ShowErrors),
-            () => Assert.False(sut.IsRunning),
+            () => Assert.NotEqual("disk gone", sut.Session.Errors[0]),
+            () => Assert.True(sut.Session.ShowErrors),
+            () => Assert.False(sut.Session.IsRunning),
             () => Assert.True(sut.StartCommand.CanExecute(null))
         );
     }
@@ -414,7 +452,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
             () => sut.StartCommand.ExecuteAsync(null)
         );
 
-        Assert.Multiple(() => Assert.False(sut.IsRunning), () => Assert.False(sut.HasResult));
+        Assert.Multiple(() => Assert.False(sut.Session.IsRunning), () => Assert.False(sut.Session.HasResult));
     }
 
     [Fact]
@@ -439,8 +477,8 @@ public sealed class OperationViewModelBaseTests : IDisposable
                     );
 
                 progress.Report(new BackupStatus(0, 10, 0, 0, TimeSpan.Zero));
-                indeterminateWhileScanning = sut.IsProgressIndeterminate;
-                percentWhileScanning = sut.ProgressValue;
+                indeterminateWhileScanning = sut.Session.IsProgressIndeterminate;
+                percentWhileScanning = sut.Session.ProgressValue;
 
                 progress.Report(
                     new BackupStatus(4, 10, 250, 1000, TimeSpan.FromSeconds(3725))
@@ -463,14 +501,14 @@ public sealed class OperationViewModelBaseTests : IDisposable
         Assert.Multiple(
             () => Assert.True(indeterminateWhileScanning),
             () => Assert.Equal(0d, percentWhileScanning),
-            () => Assert.False(sut.IsProgressIndeterminate),
-            () => Assert.Equal(25d, sut.ProgressValue, 0.001),
+            () => Assert.False(sut.Session.IsProgressIndeterminate),
+            () => Assert.Equal(25d, sut.Session.ProgressValue, 0.001),
             () =>
                 Assert.Equal(
                     string.Format(CultureInfo.CurrentCulture, Strings.ProgressFilesFormat, 4, 10),
-                    sut.ProgressText
+                    sut.Session.ProgressText
                 ),
-            () => Assert.Contains("01:02:05", sut.ElapsedText, StringComparison.Ordinal)
+            () => Assert.Contains("01:02:05", sut.Session.ElapsedText, StringComparison.Ordinal)
         );
     }
 
@@ -505,18 +543,18 @@ public sealed class OperationViewModelBaseTests : IDisposable
         sut.DestinationPath = "destination";
 
         await sut.StartCommand.ExecuteAsync(null);
-        var errorsAfterFirstRun = sut.Errors.Count;
+        var errorsAfterFirstRun = sut.Session.Errors.Count;
 
         await sut.StartCommand.ExecuteAsync(null);
 
         Assert.Multiple(
             () => Assert.Equal(2, errorsAfterFirstRun),
-            () => Assert.Empty(sut.Errors),
-            () => Assert.Empty(sut.Warnings),
-            () => Assert.False(sut.ShowErrors),
-            () => Assert.False(sut.ShowWarnings),
-            () => Assert.True(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+            () => Assert.Empty(sut.Session.Errors),
+            () => Assert.Empty(sut.Session.Warnings),
+            () => Assert.False(sut.Session.ShowErrors),
+            () => Assert.False(sut.Session.ShowWarnings),
+            () => Assert.True(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.Session.ResultTitle)
         );
     }
 
@@ -696,25 +734,6 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     /// <summary>
-    /// A synchronization context that invokes posted callbacks on the calling thread, making the
-    /// progress reports the engine pushes observable at a deterministic point in the test.
-    /// </summary>
-    private sealed class InlineSynchronizationContext : SynchronizationContext
-    {
-        /// <inheritdoc/>
-        public override void Post(SendOrPostCallback d, object? state)
-        {
-            d(state);
-        }
-
-        /// <inheritdoc/>
-        public override void Send(SendOrPostCallback d, object? state)
-        {
-            d(state);
-        }
-    }
-
-    /// <summary>
     /// The minimal concrete page used to exercise the abstract engine: it builds a create request
     /// from the current inputs and records every recent-path application so the load-once guard is
     /// observable.
@@ -736,13 +755,9 @@ public sealed class OperationViewModelBaseTests : IDisposable
         /// <inheritdoc/>
         /// <remarks>
         /// Reads the real <c>Password</c> rather than a literal, so a change that cleared it before
-        /// the request was built shows up here instead of hiding behind a stub value.
+        /// the request was captured shows up here instead of hiding behind a stub value.
         /// </remarks>
-        protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
-            bool proceedOnWarnings,
-            IProgress<BackupStatus> progress,
-            CancellationToken cancellationToken
-        )
+        protected override OperationExecution CaptureExecution()
         {
             var request = new CreateBackupRequest(
                 SourcePath,
@@ -751,11 +766,15 @@ public sealed class OperationViewModelBaseTests : IDisposable
                 Password,
                 EncryptionAlgorithm.Aes,
                 KeyDerivationAlgorithm.PBKDF2,
-                CompressionMode.None,
-                proceedOnWarnings
+                CompressionMode.None
             );
 
-            return operations.CreateAsync(request, progress, cancellationToken);
+            return (proceedOnWarnings, progress, cancellationToken) =>
+                operations.CreateAsync(
+                    request with { ProceedOnWarnings = proceedOnWarnings },
+                    progress,
+                    cancellationToken
+                );
         }
 
         /// <inheritdoc/>

@@ -1,7 +1,7 @@
 using BackupZCrypt.Application.Backup;
-using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -71,25 +71,14 @@ internal sealed partial class VerifyBackupViewModel(
     }
 
     /// <summary>
-    /// Builds the verify-backup request from the current inputs and runs it.
-    /// Verification skips validation and never raises advisory warnings, so the proceed flag carries
-    /// no information for it and is deliberately ignored.
+    /// Captures the request from the current inputs and returns the operation that runs it.
     /// </summary>
-    /// <param name="proceedOnWarnings">Ignored: verification never stops at warnings.</param>
-    /// <param name="progress">The sink that receives incremental status updates.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The outcome of the verification.</returns>
-    protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
-        bool proceedOnWarnings,
-        IProgress<BackupStatus> progress,
-        CancellationToken cancellationToken
-    )
+    /// <returns>The execution of the operation with the captured request.</returns>
+    protected override OperationExecution CaptureExecution()
     {
-        return Operations.VerifyAsync(
-            new VerifyBackupRequest(SourcePath, Password),
-            progress,
-            cancellationToken
-        );
+        VerifyBackupRequest request = new(SourcePath, Password);
+
+        return (_, progress, cancellationToken) => Operations.VerifyAsync(request, progress, cancellationToken);
     }
 
     /// <summary>

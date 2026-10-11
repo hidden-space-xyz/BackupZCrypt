@@ -1,12 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:BackupZCrypt.Desktop.ViewModels"
+             xmlns:ops="using:BackupZCrypt.Desktop.ViewModels.Operations"
              xmlns:controls="using:BackupZCrypt.Desktop.Controls"
              xmlns:views="using:BackupZCrypt.Desktop.Views"
              xmlns:res="using:BackupZCrypt.Desktop.Resources"
              xmlns:assets="using:BackupZCrypt.Desktop.Assets"
              x:Class="BackupZCrypt.Desktop.Views.OperationDialog"
-             x:DataType="vm:OperationViewModelBase">
+             x:DataType="ops:OperationSession">
 
   <UserControl.Styles>
     <Style Selector="views|OperationDialog Border#Scrim">
@@ -176,7 +176,7 @@
           <ProgressBar Minimum="0"
                        Maximum="100"
                        IsIndeterminate="{Binding IsProgressIndeterminate}"
-                       Value="{Binding ProgressValue}" />
+                       Value="{Binding ProgressValue, Mode=OneWay}" />
 
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">

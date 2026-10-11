@@ -1,6 +1,6 @@
 using BackupZCrypt.Application.Common;
 
-namespace BackupZCrypt.Desktop.ViewModels;
+namespace BackupZCrypt.Desktop.ViewModels.Operations;
 
 /// <summary>
 /// Delivers engine status reports to the synchronization context it was created on, never more than one at a

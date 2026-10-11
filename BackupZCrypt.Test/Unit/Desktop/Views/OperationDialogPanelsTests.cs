@@ -1,52 +1,32 @@
-using BackupZCrypt.Application.Backup;
-using BackupZCrypt.Application.Settings;
-using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 using BackupZCrypt.Desktop.Views;
-
-using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Desktop.Views;
 
 /// <summary>
-/// Unit tests for the operation dialog's panel selection and keyboard commands: which panel each operation
-/// state shows, and that Escape always backs out while Enter only ever closes a result and never confirms
+/// Unit tests for the operation dialog's panel selection and keyboard commands: which panel each session
+/// phase shows, and that Escape always backs out while Enter only ever closes a result and never confirms
 /// warnings.
 /// </summary>
 public sealed class OperationDialogPanelsTests
 {
     /// <summary>
-    /// Builds a real operation page over substituted services, whose state flags the tests set directly.
+    /// Builds an idle operation session whose commands the tests compare against.
     /// </summary>
     /// <returns>The operation the dialog would present.</returns>
-    private static RestoreBackupViewModel CreateOperation()
+    private static OperationSession CreateOperation()
     {
-        return new RestoreBackupViewModel(
-            Substitute.For<IBackupOperations>(),
-            Substitute.For<ISettingsStore>(),
-            Substitute.For<IFilePickerService>()
-        );
+        return new OperationSession();
     }
 
     [Theory]
-    [InlineData(false, false, false, OperationDialogPanel.None)]
-    [InlineData(true, false, false, OperationDialogPanel.Running)]
-    [InlineData(false, true, false, OperationDialogPanel.Warnings)]
-    [InlineData(false, false, true, OperationDialogPanel.Result)]
-    [InlineData(true, true, true, OperationDialogPanel.Running)]
-    [InlineData(false, true, true, OperationDialogPanel.Warnings)]
-    internal void For_OperationState_ShowsTheRunThenTheWarningsThenTheResult(
-        bool isRunning,
-        bool showWarnings,
-        bool hasResult,
-        OperationDialogPanel expected
-    )
+    [InlineData(OperationPhase.Idle, OperationDialogPanel.None)]
+    [InlineData(OperationPhase.Running, OperationDialogPanel.Running)]
+    [InlineData(OperationPhase.AwaitingConfirmation, OperationDialogPanel.Warnings)]
+    [InlineData(OperationPhase.Completed, OperationDialogPanel.Result)]
+    internal void For_EachPhase_ShowsItsOwnPanel(OperationPhase phase, OperationDialogPanel expected)
     {
-        var operation = CreateOperation();
-        operation.IsRunning = isRunning;
-        operation.ShowWarnings = showWarnings;
-        operation.HasResult = hasResult;
-
-        Assert.Equal(expected, OperationDialogPanels.For(operation));
+        Assert.Equal(expected, OperationDialogPanels.For(phase));
     }
 
     [Fact]

@@ -430,7 +430,7 @@ public sealed class CreateBackupViewModelTests
     }
 
     [Fact]
-    internal async Task OnNavigatedToAsync_WhileAnOperationRuns_KeepsTheAlgorithmsTheRunStartedWith()
+    internal async Task OnNavigatedToAsync_WhileAnOperationRuns_LeavesTheAlgorithmsAlone()
     {
         var sut = CreateSut();
         _ = this
@@ -443,25 +443,35 @@ public sealed class CreateBackupViewModelTests
                 )
             );
 
-        var requests = StubCreateCapturingRequests();
-
-        sut.IsRunning = true;
-        await sut.OnNavigatedToAsync();
-        sut.IsRunning = false;
+        TaskCompletionSource<Result<BackupOutcome>> release = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        _ = this
+            .operations.CreateAsync(
+                Arg.Any<CreateBackupRequest>(),
+                Arg.Any<IProgress<BackupStatus>?>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(_ => release.Task);
 
         sut.SourcePath = "source";
         sut.DestinationPath = "destination";
         sut.Password = "good-password";
         sut.ConfirmPassword = "good-password";
 
-        await sut.StartCommand.ExecuteAsync(null);
-
-        Assert.Multiple(
-            () => Assert.Single(requests),
-            () => Assert.Equal(EncryptionAlgorithm.Aes, requests[0].EncryptionAlgorithm),
-            () => Assert.Equal(KeyDerivationAlgorithm.Argon2id, requests[0].KeyDerivationAlgorithm),
-            () => Assert.Equal(CompressionMode.None, requests[0].Compression)
+        var running = sut.StartCommand.ExecuteAsync(null);
+        await sut.OnNavigatedToAsync();
+        var shownWhileRunning = sut.EncryptionName;
+        release.SetResult(
+            Result<BackupOutcome>.Success(
+                BackupOutcome.Completed(new BackupResult(TimeSpan.FromSeconds(1), 16, 1, 1))
+            )
         );
+        await running;
+
+        Assert.Equal(AlgorithmMetadataProvider.GetName(EncryptionAlgorithm.Aes), shownWhileRunning);
+        await this.settingsStore.DidNotReceive()
+            .LoadAsync<BackupCreationSettings>(Arg.Any<CancellationToken>());
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 using BackupZCrypt.Application.Common;
-using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
-namespace BackupZCrypt.Test.Unit.Desktop.ViewModels;
+namespace BackupZCrypt.Test.Unit.Desktop.ViewModels.Operations;
 
 /// <summary>
 /// Unit tests for <see cref="CoalescingStatusProgress"/>. The engine reports from several worker threads at

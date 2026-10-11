@@ -8,7 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 
 using BackupZCrypt.Desktop.Behaviors;
-using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 
 namespace BackupZCrypt.Desktop.Views;
 
@@ -46,7 +46,7 @@ internal sealed partial class OperationDialog : UserControl
     /// <summary>
     /// The operation being presented, or <see langword="null"/> before a data context is assigned.
     /// </summary>
-    private OperationViewModelBase? viewModel;
+    private OperationSession? viewModel;
 
     /// <summary>
     /// The scope keeping keyboard input inside the overlay while it is attached.
@@ -112,7 +112,7 @@ internal sealed partial class OperationDialog : UserControl
     {
         base.OnDataContextChanged(e);
 
-        viewModel = DataContext as OperationViewModelBase;
+        viewModel = DataContext as OperationSession;
         Sync();
     }
 
@@ -206,26 +206,17 @@ internal sealed partial class OperationDialog : UserControl
     }
 
     /// <summary>
-    /// Queues a single state refresh when the running, warnings, or result state of the operation changes.
+    /// Queues a single state refresh when the phase of the session changes.
     /// </summary>
     /// <remarks>
-    /// The refresh is deferred so it sees the operation after a whole batch of changes: starting a run first
-    /// clears the result and only then raises the running flag, and reacting in between would close the overlay
-    /// for an operation that is just beginning.
+    /// The refresh is deferred so it runs on the UI thread after the change has settled, and several quick
+    /// changes collapse into one refresh.
     /// </remarks>
     /// <param name="sender">The operation that raised the event.</param>
     /// <param name="e">The property change notification.</param>
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (
-            syncQueued
-            || e.PropertyName
-                is not (
-                    nameof(OperationViewModelBase.IsRunning)
-                    or nameof(OperationViewModelBase.ShowWarnings)
-                    or nameof(OperationViewModelBase.HasResult)
-                )
-        )
+        if (syncQueued || e.PropertyName is not nameof(OperationSession.Phase))
         {
             return;
         }
@@ -248,7 +239,7 @@ internal sealed partial class OperationDialog : UserControl
             return;
         }
 
-        var panel = OperationDialogPanels.For(viewModel);
+        var panel = OperationDialogPanels.For(viewModel.Phase);
 
         if (panel is OperationDialogPanel.None)
         {

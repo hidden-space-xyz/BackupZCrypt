@@ -3,7 +3,9 @@ using BackupZCrypt.Application.Common;
 using BackupZCrypt.Application.Manifest;
 using BackupZCrypt.Application.Settings;
 using BackupZCrypt.Desktop.Resources;
+using BackupZCrypt.Desktop.ViewModels.Operations;
 using BackupZCrypt.Desktop.ViewModels;
+using BackupZCrypt.Test.Common;
 
 using NSubstitute;
 
@@ -261,8 +263,8 @@ public sealed class ExistingBackupViewModelTests : IDisposable
             () => Assert.Equal("backup-password", requests[0].Password),
             () => Assert.False(requests[0].ProceedOnWarnings),
             () => Assert.NotNull(Assert.Single(progresses)),
-            () => Assert.True(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+            () => Assert.True(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.Session.ResultTitle)
         );
     }
 
@@ -297,8 +299,8 @@ public sealed class ExistingBackupViewModelTests : IDisposable
             () => Assert.Equal("backup-password", requests[0].Password),
             () => Assert.False(requests[0].ProceedOnWarnings),
             () => Assert.NotNull(Assert.Single(progresses)),
-            () => Assert.True(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.ResultSuccessTitle, sut.ResultTitle)
+            () => Assert.True(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.ResultSuccessTitle, sut.Session.ResultTitle)
         );
     }
 
@@ -330,8 +332,8 @@ public sealed class ExistingBackupViewModelTests : IDisposable
             () => Assert.Equal("backup-source", requests[0].BackupPath),
             () => Assert.Equal("backup-password", requests[0].Password),
             () => Assert.NotNull(Assert.Single(progresses)),
-            () => Assert.True(sut.ResultIsSuccess),
-            () => Assert.Equal(Strings.VerifySuccessTitle, sut.ResultTitle)
+            () => Assert.True(sut.Session.ResultIsSuccess),
+            () => Assert.Equal(Strings.VerifySuccessTitle, sut.Session.ResultTitle)
         );
     }
 
@@ -600,25 +602,6 @@ public sealed class ExistingBackupViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// A synchronization context that invokes posted callbacks on the calling thread, making a
-    /// detection that completes after its await observable at a deterministic point in the test.
-    /// </summary>
-    private sealed class InlineSynchronizationContext : SynchronizationContext
-    {
-        /// <inheritdoc/>
-        public override void Post(SendOrPostCallback d, object? state)
-        {
-            d(state);
-        }
-
-        /// <inheritdoc/>
-        public override void Send(SendOrPostCallback d, object? state)
-        {
-            d(state);
-        }
-    }
-
-    /// <summary>
     /// The minimal concrete page used to exercise the abstract detection engine: the backup lives at
     /// the source path, as it does on the restore and verify pages. Its operation is never started by
     /// the tests that use it, so it reports a canned success.
@@ -636,13 +619,9 @@ public sealed class ExistingBackupViewModelTests : IDisposable
         protected override string BackupPath => SourcePath;
 
         /// <inheritdoc/>
-        protected override Task<Result<BackupOutcome>> ExecuteOperationAsync(
-            bool proceedOnWarnings,
-            IProgress<BackupStatus> progress,
-            CancellationToken cancellationToken
-        )
+        protected override OperationExecution CaptureExecution()
         {
-            return Task.FromResult(SuccessOutcome());
+            return static (_, _, _) => Task.FromResult(SuccessOutcome());
         }
     }
 }
