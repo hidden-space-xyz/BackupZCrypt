@@ -438,10 +438,10 @@ internal sealed partial class OperationSession : ObservableObject
         ResultIsSuccess = operation.IsSuccess;
         ResultTitle = operation.IsSuccess ? run.SuccessTitle : run.PartialTitle;
 
-        var isUpdate = operation.UnchangedFiles > 0 || operation.RemovedFiles > 0;
+        var update = operation.Update;
 
         ResultFiles =
-            isUpdate && operation.TotalFiles is 0 && operation.RemovedFiles is 0
+            update is { RemovedFiles: 0 } && operation.TotalFiles is 0
                 ? Strings.ResultNoChanges
                 : string.Format(
                     CultureInfo.CurrentCulture,
@@ -450,15 +450,15 @@ internal sealed partial class OperationSession : ObservableObject
                     operation.TotalFiles
                 );
 
-        HasResultUpdateDetails = isUpdate;
-        ResultUpdateDetails = isUpdate
-            ? string.Format(
+        HasResultUpdateDetails = update is not null;
+        ResultUpdateDetails = update is null
+            ? string.Empty
+            : string.Format(
                 CultureInfo.CurrentCulture,
                 Strings.ResultUpdateDetailsFormat,
-                operation.UnchangedFiles,
-                operation.RemovedFiles
-            )
-            : string.Empty;
+                update.UnchangedFiles,
+                update.RemovedFiles
+            );
 
         ResultDuration = string.Format(
             CultureInfo.CurrentCulture,

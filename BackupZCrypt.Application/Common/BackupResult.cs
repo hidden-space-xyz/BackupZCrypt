@@ -15,8 +15,7 @@ public sealed record class BackupResult
     /// <param name="totalFiles">The total number of files in the operation.</param>
     /// <param name="errors">The errors that occurred, if any.</param>
     /// <param name="warnings">The warnings that were raised, if any.</param>
-    /// <param name="unchangedFiles">The number of files an update carried over without rewriting them.</param>
-    /// <param name="removedFiles">The number of files an update removed from the backup.</param>
+    /// <param name="update">What an update did to the files the backup already held, or <see langword="null"/> for any other operation.</param>
     /// <exception cref="ArgumentOutOfRangeException">
     /// <paramref name="elapsedTime"/> is negative, a byte or file count is negative, or
     /// <paramref name="processedFiles"/> exceeds <paramref name="totalFiles"/>.
@@ -28,13 +27,10 @@ public sealed record class BackupResult
         int totalFiles,
         IEnumerable<LocalizableMessage>? errors = null,
         IEnumerable<LocalizableMessage>? warnings = null,
-        int unchangedFiles = 0,
-        int removedFiles = 0
+        UpdateSummary? update = null
     )
     {
         ValidateInputs(elapsedTime, totalBytes, processedFiles, totalFiles);
-        ArgumentOutOfRangeException.ThrowIfNegative(unchangedFiles);
-        ArgumentOutOfRangeException.ThrowIfNegative(removedFiles);
 
         this.ElapsedTime = elapsedTime;
         this.TotalBytes = totalBytes;
@@ -42,8 +38,7 @@ public sealed record class BackupResult
         this.TotalFiles = totalFiles;
         this.Errors = errors?.ToArray() ?? Array.Empty<LocalizableMessage>();
         this.Warnings = warnings?.ToArray() ?? Array.Empty<LocalizableMessage>();
-        this.UnchangedFiles = unchangedFiles;
-        this.RemovedFiles = removedFiles;
+        this.Update = update;
     }
 
     /// <summary>
@@ -73,16 +68,11 @@ public sealed record class BackupResult
     public int TotalFiles { get; }
 
     /// <summary>
-    /// Gets the number of files an update carried over from the previous backup without rewriting
-    /// them; zero for every other operation.
+    /// Gets what an update did to the files the backup already held, or <see langword="null"/> when
+    /// the operation was not an update. Its presence, not its counts, tells an update apart: an update
+    /// can rewrite every file and remove none.
     /// </summary>
-    public int UnchangedFiles { get; }
-
-    /// <summary>
-    /// Gets the number of files an update removed from the backup because they are no longer in the
-    /// source; zero for every other operation.
-    /// </summary>
-    public int RemovedFiles { get; }
+    public UpdateSummary? Update { get; }
 
     /// <summary>
     /// Gets the errors that occurred during the operation, if any.

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using BackupZCrypt.Application.Backup;
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop.Resources;
@@ -365,6 +367,43 @@ public sealed class OperationSessionTests : IDisposable
     internal void FormatDuration_CountsHoursPastADayInsteadOfWrapping(int seconds, string expected)
     {
         Assert.Equal(expected, OperationSession.FormatDuration(TimeSpan.FromSeconds(seconds)));
+    }
+
+    [Theory]
+    [InlineData(0, false, 0, 0, false)]
+    [InlineData(2, false, 0, 0, false)]
+    [InlineData(2, true, 0, 0, false)]
+    [InlineData(0, true, 0, 0, true)]
+    [InlineData(0, true, 4, 0, true)]
+    [InlineData(0, true, 3, 1, false)]
+    internal async Task RunAsync_Completed_ShowsTheUpdateRowForEveryUpdateAndNoChangesOnlyWhenNothingChanged(
+        int files,
+        bool isUpdate,
+        int unchangedFiles,
+        int removedFiles,
+        bool nothingChanged
+    )
+    {
+        OperationSession sut = new();
+        UpdateSummary? update = isUpdate ? new(unchangedFiles, removedFiles) : null;
+        BackupResult completion = new(TimeSpan.FromSeconds(1), 16, files, files, update: update);
+
+        await sut.RunAsync(
+            Run((_, _, _) => Task.FromResult(Result<BackupOutcome>.Success(BackupOutcome.Completed(completion))))
+        );
+
+        var expectedFiles = nothingChanged
+            ? Strings.ResultNoChanges
+            : string.Format(CultureInfo.CurrentCulture, Strings.ResultFilesFormat, files, files);
+        var expectedUpdate = isUpdate
+            ? string.Format(CultureInfo.CurrentCulture, Strings.ResultUpdateDetailsFormat, unchangedFiles, removedFiles)
+            : string.Empty;
+
+        Assert.Multiple(
+            () => Assert.Equal(expectedFiles, sut.ResultFiles),
+            () => Assert.Equal(isUpdate, sut.HasResultUpdateDetails),
+            () => Assert.Equal(expectedUpdate, sut.ResultUpdateDetails)
+        );
     }
 
     [Fact]

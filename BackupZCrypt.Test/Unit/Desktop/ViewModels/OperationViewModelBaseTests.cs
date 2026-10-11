@@ -149,8 +149,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
                         1,
                         1,
                         warnings: [new LocalizableMessage(MessageCode.SourceLinksSkippedFormat, 1, "linked")],
-                        unchangedFiles: 7,
-                        removedFiles: 2
+                        update: new UpdateSummary(7, 2)
                     )
                 )
             )
@@ -185,7 +184,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
         var sut = CreateSut();
         StubOperation(
             Result<BackupOutcome>.Success(
-                BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0, unchangedFiles: 4))
+                BackupOutcome.Completed(new BackupResult(TimeSpan.Zero, 0, 0, 0, update: new UpdateSummary(4, 0)))
             )
         );
 

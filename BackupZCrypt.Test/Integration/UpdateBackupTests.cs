@@ -1,4 +1,5 @@
 using BackupZCrypt.Application.Backup;
+using BackupZCrypt.Application.Common;
 using BackupZCrypt.Domain.Algorithms;
 using BackupZCrypt.Domain.Archive;
 using BackupZCrypt.Test.Common;
@@ -68,6 +69,7 @@ public sealed class UpdateBackupTests
                     updateResult.Value.Completion!.TotalFiles,
                     updateResult.Value.Completion!.ProcessedFiles
                 ),
+            () => Assert.Equal(new UpdateSummary(2, 0), updateResult.Value.Completion!.Update),
             () => Assert.Equal(4, ChunkFiles(destination.Path).Length)
         );
 
@@ -220,6 +222,40 @@ public sealed class UpdateBackupTests
             () => Assert.Equal(1, restoreResult.Value.Completion!.TotalFiles),
             () => _ = Assert.Single(Directory.GetFiles(restored.Path, "*", SearchOption.AllDirectories)),
             () => Assert.Equal(SharedContent, survivorText)
+        );
+    }
+
+    [Fact]
+    internal async Task Update_EveryFileChangedAndNoneRemoved_StillReportsAnUpdate()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var operations = provider.GetRequiredService<IBackupOperations>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+
+        _ = source.WriteText("first.txt", "first original");
+        _ = source.WriteText(Path.Join("dir", "second.txt"), "second original");
+
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+
+        _ = source.WriteText("first.txt", "first rewritten with other content");
+        _ = source.WriteText(Path.Join("dir", "second.txt"), "second rewritten with other content");
+
+        var updateResult = await operations.UpdateAsync(
+            NewUpdateRequest(source.Path, destination.Path),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess),
+            () => Assert.Null(createResult.Value.Completion!.Update),
+            () => Assert.True(updateResult.IsSuccess && updateResult.Value.Completion!.IsSuccess),
+            () => Assert.Equal(2, updateResult.Value.Completion!.TotalFiles),
+            () => Assert.Equal(new UpdateSummary(0, 0), updateResult.Value.Completion!.Update)
         );
     }
 

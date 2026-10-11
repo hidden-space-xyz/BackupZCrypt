@@ -267,8 +267,7 @@ public sealed class BackupSafetyTests
                     [MessageCode.UpdateRemovesFilesFormat],
                     preview.Value.PendingWarnings.Select(static w => w.Code)
                 ),
-            () => Assert.Equal(1, update.Value.Completion!.RemovedFiles),
-            () => Assert.Equal(1, update.Value.Completion!.UnchangedFiles),
+            () => Assert.Equal(new UpdateSummary(1, 1), update.Value.Completion!.Update),
             () => Assert.Equal(0, update.Value.Completion!.TotalFiles)
         );
     }
@@ -291,7 +290,7 @@ public sealed class BackupSafetyTests
 
         Assert.Multiple(
             () => AssertCompleted(update),
-            () => Assert.Equal(1, update.Value.Completion!.UnchangedFiles),
+            () => Assert.Equal(new UpdateSummary(1, 0), update.Value.Completion!.Update),
             () => Assert.Equal(0, update.Value.Completion!.TotalFiles)
         );
     }
@@ -342,7 +341,7 @@ public sealed class BackupSafetyTests
         AssertCompleted(await RestoreAsync(provider, destination.Path, restored.Path));
 
         Assert.Multiple(
-            () => Assert.Equal(0, update.Value.Completion!.RemovedFiles),
+            () => Assert.Equal(0, update.Value.Completion!.Update?.RemovedFiles),
             () =>
                 Assert.Equal(
                     [MessageCode.InaccessibleFolderFormat],

@@ -415,8 +415,7 @@ internal sealed class BackupWriter(
                     plan.WorkItems.Count + snapshot.Collisions.Count + snapshot.UnsupportedNames.Count,
                     errors,
                     snapshot.LinksWarning is { } linksWarning ? [linksWarning] : null,
-                    plan.CarriedOver.Count,
-                    plan.RemovedCount
+                    new UpdateSummary(plan.CarriedOver.Count, plan.RemovedCount)
                 )
             );
         }
