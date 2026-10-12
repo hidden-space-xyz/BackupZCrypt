@@ -1,7 +1,10 @@
 using BackupZCrypt.Application.Engine;
+using BackupZCrypt.Application.FileSystem;
 using BackupZCrypt.Infrastructure.FileSystem;
 using BackupZCrypt.Test.Common;
 using BackupZCrypt.Test.Unit.Domain.Archive;
+
+using NSubstitute;
 
 namespace BackupZCrypt.Test.Unit.Application.Engine;
 
@@ -94,6 +97,59 @@ public sealed class RestorePathGuardTests
                     root,
                     Path.Join(link, "nested")
                 )
+        );
+    }
+
+    [Fact]
+    internal void ResolveSafeDestination_VolumeRootAsTheRestoreRoot_LandsDirectlyBelowIt()
+    {
+        var volumeRoot = Path.GetPathRoot(Path.GetTempPath())!;
+
+        var resolved = RestorePathGuard.ResolveSafeDestination(volumeRoot, "docs/notes.md");
+
+        Assert.Equal(Path.Join(volumeRoot, "docs", "notes.md"), resolved);
+    }
+
+    [Fact]
+    internal void EnsureNoReparsePointDescendants_DirectoryOutsideTheRoot_IsRejectedWithoutProbing()
+    {
+        var fileOperations = Substitute.For<IFileOperationsService>();
+        var root = Path.Join(Path.GetTempPath(), "bzc-guard-root");
+
+        _ = Assert.Throws<InvalidDataException>(
+            () =>
+                RestorePathGuard.EnsureNoReparsePointDescendants(
+                    fileOperations,
+                    root,
+                    Path.Join(Path.GetTempPath(), "bzc-guard-elsewhere", "nested")
+                )
+        );
+        _ = fileOperations.DidNotReceive().IsReparsePoint(Arg.Any<string>());
+    }
+
+    [Fact]
+    internal void EnsureNoReparsePointDescendants_TheRootItself_IsAcceptedWithoutProbing()
+    {
+        var fileOperations = Substitute.For<IFileOperationsService>();
+        var root = Path.Join(Path.GetTempPath(), "bzc-guard-root");
+
+        RestorePathGuard.EnsureNoReparsePointDescendants(fileOperations, root, root);
+
+        _ = fileOperations.DidNotReceive().DirectoryExists(Arg.Any<string>());
+    }
+
+    [Fact]
+    internal void EnsureNoReparsePointDescendants_PlainFoldersBelowTheRoot_ProbesEachSegmentAndAccepts()
+    {
+        var fileOperations = Substitute.For<IFileOperationsService>();
+        var root = Path.Join(Path.GetTempPath(), "bzc-guard-root");
+        _ = fileOperations.DirectoryExists(Arg.Any<string>()).Returns(true);
+
+        RestorePathGuard.EnsureNoReparsePointDescendants(fileOperations, root, Path.Join(root, "a", "b"));
+
+        Assert.Multiple(
+            () => _ = fileOperations.Received(1).IsReparsePoint(Path.Join(Path.GetFullPath(root), "a")),
+            () => _ = fileOperations.Received(1).IsReparsePoint(Path.Join(Path.GetFullPath(root), "a", "b"))
         );
     }
 }

@@ -173,6 +173,28 @@ public sealed class FileSystemServiceTests
     }
 
     [Fact]
+    internal async Task WriteFileAtomicallyAsync_PathWithoutAFolder_IsRefusedBeforeAnythingIsWritten()
+    {
+        var service = new FileOperationsService();
+        var writerCalled = false;
+
+        _ = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.WriteFileAtomicallyAsync(
+                    "no-folder.bin",
+                    (_, _) =>
+                    {
+                        writerCalled = true;
+                        return Task.CompletedTask;
+                    },
+                    TestContext.Current.CancellationToken
+                )
+        );
+
+        Assert.False(writerCalled, "The writer ran for a path the temporary file has no folder to sit beside.");
+    }
+
+    [Fact]
     internal async Task ScanDirectoryAsync_Tree_ReportsFilesAndOnlyTheEmptyLeafFolders()
     {
         using var dir = new TempDir();

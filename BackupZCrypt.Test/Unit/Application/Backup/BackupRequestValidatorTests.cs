@@ -1224,4 +1224,178 @@ public sealed class BackupRequestValidatorTests
 
         Assert.Equal([MessageCode.AlgorithmNotSupported], Codes(errors));
     }
+
+    [Theory]
+    [InlineData(true, MessageCode.DestinationAccessDenied)]
+    [InlineData(false, null)]
+    internal async Task AnalyzeErrors_CreateIntoAFolderThatCannotBeListed_ReportsOnlyADeniedListing(
+        bool denied,
+        MessageCode? expected
+    )
+    {
+        this.StubReadableSource();
+        _ = this.systemStorage.GetPathRoot(Arg.Any<string>()).Returns(string.Empty);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations
+            .GetDirectoryEntryNames(DestinationDir)
+            .Returns(_ => throw (denied ? new UnauthorizedAccessException("denied") : new IOException("gone")));
+
+        var errors = await this.CreateSut()
+            .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        MessageCode[] expectedCodes = expected is { } code ? [code] : [];
+        Assert.Equal(expectedCodes, Codes(errors));
+    }
+
+    [Fact]
+    internal async Task AnalyzeErrors_SourceListingCancelled_PropagatesTheCancellation()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () =>
+                this.CreateSut()
+                    .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_CreateIntoAFolderThatCannotBeListed_SkipsTheReplacedBackupWarning()
+    {
+        this.StubReadableSource();
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(true);
+        _ = this.fileOperations
+            .GetDirectoryEntryNames(DestinationDir)
+            .Returns(_ => throw new UnauthorizedAccessException("denied"));
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Weak, 20, 10, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Equal([MessageCode.WeakPasswordWarning], Codes(warnings));
+    }
+
+    [Theory]
+    [InlineData(ValidatedOperation.Create)]
+    [InlineData(ValidatedOperation.Update)]
+    internal async Task AnalyzeWarnings_NamesThatCollideOrCannotBeRecorded_AreAnnouncedBeforeTheBackup(
+        ValidatedOperation operation
+    )
+    {
+        var composed = Path.Join(SourceDir, "café.txt");
+        var decomposed = Path.Join(SourceDir, "café.txt");
+        var outside = Path.Join(Path.GetTempPath(), "bzc-validator-outside.txt");
+
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(composed, decomposed, outside));
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir, operation: operation),
+                TestContext.Current.CancellationToken
+            );
+
+        Assert.Multiple(
+            () =>
+                Assert.Equal(
+                    [MessageCode.SourceNameCollisionsFormat, MessageCode.SourceUnsupportedNamesFormat],
+                    Codes(warnings)
+                ),
+            () => Assert.Equal<object>([1, PathSample.Of(["café.txt"])], warnings[0].Args),
+            () =>
+                Assert.Equal<object>(
+                    [1, PathSample.Of([Path.GetRelativePath(SourceDir, outside)])],
+                    warnings[1].Args
+                )
+        );
+    }
+
+    [Theory]
+    [InlineData(9_000L, "FAT32", true)]
+    [InlineData(9_000L, "fat", true)]
+    [InlineData(9_000L, "exFAT", false)]
+    [InlineData(9_000L, "NTFS", false)]
+    [InlineData(9_000L, null, false)]
+    [InlineData(8_000L, "FAT32", false)]
+    internal async Task AnalyzeWarnings_CreateOntoAFatDrive_WarnsOnlyWhenTheChunksCanOutgrowTheFolderLimit(
+        long sizeInMebibytes,
+        string? driveFormat,
+        bool expectWarning
+    )
+    {
+        var driveRoot = Path.GetPathRoot(DestinationDir)!;
+        var sourceFile = Path.Join(SourceDir, "large.bin");
+
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(sourceFile));
+        _ = this.fileOperations.GetFileSize(sourceFile).Returns(sizeInMebibytes * 1024 * 1024);
+        _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(driveRoot);
+        _ = this.systemStorage.IsDriveReady(driveRoot).Returns(false);
+        _ = this.systemStorage.GetDriveFormat(driveRoot).Returns(driveFormat);
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        MessageCode[] expectedCodes = expectWarning ? [MessageCode.FatFileSystemWarning] : [];
+        Assert.Equal(expectedCodes, Codes(warnings));
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_SourceSizesBeyondWhatALongHolds_SaturateInsteadOfWrapping()
+    {
+        var driveRoot = Path.GetPathRoot(DestinationDir)!;
+        var huge = Path.Join(SourceDir, "huge.bin");
+        var small = Path.Join(SourceDir, "small.bin");
+
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .Returns(Scan(huge, small));
+        _ = this.fileOperations.GetFileSize(huge).Returns(long.MaxValue - 10);
+        _ = this.fileOperations.GetFileSize(small).Returns(100L);
+        _ = this.systemStorage.GetPathRoot(DestinationDir).Returns(driveRoot);
+        _ = this.systemStorage.IsDriveReady(driveRoot).Returns(true);
+        _ = this.systemStorage.GetAvailableFreeSpace(driveRoot).Returns(long.MaxValue - 1);
+        _ = this.passwordService
+            .AnalyzePasswordStrength(Arg.Any<string>())
+            .Returns(new PasswordStrengthAnalysis(PasswordStrength.Strong, 95, 110, []));
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        var lowSpace = Assert.Single(warnings, static w => w.Code is MessageCode.LowDiskSpaceFormat);
+        Assert.Equal<object>([new ByteCount(long.MaxValue - 1), new ByteCount(long.MaxValue)], lowSpace.Args);
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_RestoreIntoAFolderThatDoesNotExistYet_ReportsNothingWithoutListingIt()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.fileOperations.DirectoryExists(DestinationDir).Returns(false);
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(
+                ValidRequest(SourceDir, DestinationDir, operation: ValidatedOperation.Restore),
+                TestContext.Current.CancellationToken
+            );
+
+        Assert.Empty(warnings);
+        _ = await this.fileOperations.DidNotReceive()
+            .GetFilesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
 }

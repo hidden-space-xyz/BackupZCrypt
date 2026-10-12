@@ -18,6 +18,7 @@ public sealed class PathNormalizationHelperTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("\"   \"")]
     internal void TryNormalize_EmptyOrWhitespace_ReturnsEmptyWithoutError(string rawPath)
     {
         var result = PathNormalizationHelper.TryNormalize(rawPath, out var error);

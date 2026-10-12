@@ -70,6 +70,23 @@ public sealed class SystemStorageServiceTests
     }
 
     [Fact]
+    internal void GetDriveFormat_VolumeHoldingTheTempDirectory_NamesItsFileSystem()
+    {
+        var service = new SystemStorageService();
+        var root = service.GetPathRoot(Path.GetTempPath())!;
+
+        Assert.False(string.IsNullOrWhiteSpace(service.GetDriveFormat(root)));
+    }
+
+    [Fact]
+    internal void GetDriveFormat_EmptyRoot_ReturnsNullWithoutThrowing()
+    {
+        var service = new SystemStorageService();
+
+        Assert.Null(service.GetDriveFormat(string.Empty));
+    }
+
+    [Fact]
     internal void GetPathRoot_PathWithNoVolume_ReturnsTheUnknownSentinelWithoutThrowing()
     {
         var service = new SystemStorageService();
