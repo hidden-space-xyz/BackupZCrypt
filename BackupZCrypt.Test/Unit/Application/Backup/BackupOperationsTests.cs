@@ -229,12 +229,12 @@ public sealed class BackupOperationsTests
     }
 
     /// <summary>
-    /// Builds a path the running platform cannot resolve to an absolute form.
+    /// Builds a path no platform can resolve to an absolute form.
     /// </summary>
     /// <returns>A raw path that fails normalization.</returns>
     private static string UnnormalizablePath()
     {
-        return OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+        return new string('a', 300_000);
     }
 
     /// <summary>

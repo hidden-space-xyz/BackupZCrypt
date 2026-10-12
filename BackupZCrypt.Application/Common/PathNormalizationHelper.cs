@@ -39,8 +39,11 @@ internal static class PathNormalizationHelper
     /// see.
     /// </para>
     /// <para>
-    /// On Windows, a path holding characters the file system refuses is rejected here with a message
-    /// that names the problem, instead of failing later with the system's own description.
+    /// A path holding a null character is rejected on every platform before its environment
+    /// variables are expanded, since Windows expands them as a null-terminated string and would
+    /// silently drop the null character and everything after it. On Windows, a path holding other
+    /// characters the file system refuses is rejected here with a message that names the problem,
+    /// instead of failing later with the system's own description.
     /// </para>
     /// </remarks>
     /// <param name="rawPath">The raw path to normalize; whitespace yields an empty string.</param>
@@ -60,6 +63,12 @@ internal static class PathNormalizationHelper
         if (string.IsNullOrWhiteSpace(entered))
         {
             return string.Empty;
+        }
+
+        if (entered.Contains('\0', StringComparison.Ordinal))
+        {
+            error = new LocalizableMessage(MessageCode.PathInvalidCharactersFormat, entered);
+            return null;
         }
 
         try

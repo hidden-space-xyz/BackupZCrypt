@@ -77,6 +77,20 @@ public sealed class PathNormalizationHelperTests
     }
 
     [Fact]
+    internal void TryNormalize_RootedPathWithANullCharacter_IsRejectedAsInvalidCharacters()
+    {
+        var entered = Path.Join(Path.GetTempPath(), "bad\0name");
+
+        var result = PathNormalizationHelper.TryNormalize(entered, out var error);
+
+        Assert.Multiple(
+            () => Assert.Null(result),
+            () => Assert.Equal(MessageCode.PathInvalidCharactersFormat, error?.Code),
+            () => Assert.Equal<object>([entered], error!.Args)
+        );
+    }
+
+    [Fact]
     internal void TryNormalize_PaddedPathWithEnvironmentVariable_TrimsAndExpandsBeforeResolving()
     {
         var variableName = "BZC_TEST_ROOT_" + Guid.NewGuid().ToString("N");
@@ -104,7 +118,7 @@ public sealed class PathNormalizationHelperTests
     [Fact]
     internal void TryNormalize_UnresolvablePath_ReturnsNullAndAnError()
     {
-        var invalid = OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+        var invalid = new string('a', 300_000);
 
         var result = PathNormalizationHelper.TryNormalize(invalid, out var error);
 

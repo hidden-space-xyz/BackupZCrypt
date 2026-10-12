@@ -264,13 +264,13 @@ public sealed class BackupRequestValidatorTests
     }
 
     /// <summary>
-    /// Builds a path the running platform cannot resolve to an absolute form: one longer than
-    /// Windows can address, and one carrying an embedded null character everywhere else.
+    /// Builds a path no platform can resolve to an absolute form: a relative one, longer than
+    /// Windows can address.
     /// </summary>
     /// <returns>A raw path that fails normalization.</returns>
     private static string UnnormalizablePath()
     {
-        return OperatingSystem.IsWindows() ? new string('a', 300_000) : "some-folder\0name";
+        return new string('a', 300_000);
     }
 
     [Fact]
