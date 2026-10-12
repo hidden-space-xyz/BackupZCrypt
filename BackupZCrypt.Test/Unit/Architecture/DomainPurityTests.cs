@@ -8,10 +8,17 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// </summary>
 /// <remarks>
 /// <c>System.IO.Path</c> stays allowed: it only manipulates strings. Streams stay allowed too, since
-/// the codec reads and writes in-memory buffers through them.
+/// the codec reads and writes in-memory buffers through them. The tracker types that coverage
+/// instrumentation injects into the assembly write their hits to disk and are not Domain code, so
+/// they are skipped.
 /// </remarks>
 public sealed class DomainPurityTests
 {
+    /// <summary>
+    /// The namespace of the tracker types coverage instrumentation injects into an instrumented assembly.
+    /// </summary>
+    private const string CoverageInstrumentationNamespace = "Microsoft.CodeCoverage";
+
     /// <summary>
     /// The types whose use means the Domain is touching the outside world.
     /// </summary>
@@ -44,6 +51,7 @@ public sealed class DomainPurityTests
     {
         var violations = typeof(BackupLayout)
             .Assembly.GetTypes()
+            .Where(static type => !IsInNamespace(type, CoverageInstrumentationNamespace))
             .SelectMany(type =>
                 TypeReferences
                     .Of(type)
@@ -64,9 +72,18 @@ public sealed class DomainPurityTests
     private static bool IsForbidden(Type type)
     {
         return ForbiddenTypes.Contains(type.FullName ?? string.Empty)
-            || ForbiddenNamespaces.Any(ns =>
-                type.Namespace is { } typeNamespace
-                && (typeNamespace == ns || typeNamespace.StartsWith(ns + ".", StringComparison.Ordinal))
-            );
+            || ForbiddenNamespaces.Any(ns => IsInNamespace(type, ns));
+    }
+
+    /// <summary>
+    /// Determines whether a type is declared in a namespace or one nested inside it.
+    /// </summary>
+    /// <param name="type">The type to classify.</param>
+    /// <param name="ns">The namespace.</param>
+    /// <returns><see langword="true"/> when the type's namespace is <paramref name="ns"/> or nested inside it.</returns>
+    private static bool IsInNamespace(Type type, string ns)
+    {
+        return type.Namespace is { } typeNamespace
+            && (typeNamespace == ns || typeNamespace.StartsWith(ns + ".", StringComparison.Ordinal));
     }
 }
