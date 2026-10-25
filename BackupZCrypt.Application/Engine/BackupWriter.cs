@@ -510,14 +510,7 @@ internal sealed class BackupWriter(
     )
     {
         HashSet<string> directories = new(snapshot.EmptyDirectories, StringComparer.Ordinal);
-
-        foreach (var directory in previousDirectories ?? [])
-        {
-            if (snapshot.IsInsideInaccessibleDirectory(directory))
-            {
-                _ = directories.Add(directory);
-            }
-        }
+        directories.UnionWith((previousDirectories ?? []).Where(snapshot.IsInsideInaccessibleDirectory));
 
         directories.RemoveWhere(directory =>
             entries.Any(e => e.OriginalPath.StartsWith(directory + "/", StringComparison.Ordinal))

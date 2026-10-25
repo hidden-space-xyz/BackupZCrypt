@@ -290,24 +290,19 @@ public sealed class ChunkSealerTests
     [Fact]
     internal async Task Seal_WipesTheNonceTheAssociatedDataAndTheCompressionBuffer()
     {
-        MemoryStream? compressedOutput = null;
+        await using MemoryStream compressedOutput = new();
+        compressedOutput.Write([1, 2, 3, 4, 5, 6, 7, 8]);
+        compressedOutput.Position = 0;
         var compression = Substitute.For<ICompressionStrategy>();
         _ = compression
             .CompressAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                compressedOutput = new MemoryStream();
-                compressedOutput.Write([1, 2, 3, 4, 5, 6, 7, 8]);
-                compressedOutput.Position = 0;
-                return Task.FromResult<Stream>(compressedOutput);
-            });
+            .Returns(Task.FromResult<Stream>(compressedOutput));
         RecordingEncryption encryption = new();
         ChunkSealer sealer = new(CreateRandomKey(), CreateRandomKey(), encryption, compression);
         var chunk = CreateSample();
 
         _ = await sealer.SealAsync(chunk, SHA256.HashData(chunk), CancellationToken.None);
 
-        Assert.NotNull(compressedOutput);
         Assert.All(compressedOutput.GetBuffer().AsSpan(0, 8).ToArray(), static b => Assert.Equal(0, b));
         AssertAllWiped(encryption.Nonces);
         AssertAllWiped(encryption.AssociatedData);
@@ -505,13 +500,22 @@ public sealed class ChunkSealerTests
         var compression = Substitute.For<ICompressionStrategy>();
         _ = compression
             .CompressAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                MemoryStream memory = new(output.ToArray(), writable: false);
-                return Task.FromResult<Stream>(asMemoryStream ? memory : new BufferedStream(memory));
-            });
+            .Returns(_ => Task.FromResult(OpenFixedStream(output, asMemoryStream)));
 
         return compression;
+    }
+
+    /// <summary>
+    /// Opens a read-only stream over a copy of fixed bytes, either as a <see cref="MemoryStream"/>
+    /// or wrapped in another stream type.
+    /// </summary>
+    /// <param name="contents">The bytes the stream yields.</param>
+    /// <param name="asMemoryStream">Whether the stream is a <see cref="MemoryStream"/>.</param>
+    /// <returns>The stream, which the caller owns and disposes.</returns>
+    private static Stream OpenFixedStream(byte[] contents, bool asMemoryStream)
+    {
+        MemoryStream memory = new(contents.ToArray(), writable: false);
+        return asMemoryStream ? memory : new BufferedStream(memory);
     }
 
     /// <summary>

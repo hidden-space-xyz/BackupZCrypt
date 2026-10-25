@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop.Presentation;
@@ -14,30 +13,12 @@ namespace BackupZCrypt.Test.Unit.Desktop.Presentation;
 /// the placeholders the resources themselves declare, so a code added without a resource — which the app
 /// would silently render as the raw enum name — fails here rather than in front of a user.
 /// </summary>
-public sealed partial class MessageLocalizerTests
+public sealed class MessageLocalizerTests
 {
     /// <summary>
     /// The suffix that, by convention, marks a code whose resource consumes <c>string.Format</c> arguments.
     /// </summary>
     private const string FormatSuffix = "Format";
-
-    /// <summary>
-    /// The match timeout the placeholder pattern runs under, mirroring the bound the production
-    /// patterns carry so no regex in the solution is left unbounded.
-    /// </summary>
-    private const int RegexTimeoutMilliseconds = 1000;
-
-    /// <summary>
-    /// Gets the pattern matching the opening of a <c>string.Format</c> placeholder, capturing its
-    /// argument index.
-    /// </summary>
-    /// <value>The placeholder pattern.</value>
-    [GeneratedRegex(
-        @"\{(?<index>\d+)[^}]*\}",
-        RegexOptions.ExplicitCapture,
-        RegexTimeoutMilliseconds
-    )]
-    private static partial Regex PlaceholderPattern { get; }
 
     [Fact]
     internal void Localize_EveryMessageCode_ResolvesToLocalizedTextRatherThanTheCodeName()
@@ -85,7 +66,7 @@ public sealed partial class MessageLocalizerTests
             {
                 offenders.Add($"{name} (dropped an argument, rendering '{text}')");
             }
-            else if (PlaceholderPattern.IsMatch(text))
+            else if (PlaceholderIndexes(text).Any())
             {
                 offenders.Add($"{name} (left an unsubstituted placeholder in '{text}')");
             }
@@ -100,7 +81,7 @@ public sealed partial class MessageLocalizerTests
         var offenders = Enum.GetValues<MessageCode>()
             .Where(static code =>
                 !code.ToString().EndsWith(FormatSuffix, StringComparison.Ordinal)
-                && PlaceholderPattern.IsMatch(MessageLocalizer.Localize(new LocalizableMessage(code)))
+                && PlaceholderIndexes(MessageLocalizer.Localize(new LocalizableMessage(code))).Any()
             )
             .Select(static code => code.ToString())
             .ToList();
@@ -202,11 +183,8 @@ public sealed partial class MessageLocalizerTests
     /// <returns>One argument per placeholder index, or an empty array when the resource takes none.</returns>
     private static object[] ArgumentsFor(string key)
     {
-        var highestIndex = PlaceholderPattern
-            .Matches(Strings.GetByKey(key))
-            .Select(static match =>
-                int.Parse(match.Groups["index"].Value, CultureInfo.InvariantCulture)
-            )
+        var highestIndex = PlaceholderIndexes(Strings.GetByKey(key))
+            .Select(static index => int.Parse(index, CultureInfo.InvariantCulture))
             .DefaultIfEmpty(-1)
             .Max();
 
@@ -215,5 +193,36 @@ public sealed partial class MessageLocalizerTests
             .. Enumerable.Range(0, highestIndex + 1)
                 .Select(static index => (object)string.Create(CultureInfo.InvariantCulture, $"ARG{index}")),
         ];
+    }
+
+    /// <summary>
+    /// Lists the argument indexes of the <c>string.Format</c> placeholders in a text: every opening brace
+    /// followed at once by a decimal index and closed by a later brace.
+    /// </summary>
+    /// <param name="text">The text to scan.</param>
+    /// <returns>The digits of each placeholder's index, in text order.</returns>
+    private static IEnumerable<string> PlaceholderIndexes(string text)
+    {
+        var open = text.IndexOf('{', StringComparison.Ordinal);
+
+        while (open >= 0)
+        {
+            var digits = open + 1;
+            var end = digits;
+
+            while (end < text.Length && char.IsDigit(text[end]))
+            {
+                end++;
+            }
+
+            var close = end > digits ? text.IndexOf('}', end) : -1;
+
+            if (close >= 0)
+            {
+                yield return text[digits..end];
+            }
+
+            open = text.IndexOf('{', Math.Max(close, open) + 1);
+        }
     }
 }

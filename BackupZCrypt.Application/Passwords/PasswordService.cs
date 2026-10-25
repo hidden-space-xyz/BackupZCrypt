@@ -547,7 +547,38 @@ internal sealed partial class PasswordService : IPasswordService
     /// <returns>The penalty in bits.</returns>
     private static double YearPenalty(string password)
     {
-        return YearRegex.Count(password) * 4.0;
+        return CountYears(password) * 4.0;
+    }
+
+    /// <summary>
+    /// Counts the four-digit years in the 1900-2099 range that are not part of a longer number,
+    /// wherever they sit — <c>Summer2024</c> included — since birth and current years are among the
+    /// most guessable substrings a password can contain.
+    /// </summary>
+    /// <param name="password">The password to inspect.</param>
+    /// <returns>The number of runs of exactly four ASCII digits that begin with 19 or 20.</returns>
+    private static int CountYears(string password)
+    {
+        var count = 0;
+        var start = 0;
+
+        while (start < password.Length)
+        {
+            var end = start;
+            while (end < password.Length && char.IsAsciiDigit(password[end]))
+            {
+                end++;
+            }
+
+            if (end - start == 4 && password.AsSpan(start, 2) is "19" or "20")
+            {
+                count++;
+            }
+
+            start = end + 1;
+        }
+
+        return count;
     }
 
     /// <summary>
@@ -662,7 +693,7 @@ internal sealed partial class PasswordService : IPasswordService
             tips.Add(MessageCode.TipAvoidCommonWords);
         }
 
-        if (YearRegex.IsMatch(password))
+        if (CountYears(password) > 0)
         {
             tips.Add(MessageCode.TipAvoidYears);
         }
@@ -760,13 +791,4 @@ internal sealed partial class PasswordService : IPasswordService
     /// <value>The generated regex.</value>
     [GeneratedRegex(@"[\x20-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]", RegexOptions.None, RegexTimeoutMilliseconds)]
     private static partial Regex SpecialCharRegex { get; }
-
-    /// <summary>
-    /// Gets the source-generated regex that matches a four-digit year in the 1900-2099 range that is
-    /// not part of a longer number, wherever it sits — <c>Summer2024</c> included — since birth and
-    /// current years are among the most guessable substrings a password can contain.
-    /// </summary>
-    /// <value>The generated regex.</value>
-    [GeneratedRegex(@"(?<![0-9])(?:19|20)[0-9]{2}(?![0-9])", RegexOptions.None, RegexTimeoutMilliseconds)]
-    private static partial Regex YearRegex { get; }
 }

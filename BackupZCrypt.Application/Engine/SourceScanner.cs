@@ -116,16 +116,15 @@ internal static class SourceScanner
             files.Add(candidate);
         }
 
-        List<string> emptyDirectories = [];
-        foreach (var directory in scan.EmptyDirectories)
-        {
-            if (TryGetManifestPath(sourcePath, directory, out var manifestPath))
-            {
-                emptyDirectories.Add(manifestPath);
-            }
-        }
-
-        emptyDirectories.Sort(StringComparer.Ordinal);
+        List<string> emptyDirectories =
+        [
+            .. scan
+                .EmptyDirectories.Select(directory =>
+                    TryGetManifestPath(sourcePath, directory, out var manifestPath) ? manifestPath : null
+                )
+                .OfType<string>()
+                .Order(StringComparer.Ordinal),
+        ];
 
         List<string> skippedLinks =
         [
@@ -252,15 +251,8 @@ internal sealed record class SourceSnapshot(
     {
         ArgumentNullException.ThrowIfNull(manifestPath);
 
-        foreach (var directory in this.InaccessibleDirectories)
-        {
-            var prefix = ManifestPathPolicy.Canonicalize(directory) + "/";
-            if (manifestPath.StartsWith(prefix, PathNormalizationHelper.PathComparer))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return this.InaccessibleDirectories
+            .Select(static directory => ManifestPathPolicy.Canonicalize(directory) + "/")
+            .Any(prefix => manifestPath.StartsWith(prefix, PathNormalizationHelper.PathComparer));
     }
 }

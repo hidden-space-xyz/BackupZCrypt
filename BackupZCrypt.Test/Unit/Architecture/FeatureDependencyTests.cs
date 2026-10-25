@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 using BackupZCrypt.Application.Common;
 using BackupZCrypt.Desktop;
@@ -35,7 +34,7 @@ namespace BackupZCrypt.Test.Unit.Architecture;
 /// constant.
 /// </para>
 /// </remarks>
-public sealed partial class FeatureDependencyTests
+public sealed class FeatureDependencyTests
 {
     /// <summary>
     /// The project whose feature folders are checked.
@@ -121,7 +120,7 @@ public sealed partial class FeatureDependencyTests
     internal void FeatureReferences_MatchTheDocumentedFeatureRules(string feature)
     {
         var found = CompiledReferences(ApplicationTypes().Where(type => FeatureOf(type) == feature), FeatureOf)
-            .Concat(SourceReferences(FeatureFolder(feature), RelativeFeatureNamespace()))
+            .Concat(SourceReferences(FeatureFolder(feature), RelativeFeatureMentions))
             .Where(reference => reference.Feature != feature);
 
         AssertReferencesMatch(feature, FeatureReferences[feature], found);
@@ -133,7 +132,10 @@ public sealed partial class FeatureDependencyTests
     {
         var found = CompiledReferences(OuterAssembliesByProject[project].GetTypes(), AreaOf)
             .Concat(
-                SourceReferences(Path.Join(OnDiskFormatFixtures.RepositoryRoot, project), QualifiedArea())
+                SourceReferences(
+                    Path.Join(OnDiskFormatFixtures.RepositoryRoot, project),
+                    static text => QualifiedAreaMentions(text).Select(static mention => mention.Feature)
+                )
             );
 
         AssertReferencesMatch(project, OuterReferences[project], found);
@@ -276,16 +278,17 @@ public sealed partial class FeatureDependencyTests
     /// Lists the features or areas the C# and XAML source files under a folder mention.
     /// </summary>
     /// <param name="folder">The folder searched, excluding build output.</param>
-    /// <param name="pattern">The expression whose <c>feature</c> group names what a mention refers to.</param>
+    /// <param name="mentions">Reads the features or areas a file's text mentions.</param>
     /// <returns>Each referenced feature or area with the file that mentions it.</returns>
-    private static IEnumerable<(string Feature, string Origin)> SourceReferences(string folder, Regex pattern)
+    private static IEnumerable<(string Feature, string Origin)> SourceReferences(
+        string folder,
+        Func<string, IEnumerable<string>> mentions
+    )
     {
         return SourceFiles(folder, "*.cs")
             .Concat(SourceFiles(folder, "*.axaml"))
             .SelectMany(file =>
-                pattern
-                    .Matches(File.ReadAllText(file))
-                    .Select(match => (match.Groups["feature"].Value, Path.GetRelativePath(folder, file)))
+                mentions(File.ReadAllText(file)).Select(feature => (feature, Path.GetRelativePath(folder, file)))
             );
     }
 
@@ -357,26 +360,88 @@ public sealed partial class FeatureDependencyTests
     /// </returns>
     private static string? AreaOf(Type type)
     {
-        return type.Namespace is { } ns && QualifiedArea().Match(ns) is { Success: true, Index: 0 } match
-            ? match.Groups["feature"].Value
+        return type.Namespace is { } ns
+            ? QualifiedAreaMentions(ns)
+                .Where(static mention => mention.Index == 0)
+                .Select(static mention => mention.Feature)
+                .FirstOrDefault()
             : null;
     }
 
     /// <summary>
-    /// Matches a fully qualified mention of an Application feature or Domain area namespace and
-    /// captures it below the <c>BackupZCrypt</c> root. Only fully qualified mentions count outside
+    /// Lists the fully qualified mentions of an Application feature or Domain area namespace in a
+    /// text, each read below the <c>BackupZCrypt</c> root. Only fully qualified mentions count outside
     /// Application, where a bare <c>Application.</c> belongs to other libraries, such as Avalonia's
     /// <c>Application.Current</c>.
     /// </summary>
-    /// <returns>The compiled expression.</returns>
-    [GeneratedRegex(@"\bBackupZCrypt\.(?<feature>(?:Application|Domain)\.[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
-    private static partial Regex QualifiedArea();
+    /// <param name="text">The text to scan.</param>
+    /// <returns>Where each mention starts and the feature or area it names, such as <c>Application.Backup</c>.</returns>
+    private static IEnumerable<(int Index, string Feature)> QualifiedAreaMentions(string text)
+    {
+        const string Root = "BackupZCrypt.";
+        var start = text.IndexOf(Root, StringComparison.Ordinal);
+
+        while (start >= 0)
+        {
+            var area = start + Root.Length;
+            var end = SourceText.IsWordCharacterAt(text, start - 1)
+                ? -1
+                : Math.Max(SegmentEnd(text, area, "Application."), SegmentEnd(text, area, "Domain."));
+
+            if (end >= 0)
+            {
+                yield return (start, text[area..end]);
+            }
+
+            start = text.IndexOf(Root, Math.Max(end, start + 1), StringComparison.Ordinal);
+        }
+    }
 
     /// <summary>
-    /// Matches a mention of an Application feature namespace, fully qualified or relative to the
-    /// <c>BackupZCrypt</c> root, and captures the feature.
+    /// Lists the Application features a text mentions by namespace, fully qualified or relative to the
+    /// <c>BackupZCrypt</c> root.
     /// </summary>
-    /// <returns>The compiled expression.</returns>
-    [GeneratedRegex(@"(?<![\w.])(?:BackupZCrypt\.)?Application\.(?<feature>[A-Za-z]+)\b", RegexOptions.CultureInvariant)]
-    private static partial Regex RelativeFeatureNamespace();
+    /// <param name="text">The text to scan.</param>
+    /// <returns>The feature each mention names, such as <c>Backup</c>.</returns>
+    private static IEnumerable<string> RelativeFeatureMentions(string text)
+    {
+        const string Root = "BackupZCrypt.";
+        const string Layer = "Application.";
+        var layer = text.IndexOf(Layer, StringComparison.Ordinal);
+
+        while (layer >= 0)
+        {
+            var start = layer >= Root.Length && text[(layer - Root.Length)..layer] == Root ? layer - Root.Length : layer;
+            var end = SourceText.IsWordCharacterAt(text, start - 1) || SourceText.IsAt(text, start - 1, '.')
+                ? -1
+                : SegmentEnd(text, layer, Layer);
+
+            if (end >= 0)
+            {
+                yield return text[(layer + Layer.Length)..end];
+            }
+
+            layer = text.IndexOf(Layer, Math.Max(end, layer + 1), StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// Reads a namespace segment that follows a given prefix: a run of ASCII letters that ends a word.
+    /// </summary>
+    /// <param name="text">The text to read.</param>
+    /// <param name="index">The position the prefix is expected at.</param>
+    /// <param name="prefix">The namespace prefix, such as <c>Application.</c>.</param>
+    /// <returns>The position just past the segment, or -1 when the text does not continue that way.</returns>
+    private static int SegmentEnd(string text, int index, string prefix)
+    {
+        if (!text.AsSpan(index).StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return -1;
+        }
+
+        var start = index + prefix.Length;
+        var end = SourceText.SkipWhile(text, start, char.IsAsciiLetter);
+
+        return end > start && !SourceText.IsWordCharacterAt(text, end) ? end : -1;
+    }
 }

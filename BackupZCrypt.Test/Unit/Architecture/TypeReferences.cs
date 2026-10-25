@@ -107,21 +107,13 @@ internal static class TypeReferences
     /// <returns>The types they name.</returns>
     private static IEnumerable<Type> AttributeTypes(IEnumerable<CustomAttributeData> attributes)
     {
-        foreach (var attribute in attributes)
-        {
-            yield return attribute.AttributeType;
-
-            var arguments = attribute.ConstructorArguments
-                .Concat(attribute.NamedArguments.Select(static named => named.TypedValue));
-
-            foreach (var argument in arguments)
-            {
-                if (argument.Value is Type named)
-                {
-                    yield return named;
-                }
-            }
-        }
+        return attributes.SelectMany(static attribute =>
+            attribute
+                .ConstructorArguments.Concat(attribute.NamedArguments.Select(static named => named.TypedValue))
+                .Select(static argument => argument.Value)
+                .OfType<Type>()
+                .Prepend(attribute.AttributeType)
+        );
     }
 
     /// <summary>

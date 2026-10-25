@@ -481,14 +481,13 @@ internal sealed class ChunkStore(
 
             var pruned = true;
 
-            foreach (var name in fileOperationsService.GetDirectoryEntryNames(backupRoot))
+            foreach (
+                var name in fileOperationsService
+                    .GetDirectoryEntryNames(backupRoot)
+                    .Where(BackupLayout.IsTemporaryFileName)
+            )
             {
-                if (BackupLayout.IsTemporaryFileName(name))
-                {
-                    pruned &= fileOperationsService.TryDeleteFile(
-                        Path.Join(backupRoot, name)
-                    );
-                }
+                pruned &= fileOperationsService.TryDeleteFile(Path.Join(backupRoot, name));
             }
 
             if (!fileOperationsService.DirectoryExists(chunksDir))

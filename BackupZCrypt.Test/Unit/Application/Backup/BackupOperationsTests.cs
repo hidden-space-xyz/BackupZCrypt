@@ -126,12 +126,12 @@ public sealed class BackupOperationsTests
     /// theory can drive the shared pipeline with each of them.
     /// </summary>
     /// <param name="request">The request to run.</param>
-    /// <param name="progress">The sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
+    /// <param name="statusSink">The sink that receives incremental status updates, or <see langword="null"/> to discard them.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The outcome of the operation.</returns>
     private Task<Result<BackupOutcome>> RunAsync(
         BackupRequest request,
-        IProgress<BackupStatus>? progress,
+        IProgress<BackupStatus>? statusSink,
         CancellationToken cancellationToken
     )
     {
@@ -139,9 +139,9 @@ public sealed class BackupOperationsTests
 
         return request switch
         {
-            CreateBackupRequest create => sut.CreateAsync(create, progress, cancellationToken),
-            UpdateBackupRequest update => sut.UpdateAsync(update, progress, cancellationToken),
-            RestoreBackupRequest restore => sut.RestoreAsync(restore, progress, cancellationToken),
+            CreateBackupRequest create => sut.CreateAsync(create, statusSink, cancellationToken),
+            UpdateBackupRequest update => sut.UpdateAsync(update, statusSink, cancellationToken),
+            RestoreBackupRequest restore => sut.RestoreAsync(restore, statusSink, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
     }

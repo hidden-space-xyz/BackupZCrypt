@@ -383,10 +383,38 @@ public sealed class PasswordServiceTests
         Assert.Contains(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength(password).Tips);
     }
 
-    [Fact]
-    internal void AnalyzePasswordStrength_LongerNumber_IsNotMistakenForAYear()
+    [Theory]
+    [InlineData("1999summer!")]
+    [InlineData("Summer!2024")]
+    [InlineData("2024")]
+    internal void AnalyzePasswordStrength_YearAtEitherEnd_IsStillDetected(string password)
     {
-        Assert.DoesNotContain(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength("Ab#120245xyQ").Tips);
+        Assert.Contains(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength(password).Tips);
+    }
+
+    [Theory]
+    [InlineData("Ab#120245xyQ")]
+    [InlineData("Ab#19999xyQ")]
+    [InlineData("Ab#199xyQ")]
+    [InlineData("Ab#1234xyQ")]
+    [InlineData("Ab#2199xyQ")]
+    [InlineData("Ab#1899xyQ")]
+    internal void AnalyzePasswordStrength_NumberThatIsNotAFourDigitYear_IsNotMistakenForAYear(string password)
+    {
+        Assert.DoesNotContain(MessageCode.TipAvoidYears, this.sut.AnalyzePasswordStrength(password).Tips);
+    }
+
+    [Fact]
+    internal void AnalyzePasswordStrength_EachYear_CostsFourBitsOfEntropy()
+    {
+        var none = this.sut.AnalyzePasswordStrength("Kq7mvB#5386x6835").Entropy;
+        var one = this.sut.AnalyzePasswordStrength("Kq7mvB#1984x6835").Entropy;
+        var two = this.sut.AnalyzePasswordStrength("Kq7mvB#1984x2041").Entropy;
+
+        Assert.Multiple(
+            () => Assert.Equal(4.0, none - one, 1e-9),
+            () => Assert.Equal(4.0, one - two, 1e-9)
+        );
     }
 
     [Theory]

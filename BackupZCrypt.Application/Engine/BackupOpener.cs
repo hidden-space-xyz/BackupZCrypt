@@ -23,7 +23,8 @@ internal sealed class BackupOpener(
     /// <remarks>
     /// The password is normalized exactly as it was when the backup was created, so the same
     /// characters open it whichever Unicode form the keyboard, input method, or operating system
-    /// produced.
+    /// produced. The opened backup receives its own copy of the key schedule, so the keys derived
+    /// here are wiped on every path, including an exception, before the method returns.
     /// </remarks>
     /// <param name="backupRoot">The backup folder.</param>
     /// <param name="password">The password as the user typed it.</param>
@@ -66,7 +67,7 @@ internal sealed class BackupOpener(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var keys = ArchiveKeys.Derive(
+        using var keys = ArchiveKeys.Derive(
             password,
             preamble.MasterSalt,
             keyDerivationStrategies.Resolve(preamble.KeyDerivation)
@@ -75,10 +76,9 @@ internal sealed class BackupOpener(
 
         if (manifest is null)
         {
-            keys.Dispose();
             return (null, new LocalizableMessage(wrongPasswordCode));
         }
 
-        return (new OpenedBackup(preamble, keys, manifest), null);
+        return (new OpenedBackup(preamble, ArchiveKeys.FromMasterKey([.. keys.MasterKey]), manifest), null);
     }
 }

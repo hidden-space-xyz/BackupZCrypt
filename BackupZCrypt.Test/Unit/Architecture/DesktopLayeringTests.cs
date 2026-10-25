@@ -46,6 +46,11 @@ public sealed partial class DesktopLayeringTests
     private const string RootArea = "(root)";
 
     /// <summary>
+    /// The schemes through which a XAML namespace value maps a CLR namespace.
+    /// </summary>
+    private static readonly string[] ClrNamespaceSchemes = ["using:", "clr-namespace:"];
+
+    /// <summary>
     /// The desktop areas each area uses.
     /// </summary>
     private static readonly Dictionary<string, string[]> AllowedAreas = new(StringComparer.Ordinal)
@@ -136,7 +141,9 @@ public sealed partial class DesktopLayeringTests
             );
         var mentioned = SourceFiles()
             .Where(static file => CompositionMention().IsMatch(File.ReadAllText(file)))
-            .Select(static file => (Area: (string?)AreaOfFile(file), Edge: Path.GetRelativePath(ProjectRoot, file)));
+            .Select<string, (string? Area, string Edge)>(static file =>
+                (AreaOfFile(file), Path.GetRelativePath(ProjectRoot, file))
+            );
         var wiring = compiled.Concat(mentioned).ToList();
 
         var outsideTheRoot = wiring
@@ -182,9 +189,8 @@ public sealed partial class DesktopLayeringTests
             {
                 var markup = File.ReadAllText(file);
 
-                return XamlNamespaceDeclaration()
-                    .Matches(markup)
-                    .Select(static declaration => declaration.Groups["prefix"].Value)
+                return XamlNamespaceDeclarations(markup)
+                    .Select(static declaration => declaration.Prefix)
                     .Where(prefix => !IsPrefixUsed(markup, prefix))
                     .Select(prefix => $"{Path.GetRelativePath(ProjectRoot, file)} declares {prefix}");
             })
@@ -222,17 +228,14 @@ public sealed partial class DesktopLayeringTests
         var text = File.ReadAllText(file);
         var origin = Path.GetRelativePath(ProjectRoot, file);
 
-        var imported = UsingDirective()
-            .Matches(text)
-            .Select(static directive => AreaOf(directive.Groups["namespace"].Value));
-        var declared = XamlNamespaceDeclaration()
-            .Matches(text)
-            .Where(declaration => IsPrefixUsed(text, declaration.Groups["prefix"].Value))
-            .Select(static declaration => AreaOf(declaration.Groups["namespace"].Value));
+        var imported = UsingDirectiveTargets(text).Select(AreaOf);
+        var declared = XamlNamespaceDeclarations(text)
+            .Where(declaration => IsPrefixUsed(text, declaration.Prefix))
+            .Select(static declaration => AreaOf(declaration.Namespace));
         var loaded = AssetUri()
             .Matches(text)
             .Where(static uri => uri.Groups["assembly"].Value == typeof(App).Assembly.GetName().Name)
-            .Select(static uri => (string?)uri.Groups["area"].Value);
+            .Select(static uri => uri.Groups["area"].Value);
 
         return imported
             .Concat(declared)
@@ -339,25 +342,129 @@ public sealed partial class DesktopLayeringTests
     }
 
     /// <summary>
-    /// Matches a <c>using</c> directive, plain, static, global, or aliased, and captures the
-    /// namespace or type it names.
+    /// Lists the namespaces or types named by the <c>using</c> directives of a C# file, plain, static,
+    /// global, or aliased, each written on a line of its own.
     /// </summary>
-    /// <returns>The compiled expression.</returns>
-    [GeneratedRegex(
-        @"^\s*(?:global\s+)?using\s+(?:static\s+)?(?:\w+\s*=\s*)?(?<namespace>[\w.]+)\s*;",
-        RegexOptions.Multiline | RegexOptions.CultureInvariant
-    )]
-    private static partial Regex UsingDirective();
+    /// <param name="text">The text of the file.</param>
+    /// <returns>The namespace or type each directive names, in file order.</returns>
+    private static IEnumerable<string> UsingDirectiveTargets(string text)
+    {
+        return text.Split('\n').Select(UsingDirectiveTarget).OfType<string>();
+    }
 
     /// <summary>
-    /// Matches a XAML namespace declaration that maps a prefix to a CLR namespace, and captures both.
+    /// Reads the namespace or type that the <c>using</c> directive starting a line names, leaving out
+    /// a <c>using</c> statement or declaration, which names no namespace.
     /// </summary>
-    /// <returns>The compiled expression.</returns>
-    [GeneratedRegex(
-        @"xmlns:(?<prefix>\w+)\s*=\s*""(?:using:|clr-namespace:)(?<namespace>[\w.]+)",
-        RegexOptions.CultureInvariant
-    )]
-    private static partial Regex XamlNamespaceDeclaration();
+    /// <param name="line">One line of a C# file.</param>
+    /// <returns>The namespace or type, or <see langword="null"/> when the line starts no directive.</returns>
+    private static string? UsingDirectiveTarget(string line)
+    {
+        var text = line.TrimStart();
+        text = AfterKeyword(text, "global") ?? text;
+
+        if (AfterKeyword(text, "using") is not { } directive)
+        {
+            return null;
+        }
+
+        directive = AfterKeyword(directive, "static") ?? directive;
+        var end = directive.IndexOf(';', StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return null;
+        }
+
+        var alias = directive.IndexOf('=', 0, end);
+        var target = directive[(alias + 1)..end].Trim();
+        var isAliasValid = alias < 0 || IsWord(directive[..alias].TrimEnd());
+        var isTargetValid = target.Length > 0 && target.All(static c => SourceText.IsWordCharacter(c) || c == '.');
+
+        return isAliasValid && isTargetValid ? target : null;
+    }
+
+    /// <summary>
+    /// Returns the text that follows a leading keyword and the whitespace that must separate it from
+    /// what comes next.
+    /// </summary>
+    /// <param name="text">The text, already trimmed at its start.</param>
+    /// <param name="keyword">The keyword expected first.</param>
+    /// <returns>The rest of the text, trimmed at its start, or <see langword="null"/> when it does not start with the keyword.</returns>
+    private static string? AfterKeyword(string text, string keyword)
+    {
+        return text.StartsWith(keyword, StringComparison.Ordinal)
+            && text.Length > keyword.Length
+            && char.IsWhiteSpace(text[keyword.Length])
+            ? text[keyword.Length..].TrimStart()
+            : null;
+    }
+
+    /// <summary>
+    /// Determines whether a text is a single identifier.
+    /// </summary>
+    /// <param name="text">The text to test.</param>
+    /// <returns><see langword="true"/> when the text is non-empty and holds only word characters.</returns>
+    private static bool IsWord(string text)
+    {
+        return text.Length > 0 && text.All(SourceText.IsWordCharacter);
+    }
+
+    /// <summary>
+    /// Lists the XAML namespace declarations of a file that map a prefix to a CLR namespace through
+    /// <c>using:</c> or <c>clr-namespace:</c>.
+    /// </summary>
+    /// <param name="markup">The text of the file.</param>
+    /// <returns>Each declared prefix with the namespace it maps to, in file order.</returns>
+    private static IEnumerable<(string Prefix, string Namespace)> XamlNamespaceDeclarations(string markup)
+    {
+        const string Declaration = "xmlns:";
+        var start = markup.IndexOf(Declaration, StringComparison.Ordinal);
+
+        while (start >= 0)
+        {
+            var prefixStart = start + Declaration.Length;
+            var prefixEnd = SourceText.SkipWhile(markup, prefixStart, SourceText.IsWordCharacter);
+            var equals = SourceText.SkipWhile(markup, prefixEnd, char.IsWhiteSpace);
+            var quote = SourceText.SkipWhile(markup, equals + 1, char.IsWhiteSpace);
+
+            if (
+                prefixEnd > prefixStart
+                && SourceText.IsAt(markup, equals, '=')
+                && SourceText.IsAt(markup, quote, '"')
+                && ClrNamespaceAt(markup, quote + 1) is { } clrNamespace
+            )
+            {
+                yield return (markup[prefixStart..prefixEnd], clrNamespace);
+            }
+
+            start = markup.IndexOf(Declaration, prefixStart, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// Reads the CLR namespace a XAML namespace value names, after its <c>using:</c> or
+    /// <c>clr-namespace:</c> scheme.
+    /// </summary>
+    /// <param name="markup">The text of the file.</param>
+    /// <param name="index">The position the value starts at, just inside its opening quote.</param>
+    /// <returns>The namespace, or <see langword="null"/> when the value maps no CLR namespace.</returns>
+    private static string? ClrNamespaceAt(string markup, int index)
+    {
+        var scheme = ClrNamespaceSchemes.FirstOrDefault(scheme =>
+            markup.AsSpan(index).StartsWith(scheme, StringComparison.Ordinal)
+        );
+
+        if (scheme is null)
+        {
+            return null;
+        }
+
+        var start = index + scheme.Length;
+        var end = SourceText.SkipWhile(markup, start, static c => SourceText.IsWordCharacter(c) || c == '.');
+
+        return end > start ? markup[start..end] : null;
+    }
 
     /// <summary>
     /// Matches an <c>avares://</c> resource and captures the assembly it is embedded in and the
