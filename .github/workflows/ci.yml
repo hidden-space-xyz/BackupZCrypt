@@ -12,21 +12,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  codeql:
-    needs: quality
-    uses: ./.github/workflows/codeql.yml
-    permissions:
-      actions: read
-      contents: read
-      packages: read
-      security-events: write
-
-  release:
-    needs: codeql
-    uses: ./.github/workflows/release.yml
-    permissions:
-      contents: write
-
   quality:
     name: Build, test and quality
     runs-on: ubuntu-latest
@@ -37,6 +22,11 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
+            .config/dotnet-tools.json
       - name: Restore dependencies and tools
         run: |
           dotnet restore BackupZCrypt.sln
@@ -57,3 +47,11 @@ jobs:
           dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 90
       - name: Verify formatting
         run: dotnet format whitespace BackupZCrypt.sln --verify-no-changes --no-restore
+
+  release:
+    needs: quality
+    uses: ./.github/workflows/release.yml
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write

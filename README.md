@@ -9,8 +9,8 @@
 <p align="center">
 <img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F&logo=github&logoColor=white" />
 <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
-<a href="https://github.com/hidden-space-xyz/BackupZCrypt/actions/workflows/ci.yml" title="CodeQL runs after checks and gates releases within CI">
-  <img alt="CodeQL: part of CI" src="https://img.shields.io/badge/CodeQL-in_CI-2088FF?style=for-the-badge&logo=github&logoColor=white" />
+<a href="https://github.com/hidden-space-xyz/BackupZCrypt/actions/workflows/codeql.yml">
+  <img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?branch=develop&style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
 </a>
 </p>
 
@@ -190,10 +190,12 @@ We especially welcome contributions for UI and security improvements.
 
 ### For Maintainers
 
-Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate,
-formatting and CodeQL before publishing the four desktop packages. The workflow calculates the tag
-from the latest stable tag and stamps that exact version into every binary; no source version needs
-to be edited. [`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in
+Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate
+and formatting before publishing the four desktop packages with signed build provenance. The workflow
+calculates the tag from the latest stable tag and stamps that exact version into every binary; no
+source version needs to be edited. CodeQL scans `develop` and `master` independently and does not
+block releases, and Dependabot opens one grouped `bump:` pull request against `develop` every
+Saturday. [`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in
 full.
 
 ## 📜 License

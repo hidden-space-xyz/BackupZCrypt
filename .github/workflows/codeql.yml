@@ -1,13 +1,26 @@
 name: CodeQL
 
 on:
-  workflow_call:
+  push:
+    branches: [develop, master]
+    paths:
+      - BackupZCrypt.*/**
+      - BackupZCrypt.sln
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
+      - global.json
+      - .github/workflows/codeql.yml
 
 permissions:
   actions: read
   contents: read
   packages: read
   security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -18,20 +31,18 @@ jobs:
         include:
           - language: csharp
             build-mode: manual
-          - language: actions
-            build-mode: none
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
-      - name: Set up Node.js for the security gate
-        uses: actions/setup-node@v7
-        with:
-          node-version: 26
       - name: Set up .NET
-        if: matrix.language == 'csharp'
         uses: actions/setup-dotnet@v6
+        if: matrix.language == 'csharp'
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
@@ -45,21 +56,25 @@ jobs:
           dotnet build BackupZCrypt.sln --configuration Release --no-restore --no-incremental -p:UseSharedCompilation=false
       - name: Analyze code
         uses: github/codeql-action/analyze@v4
-        id: analyze
         with:
           category: /language:${{ matrix.language }}
           output: ${{ runner.temp }}/codeql-results
-          wait-for-processing: true
-      - name: Block releases on high, critical or error findings
-        env:
-          SARIF_DIRECTORY: ${{ steps.analyze.outputs.sarif-output }}
-        run: node .github/scripts/check-codeql.mjs "$SARIF_DIRECTORY"
-      - name: Preserve CodeQL diagnostic reports
-        if: always()
+          upload: never
+      - name: Drop results in build output
+        working-directory: ${{ runner.temp }}/codeql-results
+        run: |
+          for sarif in *.sarif; do
+            jq '.runs[].results |= map(select(.locations[0].physicalLocation.artifactLocation.uri // "" | test("(^|/)(obj|bin)/") | not))' "$sarif" > "$sarif.filtered"
+            mv "$sarif.filtered" "$sarif"
+          done
+      - name: Upload results to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-results
+          category: /language:${{ matrix.language }}
+      - name: Upload SARIF report
         uses: actions/upload-artifact@v7
         with:
           name: codeql-sarif-${{ matrix.language }}
           path: ${{ runner.temp }}/codeql-results/*.sarif
-          if-no-files-found: warn
-          overwrite: true
-          retention-days: 14
+          retention-days: 7

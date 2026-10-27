@@ -36,6 +36,10 @@ jobs:
     if: needs.version.outputs.changed == 'true'
     name: Publish ${{ matrix.rid }}
     runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -55,6 +59,10 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
       - name: Publish self-contained single-file application
         env:
           RID: ${{ matrix.rid }}
@@ -89,6 +97,10 @@ jobs:
             chmod +x "staging/${name}/BackupZCrypt"
             tar --owner=0 --group=0 -czf "artifacts/${name}.tar.gz" -C staging "$name"
           fi
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/*
       - name: Upload portable package
         uses: actions/upload-artifact@v7
         with:
@@ -155,6 +167,7 @@ jobs:
 
           Every package is a self-contained single-file build; no .NET runtime is required.
           On Linux and macOS, run \`chmod +x BackupZCrypt\` after extracting.
+          Verify a download with \`gh attestation verify <asset> --repo ${GITHUB_REPOSITORY}\`.
           EOF
           args=()
           if [[ -n "$PREVIOUS_TAG" ]]; then

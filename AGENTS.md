@@ -25,7 +25,7 @@ Use xUnit v3 and NSubstitute. Name test classes `TypeNameTests` and test methods
 
 ## Commit & Pull Request Guidelines
 
-Use Conventional Commits, consistent with history: `feat:`, `fix:`, `perf:`, `refactor:`, `chore:`, `ci:`, or `bump:` for dependency updates. Mark breaking changes with `!` in the subject; the release workflow reads only commit subjects, so a `BREAKING CHANGE:` footer alone does not bump the major version. Only breaking, `feat:`, `fix:`, and `perf:` commits publish a release. Branch from `develop` and open pull requests against `develop`; `master` is reserved for releases. PRs should explain intent and risk, link relevant issues, list verification commands, and include screenshots for Avalonia UI changes. Run build, tests, and the whitespace check before requesting review.
+Use Conventional Commits, consistent with history: `feat:`, `fix:`, `perf:`, `refactor:`, `chore:`, `ci:`, or `bump:` for dependency updates, the prefix Dependabot uses for its weekly grouped pull request against `develop`. Mark breaking changes with `!` in the subject; the release workflow reads only commit subjects, so a `BREAKING CHANGE:` footer alone does not bump the major version. Only breaking, `feat:`, `fix:`, and `perf:` commits publish a release. Branch from `develop` and open pull requests against `develop`; `master` is reserved for releases. PRs should explain intent and risk, link relevant issues, list verification commands, and include screenshots for Avalonia UI changes. Run build, tests, and the whitespace check before requesting review.
 
 ## Security & Configuration
 
