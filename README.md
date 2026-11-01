@@ -1,112 +1,120 @@
 <p align="center">
-<img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
-<img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMy40NDkgOS43NSAyLjF2OS40NTFIMG0xMC45NDktOS42MDJMMjQgMHYxMS40SDEwLjk0OU0wIDEyLjZoOS43NXY5LjQ1MUwwIDIwLjY5OU0xMC45NDkgMTIuNkgyNFYyNGwtMTIuOS0xLjgwMSIvPjwvc3ZnPgo%3D" />
-<img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
-<img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
-<img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge&logo=gnu&logoColor=white" />
+  <img
+    width="100%"
+    alt="BackupZCrypt"
+    src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:bdf05e,50:58c75a,100:0b9a80&text=BackupZCrypt&fontColor=064e3b&fontSize=56&fontAlign=50&fontAlignY=40&animation=fadeIn"
+  />
+</p>
+<p align="center">
+  <img alt=".NET" src="https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMy40NDkgOS43NSAyLjF2OS40NTFIMG0xMC45NDktOS42MDJMMjQgMHYxMS40SDEwLjk0OU0wIDEyLjZoOS43NXY5LjQ1MUwwIDIwLjY5OU0xMC45NDkgMTIuNkgyNFYyNGwtMTIuOS0xLjgwMSIvPjwvc3ZnPgo%3D" />
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" />
+  <img alt="License" src="https://img.shields.io/badge/GPL--3.0-red?style=for-the-badge&logo=gnu&logoColor=white" />
 </p>
 
 <p align="center">
-<img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&color=2EA44F&logo=github&logoColor=white" />
-<img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
-<a href="https://github.com/hidden-space-xyz/BackupZCrypt/actions/workflows/codeql.yml">
-  <img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?branch=develop&style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
-</a>
+  <img alt="Release" src="https://img.shields.io/github/v/release/hidden-space-xyz/BackupZCrypt?style=for-the-badge&label=Release&color=2EA44F&logo=github&logoColor=white" />
+  <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/ci.yml?style=for-the-badge&label=CI&logo=githubactions&logoColor=white" />
+  <a href="https://github.com/hidden-space-xyz/BackupZCrypt/actions/workflows/codeql.yml">
+    <img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/hidden-space-xyz/BackupZCrypt/codeql.yml?branch=develop&style=for-the-badge&label=CodeQL&logo=github&logoColor=white" />
+  </a>
 </p>
 
 # 🔐 BackupZCrypt
 
-**BackupZCrypt splits your files into chunks, deduplicates them, and encrypts every chunk
-individually under a key that only your password can produce.**
+**BackupZCrypt splits your files into chunks, deduplicates them, and encrypts every chunk individually under
+a key that only your password can produce.**
 
 ## 📋 What BackupZCrypt Does For You
 
-BackupZCrypt gives you privacy and security with efficient, incremental backups:
-
-- **🛡️ Protect Sensitive Documents** — Encrypt financial records, personal photos, medical information, and more
-- **☁️ Secure Cloud Storage** — Safely store encrypted backups on any cloud like Dropbox, Google Drive, or OneDrive
+- **🛡️ Protect Sensitive Documents** — Encrypt financial records, personal photos, medical information and more
+- **☁️ Secure Cloud Storage** — Safely store encrypted backups on any cloud like Dropbox, Google Drive or OneDrive
 - **⚡ Efficient Updates** — Only changed chunks are re-encrypted and synced, saving time and bandwidth
 - **🔒 Control Your Privacy** — Keep your data private, even when sharing devices or storage
-- **✅ Peace of Mind** — Authenticated encryption means your files stay private *and* tamper-evident
+- **✅ Peace of Mind** — Authenticated encryption means your files stay private _and_ tamper-evident
 
 ## ⭐ Features
 
 - **🧩 Content-Defined Chunking** — Files are split into variable-size chunks using a gear-hash algorithm (FastCDC)
-- **🔄 Multiple Encryption Algorithms** — AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM, and Camellia-256 GCM — all in authenticated encryption (AEAD) mode
-- **🔑 Multiple Key Derivation Algorithms** — Argon2id, Scrypt, and PBKDF2
+- **🔄 Multiple Encryption Algorithms** — AES-256 GCM, ChaCha20-Poly1305, Twofish-256 GCM, Serpent-256 GCM and Camellia-256 GCM, all in authenticated encryption (AEAD) mode
+- **🔑 Multiple Key Derivation Algorithms** — Argon2id, Scrypt and PBKDF2
 - **🗜️ Optional Zstandard Compression** — Three presets (Fast, Normal, Best) applied per chunk before encryption
 - **🎲 Password Generator** — One click produces a 50-character password from a cryptographic random source
-- **📊 Password Strength Guidance** — Built-in analyzer evaluates your password and warns you before using a weak one
+- **📊 Password Strength Guidance** — A built-in analyzer evaluates your password and warns you before using a weak one
 - **🛡️ Integrity Verification** — Check that a backup is complete and undamaged without restoring it
 - **⏱️ Backup Time Estimator** — Benchmarks the selected algorithms on your own hardware
 - **🌐 Portable Archives** — A backup written on one operating system restores identically on the other two
 - **🌍 Localized Interface** — Available in English and Spanish
 - **💻 Local Processing Only** — Your files and passwords never leave your computer
-- **👁️ Zero Data Collection** — We don't track, collect, or transmit any of your information
+- **👁️ Zero Data Collection** — Nothing about you is tracked, collected or transmitted
 - **💯 Completely Free** — Open-source and free to use, forever
-
-## 🚀 Usage
-
-- **🔐 Create Backup** — Select a source folder, an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete), and a password to produce an encrypted backup. Only the previous backup's own files are ever removed from the destination
-- **🔄 Update Backup** — Re-scan the source: files whose size and modification time are unchanged are kept without being read, and only changed chunks are re-encrypted. Files deleted from the source are removed from the backup, and you are told which ones before anything changes
-- **📦 Restore Backup** — Point to an existing backup, enter its password, and recover your files anywhere, with their modification times, read-only and hidden attributes on Windows or permission bits on Linux and macOS, and empty folders
-- **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without restoring anything. Damaged chunks are set aside so the next update rebuilds them from the source
-- **⚙️ Settings** — Choose your preferred encryption, key derivation, and compression defaults, plus the interface language
-
-Settings are stored as plain JSON under `%LocalAppData%\BackupZCrypt` on Windows and the equivalent
-local application data directory on Linux and macOS. They hold your preferences and the last source and
-destination folders you chose — never your password.
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/2fee1133-1831-4b1d-9c71-f3798471e505" />
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/1d2b6c7b-16cd-4b6c-9604-642d058475a7" />
-  <img width="30%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/516080e4-8fbc-44bc-bcf4-2ae825937ff4" />
+  <img width="32%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/2fee1133-1831-4b1d-9c71-f3798471e505" />
+  <img width="32%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/1d2b6c7b-16cd-4b6c-9604-642d058475a7" />
+  <img width="32%" alt="BackupZCrypt desktop interface" src="https://github.com/user-attachments/assets/516080e4-8fbc-44bc-bcf4-2ae825937ff4" />
 </p>
+
+## 🚀 Usage
+
+- **🔐 Create Backup** — Select a source folder, an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete) and a password to produce an encrypted backup. Only the previous backup's own files are ever removed from the destination
+- **🔄 Update Backup** — Re-scan the source: files whose size and modification time are unchanged are kept without being read, and only changed chunks are re-encrypted. Files deleted from the source are removed from the backup, and you are told which ones before anything changes
+- **📦 Restore Backup** — Point to an existing backup, enter its password and recover your files anywhere, with their modification times, read-only and hidden attributes on Windows or permission bits on Linux and macOS, and empty folders
+- **🛡️ Verify Integrity** — Point to a backup and enter its password to confirm every chunk is intact and restorable, without restoring anything. Damaged chunks are set aside so the next update rebuilds them from the source
+- **⚙️ Settings** — Choose your preferred encryption, key derivation and compression defaults, plus the interface language
+
+> [!NOTE]
+> Settings are stored as plain JSON under `%LocalAppData%\BackupZCrypt` on Windows and the equivalent local
+> application data directory on Linux and macOS. They hold your preferences and the last source and destination
+> folders you chose, never your password.
 
 ## ⬇️ Download
 
 Grab the build for your platform from the [latest release](https://github.com/hidden-space-xyz/BackupZCrypt/releases/latest).
-Every asset is a self-contained single-file executable — no .NET runtime required:
+Every asset is a self-contained single-file executable, so no .NET runtime is required:
 
-| Platform | Asset |
-| --- | --- |
-| 🪟 Windows x64 | `BackupZCrypt-v<version>-win-x64.zip` |
-| 🐧 Linux x64 | `BackupZCrypt-v<version>-linux-x64.tar.gz` |
-| 🍎 macOS Intel | `BackupZCrypt-v<version>-osx-x64.tar.gz` |
+| Platform               | Asset                                      |
+| ---------------------- | ------------------------------------------ |
+| 🪟 Windows x64         | `BackupZCrypt-v<version>-win-x64.zip`      |
+| 🐧 Linux x64           | `BackupZCrypt-v<version>-linux-x64.tar.gz` |
+| 🍎 macOS Intel         | `BackupZCrypt-v<version>-osx-x64.tar.gz`   |
 | 🍎 macOS Apple Silicon | `BackupZCrypt-v<version>-osx-arm64.tar.gz` |
 
-On Linux and macOS run `chmod +x BackupZCrypt` after extracting.
+On Linux and macOS, run `chmod +x BackupZCrypt` after extracting.
 
 ## 🔒 Security
 
 ### How your data is protected
 
-| Layer | What BackupZCrypt does |
-| --- | --- |
-| **Key derivation** | Your password and a 32-byte random salt produce a 256-bit master key through Argon2id (256 MiB, 4 passes, 2 lanes), Scrypt (N = 2¹⁸, r = 8, p = 1) or PBKDF2-SHA256 (800,000 iterations) |
-| **Key separation** | HKDF-SHA256 expands that master key into four purpose-bound sub-keys, so the key that names a chunk cannot decrypt it |
-| **Chunk encryption** | Each chunk is compressed, then sealed with the chosen AEAD cipher under a 96-bit nonce derived by HMAC from its own content hash, carrying a 128-bit authentication tag |
-| **File names** | Chunks are stored under `HMAC-SHA256(naming key, content hash)`, so the names in your backup folder reveal nothing about their contents |
-| **Manifest** | The file list is a separately encrypted, authenticated document. Only its 34-byte header — cipher, key derivation function and salt — is readable, and that header is bound into the ciphertext so it cannot be swapped |
-| **Restore** | Entry paths are validated and confined to the destination, decompression is bounded by the declared size, and every restored file's SHA-256 is re-checked against the manifest |
+| Layer                | What BackupZCrypt does                                                                                                                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Key derivation**   | Your password and a 32-byte random salt produce a 256-bit master key through Argon2id (256 MiB, 4 passes, 2 lanes), Scrypt (N = 2¹⁸, r = 8, p = 1) or PBKDF2-SHA256 (800,000 iterations)                              |
+| **Key separation**   | HKDF-SHA256 expands that master key into four purpose-bound sub-keys, so the key that names a chunk cannot decrypt it                                                                                                 |
+| **Chunk encryption** | Each chunk is compressed, then sealed with the chosen AEAD cipher under a 96-bit nonce derived by HMAC from its own content hash, carrying a 128-bit authentication tag                                               |
+| **File names**       | Chunks are stored under `HMAC-SHA256(naming key, content hash)`, so the names in your backup folder reveal nothing about their contents                                                                               |
+| **Manifest**         | The file list is a separately encrypted, authenticated document. Only its 34-byte header (cipher, key derivation function and salt) is readable, and that header is bound into the ciphertext so it cannot be swapped |
+| **Restore**          | Entry paths are validated and confined to the destination, decompression is bounded by the declared size, and every restored file's SHA-256 is re-checked against the manifest                                        |
 
 Key material is wiped from memory after use, and file hashes are compared in constant time.
 
-Backups are portable between operating systems: the manifest records paths with `/` separators and
-in Unicode composed form regardless of the platform that wrote it, so an archive created on Windows
-rebuilds the same directory tree on Linux and macOS. A name that is valid where the backup was
-created but not where it is restored — a colon in a Linux file name restored on Windows, for example —
-is reported for that file while every other file is restored.
+Backups are portable between operating systems: the manifest records paths with `/` separators and in Unicode
+composed form regardless of the platform that wrote it, so an archive created on Windows rebuilds the same
+directory tree on Linux and macOS. A name that is valid where the backup was created but not where it is
+restored, such as a colon in a Linux file name restored on Windows, is reported for that file while every other
+file is restored.
 
-BackupZCrypt contains no networking code. There is no telemetry, no update check, and no account —
+BackupZCrypt contains no networking code. There is no telemetry, no update check and no account, so there is
 nothing to opt out of.
 
 ### Before you start
 
-- 🔑 Everything rests on your password — use the built-in generator, or a long passphrase kept somewhere safe
-- ⚠️ There is no password recovery and no back door. Lose the password and the backup is unreadable, permanently
+> [!WARNING]
+> There is no password recovery and no back door. Lose the password and the backup is unreadable, permanently.
+
+- 🔑 Everything rests on your password: use the built-in generator, or a long passphrase kept somewhere safe
 - 🧪 Verify a fresh backup, and restore it once for real. A backup you have never restored is an assumption
 - 🔄 Keep your operating system and BackupZCrypt updated
 
@@ -116,7 +124,7 @@ nothing to opt out of.
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 
-### Build and Run
+### Build and run
 
 ```bash
 git clone https://github.com/hidden-space-xyz/BackupZCrypt.git
@@ -125,53 +133,61 @@ dotnet build BackupZCrypt.sln
 dotnet run --project BackupZCrypt.Desktop
 ```
 
-Building never produces a distributable — the portable packages come only from the release workflow.
+> [!NOTE]
+> Building never produces a distributable. The portable packages come only from the release workflow.
 
-### Running the Tests
+### Running the tests
 
 ```bash
 dotnet test BackupZCrypt.sln
 ```
 
-The suite is designed to run unattended on CI: no test depends on wall-clock timing, throughput, or a
-specific locale, and every temporary file lives in a directory the test owns and deletes.
+The suite is designed to run unattended on CI: no test depends on wall-clock timing, throughput or a specific
+locale, and every temporary file lives in a directory the test owns and deletes.
 
-### Project Structure
+## 📁 Repository
 
-| Project | Purpose |
-|---|---|
-| `BackupZCrypt.Domain` | The archive domain, free of I/O: algorithm identifiers, cipher and key-derivation contracts, format constants, and the manifest, key schedule, and chunk layout every archive is written with |
-| `BackupZCrypt.Application` | Use cases and the ports they need: backup orchestration, algorithm catalog and strategy registry, chunked backup engine, manifest, password and settings services, and the compression, chunking, file-system and settings ports |
-| `BackupZCrypt.Infrastructure` | Implementations of the ports: encryption, key derivation, compression, and chunking algorithms; file system; settings |
-| `BackupZCrypt.Composition` | Dependency injection wiring shared by all front ends |
-| `BackupZCrypt.Desktop` | Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm) |
-| `BackupZCrypt.Test` | xUnit suite: unit, integration, architecture, and on-disk format tests |
+```text
+BackupZCrypt/
+├── BackupZCrypt.Domain/          Archive format, key schedule and cipher contracts, free of I/O
+├── BackupZCrypt.Application/     Use cases, the chunked backup engine and the ports they need
+├── BackupZCrypt.Infrastructure/  Encryption, key derivation, compression, chunking, file system, settings
+├── BackupZCrypt.Composition/     Dependency injection wiring shared by every front end
+├── BackupZCrypt.Desktop/         Cross-platform Avalonia UI (MVVM with CommunityToolkit.Mvvm)
+├── BackupZCrypt.Test/            xUnit suite: unit, integration, architecture and on-disk format tests
+├── scripts/                      Icon rendering and the coverage gate
+└── .github/workflows/            CI, CodeQL and release pipelines
+```
+
+Project references point inward only: Domain references no project, Application only Domain, Infrastructure
+only Application, Composition both of them, and Desktop Application and Composition. `LayerDependencyTests`
+enforces these rules. See [AGENTS.md](AGENTS.md) for the full layout and coding conventions.
 
 ## 💡 How to Contribute
 
-We welcome contributions from everyone, regardless of technical background — community suggestions
-are what guide where this project goes next.
+Contributions are welcome from everyone, regardless of technical background. Community suggestions are what
+guide where this project goes next.
 
-### For Non-Developers
+### For non-developers
 
-- **Report Bugs**: Found something that doesn't work? Let us know by opening an issue.
-- **Suggest Features**: Have ideas for new features or improvements? We'd love to hear them.
+- **Report Bugs**: Found something that doesn't work? Open an issue with your operating system and BackupZCrypt version.
+- **Suggest Features**: Ideas for new features or improvements are welcome as issues.
 - **Translations**: Help translate the application into your language.
-- **Documentation**: Improve or clarify our documentation.
-- **Spread the Word**: Share the project on social media, blog about it, or tell your friends.
-- **User Testing**: Try new features and provide feedback.
+- **Documentation**: Improve or clarify the documentation.
+- **Spread the Word**: Share the project, blog about it or tell your friends.
+- **User Testing**: Try new features and give feedback.
 
-### For Developers
+### For developers
 
-1. Fork the repository
-2. Create a feature branch from `develop`
-3. Implement your changes, with XML documentation and tests
-4. Open a pull request against `develop` — `master` only receives release merges
+1. Fork the repository.
+2. Create a feature branch from `develop`.
+3. Implement your changes, with XML documentation and tests.
+4. Open a pull request against `develop`; `master` only receives release merges.
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). The release
-workflow derives the next version from every commit since the latest stable tag: a breaking `!`
-bumps the major version, `feat:` bumps minor, and `fix:` or `perf:` bumps patch. Other commit types
-do not publish a release by themselves.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). The release workflow
+derives the next version from every commit since the latest stable tag: a breaking `!` bumps the major
+version, `feat:` bumps minor, and `fix:` or `perf:` bumps patch. Other commit types do not publish a release
+by themselves.
 
 The complete gate runs when changes land on `master`, immediately before any release. Run its local
 equivalents before opening a pull request:
@@ -186,19 +202,26 @@ dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summa
 dotnet format whitespace BackupZCrypt.sln --verify-no-changes
 ```
 
-We especially welcome contributions for UI and security improvements.
+UI and security improvements are especially welcome.
 
-### For Maintainers
+### For maintainers
 
-Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate
-and formatting before publishing the four desktop packages with signed build provenance. The workflow
-calculates the tag from the latest stable tag and stamps that exact version into every binary; no
-source version needs to be edited. CodeQL scans `develop` and `master` independently and does not
-block releases, and Dependabot opens one grouped `bump:` pull request against `develop` every
-Saturday. [`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in
-full.
+Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate and
+formatting before publishing the four desktop packages with signed build provenance. The workflow calculates
+the tag from the latest stable tag and stamps that exact version into every binary, so no source version needs
+to be edited. CodeQL scans `develop` and `master` independently and does not block releases, and Dependabot
+opens one grouped `bump:` pull request against `develop` every Saturday.
+[`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in full.
 
 ## 📜 License
 
-BackupZCrypt is released under the [GNU General Public License v3.0](LICENSE). You are free to use,
-study, modify and redistribute it, and any derivative work must carry the same license.
+BackupZCrypt is released under the [GNU General Public License v3.0](LICENSE). You are free to use, study,
+modify and redistribute it, and any derivative work must carry the same license.
+
+<p align="center">
+  <img
+    width="100%"
+    alt=""
+    src="https://capsule-render.vercel.app/api?type=waving&section=footer&height=140&color=0:0b9a80,50:58c75a,100:bdf05e&animation=twinkling"
+  />
+</p>
