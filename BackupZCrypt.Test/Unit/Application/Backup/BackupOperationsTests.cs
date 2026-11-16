@@ -710,6 +710,29 @@ public sealed class BackupOperationsTests
     }
 
     [Fact]
+    internal async Task RunAsync_PreviewCancelled_PropagatesInsteadOfSkippingThePreview()
+    {
+        this.PassValidation();
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        this.StubOperationsSucceed();
+        _ = this.chunkedBackupService
+            .PreviewRestoreAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        _ = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => this.RunAsync(Request(RunOperation.Restore), this.progress, CancellationToken.None)
+        );
+        await this.chunkedBackupService.DidNotReceive()
+            .RestoreAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<IProgress<BackupStatus>>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     internal async Task DetectManifestKindAsync_ProbeOutOfMemory_PropagatesInsteadOfReportingMissing()
     {
         _ = this.manifestService

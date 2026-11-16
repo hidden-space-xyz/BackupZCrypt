@@ -59,6 +59,20 @@ public sealed class PasswordServiceTests
         );
     }
 
+    [Theory]
+    [InlineData(" ")]
+    [InlineData(" \t  ")]
+    internal void AnalyzePasswordStrength_OnlyWhitespace_IsVeryWeakWithNoEntropy(string password)
+    {
+        var analysis = this.sut.AnalyzePasswordStrength(password);
+
+        Assert.Multiple(
+            () => Assert.Equal(PasswordStrength.VeryWeak, analysis.Strength),
+            () => Assert.Equal(0d, analysis.Score),
+            () => Assert.Equal(0d, analysis.Entropy)
+        );
+    }
+
     [Fact]
     internal void AnalyzePasswordStrength_ShortAllLowercase_IsWeakAndSuggestsAllMissingCategories()
     {

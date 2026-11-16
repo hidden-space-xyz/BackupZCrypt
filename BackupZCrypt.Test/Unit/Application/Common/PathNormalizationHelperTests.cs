@@ -77,6 +77,20 @@ public sealed class PathNormalizationHelperTests
         );
     }
 
+    [Theory]
+    [InlineData("/data/bad<name", true)]
+    [InlineData("/data/what?", true)]
+    [InlineData("/data/a|b", true)]
+    [InlineData("/data/colon:inside", true)]
+    [InlineData("/data/tab\tinside", true)]
+    [InlineData("/data/bell\u0007inside", true)]
+    [InlineData("/data/plain folder", false)]
+    [InlineData("/", false)]
+    internal void HasInvalidWindowsCharacters_ChecksEverythingAfterTheRoot(string path, bool expected)
+    {
+        Assert.Equal(expected, PathNormalizationHelper.HasInvalidWindowsCharacters(path));
+    }
+
     [Fact]
     internal void TryNormalize_OnWindows_PathBeyondTheSystemLimitIsReportedAsTooLong()
     {

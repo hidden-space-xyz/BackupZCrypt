@@ -70,6 +70,24 @@ internal sealed class FileMetadataService : IFileMetadataService
         }
 
         var attributes = File.GetAttributes(filePath);
+        var updated = WithRecordedFlags(attributes, isReadOnly, isHidden);
+
+        if (updated != attributes)
+        {
+            File.SetAttributes(filePath, updated);
+        }
+    }
+
+    /// <summary>
+    /// Sets or clears the hidden and read-only flags that were recorded, leaving every other
+    /// attribute, and any flag that was not recorded, as it is.
+    /// </summary>
+    /// <param name="attributes">The file's current attributes.</param>
+    /// <param name="isReadOnly">Whether the file should be read-only, or <see langword="null"/> to keep it.</param>
+    /// <param name="isHidden">Whether the file should be hidden, or <see langword="null"/> to keep it.</param>
+    /// <returns>The attributes to apply.</returns>
+    internal static FileAttributes WithRecordedFlags(FileAttributes attributes, bool? isReadOnly, bool? isHidden)
+    {
         var updated = attributes;
 
         if (isHidden is { } hidden)
@@ -82,9 +100,6 @@ internal sealed class FileMetadataService : IFileMetadataService
             updated = readOnly ? updated | FileAttributes.ReadOnly : updated & ~FileAttributes.ReadOnly;
         }
 
-        if (updated != attributes)
-        {
-            File.SetAttributes(filePath, updated);
-        }
+        return updated;
     }
 }

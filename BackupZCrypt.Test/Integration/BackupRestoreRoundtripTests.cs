@@ -205,6 +205,48 @@ public sealed class BackupRestoreRoundtripTests
     }
 
     [Fact]
+    internal async Task Restore_BackupPathEndingInASeparator_RestoresEveryFileAndEmptyFolder()
+    {
+        await using var provider = TestHost.CreateProvider();
+        var operations = provider.GetRequiredService<IBackupOperations>();
+
+        using var source = new TempDir();
+        using var destination = new TempDir();
+        using var restored = new TempDir();
+
+        _ = source.WriteText("note.txt", "kept");
+        _ = Directory.CreateDirectory(Path.Join(source.Path, "empty"));
+
+        var createResult = await operations.CreateAsync(
+            NewCreateRequest(
+                source.Path,
+                destination.Path,
+                EncryptionAlgorithm.Aes,
+                CompressionMode.None,
+                KeyDerivationAlgorithm.PBKDF2
+            ),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+        Assert.True(createResult.IsSuccess, DescribeErrors("Create failed", createResult.Errors));
+
+        var restoreResult = await operations.RestoreAsync(
+            NewRestoreRequest(destination.Path + Path.DirectorySeparatorChar, restored.Path),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+
+        Assert.Multiple(
+            () => Assert.True(restoreResult.IsSuccess, DescribeErrors("Restore failed", restoreResult.Errors)),
+            () =>
+                Assert.True(
+                    restoreResult.Value.Completion!.IsSuccess,
+                    DescribeErrors("Restore inner result failed", restoreResult.Value.Completion.Errors)
+                ),
+            () => Assert.Equal("kept", File.ReadAllText(Path.Join(restored.Path, "note.txt"))),
+            () => Assert.True(Directory.Exists(Path.Join(restored.Path, "empty")))
+        );
+    }
+
+    [Fact]
     internal async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
     {
         await using var provider = TestHost.CreateProvider();

@@ -1263,6 +1263,51 @@ public sealed class BackupRequestValidatorTests
     }
 
     [Fact]
+    internal async Task AnalyzeErrors_SourceListingOutOfMemory_PropagatesInsteadOfReportingAnAccessError()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () =>
+                this.CreateSut()
+                    .AnalyzeErrorsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_SourceListingCancelled_StopsTheSweepBeforeTheLaterChecks()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        var warnings = await this.CreateSut()
+            .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken);
+
+        Assert.Empty(warnings);
+        _ = this.passwordService.DidNotReceive().AnalyzePasswordStrength(Arg.Any<string>());
+    }
+
+    [Fact]
+    internal async Task AnalyzeWarnings_SourceListingOutOfMemory_PropagatesInsteadOfSkippingTheSweep()
+    {
+        _ = this.fileOperations.DirectoryExists(SourceDir).Returns(true);
+        _ = this.directoryScan
+            .ScanDirectoryAsync(SourceDir, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InsufficientMemoryException());
+
+        _ = await Assert.ThrowsAsync<InsufficientMemoryException>(
+            () =>
+                this.CreateSut()
+                    .AnalyzeWarningsAsync(ValidRequest(SourceDir, DestinationDir), TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
     internal async Task AnalyzeWarnings_CreateIntoAFolderThatCannotBeListed_SkipsTheReplacedBackupWarning()
     {
         this.StubReadableSource();

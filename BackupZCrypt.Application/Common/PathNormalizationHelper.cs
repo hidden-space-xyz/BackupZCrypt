@@ -121,9 +121,13 @@ internal static class PathNormalizationHelper
     /// Determines whether a fully qualified Windows path holds a character the file system refuses
     /// anywhere after its root.
     /// </summary>
+    /// <remarks>
+    /// The check is pure string inspection, so it is exposed to the test assembly and verified on
+    /// every platform even though only Windows calls it.
+    /// </remarks>
     /// <param name="path">The fully qualified path.</param>
     /// <returns><see langword="true"/> when the path cannot exist on Windows.</returns>
-    private static bool HasInvalidWindowsCharacters(string path)
+    internal static bool HasInvalidWindowsCharacters(string path)
     {
         var root = Path.GetPathRoot(path) ?? string.Empty;
         var remainder = path.AsSpan(root.Length);

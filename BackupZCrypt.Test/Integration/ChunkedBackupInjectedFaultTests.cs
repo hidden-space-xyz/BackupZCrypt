@@ -444,6 +444,38 @@ public sealed class ChunkedBackupInjectedFaultTests
     }
 
     [Fact]
+    internal async Task Restore_CancelledWhileApplyingMetadata_PropagatesTheCancellationInsteadOfReportingTheFile()
+    {
+        using var source = new TempDir();
+        using var archive = new TempDir();
+        using var restored = new TempDir();
+
+        _ = source.WriteText("a.txt", "content");
+
+        await using (var plain = TestHost.CreateProvider())
+        {
+            await CreateBackupAsync(plain.GetRequiredService<IChunkedBackupService>(), source.Path, archive.Path);
+        }
+
+        InterceptedMetadataService metadata = new(onApply: _ => throw new OperationCanceledException());
+        await using var provider = TestHost.CreateProvider(services =>
+            services.AddSingleton<IFileMetadataService>(metadata)
+        );
+        var service = provider.GetRequiredService<IChunkedBackupService>();
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () =>
+                service.RestoreAsync(
+                    archive.Path,
+                    restored.Path,
+                    Password,
+                    new RecordingProgress<BackupStatus>(),
+                    TestContext.Current.CancellationToken
+                )
+        );
+    }
+
+    [Fact]
     internal async Task Restore_IntoAFolderThatHoldsTheBackup_RefusesOnlyTheEntriesThatWouldLandInsideIt()
     {
         const string KeepContent = "a file that lands next to the backup folder";
