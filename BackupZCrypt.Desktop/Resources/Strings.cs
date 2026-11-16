@@ -438,7 +438,7 @@ internal static class Strings
     public static string ResultErrorTitle => Get();
 
     /// <summary>
-    /// Gets the title shown when an operation is canceled.
+    /// Gets the title shown when an operation is cancelled.
     /// </summary>
     public static string ResultCancelled => Get();
 
@@ -550,7 +550,8 @@ internal static class Strings
     public static string WindowClose => Get();
 
     /// <summary>
-    /// Gets the AES display name. Resolved by <c>AlgorithmMetadataProvider</c> from the strategy enum value.
+    /// Gets the AES display name. Resolved by <c>AlgorithmMetadataProvider</c> from the
+    /// <c>EncryptionAlgorithm</c> value.
     /// </summary>
     public static string AesDisplayName => Get();
 
@@ -861,7 +862,8 @@ internal static class Strings
 
     /// <summary>
     /// Dynamically resolves a resource string by its key, used for <c>MessageCode</c>-keyed strings
-    /// looked up by enum member name (by <c>MessageLocalizer</c> and <c>PasswordStrengthFormatter</c>).
+    /// looked up by enum member name by <c>MessageLocalizer</c>, including the password tips that
+    /// <c>PasswordStrengthFormatter</c> localizes through it.
     /// </summary>
     /// <param name="key">The resource key, typically a <c>MessageCode</c> member name.</param>
     /// <returns>The localized string, or the key itself when no matching resource exists.</returns>

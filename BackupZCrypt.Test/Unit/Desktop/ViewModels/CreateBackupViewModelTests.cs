@@ -72,7 +72,7 @@ public sealed class CreateBackupViewModelTests
     private readonly ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
 
     /// <summary>
-    /// The substituted folder picker, never exercised here but required by the constructor.
+    /// The substituted folder picker the source and destination folders are chosen through.
     /// </summary>
     private readonly IFilePickerService filePicker = Substitute.For<IFilePickerService>();
 

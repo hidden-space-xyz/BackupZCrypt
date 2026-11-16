@@ -4,8 +4,9 @@ namespace BackupZCrypt.Infrastructure.FileSystem;
 
 /// <summary>
 /// Queries the local file system for drive/volume information used to validate backup
-/// destinations. Every method swallows I/O exceptions and returns a sentinel value so
-/// callers can treat an unavailable or invalid path as a non-fatal condition.
+/// destinations. Every method swallows any exception other than <see cref="OutOfMemoryException"/>
+/// and returns a sentinel value so callers can treat an unavailable or invalid path as a non-fatal
+/// condition.
 /// </summary>
 internal sealed class SystemStorageService : ISystemStorageService
 {

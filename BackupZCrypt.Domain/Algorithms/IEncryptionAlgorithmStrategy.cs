@@ -1,7 +1,7 @@
 namespace BackupZCrypt.Domain.Algorithms;
 
 /// <summary>
-/// Encrypts and decrypts individual chunks using a specific AEAD cipher.
+/// Encrypts and decrypts individual chunks, and the manifest, using a specific AEAD cipher.
 /// </summary>
 public interface IEncryptionAlgorithmStrategy : IAlgorithmStrategy<EncryptionAlgorithm>
 {

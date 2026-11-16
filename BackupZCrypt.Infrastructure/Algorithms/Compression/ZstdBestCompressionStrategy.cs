@@ -11,7 +11,7 @@ internal sealed class ZstdBestCompressionStrategy : ZstdCompressionStrategyBase
     public override Domain.Algorithms.CompressionMode Id => Domain.Algorithms.CompressionMode.ZstdBest;
 
     /// <summary>
-    /// Gets the zstd compression level (19, maximum ratio).
+    /// Gets the zstd compression level (19, the highest standard level).
     /// </summary>
     protected override int CompressionLevel => 19;
 }

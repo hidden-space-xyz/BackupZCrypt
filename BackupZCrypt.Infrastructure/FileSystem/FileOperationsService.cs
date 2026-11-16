@@ -9,15 +9,17 @@ namespace BackupZCrypt.Infrastructure.FileSystem;
 /// <summary>
 /// File-system implementation of <see cref="IFileOperationsService"/> backed by
 /// <see cref="System.IO"/>. Stream factory methods open files asynchronously with
-/// sequential-scan hints and the shared <see cref="StreamConstants.CopyBufferSize"/>.
+/// sequential-scan hints, using the caller's buffer size or the shared
+/// <see cref="StreamConstants.CopyBufferSize"/>.
 /// </summary>
 internal sealed class FileOperationsService : IFileOperationsService
 {
     /// <summary>
     /// Enumerates files recursively under <paramref name="directoryPath"/> that match
-    /// <paramref name="searchPattern"/>, skipping inaccessible entries. Recursion stops at
-    /// reparse points (symlinks/junctions), so traversal cannot cycle, descend outside the source
-    /// tree, or copy the contents of a file reached through a link.
+    /// <paramref name="searchPattern"/>, skipping inaccessible entries. Reparse points of
+    /// every kind (symbolic links, junctions, and others) are neither descended into nor returned, so
+    /// traversal cannot cycle, descend outside the source tree, or copy the contents of a file reached
+    /// through a link.
     /// </summary>
     /// <param name="directoryPath">The root directory to enumerate.</param>
     /// <param name="searchPattern">A simple wildcard expression matched against file names; defaults to all files.</param>
@@ -187,6 +189,11 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// <param name="writer">The callback that writes the complete temporary file.</param>
     /// <param name="cancellationToken">A token to cancel the operation before publication.</param>
     /// <returns>A task that completes after the temporary file has been renamed into place.</returns>
+    /// <exception cref="ArgumentException"><paramref name="finalPath"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="finalPath"/> or <paramref name="writer"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException"><paramref name="finalPath"/> has no directory.</exception>
     public async Task WriteFileAtomicallyAsync(
         string finalPath,
         Func<Stream, CancellationToken, Task> writer,
@@ -241,6 +248,10 @@ internal sealed class FileOperationsService : IFileOperationsService
     /// <param name="maximumBytes">The greatest file length the caller accepts.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The complete file contents.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumBytes"/> is negative.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The file is longer than <paramref name="maximumBytes"/>, or it grew while it was being read.
+    /// </exception>
     public async Task<byte[]> ReadAllBytesBoundedAsync(
         string filePath,
         int maximumBytes,

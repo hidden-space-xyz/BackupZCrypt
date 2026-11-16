@@ -160,8 +160,8 @@ BackupZCrypt/
 ```
 
 Project references point inward only: Domain references no project, Application only Domain, Infrastructure
-only Application, Composition both of them, and Desktop Application and Composition. `LayerDependencyTests`
-enforces these rules. See [AGENTS.md](AGENTS.md) for the full layout and coding conventions.
+only Application, Composition Application and Infrastructure, and Desktop Application and Composition.
+`LayerDependencyTests` enforces these rules. See [AGENTS.md](AGENTS.md) for the full layout and coding conventions.
 
 ## 💡 How to Contribute
 
@@ -170,12 +170,12 @@ guide where this project goes next.
 
 ### For non-developers
 
-- **Report Bugs**: Found something that doesn't work? Open an issue with your operating system and BackupZCrypt version.
-- **Suggest Features**: Ideas for new features or improvements are welcome as issues.
-- **Translations**: Help translate the application into your language.
-- **Documentation**: Improve or clarify the documentation.
-- **Spread the Word**: Share the project, blog about it or tell your friends.
-- **User Testing**: Try new features and give feedback.
+- **🐛 Report Bugs** — Found something that doesn't work? Open an issue with your operating system and BackupZCrypt version
+- **💡 Suggest Features** — Ideas for new features or improvements are welcome as issues
+- **🌍 Translations** — Help translate the application into your language
+- **📝 Documentation** — Improve or clarify the documentation
+- **📣 Spread the Word** — Share the project, blog about it or tell your friends
+- **🧪 User Testing** — Try new features and give feedback
 
 ### For developers
 
@@ -206,10 +206,10 @@ UI and security improvements are especially welcome.
 
 ### For maintainers
 
-Landing a releasable Conventional Commit on `master` runs build, tests, the 95% back-end and front-end coverage gate and
-formatting before publishing the four desktop packages with signed build provenance. The workflow calculates
-the tag from the latest stable tag and stamps that exact version into every binary, so no source version needs
-to be edited. CodeQL scans `develop` and `master` independently and does not block releases, and Dependabot
+Landing a releasable Conventional Commit on `master` runs build, tests, the 95% back-end and front-end
+coverage gate and formatting before publishing the four desktop packages with signed build provenance. The
+workflow calculates the tag from the latest stable tag and stamps that exact version into every binary, so no
+source version needs to be edited. CodeQL scans `develop` and `master` independently and does not block releases, and Dependabot
 opens one grouped `bump:` pull request against `develop` every Saturday.
 [`.github/workflows/README.md`](.github/workflows/README.md) documents the pipeline in full.
 

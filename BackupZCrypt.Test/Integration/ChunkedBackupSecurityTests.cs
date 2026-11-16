@@ -23,10 +23,10 @@ namespace BackupZCrypt.Test.Integration;
 /// <para>
 /// Every case is built from a real backup and, where a hostile manifest is needed, rewritten through
 /// the production <see cref="IManifestService"/> so the AEAD stays valid and the engine rejects the
-/// entry on its own merits rather than on a broken signature. PBKDF2 and multi-kilobyte files keep the
-/// suite cheap on CI: the cases that share one expensive fixture are looped inside a single test rather
-/// than repeated as separate cases, because each additional case would otherwise pay for another key
-/// derivation.
+/// entry on its own merits rather than on a broken signature. PBKDF2 and files of at most a few
+/// kilobytes keep the suite cheap on CI: the cases that share one expensive fixture are looped inside a
+/// single test rather than repeated as separate cases, because each additional case would otherwise pay
+/// for another key derivation.
 /// </para>
 /// <para>
 /// The source files are far below the chunker's 256 KiB minimum, so each one becomes exactly a single

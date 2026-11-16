@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
-/// End-to-end regression tests for the data-safety guarantees of create, update, restore, and verify:
+/// End-to-end regression tests for the data-safety guarantees of create, update, and restore:
 /// no user file is ever deleted, a backup is only replaced once its successor is complete, nothing the
 /// user selected is left out silently, and a restore reproduces the files with their metadata.
 /// </summary>

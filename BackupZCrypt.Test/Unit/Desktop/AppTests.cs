@@ -114,7 +114,8 @@ public sealed class AppTests
     }
 
     /// <summary>
-    /// Runs start-up against a substituted desktop lifetime and settings store, restores the cultures afterwards, and checks that exiting the lifetime disposes the container.
+    /// Runs start-up against a substituted desktop lifetime and settings store, restores the cultures
+    /// afterwards, and exits the lifetime so the container it built is disposed.
     /// </summary>
     /// <param name="store">The settings store start-up reads the language from.</param>
     /// <param name="assert">The assertions made once start-up has finished.</param>

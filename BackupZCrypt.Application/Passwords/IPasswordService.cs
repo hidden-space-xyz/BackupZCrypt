@@ -18,5 +18,12 @@ public interface IPasswordService
     /// <param name="length">The number of characters the generated password must contain.</param>
     /// <param name="options">The flags selecting which character classes to include and exclusions to apply.</param>
     /// <returns>A randomly generated password.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="length"/> is zero or negative.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="options"/> selects no character class, or its exclusions leave no character to
+    /// draw from.
+    /// </exception>
     public string GeneratePassword(int length, PasswordGenerationOptions options);
 }

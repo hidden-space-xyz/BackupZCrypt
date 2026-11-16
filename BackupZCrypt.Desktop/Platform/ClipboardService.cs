@@ -54,8 +54,9 @@ internal sealed class ClipboardService : IClipboardService, IDisposable
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Does nothing when the application is not running a classic desktop lifetime or its main window exposes
-    /// no clipboard; in that case the returned task completes without the clipboard having been updated.
+    /// Does nothing when no clipboard can be resolved (with the default constructor, when the application is
+    /// not running a classic desktop lifetime or its main window exposes no clipboard); in that case the
+    /// returned task completes without the clipboard having been updated.
     /// The transfer object is disposed only once the clipboard write has completed, by which point the
     /// clipboard holds its own copy of the payload.
     /// </remarks>

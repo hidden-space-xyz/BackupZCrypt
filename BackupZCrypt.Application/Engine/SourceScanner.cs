@@ -20,6 +20,7 @@ internal static class SourceScanner
     /// <param name="cancellationToken">A token to cancel the walk.</param>
     /// <returns>The snapshot, or <see langword="null"/> when the folder does not exist.</returns>
     /// <exception cref="UnauthorizedAccessException">The source folder itself cannot be listed.</exception>
+    /// <exception cref="IOException">The source folder itself cannot be opened.</exception>
     internal static async Task<SourceSnapshot?> ScanAsync(
         IDirectoryScanService directoryScanService,
         string sourcePath,

@@ -227,11 +227,12 @@ internal static class TypeReferences
     }
 
     /// <summary>
-    /// Expands a type into itself and the types it is composed of: the element type of an array,
-    /// pointer, or by-ref type, and the definition and arguments of a generic type.
+    /// Expands a type into the types it is composed of: the element type of an array, pointer, or
+    /// by-ref type, and the definition and arguments of a constructed generic type, each expanded in
+    /// turn. Any other type stands for itself.
     /// </summary>
     /// <param name="type">The type to expand.</param>
-    /// <returns>The type and its parts.</returns>
+    /// <returns>The type itself, or its expanded parts.</returns>
     private static IEnumerable<Type> Expand(Type type)
     {
         if (type.HasElementType)

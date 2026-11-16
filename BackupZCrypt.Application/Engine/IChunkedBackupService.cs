@@ -12,7 +12,7 @@ internal interface IChunkedBackupService
     /// <summary>
     /// Creates a new chunked backup of the source at the destination.
     /// </summary>
-    /// <param name="sourcePath">The file or directory to back up.</param>
+    /// <param name="sourcePath">The directory to back up.</param>
     /// <param name="destinationPath">The directory where chunks and the manifest are written.</param>
     /// <param name="password">The password the archive's keys are derived from.</param>
     /// <param name="algorithms">The cipher, key derivation function, and compression the archive is written with.</param>

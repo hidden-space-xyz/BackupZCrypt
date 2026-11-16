@@ -48,8 +48,9 @@ internal abstract class ZstdCompressionStrategyBase : ICompressionStrategy
     }
 
     /// <summary>
-    /// Wraps the compressed input stream in a zstd decompression stream. Decompression is
-    /// streamed lazily, so the level does not need to match the one used for compression.
+    /// Wraps the compressed input stream in a zstd decompression stream that decompresses lazily as
+    /// it is read. A zstd frame does not depend on the level it was written with, so any strategy can
+    /// decompress it.
     /// </summary>
     /// <param name="inputStream">The compressed data to read from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

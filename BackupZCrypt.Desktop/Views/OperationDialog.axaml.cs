@@ -30,8 +30,8 @@ namespace BackupZCrypt.Desktop.Views;
 internal sealed partial class OperationDialog : UserControl
 {
     /// <summary>
-    /// How long the exit motion is given before the overlay reports completion. It matches the longest fade of
-    /// the scrim and the card, so the overlay is never removed while it is still visible.
+    /// How long the exit motion is given before the overlay reports completion. It outlasts the longest
+    /// fade of the scrim and the card, so the overlay is never removed while it is still visible.
     /// </summary>
     private static readonly TimeSpan ExitDuration = TimeSpan.FromMilliseconds(260);
 

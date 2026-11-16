@@ -63,8 +63,8 @@ public static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The entry path to validate.</param>
     /// <exception cref="InvalidDataException">
-    /// The path is empty, rooted, not in canonical form, contains a NUL character, or has an empty or
-    /// relative segment.
+    /// The path is empty, rooted, not in canonical form, contains a NUL character, or has an empty,
+    /// traversal, or current-directory segment.
     /// </exception>
     public static void ValidateRelative(string relativePath)
     {
@@ -155,6 +155,9 @@ public static class ManifestPathPolicy
     /// </remarks>
     /// <param name="relativePath">The path relative to the backup root, using host separators.</param>
     /// <returns>The path with canonical separators and Unicode composition.</returns>
+    /// <exception cref="InvalidDataException">
+    /// The path contains a backslash on a host whose directory separator is not a backslash.
+    /// </exception>
     public static string ToManifestPath(string relativePath)
     {
         if (Path.DirectorySeparatorChar is not '\\' && relativePath.Contains('\\'))

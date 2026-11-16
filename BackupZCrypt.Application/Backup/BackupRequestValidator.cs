@@ -185,8 +185,7 @@ internal sealed class BackupRequestValidator(
 
     /// <summary>
     /// Reports the blocking problems of the source path: empty, a file rather than a directory,
-    /// missing, unreadable, holding no file that can be backed up, or holding more files than one
-    /// manifest can record.
+    /// missing, unreadable, or, for a create or update, holding no file that can be backed up.
     /// </summary>
     /// <param name="request">The request whose operation decides how deeply the source is inspected.</param>
     /// <param name="sourcePath">The normalized source path.</param>

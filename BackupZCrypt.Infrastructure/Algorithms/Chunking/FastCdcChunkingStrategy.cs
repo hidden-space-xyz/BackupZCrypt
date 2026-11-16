@@ -330,8 +330,8 @@ internal sealed class FastCdcChunkingStrategy : IChunkingStrategy
 
     /// <summary>
     /// Splits the source stream into content-defined chunks, yielding each chunk as it is
-    /// produced. Boundaries are chosen by the FastCDC rolling hash; the final chunk may be
-    /// shorter than the target size.
+    /// produced. Boundaries are chosen by the FastCDC rolling hash; only the final chunk may be
+    /// shorter than the minimum size.
     /// </summary>
     /// <param name="source">The stream to chunk.</param>
     /// <param name="cancellationToken">A token to cancel the enumeration.</param>

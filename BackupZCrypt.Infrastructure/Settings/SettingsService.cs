@@ -12,7 +12,10 @@ namespace BackupZCrypt.Infrastructure.Settings;
 /// overwriting anything, when a file cannot be read.
 /// </summary>
 /// <param name="fileOperationsService">The service used to read and write settings files.</param>
-/// <param name="baseDirectoryPath">An optional override for the settings directory; defaults to local application data.</param>
+/// <param name="baseDirectoryPath">
+/// An optional override for the settings directory; defaults to a <c>BackupZCrypt</c> folder under the
+/// local application data directory.
+/// </param>
 internal sealed class SettingsService(
     IFileOperationsService fileOperationsService,
     string? baseDirectoryPath = null

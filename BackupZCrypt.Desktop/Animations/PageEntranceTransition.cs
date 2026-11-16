@@ -121,7 +121,8 @@ internal sealed class PageEntranceTransition : IPageTransition
     }
 
     /// <summary>
-    /// Puts the page in its resting place without any motion, for a presenter that is not on screen.
+    /// Moves the page to its resting values: fully opaque and at no vertical offset. With the transitions
+    /// attached by <see cref="Rise"/>, the transitions animate the page towards these values.
     /// </summary>
     /// <param name="page">The presenter of the incoming page.</param>
     private static void Settle(Visual page)

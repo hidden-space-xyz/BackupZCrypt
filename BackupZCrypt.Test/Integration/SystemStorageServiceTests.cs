@@ -3,9 +3,9 @@ using BackupZCrypt.Infrastructure.FileSystem;
 namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
-/// Unit tests for <see cref="SystemStorageService"/>'s never-throw contract. The validator treats
-/// the sentinels (<c>-1</c> free space, <see langword="false"/> readiness) as "unknown, skip the
-/// check" rather than "block the backup", so an exception escaping this service would turn an
+/// Tests for <see cref="SystemStorageService"/>'s never-throw contract. The validator's free-space
+/// check treats the sentinels (<c>-1</c> free space, <see langword="false"/> readiness) as "unknown,
+/// skip the check" rather than "block the backup", so an exception escaping this service would turn an
 /// unreadable drive into a crash instead of a skipped precondition. The reverse also matters, so
 /// the volume actually holding the test's temp directory is checked to report itself as ready with
 /// real free space rather than as permanently unknown.
@@ -16,8 +16,8 @@ namespace BackupZCrypt.Test.Integration;
 /// returns an empty string for any relative destination path, and only the validator's
 /// <c>IsNullOrEmpty</c> guard keeps it from reaching <c>DriveInfo</c> today. A service that answered
 /// "unknown" for every path would satisfy the sentinel cases while silently disabling the free-space
-/// precondition, and a backup would then run until the destination filled instead of being refused up
-/// front.
+/// precondition, and a backup would then run until the destination filled instead of being warned about
+/// up front.
 /// </para>
 /// <para>
 /// Every case is portable by construction: on Windows the <c>DriveInfo</c> constructor rejects an

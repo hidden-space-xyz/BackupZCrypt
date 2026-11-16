@@ -22,15 +22,15 @@ public sealed record class OnDiskFormatFixture(
 /// generator that writes them and the tests that pin them.
 /// </summary>
 /// <remarks>
-/// Keeping the source tree, password, salt, and algorithm combinations in one place is what makes
+/// Keeping the source tree, salt, sub-key labels, and algorithm combinations in one place is what makes
 /// the fixtures meaningful: the generator and the assertions cannot drift apart and quietly agree
 /// on a format that changed.
 /// </remarks>
 public static class OnDiskFormatFixtures
 {
     /// <summary>
-    /// The HKDF context labels that bind each sub-key to a single purpose, in the order the backup
-    /// service derives them. These strings are part of the on-disk format: changing one makes every
+    /// The HKDF context labels that bind each sub-key to a single purpose, in the order the archive
+    /// key schedule derives them. These strings are part of the on-disk format: changing one makes every
     /// existing archive undecryptable.
     /// </summary>
     public static readonly string[] SubKeyLabels =

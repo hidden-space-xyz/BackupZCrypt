@@ -123,6 +123,9 @@ public interface IFileOperationsService
     /// <param name="maximumBytes">The greatest file length the caller accepts.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The complete file contents.</returns>
+    /// <exception cref="InvalidDataException">
+    /// The file is longer than <paramref name="maximumBytes"/> or grows while it is read.
+    /// </exception>
     public Task<byte[]> ReadAllBytesBoundedAsync(
         string filePath,
         int maximumBytes,

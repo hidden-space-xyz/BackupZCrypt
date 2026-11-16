@@ -1,8 +1,8 @@
 namespace BackupZCrypt.Application.Common;
 
 /// <summary>
-/// The immutable outcome of a completed backup or restore operation, including timing,
-/// counts, and any accumulated errors and warnings.
+/// The immutable outcome of a completed create, update, restore, or verify operation, including
+/// timing, counts, and any accumulated errors and warnings.
 /// </summary>
 public sealed record class BackupResult
 {

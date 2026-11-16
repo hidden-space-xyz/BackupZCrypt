@@ -45,10 +45,10 @@ public sealed class OperationViewModelBaseTests : IDisposable
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OperationViewModelBaseTests"/> class, installing
-    /// a synchronization context that runs posted callbacks inline, so the <see cref="Progress{T}"/>
-    /// the page attaches to its message delivers its reports synchronously instead of on an
-    /// arbitrary thread pool thread. A fresh instance is constructed for every test, so this is the
-    /// per-test setup hook.
+    /// a synchronization context that runs posted callbacks inline, so the
+    /// <see cref="CoalescingStatusProgress"/> the page's session attaches to each run delivers its
+    /// reports synchronously instead of on an arbitrary thread pool thread. A fresh instance is
+    /// constructed for every test, so this is the per-test setup hook.
     /// </summary>
     public OperationViewModelBaseTests()
     {

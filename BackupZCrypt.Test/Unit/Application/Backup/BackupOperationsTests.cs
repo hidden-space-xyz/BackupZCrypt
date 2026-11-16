@@ -16,7 +16,7 @@ namespace BackupZCrypt.Test.Unit.Application.Backup;
 /// Unit tests for the backup operations: the validation gate, the preview of an update or restore,
 /// the post-validation source and destination checks, the backup lock, operation dispatch,
 /// cancellation, unexpected-error mapping, and the classification of a picked backup folder. The
-/// validator, file system, storage, backup service, and manifest service are all substituted, so
+/// validator, file system, lock, storage, backup service, and manifest service are all substituted, so
 /// nothing here touches the real disk.
 /// </summary>
 /// <remarks>

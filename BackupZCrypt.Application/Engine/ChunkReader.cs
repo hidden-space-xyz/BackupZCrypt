@@ -33,12 +33,21 @@ internal sealed class ChunkReader(
     /// <param name="fileEntry">The manifest entry describing the file and its chunks.</param>
     /// <param name="destination">The stream the reconstructed plaintext is written to.</param>
     /// <param name="tracker">The progress tracker that is told about every chunk processed.</param>
-    /// <param name="onDamagedChunk">Told about a chunk file whose content fails authentication, if not <see langword="null"/>.</param>
+    /// <param name="onDamagedChunk">
+    /// Told about a chunk file whose stored bytes are unusable, because their length is impossible or
+    /// they fail authentication or decode to the wrong size, if not <see langword="null"/>.
+    /// </param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when every chunk has been verified and written to <paramref name="destination"/>.</returns>
     /// <exception cref="MissingChunkException">A chunk file is missing.</exception>
-    /// <exception cref="InvalidDataException">The entry path is malformed or a chunk decompresses beyond the declared size.</exception>
-    /// <exception cref="CryptographicException">A chunk fails authentication or the size or hash does not match the manifest.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The entry path is malformed, a stored chunk has an impossible length, or a chunk decompresses
+    /// beyond the declared size.
+    /// </exception>
+    /// <exception cref="CryptographicException">
+    /// A recorded hash is malformed, a chunk fails authentication, or the size or hash does not match
+    /// the manifest.
+    /// </exception>
     internal async Task ReadFileAsync(
         ChunkManifestFileEntry fileEntry,
         Stream destination,

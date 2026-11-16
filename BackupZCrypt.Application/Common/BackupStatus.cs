@@ -1,7 +1,7 @@
 namespace BackupZCrypt.Application.Common;
 
 /// <summary>
-/// An immutable snapshot of the progress of an in-flight backup or restore operation.
+/// An immutable snapshot of the progress of an in-flight create, update, restore, or verify operation.
 /// </summary>
 public sealed record class BackupStatus
 {

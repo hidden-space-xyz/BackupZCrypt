@@ -19,15 +19,14 @@ namespace BackupZCrypt.Test.Tools;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Maintenance tool: rewrites the committed format fixtures. Run only on a deliberate format
-/// change. Every case therefore declares <c>Explicit = true</c> on its <see cref="FactAttribute"/>
+/// Every case declares <c>Explicit = true</c> on its <see cref="FactAttribute"/>
 /// — xUnit has no class-level form — so a normal <c>dotnet test</c> never runs it: the fixtures
 /// exist precisely to detect a change in the on-disk format, so regenerating them on each run
 /// would defeat their entire purpose.
 /// </para>
 /// <para>
 /// Run it only when the format is changed <b>deliberately</b>, and treat the resulting diff as the
-/// review artefact — a fixture that changes without an intended format change is a data-loss bug:
+/// review artifact — a fixture that changes without an intended format change is a data-loss bug:
 /// <c>dotnet run --project BackupZCrypt.Test -- -explicit only -class "*OnDiskFormatFixtureGenerator"</c>.
 /// </para>
 /// <para>
@@ -40,7 +39,8 @@ namespace BackupZCrypt.Test.Tools;
 public sealed class OnDiskFormatFixtureGenerator
 {
     /// <summary>
-    /// The password the fixture archives are created with, shared with <c>OnDiskFormatTests</c>.
+    /// The password the fixture archives are created with, which must match the one
+    /// <c>OnDiskFormatTests</c> uses.
     /// </summary>
     private const string Password = "Correct-Horse-Battery-Staple-42";
 
@@ -58,7 +58,7 @@ public sealed class OnDiskFormatFixtureGenerator
     }
 
     /// <summary>
-    /// Prints the golden key-schedule vectors as ready-to-paste C# literals.
+    /// Prints the golden key-schedule vectors to the test output as lowercase hexadecimal strings.
     /// </summary>
     [Fact(Explicit = true)]
     internal void PrintGoldenVectors()

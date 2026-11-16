@@ -12,15 +12,18 @@ internal sealed class DirectoryScanService : IDirectoryScanService
     /// <summary>
     /// Walks the tree under <paramref name="directoryPath"/> on a background thread, one folder at a
     /// time, so a folder that cannot be listed is recorded and skipped instead of hiding the rest of
-    /// the tree or failing the whole walk.
+    /// the tree or failing the whole walk. Only a failure to list the root itself propagates.
     /// </summary>
     /// <remarks>
     /// Only symbolic links and junctions are left out. Other reparse points — cloud placeholders,
     /// deduplicated or compacted files — hold the file's own data and are walked like any other entry.
+    /// A reparse point whose link target cannot be read is treated as a link and left out.
     /// </remarks>
     /// <param name="directoryPath">The root directory to walk.</param>
     /// <param name="cancellationToken">A token to cancel the walk.</param>
     /// <returns>The files and folders found and the entries that were skipped.</returns>
+    /// <exception cref="UnauthorizedAccessException">The root directory itself cannot be listed.</exception>
+    /// <exception cref="IOException">The root directory cannot be opened.</exception>
     public Task<DirectoryScan> ScanDirectoryAsync(
         string directoryPath,
         CancellationToken cancellationToken = default

@@ -11,7 +11,7 @@ internal sealed class ZstdFastCompressionStrategy : ZstdCompressionStrategyBase
     public override Domain.Algorithms.CompressionMode Id => Domain.Algorithms.CompressionMode.ZstdFast;
 
     /// <summary>
-    /// Gets the zstd compression level (1, fastest).
+    /// Gets the zstd compression level (1, the fastest standard level).
     /// </summary>
     protected override int CompressionLevel => 1;
 }

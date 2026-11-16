@@ -564,9 +564,10 @@ internal sealed class ChunkStore(
     /// was published, and removes the chunks directory again when that leaves it empty.
     /// </summary>
     /// <remarks>
-    /// The chunks of a run are named under its own keys, so none of them can belong to the backup the
-    /// run was going to replace. Cleanup is best-effort: a file that cannot be deleted stays behind as
-    /// an orphan the next successful run prunes.
+    /// A create names its chunks under keys derived from a fresh salt, and an update records only the
+    /// chunks the backup did not already hold in a usable state, so none of them is a chunk the
+    /// previous manifest can still read. Cleanup is best-effort: a file that cannot be deleted stays
+    /// behind as an orphan the next successful run prunes.
     /// </remarks>
     /// <param name="context">The run's record of the chunk files it wrote.</param>
     /// <param name="chunksDir">The chunks directory.</param>

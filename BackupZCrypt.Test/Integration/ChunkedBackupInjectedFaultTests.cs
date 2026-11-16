@@ -24,10 +24,10 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each fault is injected by registering, after the production services, a thin wrapper around the
-/// real implementation that fails only where the case says so. Everything else, from key derivation to
-/// the bytes on disk, runs through the real stack, and every case asserts what the user is left with,
-/// not only the reported counts.
+/// Each fault is injected by registering, after the production services, a substitute or a thin
+/// wrapper around the real implementation that fails only where the case says so. Everything else,
+/// from key derivation to the bytes on disk, runs through the real stack, and every case asserts what
+/// the user is left with, not only the reported counts.
 /// </para>
 /// <para>
 /// A manifest is edited through <see cref="IManifestService.SaveChunkManifestAsync"/> with the keys

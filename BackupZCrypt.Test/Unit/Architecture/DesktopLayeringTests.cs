@@ -6,9 +6,9 @@ using BackupZCrypt.Test.Tools;
 namespace BackupZCrypt.Test.Unit.Architecture;
 
 /// <summary>
-/// Keeps the desktop front end layered: ViewModels, the models they expose, and the presentation
-/// mappers stay free of the UI framework so they can be tested without it, the views use only what
-/// they present, and nothing below the views reaches back up into them.
+/// Keeps the desktop front end layered: ViewModels, the models they expose, the presentation mappers,
+/// and the resources stay free of the UI framework so they can be tested without it, the views use
+/// only what they present, and nothing below the views reaches back up into them.
 /// </summary>
 /// <remarks>
 /// <para>

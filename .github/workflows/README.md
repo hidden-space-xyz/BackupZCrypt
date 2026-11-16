@@ -25,7 +25,7 @@ manifest.
 
 Coverage is required to stay at or above 95% for lines, branches and methods, separately for the
 back end (the `Application`, `Composition`, `Domain` and `Infrastructure` assemblies together) and the
-front end (the `Desktop` assembly). The Desktop views, compiled XAML, behaviours and platform adapters
+front end (the `BackupZCrypt.Desktop` project, whose assembly is named `BackupZCrypt`). The Desktop views, compiled XAML, behaviours and platform adapters
 are exercised on the headless Avalonia platform, which needs no display on the Linux runner. The back
 end is gated as a whole because `Infrastructure` holds file-system code that branches on the operating
 system, so one runner can only take one side of those branches. The exact filter lives in

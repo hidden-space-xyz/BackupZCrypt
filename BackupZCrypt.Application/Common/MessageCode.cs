@@ -113,8 +113,8 @@ public enum MessageCode
     LowDiskSpaceFormat = 21,
 
     /// <summary>
-    /// The destination already holds files that a create or restore may overwrite; formatted with
-    /// the number of existing files.
+    /// The destination already holds files that a restore may overwrite; formatted with the number
+    /// of existing files.
     /// </summary>
     DestinationExistingFilesFormat = 24,
 
@@ -129,8 +129,9 @@ public enum MessageCode
     NoFilesInSourceDirectory = 26,
 
     /// <summary>
-    /// A single file could not be backed up because of a file-level I/O or access error; the run
-    /// continues with the remaining files. Formatted with the relative file path and the reason.
+    /// A single file could not be backed up, because of a file-level I/O or access error or a name a
+    /// manifest cannot record; the run continues with the remaining files. Formatted with the
+    /// relative file path and the reason.
     /// </summary>
     FileBackupErrorFormat = 27,
 
@@ -160,8 +161,8 @@ public enum MessageCode
     BackupDestinationMustExist = 33,
 
     /// <summary>
-    /// Authenticated decryption of the manifest or of a chunk failed, so either the password is
-    /// incorrect or the stored data has been corrupted or tampered with.
+    /// Authenticated decryption of the manifest failed, so either the password is incorrect or the
+    /// manifest has been corrupted or tampered with.
     /// </summary>
     InvalidPassword = 34,
 
@@ -233,7 +234,8 @@ public enum MessageCode
     VerifyInvalidPassword = 55,
 
     /// <summary>
-    /// A file could not be reconstructed during a restore; formatted with the path and reason.
+    /// A file or folder could not be reconstructed during a restore; formatted with the path and
+    /// reason.
     /// </summary>
     DecryptionErrorFormat = 56,
 

@@ -31,11 +31,8 @@ public static class DependencyInjection
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is deliberately one method rather than one per layer. The registrations were previously
-    /// split as <c>AddDomainServices</c> and <c>AddApplicationServices</c>, but the split did not
-    /// follow the layers — the first also registered thirteen Infrastructure strategies and one
-    /// Application service — and both were always called together from the only two call sites.
-    /// One honestly named method is simpler than two that misdescribe themselves.
+    /// This is deliberately one method rather than one per layer: the registrations do not divide
+    /// cleanly along the layers, and every caller needs all of them together.
     /// </para>
     /// <para>
     /// Every strategy is registered as a singleton against its shared interface, so the open generic

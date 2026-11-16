@@ -56,7 +56,7 @@ internal sealed class App : Avalonia.Application
     }
 
     /// <summary>
-    /// Builds the dependency-injection container holding the domain and application services, the
+    /// Builds the dependency-injection container holding the application and infrastructure services, the
     /// Desktop-only platform services, and the ViewModel of the shell and of every page.
     /// </summary>
     /// <param name="overrides">Registrations applied after the application's own, or <see langword="null"/>.</param>

@@ -35,9 +35,9 @@ internal sealed class BackupRestorer(
     /// <remarks>
     /// The destination folder is created only once the manifest has been opened, so a wrong password
     /// leaves nothing behind. Each entry is checked against the running system before anything is
-    /// written: a name the system cannot create, a name that clashes with another restored file once
-    /// letter case is ignored, or a target inside the backup folder itself is reported for that file
-    /// while every other file is still restored.
+    /// written: a name the system cannot create, a name that clashes with another restored file on a
+    /// system that ignores letter case, or a target inside the backup folder itself is reported for
+    /// that file while every other file is still restored.
     /// </remarks>
     /// <param name="sourcePath">The directory containing the backup chunks and manifest.</param>
     /// <param name="destinationPath">The directory into which files are reconstructed.</param>
@@ -196,7 +196,8 @@ internal sealed class BackupRestorer(
     /// result reports every affected file.
     /// </summary>
     /// <remarks>
-    /// A chunk file whose content fails authentication is renamed with the
+    /// A chunk file whose stored bytes are unusable, such as content that fails authentication or a
+    /// length that is impossible for its chunk, is renamed with the
     /// <see cref="BackupConstants.QuarantineExtension"/> extension once the run has finished. The
     /// manifest then simply misses that chunk, which the next update regenerates from the source,
     /// while the damaged bytes stay on disk until that update prunes them.
@@ -442,7 +443,7 @@ internal sealed class BackupRestorer(
     /// Renames damaged chunk files so the next update regenerates them. A chunk that cannot be
     /// renamed, for example on read-only media, is left as it is.
     /// </summary>
-    /// <param name="chunkFiles">The chunk files that failed authentication.</param>
+    /// <param name="chunkFiles">The chunk files found damaged during verification.</param>
     /// <returns>The number of chunk files set aside.</returns>
     private int QuarantineChunks(IEnumerable<string> chunkFiles)
     {

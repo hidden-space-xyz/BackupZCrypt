@@ -14,7 +14,7 @@ internal static class Icons
 {
     /// <summary>
     /// Gets the create-backup icon: a shield silhouette (straight shoulders, Bezier-tapered tip) with a
-    /// padlock cut out of it, built from a half-ring shackle over a rounded-square body.
+    /// padlock cut out of it, built from a half-ring shackle over a rounded-rectangle body.
     /// </summary>
     public static StreamGeometry ShieldLock { get; } = StreamGeometry.Parse(
         "M12,2.2 L19.5,4.8 V10.5 C19.5,15.3 16.6,19.2 12,21.6 C7.4,19.2 4.5,15.3 4.5,10.5 V4.8 Z " +

@@ -14,10 +14,10 @@ namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
 /// Integration tests pinning that an archive is portable between operating systems: a manifest
-/// records entry paths with forward slashes whichever platform wrote it, a manifest entry recorded
-/// with Windows separators — whoever wrote it — still restores into a real directory tree on every
-/// platform, and a traversal path written in Windows notation is rejected on every platform rather
-/// than only where <c>\</c> happens to be the host separator.
+/// records entry paths with forward slashes whichever platform wrote it and restores them into the
+/// same directory tree, a manifest entry recorded with Windows separators is not one any manifest
+/// writes and is rejected on every platform, and a traversal path written in Windows notation is
+/// rejected on every platform rather than only where <c>\</c> happens to be the host separator.
 /// </summary>
 /// <remarks>
 /// Every case uses PBKDF2 and files of a few bytes, so the fixture costs one key derivation per
@@ -305,8 +305,8 @@ public sealed class CrossPlatformManifestTests
     }
 
     /// <summary>
-    /// Derives the manifest encryption sub-key the same way the backup service does, so a test can
-    /// read or rewrite a real manifest without reaching into the service's private key handling.
+    /// Derives the manifest encryption sub-key the same way <see cref="ArchiveKeys"/> does, so a test
+    /// can read or rewrite a real manifest without going through the backup engine.
     /// </summary>
     /// <param name="provider">The provider holding the real key derivation strategies.</param>
     /// <param name="preamble">The preamble carrying the master salt and key derivation algorithm.</param>

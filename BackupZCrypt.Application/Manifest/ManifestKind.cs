@@ -17,7 +17,7 @@ public enum ManifestKind
     Encrypted = 1,
 
     /// <summary>
-    /// A manifest exists but is empty or truncated.
+    /// A manifest exists but is empty, truncated, or cannot be read.
     /// </summary>
     Damaged = 2,
 

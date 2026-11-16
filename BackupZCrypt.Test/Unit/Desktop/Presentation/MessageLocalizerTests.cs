@@ -9,9 +9,10 @@ namespace BackupZCrypt.Test.Unit.Desktop.Presentation;
 
 /// <summary>
 /// Unit tests for <see cref="MessageLocalizer"/>, the single point where the language-neutral codes the
-/// lower layers emit become text the user reads. Every case is driven from <c>Enum.GetValues</c> and from
-/// the placeholders the resources themselves declare, so a code added without a resource — which the app
-/// would silently render as the raw enum name — fails here rather than in front of a user.
+/// lower layers emit become text the user reads. The exhaustive cases are driven from
+/// <c>Enum.GetValues</c> and from the placeholders the resources themselves declare, so a code added
+/// without a resource — which the app would silently render as the raw enum name — fails here rather
+/// than in front of a user.
 /// </summary>
 public sealed class MessageLocalizerTests
 {

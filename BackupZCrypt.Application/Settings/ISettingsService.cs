@@ -14,7 +14,9 @@ public interface ISettingsService
         where T : class, ISettings<T>;
 
     /// <summary>
-    /// Loads the persisted settings, creating and saving the defaults if no valid file exists.
+    /// Loads the persisted settings, creating the file with the defaults when it does not exist yet.
+    /// A file that exists but cannot be read as settings is left untouched and the defaults are
+    /// returned instead.
     /// </summary>
     /// <typeparam name="T">The settings type to load.</typeparam>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

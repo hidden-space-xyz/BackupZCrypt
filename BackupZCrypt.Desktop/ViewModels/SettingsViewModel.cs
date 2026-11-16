@@ -15,7 +15,8 @@ namespace BackupZCrypt.Desktop.ViewModels;
 
 /// <summary>
 /// ViewModel for the settings page: lets the user choose default encryption, key-derivation, and
-/// compression algorithms plus the UI language, and persists those choices.
+/// compression algorithms plus the UI language, persists those choices, and runs the benchmark that
+/// estimates how long a backup would take with them.
 /// </summary>
 internal sealed partial class SettingsViewModel : ViewModelBase
 {

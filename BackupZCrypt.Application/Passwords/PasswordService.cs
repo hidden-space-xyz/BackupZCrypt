@@ -583,7 +583,7 @@ internal sealed partial class PasswordService : IPasswordService
 
     /// <summary>
     /// Penalizes passwords drawn from too few character classes: a single-class password loses 2 bits per
-    /// character up to 20, and a short two-class password loses a flat 10.
+    /// character, up to 20 bits, and a two-class password shorter than ten characters loses a flat 10 bits.
     /// </summary>
     /// <param name="flags">The character classes detected in the password.</param>
     /// <param name="password">The password to inspect.</param>

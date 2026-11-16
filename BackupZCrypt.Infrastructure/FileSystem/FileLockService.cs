@@ -30,9 +30,9 @@ internal sealed class FileLockService : IFileLockService
     }
 
     /// <summary>
-    /// Probes the lock file with the most permissive sharing: the open only fails while another
-    /// process holds it exclusively. A missing file, a file left behind by a crash, or one that cannot
-    /// be opened for any other reason is not treated as a held lock.
+    /// Probes the lock file with the most permissive sharing, so a sharing violation means another
+    /// handle holds it exclusively. A missing file, a file left behind by a crash, or one the caller is
+    /// denied access to is not treated as a held lock; any other I/O failure to open it is.
     /// </summary>
     /// <param name="lockFilePath">The path of the lock file.</param>
     /// <returns><see langword="true"/> when another process holds the lock.</returns>

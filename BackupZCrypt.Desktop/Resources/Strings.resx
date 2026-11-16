@@ -172,7 +172,7 @@
     <value>Create a backup</value>
   </data>
   <data name="HelpCreateText" xml:space="preserve">
-    <value>Pick the source folder and an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete). Type a strong password —or press Generate— and confirm it. Then press “Start backup”.</value>
+    <value>Pick the source folder and an empty destination folder (or one holding a previous backup, which is replaced only once the new one is complete). Type a strong password — or press Generate — and confirm it. Then press “Start backup”.</value>
   </data>
   <data name="HelpUpdateTitle" xml:space="preserve">
     <value>Update a backup</value>
@@ -589,7 +589,7 @@
     <value>An unexpected error occurred: {0}</value>
   </data>
   <data name="StrengthVeryWeak" xml:space="preserve">
-    <value>Very Weak</value>
+    <value>Very weak</value>
   </data>
   <data name="StrengthWeak" xml:space="preserve">
     <value>Weak</value>

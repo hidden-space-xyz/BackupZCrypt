@@ -15,7 +15,7 @@ namespace BackupZCrypt.Test.Unit.Composition;
 /// until it is wired up.
 /// </summary>
 /// <remarks>
-/// The negative cases pin the other half of that contract: a registry asked for an identifier it has no
+/// The negative case pins the other half of that contract: a registry asked for an identifier it has no
 /// strategy for must throw rather than silently fall back to whichever strategy happens to be
 /// registered. Encrypting with an algorithm the manifest does not name would make the archive
 /// undecryptable.

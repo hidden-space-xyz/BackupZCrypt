@@ -7,7 +7,9 @@ using BackupZCrypt.Desktop.Resources;
 namespace BackupZCrypt.Test.Integration;
 
 /// <summary>
-/// Verifies that every message code has an English resx key and that the English and Spanish keys match.
+/// Verifies that the English resx holds exactly the keys the application asks for — every message
+/// code and every <see cref="Strings"/> property, with no orphaned entries — and that the English and
+/// Spanish keys match.
 /// These tests read the resource files themselves, which is what makes both key sets visible at once;
 /// <c>MessageLocalizerTests</c> covers the complementary runtime question of whether the resources actually
 /// resolve through the resource manager for the culture in effect.
