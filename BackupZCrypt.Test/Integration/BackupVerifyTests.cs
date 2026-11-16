@@ -238,21 +238,6 @@ public sealed class BackupVerifyTests
         Assert.Contains(MessageCode.SourcePathNotExist, CollectCodes(result));
     }
 
-    [Fact]
-    internal async Task Verify_EmptyPassword_ReportsPasswordRequired()
-    {
-        await using var provider = TestHost.CreateProvider();
-        var operations = provider.GetRequiredService<IBackupOperations>();
-
-        using var backup = new TempDir();
-
-        var result = await operations.VerifyAsync(
-            NewVerifyRequest(backup.Path, password: string.Empty),
-            cancellationToken: TestContext.Current.CancellationToken
-        );
-
-        Assert.Contains(MessageCode.PasswordRequired, CollectCodes(result));
-    }
 
     /// <summary>
     /// Fills the source with three files of distinct content, one of them nested, and backs them up

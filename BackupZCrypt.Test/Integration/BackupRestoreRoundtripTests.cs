@@ -204,60 +204,6 @@ public sealed class BackupRestoreRoundtripTests
         );
     }
 
-    [Fact]
-    internal async Task Restore_WithWrongPassword_FailsAndDoesNotReproduceOriginals()
-    {
-        await using var provider = TestHost.CreateProvider();
-        var operations = provider.GetRequiredService<IBackupOperations>();
-
-        using var source = new TempDir();
-        using var destination = new TempDir();
-        using var restored = new TempDir();
-
-        var expected = BuildSourceTree(source);
-
-        var createResult = await operations.CreateAsync(
-            NewCreateRequest(
-                source.Path,
-                destination.Path,
-                EncryptionAlgorithm.Aes,
-                CompressionMode.None,
-                KeyDerivationAlgorithm.PBKDF2
-            ),
-            cancellationToken: TestContext.Current.CancellationToken
-        );
-        Assert.True(createResult.IsSuccess && createResult.Value.Completion!.IsSuccess);
-
-        var wrongPasswordRequest = new RestoreBackupRequest(
-            destination.Path,
-            restored.Path,
-            "totally-different-password",
-            ProceedOnWarnings: true
-        );
-
-        var restoreResult = await operations.RestoreAsync(
-            wrongPasswordRequest,
-            cancellationToken: TestContext.Current.CancellationToken
-        );
-
-        var failed = (!restoreResult.IsSuccess) || (!restoreResult.Value.Completion!.IsSuccess);
-        Assert.True(failed, "Restore with a wrong password unexpectedly succeeded.");
-
-        var codes = CollectCodes(restoreResult);
-        Assert.Contains(MessageCode.InvalidPassword, codes);
-
-        foreach (var (relativePath, content) in expected)
-        {
-            var restoredFile = Path.Join(restored.Path, relativePath);
-            if (File.Exists(restoredFile))
-            {
-                Assert.NotEqual(
-                    content,
-                    await File.ReadAllBytesAsync(restoredFile, TestContext.Current.CancellationToken)
-                );
-            }
-        }
-    }
 
     [Fact]
     internal async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()

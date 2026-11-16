@@ -28,6 +28,12 @@ internal sealed class App : Avalonia.Application
     }
 
     /// <summary>
+    /// Gets or sets registrations applied after the application's own, so a test host can replace a service
+    /// such as the settings store before the container is built. <see langword="null"/> in the application.
+    /// </summary>
+    internal Action<IServiceCollection>? ServiceOverrides { get; set; }
+
+    /// <summary>
     /// Completes framework initialization by wiring up services, applying the saved language, and
     /// creating the main window for the classic desktop lifetime.
     /// </summary>
@@ -35,7 +41,7 @@ internal sealed class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var services = ConfigureServices();
+            var services = ConfigureServices(ServiceOverrides);
             desktop.Exit += (_, _) => services.Dispose();
 
             ApplyLanguagePreference(services);
@@ -53,8 +59,9 @@ internal sealed class App : Avalonia.Application
     /// Builds the dependency-injection container holding the domain and application services, the
     /// Desktop-only platform services, and the ViewModel of the shell and of every page.
     /// </summary>
+    /// <param name="overrides">Registrations applied after the application's own, or <see langword="null"/>.</param>
     /// <returns>The built provider, disposed when the desktop lifetime exits.</returns>
-    private static ServiceProvider ConfigureServices()
+    internal static ServiceProvider ConfigureServices(Action<IServiceCollection>? overrides = null)
     {
         ServiceCollection services = [];
 
@@ -70,6 +77,8 @@ internal sealed class App : Avalonia.Application
         _ = services.AddSingleton<SettingsViewModel>();
         _ = services.AddSingleton<AboutViewModel>();
         _ = services.AddSingleton<MainWindowViewModel>();
+
+        overrides?.Invoke(services);
 
         return services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }

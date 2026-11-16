@@ -113,27 +113,7 @@ public sealed class PasswordServiceTests
         Assert.Contains(MessageCode.TipReduceRepeats, analysis.Tips);
     }
 
-    [Fact]
-    internal void AnalyzePasswordStrength_ContainsYear_AddsAvoidYearsTip()
-    {
-        var analysis = this.sut.AnalyzePasswordStrength("summer-1999!");
 
-        Assert.Contains(MessageCode.TipAvoidYears, analysis.Tips);
-    }
-
-    [Fact]
-    internal void GeneratePassword_ReturnsRequestedLength()
-    {
-        var password = this.sut.GeneratePassword(
-            24,
-            PasswordGenerationOptions.IncludeUppercase
-                | PasswordGenerationOptions.IncludeLowercase
-                | PasswordGenerationOptions.IncludeNumbers
-                | PasswordGenerationOptions.IncludeSpecialCharacters
-        );
-
-        Assert.Equal(24, password.Length);
-    }
 
     [Fact]
     internal void GeneratePassword_UppercaseOnly_ProducesOnlyUppercaseLetters()

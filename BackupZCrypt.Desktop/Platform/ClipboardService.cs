@@ -14,14 +14,43 @@ namespace BackupZCrypt.Desktop.Platform;
 internal sealed class ClipboardService : IClipboardService, IDisposable
 {
     /// <summary>
+    /// How long a copied secret stays on the clipboard before it is cleared, unless a test shortens it.
+    /// </summary>
+    private static readonly TimeSpan DefaultSensitiveTextLifetime = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// How long a copied secret stays on the clipboard before it is cleared.
     /// </summary>
-    private static readonly TimeSpan SensitiveTextLifetime = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan sensitiveTextLifetime;
 
     /// <summary>
     /// The pending clear of the last secret copied, cancelled when another secret is copied.
     /// </summary>
     private CancellationTokenSource? pendingClear;
+
+    /// <summary>
+    /// Resolves the clipboard to write to, or <see langword="null"/> when there is none.
+    /// </summary>
+    private readonly Func<IClipboard?> getClipboard;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClipboardService"/> class that writes to the main window's
+    /// clipboard and clears a copied secret after thirty seconds.
+    /// </summary>
+    public ClipboardService()
+        : this(GetMainWindowClipboard, DefaultSensitiveTextLifetime) { }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClipboardService"/> class with the given clipboard and
+    /// secret lifetime.
+    /// </summary>
+    /// <param name="getClipboard">Resolves the clipboard to write to, or <see langword="null"/> when there is none.</param>
+    /// <param name="sensitiveTextLifetime">How long a copied secret stays on the clipboard.</param>
+    internal ClipboardService(Func<IClipboard?> getClipboard, TimeSpan sensitiveTextLifetime)
+    {
+        this.getClipboard = getClipboard;
+        this.sensitiveTextLifetime = sensitiveTextLifetime;
+    }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -32,7 +61,7 @@ internal sealed class ClipboardService : IClipboardService, IDisposable
     /// </remarks>
     public async Task SetTextAsync(string text)
     {
-        if (GetClipboard() is { } clipboard)
+        if (this.getClipboard() is { } clipboard)
         {
             using var dataTransfer = new DataTransfer();
             dataTransfer.Add(DataTransferItem.CreateText(text));
@@ -43,7 +72,7 @@ internal sealed class ClipboardService : IClipboardService, IDisposable
     /// <inheritdoc/>
     /// <remarks>
     /// Clipboard managers and other programs can read whatever stays on the clipboard, so a copied
-    /// password is cleared after <see cref="SensitiveTextLifetime"/>, but only if the clipboard still
+    /// password is cleared after the secret lifetime, but only if the clipboard still
     /// holds it: whatever the user copied since is left alone.
     /// </remarks>
     public async Task SetSensitiveTextAsync(string text)
@@ -76,16 +105,16 @@ internal sealed class ClipboardService : IClipboardService, IDisposable
     /// <param name="text">The secret that was copied.</param>
     /// <param name="cancellationToken">A token cancelled when another secret is copied.</param>
     /// <returns>A task that completes once the clipboard has been checked.</returns>
-    private static async Task ClearLaterAsync(string text, CancellationToken cancellationToken)
+    private async Task ClearLaterAsync(string text, CancellationToken cancellationToken)
     {
         try
         {
-            await Task.Delay(SensitiveTextLifetime, cancellationToken);
+            await Task.Delay(this.sensitiveTextLifetime, cancellationToken);
 
             await Dispatcher.UIThread.InvokeAsync(async () =>
             {
                 if (
-                    GetClipboard() is { } clipboard
+                    this.getClipboard() is { } clipboard
                     && string.Equals(await clipboard.TryGetTextAsync(), text, StringComparison.Ordinal)
                 )
                 {
@@ -103,7 +132,7 @@ internal sealed class ClipboardService : IClipboardService, IDisposable
     /// Returns the clipboard of the main window, if the application has one.
     /// </summary>
     /// <returns>The clipboard, or <see langword="null"/>.</returns>
-    private static IClipboard? GetClipboard()
+    private static IClipboard? GetMainWindowClipboard()
     {
         return
             Avalonia.Application.Current?.ApplicationLifetime

@@ -141,6 +141,20 @@ public sealed class EncryptionStrategyTests
 
     [Theory]
     [MemberData(nameof(RealCipherCases))]
+    internal void EncryptAndDecrypt_WithAKeyOfAnUnsupportedSize_Throw(IEncryptionAlgorithmStrategy cipher)
+    {
+        var plaintext = RandomBytes(64, seed: 13);
+        var ciphertext = cipher.EncryptChunk(plaintext, Key, Nonce, AssociatedData);
+        var shortKey = Key[..7];
+
+        Assert.Multiple(
+            () => Assert.ThrowsAny<Exception>(() => cipher.EncryptChunk(plaintext, shortKey, Nonce, AssociatedData)),
+            () => Assert.ThrowsAny<Exception>(() => cipher.DecryptChunk(ciphertext, shortKey, Nonce, AssociatedData))
+        );
+    }
+
+    [Theory]
+    [MemberData(nameof(RealCipherCases))]
     internal void Decrypt_WithWrongNonce_Throws(IEncryptionAlgorithmStrategy cipher)
     {
         var plaintext = RandomBytes(512, seed: 12);

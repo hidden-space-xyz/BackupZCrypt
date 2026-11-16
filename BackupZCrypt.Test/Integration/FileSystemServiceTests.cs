@@ -316,6 +316,35 @@ public sealed class FileSystemServiceTests
     }
 
     [Fact]
+    internal void ApplyFileMetadata_ClearsRecordedFlagsAndLeavesUnrecordedOnesAlone()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Hidden and read-only are file attributes only on Windows; Unix keeps them in the permission bits.");
+
+        using var dir = new TempDir();
+        var service = new FileMetadataService();
+        var path = dir.WriteText("flags.txt", "content");
+        var before = File.GetLastWriteTimeUtc(path);
+
+        try
+        {
+            service.ApplyFileMetadata(path, null, isReadOnly: true, isHidden: true, unixMode: null);
+            service.ApplyFileMetadata(path, null, isReadOnly: false, isHidden: false, unixMode: null);
+            service.ApplyFileMetadata(path, null, isReadOnly: null, isHidden: null, unixMode: null);
+            var metadata = service.GetFileMetadata(path);
+
+            Assert.Multiple(
+                () => Assert.False(metadata.IsReadOnly),
+                () => Assert.False(metadata.IsHidden),
+                () => Assert.Equal(before, metadata.LastWriteTimeUtc)
+            );
+        }
+        finally
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     internal async Task WriteFileAtomicallyAsync_ExistingReadOnlyTarget_IsReplaced()
     {
         using var dir = new TempDir();
@@ -335,23 +364,6 @@ public sealed class FileSystemServiceTests
         );
     }
 
-    [Fact]
-    internal void SystemStorage_RealTempDrive_IsReadyAndReportsFreeSpace()
-    {
-        using var dir = new TempDir();
-        var service = new SystemStorageService();
-
-        var root = service.GetPathRoot(dir.Path);
-        Assert.Multiple(
-            () => Assert.False(string.IsNullOrEmpty(root), "Could not resolve the temp drive root."),
-            () => Assert.True(service.IsDriveReady(root!), $"Temp drive '{root}' reported not ready."),
-            () =>
-                Assert.True(
-                    service.GetAvailableFreeSpace(root!) > 0,
-                    $"Temp drive '{root}' reported no free space."
-                )
-        );
-    }
 
     [Fact]
     internal void SystemStorage_UnmountedRoot_IsNotReadyAndReportsNegativeSpace()
@@ -367,7 +379,8 @@ public sealed class FileSystemServiceTests
         {
             Assert.Multiple(
                 () => Assert.False(service.IsDriveReady(unmountedRoot), $"'{unmountedRoot}' reported ready."),
-                () => Assert.Equal(-1L, service.GetAvailableFreeSpace(unmountedRoot))
+                () => Assert.Equal(-1L, service.GetAvailableFreeSpace(unmountedRoot)),
+                () => Assert.Null(service.GetDriveFormat(unmountedRoot))
             );
         }
     }

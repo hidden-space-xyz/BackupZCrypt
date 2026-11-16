@@ -293,6 +293,7 @@ public sealed class CreateBackupViewModelTests
     [InlineData(" Spaced-Passw0rd!", "PasswordHintSpaces")]
     [InlineData("Spaced-Passw0rd! ", "PasswordHintSpaces")]
     [InlineData("Valid-Passw0rd!", "")]
+    [InlineData("", "")]
     internal void Password_BreakingALengthOrSpacingRule_ExplainsWhyStartIsDisabled(
         string password,
         string expectedHintKey
@@ -308,6 +309,48 @@ public sealed class CreateBackupViewModelTests
             () => Assert.Equal(expected, sut.PasswordRuleHint),
             () => Assert.Equal(expected.Length > 0, sut.ShowPasswordRuleHint)
         );
+    }
+
+    [Fact]
+    internal async Task PickFolderCommands_FillTheChosenPathsAndKeepThemWhenThePickerIsCancelled()
+    {
+        var sut = CreateSut();
+        _ = this.filePicker.PickFolderAsync(Arg.Any<string>()).Returns("picked-source", "picked-destination", null);
+
+        await sut.PickSourceFolderCommand.ExecuteAsync(null);
+        await sut.PickDestinationFolderCommand.ExecuteAsync(null);
+        await sut.PickSourceFolderCommand.ExecuteAsync(null);
+
+        Assert.Multiple(
+            () => Assert.Equal("picked-source", sut.SourcePath),
+            () => Assert.Equal("picked-destination", sut.DestinationPath)
+        );
+    }
+
+    [Theory]
+    [InlineData("", "recent-source")]
+    [InlineData("typed-source", "typed-source")]
+    internal async Task OnNavigatedToAsync_SeedsOnlyAnEmptySourceFromTheMostRecentOne(string typed, string expected)
+    {
+        var sut = CreateSut();
+        _ = this
+            .settingsStore.LoadAsync<RecentPathSettings>(Arg.Any<CancellationToken>())
+            .Returns(new RecentPathSettings("recent-source", "recent-destination"));
+        sut.SourcePath = typed;
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Equal(expected, sut.SourcePath);
+    }
+
+    [Fact]
+    internal async Task OnNavigatedToAsync_WithoutARecentSource_LeavesTheSourceEmpty()
+    {
+        var sut = CreateSut();
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.True(string.IsNullOrEmpty(sut.SourcePath));
     }
 
     [Fact]

@@ -39,4 +39,13 @@ public sealed class LayoutConvertersTests
     {
         Assert.Equal(1, LayoutConverters.ColumnCount(width, "230"));
     }
+
+    [Fact]
+    internal void ColumnsForWidth_AsABinding_ConvertsTheMeasuredWidth()
+    {
+        Assert.Equal(
+            3,
+            LayoutConverters.ColumnsForWidth.Convert(690d, typeof(int), "230", System.Globalization.CultureInfo.InvariantCulture)
+        );
+    }
 }

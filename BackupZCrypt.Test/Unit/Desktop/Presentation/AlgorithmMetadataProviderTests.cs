@@ -63,6 +63,26 @@ public sealed class AlgorithmMetadataProviderTests
         );
     }
 
+    [Fact]
+    internal void Metadata_ValuesOutsideTheEnums_FallBackToBlankOrNoCompressionText()
+    {
+        const EncryptionAlgorithm unknownEncryption = (EncryptionAlgorithm)999;
+        const KeyDerivationAlgorithm unknownKeyDerivation = (KeyDerivationAlgorithm)999;
+        const CompressionMode unknownCompression = (CompressionMode)999;
+
+        Assert.Multiple(
+            () => Assert.Empty(AlgorithmMetadataProvider.GetName(unknownEncryption)),
+            () => Assert.Empty(AlgorithmMetadataProvider.GetSummary(unknownEncryption)),
+            () => Assert.Empty(AlgorithmMetadataProvider.GetDescription(unknownEncryption)),
+            () => Assert.Empty(AlgorithmMetadataProvider.GetName(unknownKeyDerivation)),
+            () => Assert.Empty(AlgorithmMetadataProvider.GetSummary(unknownKeyDerivation)),
+            () => Assert.Empty(AlgorithmMetadataProvider.GetDescription(unknownKeyDerivation)),
+            () => Assert.Equal(Strings.NoneCompressionName, AlgorithmMetadataProvider.GetName(unknownCompression)),
+            () => Assert.Equal(Strings.NoneCompressionSummary, AlgorithmMetadataProvider.GetSummary(unknownCompression)),
+            () => Assert.Equal(Strings.NoneCompressionDescription, AlgorithmMetadataProvider.GetDescription(unknownCompression))
+        );
+    }
+
     /// <summary>
     /// Asserts that every value of an algorithm enum carries a non-blank name, summary, and description, and
     /// that each of those three sets is duplicate-free, so a copy-pasted arm is caught as well as a missing one.

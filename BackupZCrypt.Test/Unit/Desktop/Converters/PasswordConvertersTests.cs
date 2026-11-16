@@ -123,6 +123,25 @@ public sealed class PasswordConvertersTests
         Assert.Empty(unmapped);
     }
 
+    [Fact]
+    internal void StrengthIsBand_ForAStrengthOutsideTheEnumOrAnotherValue_UsesTheStrongBandOrNone()
+    {
+        Assert.Multiple(
+            () => Assert.Equal(true, PasswordConverters.StrengthIsBand.Convert((PasswordStrength)999, typeof(bool), "strong", CultureInfo.InvariantCulture)),
+            () => Assert.Equal(false, PasswordConverters.StrengthIsBand.Convert("Strong", typeof(bool), "strong", CultureInfo.InvariantCulture)),
+            () => Assert.Equal(false, PasswordConverters.StrengthIsBand.Convert(PasswordStrength.Strong, typeof(bool), null, CultureInfo.InvariantCulture))
+        );
+    }
+
+    [Fact]
+    internal void StrengthConverters_NeverWriteBack()
+    {
+        Assert.Multiple(
+            () => Assert.Throws<NotSupportedException>(static () => PasswordConverters.StrengthIsBand.ConvertBack(true, typeof(PasswordStrength), "strong", CultureInfo.InvariantCulture)),
+            () => Assert.Throws<NotSupportedException>(static () => PasswordConverters.StrengthReaches.ConvertBack(true, typeof(PasswordStrength), "1", CultureInfo.InvariantCulture))
+        );
+    }
+
     /// <summary>
     /// Asks the meter converter whether a strength lights the segment at the given level.
     /// </summary>

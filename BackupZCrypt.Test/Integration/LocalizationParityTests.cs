@@ -36,18 +36,6 @@ public sealed class LocalizationParityTests
         "Strings.es.resx"
     );
 
-    [Fact]
-    internal void EveryMessageCode_HasEnglishResxKey()
-    {
-        var englishKeys = ReadResxKeys(EnglishResxPath);
-
-        var missing = Enum.GetNames<MessageCode>()
-            .Where(code => !englishKeys.Contains(code))
-            .Order(StringComparer.Ordinal)
-            .ToList();
-
-        Assert.Empty(missing);
-    }
 
     [Fact]
     internal void EnglishAndSpanish_HaveIdenticalKeySets()

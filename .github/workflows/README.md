@@ -4,7 +4,7 @@ BackupZCrypt ships through a single gated flow that ends in cross-platform deskt
 
 ```text
 push to master
-  -> Release build, tests, >= 90% core coverage and formatting
+  -> Release build, tests, >= 95% back-end and front-end coverage and formatting
   -> Conventional Commits version resolution
   -> four self-contained portable packages with build provenance
   -> tag and GitHub Release
@@ -23,11 +23,12 @@ Microsoft Testing Platform, creates a Cobertura report and verifies whitespace f
 packages are cached by the hash of `Directory.Packages.props`, the project files and the local tool
 manifest.
 
-Coverage is required to stay at or above 90% for lines, branches and methods. The measurement covers
-the platform-independent `Application`, `Composition`, `Domain` and `Infrastructure` assemblies.
-Avalonia UI composition is still compiled and its view-model tests still run, but the `Desktop`
-assembly is not part of the threshold because it also contains generated XAML and native UI adapters
-that cannot be exercised by the headless Linux runner. The exact filter lives in
+Coverage is required to stay at or above 95% for lines, branches and methods, separately for the
+back end (the `Application`, `Composition`, `Domain` and `Infrastructure` assemblies together) and the
+front end (the `Desktop` assembly). The Desktop views, compiled XAML, behaviours and platform adapters
+are exercised on the headless Avalonia platform, which needs no display on the Linux runner. The back
+end is gated as a whole because `Infrastructure` holds file-system code that branches on the operating
+system, so one runner can only take one side of those branches. The exact filter lives in
 [`BackupZCrypt.Test/CodeCoverage.config`](../../BackupZCrypt.Test/CodeCoverage.config).
 
 ## CodeQL

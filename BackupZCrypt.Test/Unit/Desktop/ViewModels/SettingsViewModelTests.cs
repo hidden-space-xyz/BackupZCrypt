@@ -269,24 +269,83 @@ public sealed class SettingsViewModelTests
             .SaveAsync(Arg.Any<LanguageSettings>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    internal async Task SaveCommand_WhenTheLanguageWriteFails_ShowsTheError()
+    {
+        var sut = CreateSut();
+        _ = this
+            .settingsStore.SaveAsync(Arg.Any<BackupCreationSettings>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+        _ = this
+            .settingsStore.SaveAsync(Arg.Any<LanguageSettings>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure(MessageCode.UnexpectedErrorFormat, "language file is locked"));
+
+        await sut.OnNavigatedToAsync();
+        await sut.SaveCommand.ExecuteAsync(null);
+
+        Assert.Multiple(
+            () => Assert.False(sut.ShowSavedNotice),
+            () => Assert.True(sut.ShowSaveError)
+        );
+    }
+
+    [Fact]
+    internal async Task OnNavigatedToAsync_StoredLanguageNotOffered_SelectsTheFirstLanguage()
+    {
+        var sut = CreateSut();
+        StubStoredSettings(BackupCreationSettings.DefaultValue, new LanguageSettings("xx"));
+
+        await sut.OnNavigatedToAsync();
+
+        Assert.Same(sut.LanguageOptions[0], sut.SelectedLanguage);
+    }
+
+    [Fact]
+    internal async Task RunBenchmarkCommand_WithALargeFileEstimate_DescribesIt()
+    {
+        var sut = CreateSut();
+        _ = this
+            .benchmarkService.EstimateAsync(Arg.Any<BenchmarkRequest>(), Arg.Any<CancellationToken>())
+            .Returns(
+                Result<BenchmarkEstimate>.Success(
+                    new BenchmarkEstimate(
+                        TimeSpan.FromMinutes(2),
+                        50_000_000,
+                        TimeSpan.FromMilliseconds(300),
+                        1,
+                        TimeSpan.FromMinutes(5),
+                        40_000_000
+                    )
+                )
+            );
+
+        await sut.RunBenchmarkCommand.ExecuteAsync(null);
+
+        Assert.Multiple(
+            () => Assert.True(sut.ShowBenchmarkResult),
+            () => Assert.False(string.IsNullOrEmpty(sut.BenchmarkLargeFileText))
+        );
+    }
+
     [SetCulture("")]
     [Theory]
     [InlineData("", 1)]
     [InlineData("   ", 1)]
+    [InlineData(null, 1)]
     [InlineData("abc", 1)]
     [InlineData("0", 1)]
     [InlineData("-5", 1)]
     [InlineData("0.0000001", 0)]
     [InlineData("1e12", 2)]
     internal async Task RunBenchmarkCommand_WithAnUnusableAmount_ReportsItAndRunsNothing(
-        string amount,
+        string? amount,
         int unitIndex
     )
     {
         var sut = CreateSut();
         var requests = StubBenchmark();
 
-        sut.BenchmarkDataAmount = amount;
+        sut.BenchmarkDataAmount = amount!;
         sut.SelectedDataUnit = sut.DataUnitOptions[unitIndex];
 
         await sut.RunBenchmarkCommand.ExecuteAsync(null);

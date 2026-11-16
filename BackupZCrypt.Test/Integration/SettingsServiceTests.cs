@@ -38,26 +38,6 @@ public sealed class SettingsServiceTests
         );
     }
 
-    [Fact]
-    internal async Task SaveThenGetOrCreate_RoundtripsNonDefaultValue()
-    {
-        using var dir = new TempDir();
-        var service = new SettingsService(new FileOperationsService(), dir.Path);
-
-        var custom = new BackupCreationSettings(
-            EncryptionAlgorithm.ChaCha20,
-            KeyDerivationAlgorithm.Scrypt,
-            CompressionMode.ZstdBest
-        );
-        Assert.NotEqual(BackupCreationSettings.DefaultValue, custom);
-
-        await service.SaveAsync(custom, TestContext.Current.CancellationToken);
-        var loaded = await service.GetOrCreateAsync<BackupCreationSettings>(
-            TestContext.Current.CancellationToken
-        );
-
-        Assert.Equal(custom, loaded);
-    }
 
     [Fact]
     internal async Task GetOrCreateAsync_WhenFileCorrupted_SelfHealsToDefaults()

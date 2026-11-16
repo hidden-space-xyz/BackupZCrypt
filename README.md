@@ -198,7 +198,7 @@ dotnet tool restore
 dotnet build BackupZCrypt.sln --configuration Release --no-restore
 dotnet test BackupZCrypt.Test/BackupZCrypt.Test.csproj --configuration Release --no-build --no-restore --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --coverage-settings BackupZCrypt.Test/CodeCoverage.config --results-directory TestResults/coverage
 dotnet reportgenerator "-reports:TestResults/coverage/*.cobertura.xml" -targetdir:TestResults/coverage/report "-reporttypes:JsonSummary;Html"
-dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 90
+dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 95
 dotnet format whitespace BackupZCrypt.sln --verify-no-changes
 ```
 
@@ -206,7 +206,7 @@ UI and security improvements are especially welcome.
 
 ### For maintainers
 
-Landing a releasable Conventional Commit on `master` runs build, tests, the 90% core-coverage gate and
+Landing a releasable Conventional Commit on `master` runs build, tests, the 95% back-end and front-end coverage gate and
 formatting before publishing the four desktop packages with signed build provenance. The workflow calculates
 the tag from the latest stable tag and stamps that exact version into every binary, so no source version needs
 to be edited. CodeQL scans `develop` and `master` independently and does not block releases, and Dependabot

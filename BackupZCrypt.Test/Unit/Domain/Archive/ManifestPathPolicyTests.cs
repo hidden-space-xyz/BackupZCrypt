@@ -38,6 +38,7 @@ public sealed class ManifestPathPolicyTests
             "\\absolute.txt",
             "nul\0char.txt",
             "docs\\notes.md",
+            "broken\uD800surrogate.txt",
             "café.txt",
         };
     }

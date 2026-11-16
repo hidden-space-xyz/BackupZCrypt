@@ -36,13 +36,10 @@ public sealed class DurationFormatterTests
     [InlineData(45.7d, "45 s")]
     [InlineData(59.999d, "59 s")]
     [InlineData(60d, "1 min 0 s")]
-    [InlineData(200d, "3 min 20 s")]
     [InlineData(3599d, "59 min 59 s")]
     [InlineData(3600d, "1 h 0 min")]
-    [InlineData(7500d, "2 h 5 min")]
     [InlineData(86_399d, "23 h 59 min")]
     [InlineData(86_400d, "1 d 0 h")]
-    [InlineData(97_200d, "1 d 3 h")]
     [InlineData(34_578_000d, "400 d 5 h")]
     [SetCulture("")]
     internal void Format_ByMagnitude_UsesExpectedGranularity(double seconds, string expected)

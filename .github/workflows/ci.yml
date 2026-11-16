@@ -33,18 +33,18 @@ jobs:
           dotnet tool restore
       - name: Build application
         run: dotnet build BackupZCrypt.sln --configuration Release --no-restore
-      - name: Tests with core coverage
+      - name: Tests with coverage
         run: >-
           dotnet test BackupZCrypt.Test/BackupZCrypt.Test.csproj
           --configuration Release --no-build --no-restore
           --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
           --coverage-settings BackupZCrypt.Test/CodeCoverage.config
           --results-directory TestResults/coverage
-      - name: Report and enforce core coverage >= 90%
+      - name: Report and enforce back-end and front-end coverage >= 95%
         run: |
           dotnet reportgenerator "-reports:TestResults/coverage/*.cobertura.xml" -targetdir:TestResults/coverage/report "-reporttypes:JsonSummary;MarkdownSummaryGithub"
           cat TestResults/coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
-          dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 90
+          dotnet run --file scripts/check-coverage.cs -- TestResults/coverage/report/Summary.json 95
       - name: Verify formatting
         run: dotnet format whitespace BackupZCrypt.sln --verify-no-changes --no-restore
 

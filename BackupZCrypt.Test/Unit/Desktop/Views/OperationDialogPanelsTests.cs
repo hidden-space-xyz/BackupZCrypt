@@ -24,6 +24,7 @@ public sealed class OperationDialogPanelsTests
     [InlineData(OperationPhase.Running, OperationDialogPanel.Running)]
     [InlineData(OperationPhase.AwaitingConfirmation, OperationDialogPanel.Warnings)]
     [InlineData(OperationPhase.Completed, OperationDialogPanel.Result)]
+    [InlineData((OperationPhase)99, OperationDialogPanel.None)]
     internal void For_EachPhase_ShowsItsOwnPanel(OperationPhase phase, OperationDialogPanel expected)
     {
         Assert.Equal(expected, OperationDialogPanels.For(phase));
@@ -50,7 +51,8 @@ public sealed class OperationDialogPanelsTests
                     operation.DismissResultCommand,
                     OperationDialogPanels.EscapeCommand(OperationDialogPanel.Result, operation)
                 ),
-            () => Assert.Null(OperationDialogPanels.EscapeCommand(OperationDialogPanel.None, operation))
+            () => Assert.Null(OperationDialogPanels.EscapeCommand(OperationDialogPanel.None, operation)),
+            () => Assert.Null(OperationDialogPanels.EscapeCommand((OperationDialogPanel)99, operation))
         );
     }
 
@@ -58,6 +60,7 @@ public sealed class OperationDialogPanelsTests
     [InlineData(OperationDialogPanel.None)]
     [InlineData(OperationDialogPanel.Running)]
     [InlineData(OperationDialogPanel.Warnings)]
+    [InlineData((OperationDialogPanel)99)]
     internal void EnterCommand_OutsideTheResult_DoesNothingSoItNeverConfirmsWarnings(
         OperationDialogPanel panel
     )
