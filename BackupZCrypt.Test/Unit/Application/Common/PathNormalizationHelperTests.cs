@@ -78,6 +78,26 @@ public sealed class PathNormalizationHelperTests
     }
 
     [Fact]
+    internal void TryNormalize_OnWindows_PathBeyondTheSystemLimitIsReportedAsTooLong()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to resolve a path beyond its maximum length.");
+        }
+
+        var entered = Path.Join(Path.GetTempPath(), new string('a', 40_000));
+
+        var result = PathNormalizationHelper.TryNormalize(entered, out var error);
+
+        Assert.Multiple(
+            () => Assert.Null(result),
+            () => Assert.Equal(MessageCode.InvalidPathFormat, error?.Code),
+            () => Assert.Equal(entered, error!.Args[0]),
+            () => Assert.Equal(MessageCode.ReasonPathTooLong, Assert.IsType<LocalizableMessage>(error!.Args[1]).Code)
+        );
+    }
+
+    [Fact]
     internal void TryNormalize_RootedPathWithANullCharacter_IsRejectedAsInvalidCharacters()
     {
         var entered = Path.Join(Path.GetTempPath(), "bad\0name");

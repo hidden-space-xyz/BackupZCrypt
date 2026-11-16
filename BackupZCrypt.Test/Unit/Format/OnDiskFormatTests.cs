@@ -19,8 +19,9 @@ namespace BackupZCrypt.Test.Unit.Format;
 /// <remarks>
 /// <para>
 /// There is no password recovery in this product: an archive that stops decrypting is permanently
-/// lost data. Every other test in this suite writes an archive with the current build and reads it
-/// back with the same build, so all of them keep passing when the format itself moves. These do not.
+/// lost data. Every other test that round-trips an archive writes it with the current build and
+/// reads it back with the same build, so all of them keep passing when the format itself moves.
+/// These do not.
 /// </para>
 /// <para>
 /// Two guards are combined. The <b>fixture archives</b> under <c>TestData/OnDiskFormatArchives</c> were

@@ -21,12 +21,12 @@ internal static class FailureReason
     private const int LockViolation = unchecked((int)0x80070021);
 
     /// <summary>
-    /// The Windows HRESULT raised when the disk is full.
+    /// The Windows HRESULT for <c>ERROR_DISK_FULL</c>, raised when there is not enough space on the disk.
     /// </summary>
     private const int DiskFull = unchecked((int)0x80070070);
 
     /// <summary>
-    /// The Windows HRESULT raised when the end of the disk was reached while writing.
+    /// The Windows HRESULT for <c>ERROR_HANDLE_DISK_FULL</c>, raised when the disk is full.
     /// </summary>
     private const int HandleDiskFull = unchecked((int)0x80070027);
 

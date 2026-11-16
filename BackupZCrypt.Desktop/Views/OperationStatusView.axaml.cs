@@ -81,8 +81,8 @@ internal sealed partial class OperationStatusView : UserControl
     /// <remarks>
     /// An event handler cannot return a task, so a fault escaping <see cref="TryShowDialogAsync"/>
     /// would be rethrown on the dispatcher and terminate the process — potentially mid-backup, and
-    /// nothing else in the application observes it. Swallowing it costs only the dialog, which is
-    /// the same posture every other handler in this assembly takes.
+    /// nothing else in the application observes it. Swallowing it costs only the dialog, never the
+    /// operation it reports on.
     /// </remarks>
     /// <param name="sender">The view model that raised the event.</param>
     /// <param name="e">The property change notification.</param>

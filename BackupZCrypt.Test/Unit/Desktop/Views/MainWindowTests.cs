@@ -101,7 +101,7 @@ public sealed class MainWindowTests
     }
 
     [Fact]
-    internal Task TitleBar_DoubleTapTogglesMaximizeAndPressStartsADrag()
+    internal Task TitleBar_DoubleTapTogglesMaximizeAndRightClickLeavesTheWindowAlone()
     {
         return HeadlessUi.RunAsync(() =>
         {

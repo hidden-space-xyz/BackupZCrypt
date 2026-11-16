@@ -204,7 +204,6 @@ public sealed class BackupRestoreRoundtripTests
         );
     }
 
-
     [Fact]
     internal async Task Restore_WithoutManifest_FailsWithManifestRequiredForDecryption()
     {
@@ -397,27 +396,6 @@ public sealed class BackupRestoreRoundtripTests
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.Equal(expected.Count, restoredFiles.Count);
-    }
-
-    /// <summary>
-    /// Gathers the operation's own error codes together with the per-file codes of the completed run,
-    /// which is only read when the outer result succeeded because
-    /// <see cref="BackupZCrypt.Application.Common.Result{T}.Value"/> throws on a failure.
-    /// </summary>
-    /// <param name="result">The operation outcome to inspect.</param>
-    /// <returns>The distinct message codes reported at either level.</returns>
-    private static HashSet<MessageCode> CollectCodes(Result<BackupOutcome> result)
-    {
-        var codes = result.Errors.Select(e => e.Code).ToHashSet();
-        if (result.IsSuccess)
-        {
-            foreach (var error in result.Value.Completion!.Errors)
-            {
-                _ = codes.Add(error.Code);
-            }
-        }
-
-        return codes;
     }
 
     /// <summary>

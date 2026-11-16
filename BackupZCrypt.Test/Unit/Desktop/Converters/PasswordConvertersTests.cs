@@ -124,10 +124,11 @@ public sealed class PasswordConvertersTests
     }
 
     [Fact]
-    internal void StrengthIsBand_ForAStrengthOutsideTheEnumOrAnotherValue_UsesTheStrongBandOrNone()
+    internal void StrengthIsBand_ForAStrengthOutsideTheEnumOrAnotherValue_UsesTheDangerBandOrNone()
     {
         Assert.Multiple(
-            () => Assert.Equal(true, PasswordConverters.StrengthIsBand.Convert((PasswordStrength)999, typeof(bool), "strong", CultureInfo.InvariantCulture)),
+            () => Assert.Equal(true, PasswordConverters.StrengthIsBand.Convert((PasswordStrength)999, typeof(bool), "danger", CultureInfo.InvariantCulture)),
+            () => Assert.Equal(false, PasswordConverters.StrengthIsBand.Convert((PasswordStrength)999, typeof(bool), "strong", CultureInfo.InvariantCulture)),
             () => Assert.Equal(false, PasswordConverters.StrengthIsBand.Convert("Strong", typeof(bool), "strong", CultureInfo.InvariantCulture)),
             () => Assert.Equal(false, PasswordConverters.StrengthIsBand.Convert(PasswordStrength.Strong, typeof(bool), null, CultureInfo.InvariantCulture))
         );

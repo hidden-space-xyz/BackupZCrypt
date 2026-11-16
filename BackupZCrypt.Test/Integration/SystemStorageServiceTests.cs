@@ -64,7 +64,7 @@ public sealed class SystemStorageServiceTests
                 Assert.True(
                     service.GetAvailableFreeSpace(root!) > 0,
                     "The volume holding the temp directory reported no free space, so the validator "
-                        + "would refuse every backup."
+                        + "would warn about low disk space on every backup."
                 )
         );
     }

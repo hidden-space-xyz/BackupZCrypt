@@ -30,10 +30,9 @@ namespace BackupZCrypt.Test.Tools;
 /// <c>dotnet run --project BackupZCrypt.Test -- -explicit only -class "*OnDiskFormatFixtureGenerator"</c>.
 /// </para>
 /// <para>
-/// That command bypasses <c>dotnet test</c> on purpose. An explicit test stays unrun however
-/// narrowly a <c>--filter</c> names it, and only <c>-explicit only</c> selects it — an option the
-/// VSTest runner cannot forward, so the v3 assembly's own runner is invoked directly. No filter
-/// typo can therefore reach this class by accident.
+/// That command bypasses <c>dotnet test</c> on purpose and runs the assembly's own xUnit console
+/// runner. An explicit test stays unrun however narrowly a filter names it, and only
+/// <c>-explicit only</c> selects it, so no filter typo can reach this class by accident.
 /// </para>
 /// </remarks>
 public sealed class OnDiskFormatFixtureGenerator

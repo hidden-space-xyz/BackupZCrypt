@@ -50,8 +50,6 @@ internal sealed class SetCultureAttribute(string culture) : BeforeAfterTestAttri
     /// <inheritdoc/>
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
-        // Both fields are assigned by Before, which xUnit always runs first; the null-forgiving
-        // operator states that rather than inventing a fallback culture that could never apply.
         CultureInfo.CurrentCulture = this.previousCulture!;
         CultureInfo.CurrentUICulture = this.previousUiCulture!;
     }

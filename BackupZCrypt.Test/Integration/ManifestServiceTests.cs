@@ -361,8 +361,6 @@ public sealed class ManifestServiceTests
         var decrypted = manifestService.DecryptChunkManifest(preamble!, key);
         Assert.NotNull(decrypted);
 
-        // The expected order is a typed local rather than an inline collection expression so both sides of
-        // the comparison below are string[]: Assert.Equal then compares them element by element, in order.
         string[] expectedPathOrder = ["a.txt", "b.txt", "docs/notes.md", "z.txt"];
 
         Assert.Multiple(

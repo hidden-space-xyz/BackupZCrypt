@@ -233,7 +233,6 @@ internal sealed class FileOperationsService : IFileOperationsService
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
-                // The original write or rename failure is the actionable error.
             }
 
             throw;

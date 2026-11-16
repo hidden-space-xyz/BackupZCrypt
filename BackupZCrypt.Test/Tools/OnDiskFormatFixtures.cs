@@ -65,9 +65,10 @@ public static class OnDiskFormatFixtures
     /// The source tree every fixture archive was created from, as relative path and UTF-8 content.
     /// </summary>
     /// <remarks>
-    /// It deliberately contains a nested directory (so entry-path portability is covered), a file
-    /// whose bytes repeat (so compression actually engages), and two files with identical content
-    /// (so chunk deduplication is exercised).
+    /// It deliberately contains a nested directory (so entry-path portability is covered) and two
+    /// files with identical content (so chunk deduplication is exercised). The files are too small
+    /// for Zstandard to shrink, but the compressed fixtures still store every chunk as a Zstandard
+    /// frame, so the decompression path is covered all the same.
     /// </remarks>
     public static readonly (string RelativePath, string Content)[] SourceTree =
     [

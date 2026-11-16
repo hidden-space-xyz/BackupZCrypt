@@ -288,9 +288,6 @@
   <data name="GenerateButton" xml:space="preserve">
     <value>Generate</value>
   </data>
-  <data name="CopyButton" xml:space="preserve">
-    <value>Copy</value>
-  </data>
   <data name="StartBackup" xml:space="preserve">
     <value>Start backup</value>
   </data>
@@ -523,7 +520,7 @@
     <value>The source folder cannot be inside the destination folder. Choose a different path.</value>
   </data>
   <data name="InvalidPathFormat" xml:space="preserve">
-    <value>Invalid path: {0}</value>
+    <value>Invalid path {0}: {1}</value>
   </data>
   <data name="PasswordRequired" xml:space="preserve">
     <value>Enter the password.</value>

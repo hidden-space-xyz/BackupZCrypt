@@ -69,7 +69,7 @@ internal sealed class ScryptKeyDerivationStrategy : IKeyDerivationAlgorithmStrat
         {
             if (passwordBytes is not null)
             {
-                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+                CryptographicOperations.ZeroMemory(passwordBytes);
             }
         }
     }

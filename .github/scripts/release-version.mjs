@@ -24,7 +24,6 @@ export function resolveRelease(cwd = process.cwd()) {
   const stable = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
   const previous = tags.find((tag) => stable.test(tag)) ?? '';
   if (previous) {
-    // Reject reruns of old commits instead of moving latest backwards.
     git('merge-base', '--is-ancestor', previous, 'HEAD');
   }
   const version = previous ? previous.slice(1) : '0.0.0';

@@ -251,6 +251,7 @@ public sealed class ChunkedBackupFailurePathTests
                 )
         );
     }
+
     [Fact]
     internal async Task Create_EverySourceFileFails_FailsWithAllFilesFailed()
     {
@@ -485,7 +486,6 @@ public sealed class ChunkedBackupFailurePathTests
     }
 
     [Fact]
-
     internal async Task Restore_DestinationAlreadyHoldsFiles_OverwritesBackedUpPathsAndLeavesOthersAlone()
     {
         const string RestoredA = "the archived content of a.txt";

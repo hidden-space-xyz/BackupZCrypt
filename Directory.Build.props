@@ -1,7 +1,6 @@
 <Project>
 
   <PropertyGroup>
-    <!-- Official releases inject the Conventional Commits-derived version during publish. -->
     <Version>0.0.0-local</Version>
   </PropertyGroup>
 

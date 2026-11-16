@@ -313,11 +313,6 @@ internal static class Strings
     public static string GenerateButton => Get();
 
     /// <summary>
-    /// Gets the copy-password button tooltip.
-    /// </summary>
-    public static string CopyButton => Get();
-
-    /// <summary>
     /// Gets the start-backup button text.
     /// </summary>
     public static string StartBackup => Get();

@@ -364,7 +364,6 @@ public sealed class FileSystemServiceTests
         );
     }
 
-
     [Fact]
     internal void SystemStorage_UnmountedRoot_IsNotReadyAndReportsNegativeSpace()
     {

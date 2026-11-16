@@ -71,8 +71,8 @@ public enum MessageCode
     SourceInsideDestination = 13,
 
     /// <summary>
-    /// A path could not be expanded and resolved to absolute form; formatted with the detail of
-    /// the failure.
+    /// A path could not be expanded and resolved to absolute form; formatted with the path and the
+    /// localizable reason it was rejected, such as its being too long.
     /// </summary>
     InvalidPathFormat = 14,
 

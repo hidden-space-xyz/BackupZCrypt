@@ -587,11 +587,27 @@ internal sealed class BackupRequestValidator(
             return;
         }
 
-        var format = systemStorage.GetDriveFormat(destinationDrive);
-        if (format is not null && format.StartsWith("FAT", StringComparison.OrdinalIgnoreCase))
+        if (IsFatFormat(systemStorage.GetDriveFormat(destinationDrive)))
         {
             warnings.Add(new LocalizableMessage(MessageCode.FatFileSystemWarning));
         }
+    }
+
+    /// <summary>
+    /// Determines whether a drive format names a FAT file system as the host reports it: <c>FAT</c>,
+    /// <c>FAT16</c>, or <c>FAT32</c> on Windows, <c>vfat</c> or <c>msdos</c> on Linux, and
+    /// <c>msdos</c> on macOS. exFAT has no such per-folder limit and is not matched.
+    /// </summary>
+    /// <param name="format">The drive format reported by the host, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the format names a FAT file system.</returns>
+    private static bool IsFatFormat(string? format)
+    {
+        return format is not null
+            && (
+                format.StartsWith("FAT", StringComparison.OrdinalIgnoreCase)
+                || format.Equals("vfat", StringComparison.OrdinalIgnoreCase)
+                || format.Equals("msdos", StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     /// <summary>

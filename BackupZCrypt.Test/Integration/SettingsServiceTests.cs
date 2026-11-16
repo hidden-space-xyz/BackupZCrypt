@@ -38,7 +38,6 @@ public sealed class SettingsServiceTests
         );
     }
 
-
     [Fact]
     internal async Task GetOrCreateAsync_WhenFileCorrupted_SelfHealsToDefaults()
     {

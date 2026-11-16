@@ -636,9 +636,7 @@ public sealed class OperationViewModelBaseTests : IDisposable
     }
 
     [Theory]
-    // cleared once the operation it protected has succeeded
     [InlineData(5, 5, "")]
-    // kept after a partial run, which may be re-run
     [InlineData(3, 5, "secret")]
     internal async Task StartCommand_ClearsThePasswordOnlyWhenTheOperationSucceeded(
         int processedFiles,

@@ -6,11 +6,12 @@ namespace BackupZCrypt.Test.Unit.Domain.Archive;
 
 /// <summary>
 /// Unit tests for the per-chunk nonce and associated-data derivation that binds a chunk's ciphertext
-/// to its content. Both values are part of the on-disk format rather than an implementation detail:
-/// the nonce must stay deterministic for deduplication to work, key-dependent so identical content
-/// under two passwords never reuses a nonce, and exactly
-/// <see cref="EncryptionConstants.NonceSize"/> bytes long, while the associated-data layout is what
-/// every previously written archive was authenticated under.
+/// to its content, and for the keyed chunk file name. All three are part of the on-disk format
+/// rather than an implementation detail: the nonce must stay deterministic for deduplication to work,
+/// key-dependent so identical content under two passwords never reuses a nonce, and exactly
+/// <see cref="EncryptionConstants.NonceSize"/> bytes long; the associated-data layout is what every
+/// previously written archive was authenticated under; and the file name must depend on the naming
+/// key so it reveals nothing about the chunk's content.
 /// </summary>
 public sealed class ChunkCryptoTests
 {

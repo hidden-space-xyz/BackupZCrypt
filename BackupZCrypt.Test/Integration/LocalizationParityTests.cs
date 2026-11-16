@@ -38,7 +38,6 @@ public sealed class LocalizationParityTests
         "Strings.es.resx"
     );
 
-
     [Fact]
     internal void EnglishAndSpanish_HaveIdenticalKeySets()
     {

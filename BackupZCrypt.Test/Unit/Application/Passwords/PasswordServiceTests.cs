@@ -113,8 +113,6 @@ public sealed class PasswordServiceTests
         Assert.Contains(MessageCode.TipReduceRepeats, analysis.Tips);
     }
 
-
-
     [Fact]
     internal void GeneratePassword_UppercaseOnly_ProducesOnlyUppercaseLetters()
     {

@@ -36,7 +36,7 @@ public sealed class BackupVerifyTests
     [Theory]
     [InlineData(CompressionMode.None)]
     [InlineData(CompressionMode.Zstd)]
-    internal async Task Verify_IntactBackup_SucceedsWithoutTouchingTheArchiveOrTheDestination(
+    internal async Task Verify_IntactBackup_SucceedsWithoutTouchingTheArchive(
         CompressionMode compression
     )
     {
@@ -45,7 +45,6 @@ public sealed class BackupVerifyTests
 
         using var source = new TempDir();
         using var destination = new TempDir();
-        using var scratch = new TempDir();
         await CreateBackupAsync(operations, source, destination, compression);
 
         var archiveBefore = Snapshot(destination.Path);
@@ -61,7 +60,6 @@ public sealed class BackupVerifyTests
             () => Assert.Equal(SourceFileCount, result.Value.Completion!.TotalFiles),
             () => Assert.Equal(result.Value.Completion!.TotalFiles, result.Value.Completion!.ProcessedFiles),
             () => Assert.Empty(result.Value.Completion!.Errors),
-            () => Assert.Empty(Directory.GetFileSystemEntries(scratch.Path)),
             () => Assert.Equal(archiveBefore, Snapshot(destination.Path))
         );
     }
@@ -237,7 +235,6 @@ public sealed class BackupVerifyTests
 
         Assert.Contains(MessageCode.SourcePathNotExist, CollectCodes(result));
     }
-
 
     /// <summary>
     /// Fills the source with three files of distinct content, one of them nested, and backs them up

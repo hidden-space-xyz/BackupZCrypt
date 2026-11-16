@@ -99,8 +99,6 @@ public sealed class SettingsViewModelTests
             .. sut.CompressionOptions.Select(static option => option.Description),
         ];
 
-        // Materialized before the assertion block because the ordering check needs to enumerate the
-        // same sequence twice, once sorted and once as built.
         var encryptionIds = sut.EncryptionOptions.Select(static option => option.Id).ToList();
 
         Assert.Multiple(

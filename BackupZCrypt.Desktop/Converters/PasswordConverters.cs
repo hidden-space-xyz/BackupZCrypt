@@ -91,7 +91,7 @@ internal static class PasswordConverters
                 PasswordStrength.Fair => "warning",
                 PasswordStrength.Good => "good",
                 PasswordStrength.Strong => "strong",
-                _ => "strong",
+                _ => "danger",
             };
         }
     }

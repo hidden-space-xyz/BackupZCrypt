@@ -89,7 +89,16 @@ internal static class PathNormalizationHelper
 
             return Path.GetFullPath(expanded);
         }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (PathTooLongException)
+        {
+            error = new LocalizableMessage(
+                MessageCode.InvalidPathFormat,
+                entered,
+                new LocalizableMessage(MessageCode.ReasonPathTooLong)
+            );
+            return null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
         {
             error = new LocalizableMessage(MessageCode.PathInvalidCharactersFormat, entered);
             return null;

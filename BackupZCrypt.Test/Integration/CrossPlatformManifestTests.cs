@@ -21,7 +21,7 @@ namespace BackupZCrypt.Test.Integration;
 /// </summary>
 /// <remarks>
 /// Every case uses PBKDF2 and files of a few bytes, so the fixture costs one key derivation per
-/// backup operation and nothing else.
+/// backup operation and per manifest the test reads or rewrites itself, and nothing else.
 /// </remarks>
 public sealed class CrossPlatformManifestTests
 {
@@ -305,28 +305,20 @@ public sealed class CrossPlatformManifestTests
     }
 
     /// <summary>
-    /// Derives the manifest encryption sub-key the same way <see cref="ArchiveKeys"/> does, so a test
-    /// can read or rewrite a real manifest without going through the backup engine.
+    /// Derives the manifest encryption sub-key through <see cref="ArchiveKeys"/>, the key schedule
+    /// the backup engine uses, so a test can read or rewrite a real manifest without going through
+    /// the engine.
     /// </summary>
     /// <param name="provider">The provider holding the real key derivation strategies.</param>
     /// <param name="preamble">The preamble carrying the master salt and key derivation algorithm.</param>
-    /// <returns>The manifest encryption key; the caller wipes it.</returns>
+    /// <returns>A copy of the manifest encryption key; the caller wipes it.</returns>
     private static byte[] DeriveManifestKey(ServiceProvider provider, ManifestPreamble preamble)
     {
-        var masterKey = provider
+        var keyDerivation = provider
             .GetRequiredService<IStrategyRegistry<KeyDerivationAlgorithm, IKeyDerivationAlgorithmStrategy>>()
-            .Resolve(preamble.KeyDerivation)
-            .DeriveKey(Password, preamble.MasterSalt, EncryptionConstants.KeySize);
+            .Resolve(preamble.KeyDerivation);
 
-        try
-        {
-            var manifestKey = new byte[EncryptionConstants.KeySize / 8];
-            HKDF.Expand(HashAlgorithmName.SHA256, masterKey, manifestKey, "manifest-encryption"u8);
-            return manifestKey;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(masterKey);
-        }
+        using var keys = ArchiveKeys.Derive(Password, preamble.MasterSalt, keyDerivation);
+        return (byte[])keys.ManifestEncryptionKey.Clone();
     }
 }

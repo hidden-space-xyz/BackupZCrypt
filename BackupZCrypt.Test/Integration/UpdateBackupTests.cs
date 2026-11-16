@@ -82,9 +82,6 @@ public sealed class UpdateBackupTests
             "Restore of the updated backup did not succeed."
         );
 
-        // The four reads are hoisted out of the grouped assertion because Assert.Multiple takes
-        // synchronous lambdas; they run only after the restore itself is known to have succeeded,
-        // so a failed restore still reports the message above rather than a file-not-found error.
         var unchangedText = await File.ReadAllTextAsync(
             Path.Join(restored.Path, "unchanged.txt"),
             TestContext.Current.CancellationToken
@@ -211,8 +208,6 @@ public sealed class UpdateBackupTests
             "Restore after the pruning update did not succeed."
         );
 
-        // Hoisted out of the grouped assertion for the same reason as in the test above: the read
-        // only makes sense once the restore is known to have succeeded.
         var survivorText = await File.ReadAllTextAsync(
             Path.Join(restored.Path, survivorRelativePath),
             TestContext.Current.CancellationToken

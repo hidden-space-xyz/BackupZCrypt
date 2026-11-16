@@ -15,7 +15,7 @@ internal sealed partial class PasswordService : IPasswordService
 {
     /// <summary>
     /// The effective entropy, in bits, that is treated as a perfect password; anything at or above it scores
-    /// the maximum. Roughly the strength of a 20-character mixed-class password.
+    /// the maximum. Roughly the strength of an 18-character mixed-class password.
     /// </summary>
     private const double MaxEntropyBits = 120.0;
 

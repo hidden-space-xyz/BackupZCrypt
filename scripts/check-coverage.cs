@@ -1,5 +1,3 @@
-// Fails when back-end (core assemblies) or front-end (Desktop) coverage drops below the minimum percentage.
-// Usage: dotnet run --file scripts/check-coverage.cs -- <ReportGenerator Summary.json> [minimum, default 95]
 using System.Globalization;
 using System.Text.Json;
 
